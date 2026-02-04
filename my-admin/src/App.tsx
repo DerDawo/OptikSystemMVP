@@ -1,16 +1,18 @@
 // in src/App.tsx
-import { Admin, Resource } from "react-admin";
+import { Admin, Resource, ListGuesser, ShowGuesser } from "react-admin";
 import { dataProvider } from './dataProvider';
 import { authProvider } from './authProvider';
 import { UserList } from "./users";
-import { ListGuesser } from 'react-admin';
+import { KundenList } from "./kunden";
+import { BrilleList } from "./brillen";
+import { GlassList } from "./glass";
 
 
 export const App = () => (
     <Admin dataProvider={dataProvider}>
-        <Resource name="kunde" list={ListGuesser} />
-        <Resource name="brille" list={ListGuesser} />
-        <Resource name="glass" list={ListGuesser} />
+        <Resource name="kunde" list={KundenList} show={ShowG} />
+        <Resource name="brille" list={BrilleList} />
+        <Resource name="glass" list={GlassList} />
         <Resource name="glastype" list={ListGuesser} />
         <Resource name="fassung" list={ListGuesser} />
     </Admin>
