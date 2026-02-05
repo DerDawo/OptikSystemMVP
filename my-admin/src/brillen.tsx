@@ -24,7 +24,9 @@ export const BrilleList = () => (
                 <ReferenceField source="GlasRechts" reference="glass" />
             </DataTable.NumberCol>
             <DataTable.NumberCol source="Fassung" />
-            <DataTable.NumberCol source="Glastyp" />
+            <DataTable.NumberCol source="Glastyp" >
+                <ReferenceField source="Glastyp" reference="glastyp" />
+            </DataTable.NumberCol>
             <DataTable.Col source="RabattBezeichnung" />
             <DataTable.NumberCol source="Summe" />
             <DataTable.Col source="BrillenArt" />
