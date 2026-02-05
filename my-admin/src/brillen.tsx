@@ -1,4 +1,6 @@
 import { DataTable, DateField, List, ReferenceField } from 'react-admin';
+import { NumberField, Show, SimpleShowLayout, TextField } from 'react-admin';
+import { DateInput, Edit, Create, NumberInput, SimpleForm, TextInput, ReferenceInput, SelectInput } from 'react-admin';
 
 export const BrilleList = () => (
     <List>
@@ -32,4 +34,82 @@ export const BrilleList = () => (
             <DataTable.Col source="BrillenArt" />
         </DataTable>
     </List>
+);
+
+export const BrilleShow = () => (
+    <Show>
+        <SimpleShowLayout>
+            <TextField source="id" />
+            <DateField source="created_at" />
+            <TextField source="Berater" />
+            <TextField source="Refraktion" />
+            <DateField source="Datum" />
+            <TextField source="Werkstatt" />
+            <DateField source="Abholung" />
+            <TextField source="Notizen" />
+            <ReferenceField source="GlasLinks" reference="glass" />
+            <ReferenceField source="GlasRechts" reference="glass" />
+            <NumberField source="Fassung" />
+            <ReferenceField source="Glastyp" reference="glastyp" />
+            <TextField source="RabattBezeichnung" />
+            <NumberField source="Summe" />
+            <TextField source="BrillenArt" />
+        </SimpleShowLayout>
+    </Show>
+);
+
+export const BrilleEdit = () => (
+    <Edit>
+        <SimpleForm>
+            <TextInput source="id" />
+            <DateInput source="created_at" />
+            <TextInput source="Berater" />
+            <TextInput source="Refraktion" />
+            <DateInput source="Datum" />
+            <TextInput source="Werkstatt" />
+            <DateInput source="Abholung" />
+            <TextInput source="Notizen" />
+            <ReferenceInput source="GlasLinks" reference="glass">
+                <SelectInput optionText="id" />
+            </ReferenceInput>
+            <ReferenceInput source="GlasRechts" reference="glass">
+                <SelectInput optionText="id" />
+            </ReferenceInput>
+            <NumberInput source="Fassung" />
+            <ReferenceInput source="Glastyp" reference="glastyp">
+                <SelectInput optionText="id" />
+            </ReferenceInput>
+            <TextInput source="RabattBezeichnung" />
+            <NumberInput source="Summe" />
+            <TextInput source="BrillenArt" />
+        </SimpleForm>
+    </Edit>
+);
+
+export const BrilleCreate = () => (
+    <Create>
+        <SimpleForm>
+            <TextInput source="id" />
+            <DateInput source="created_at" />
+            <TextInput source="Berater" />
+            <TextInput source="Refraktion" />
+            <DateInput source="Datum" />
+            <TextInput source="Werkstatt" />
+            <DateInput source="Abholung" />
+            <TextInput source="Notizen" />
+            <ReferenceInput source="GlasLinks" reference="glass">
+                <SelectInput optionText="id" />
+            </ReferenceInput>
+            <ReferenceInput source="GlasRechts" reference="glass">
+                <SelectInput optionText="id" />
+            </ReferenceInput>
+            <NumberInput source="Fassung" />
+            <ReferenceInput source="Glastyp" reference="glastyp">
+                <SelectInput optionText="id" />
+            </ReferenceInput>
+            <TextInput source="RabattBezeichnung" />
+            <NumberInput source="Summe" />
+            <TextInput source="BrillenArt" />
+        </SimpleForm>
+    </Create>
 );
