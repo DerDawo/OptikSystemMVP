@@ -1,4 +1,4 @@
-import { BooleanField, DataTable, DateField, List } from 'react-admin';
+import { BooleanField, DataTable, DateField, List, ReferenceManyField, Datagrid } from 'react-admin';
 import { NumberField, Show, SimpleShowLayout, TextField } from 'react-admin';
 import { BooleanInput, DateInput, Edit, Create, NumberInput, SimpleForm, TextInput } from 'react-admin';
 
@@ -49,6 +49,20 @@ export const GlassShow = () => (
             <BooleanField source="Liefern" />
             <NumberField source="Betrag" />
             <TextField source="Seite" />
+            <ReferenceManyField reference="brille" target="GlasLinks" label="Brillen (Links)">
+                <Datagrid>
+                    <TextField source="id" />
+                    <TextField source="Berater" />
+                    <DateField source="Datum" />
+                </Datagrid>
+            </ReferenceManyField>
+            <ReferenceManyField reference="brille" target="GlasRechts" label="Brillen (Rechts)">
+                <Datagrid>
+                    <TextField source="id" />
+                    <TextField source="Berater" />
+                    <DateField source="Datum" />
+                </Datagrid>
+            </ReferenceManyField>
         </SimpleShowLayout>
     </Show>
 );
