@@ -1,7 +1,7 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, Create, NumberInput } from 'react-admin';
 
 export const ZusatzleistungList = () => (
-    <List>
+    <List title="Zusatzleistungen" perPage={10}>
         <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="created_at">

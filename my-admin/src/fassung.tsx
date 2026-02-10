@@ -1,7 +1,7 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, NumberInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
 
 export const FassungList = () => (
-    <List>
+    <List title="Fassungen" perPage={10}>
         <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="created_at">

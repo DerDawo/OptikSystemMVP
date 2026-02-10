@@ -3,7 +3,7 @@ import { NumberField, Show, SimpleShowLayout, TextField } from 'react-admin';
 import { BooleanInput, DateInput, Edit, Create, NumberInput, SimpleForm, TextInput } from 'react-admin';
 
 export const GlassList = () => (
-    <List>
+    <List title="Gläser" perPage={10}>
         <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="created_at">

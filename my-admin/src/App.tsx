@@ -1,6 +1,7 @@
 // in src/App.tsx
 import { Admin, Resource } from "react-admin";
 import { dataProvider } from './dataProvider';
+import { MyLayout } from './MyLayout';
 // import { authProvider } from './authProvider';
 import { KundenList, KundeShow, KundeEdit, KundeCreate } from "./kunden";
 import { BrilleList, BrilleShow, BrilleEdit, BrilleCreate } from "./brillen";
@@ -16,7 +17,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
 
 export const App = () => (
-    <Admin dataProvider={dataProvider}>
+    <Admin layout={MyLayout} dataProvider={dataProvider}>
         <Resource name="kunde" list={KundenList} show={KundeShow} edit={KundeEdit} create={KundeCreate} icon={PersonIcon} />
         <Resource name="brille" list={BrilleList} show={BrilleShow} edit={BrilleEdit} create={BrilleCreate} />
         <Resource name="glass" list={GlassList} show={GlassShow} edit={GlassEdit} create={GlassCreate} icon={PanoramaFishEyeIcon} />

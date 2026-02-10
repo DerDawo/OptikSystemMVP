@@ -1,7 +1,7 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, Edit, SimpleForm, TextInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
 
 export const GlastypList = () => (
-    <List>
+    <List title="Glastypen" perPage={10}>
         <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="created_at">

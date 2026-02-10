@@ -2,13 +2,14 @@ import { DataTable, List, ReferenceManyField, Datagrid } from 'react-admin';
 import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'react-admin';
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
+import { ReferenceField } from 'react-admin';
 
 import SmartphoneIcon from '@mui/icons-material/Smartphone';
 import LocalPhoneIcon from '@mui/icons-material/LocalPhone';
 import EmailIcon from '@mui/icons-material/Email';
 
 export const KundenList = () => (
-    <List>
+    <List title="Kunden" perPage={10}>
         <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col label="Kunde">
@@ -97,10 +98,11 @@ export const KundeShow = () => (
             <TextField source="Stadt" />
             <TextField source="TelefonnummerGeschaeftlich" />
             <TextField source="KrankenversicherungsTyp" />
-            <ReferenceManyField reference="kunde_hat_brille" target="KundenID">
+            <ReferenceManyField reference="kunde_hat_brille" target="KundenID" label="Brillen">
                 <Datagrid>
-                    <TextField source="id" />
-                    <TextField source="BrillenID" />
+                    <ReferenceField source="BrillenID" reference="brille" link="show">
+                        <TextField source="id" />
+                    </ReferenceField>
                 </Datagrid>
             </ReferenceManyField>
         </SimpleShowLayout>

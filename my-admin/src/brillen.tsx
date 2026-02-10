@@ -1,14 +1,21 @@
-import { DataTable, DateField, List, ReferenceField } from 'react-admin';
+import { DataTable, DateField, List, ReferenceField, useGetList, useGetOne } from 'react-admin';
 import { NumberField, Show, SimpleShowLayout, TextField, ReferenceManyField, Datagrid } from 'react-admin';
 import { DateInput, Edit, Create, NumberInput, SimpleForm, TextInput, ReferenceInput, SelectInput } from 'react-admin';
+import { Link } from 'react-router-dom';
 
 export const BrilleList = () => (
-    <List>
+    <List title="Brillen" perPage={10}>
         <DataTable>
             <DataTable.Col source="id" />
-            <DataTable.Col source="created_at">
+            <DataTable.Col source="BrillenArt" />
+            <ReferenceManyField reference="kunde_hat_brille" target="KundenID" label="Kunde">
+                    <ReferenceField source="KundenID" reference="kunde" link="show">
+                        <TextField source="id" />
+                    </ReferenceField>
+            </ReferenceManyField>
+            {/* <DataTable.Col source="created_at">
                 <DateField source="created_at" />
-            </DataTable.Col>
+            </DataTable.Col> */}
             <DataTable.Col source="Berater" />
             <DataTable.Col source="Refraktion" />
             <DataTable.Col source="Datum">
@@ -19,27 +26,34 @@ export const BrilleList = () => (
                 <DateField source="Abholung" />
             </DataTable.Col>
             <DataTable.Col source="Notizen" />
-            <DataTable.NumberCol source="GlasLinks" >
-                <ReferenceField source="GlassLinks" reference="glass" />
+            <DataTable.NumberCol source="GlasLinks">
+                <ReferenceField source="GlasLinks" reference="glass" link="show">
+                    <TextField source="id" />
+                </ReferenceField>
             </DataTable.NumberCol>
-            <DataTable.NumberCol source="GlasRechts" >
-                <ReferenceField source="GlasRechts" reference="glass" />
+            <DataTable.NumberCol source="GlasRechts">
+                <ReferenceField source="GlasRechts" reference="glass" link="show">
+                    <TextField source="id" />
+                </ReferenceField>
             </DataTable.NumberCol>
-            <DataTable.NumberCol source="Fassung" >
-                <ReferenceField source="Fassung" reference="fassung" />
-            </DataTable.NumberCol>
-            <DataTable.NumberCol source="Glastyp" >
-                <ReferenceField source="Glastyp" reference="glastyp" />
-            </DataTable.NumberCol>
+            <DataTable.Col source="Fassung">
+                <ReferenceField source="Fassung" reference="fassung" link="show">
+                    <TextField source="id" />
+                </ReferenceField>
+            </DataTable.Col>
+            <DataTable.Col source="Glastyp">
+                <ReferenceField source="Glastyp" reference="glastyp" link="show">
+                    <TextField source="id" />
+                </ReferenceField>
+            </DataTable.Col>
             <DataTable.Col source="RabattBezeichnung" />
             <DataTable.NumberCol source="Summe" />
-            <DataTable.Col source="BrillenArt" />
         </DataTable>
     </List>
 );
 
 export const BrilleShow = () => (
-    <Show>
+    <Show >
         <SimpleShowLayout>
             <TextField source="id" />
             <DateField source="created_at" />
@@ -78,10 +92,10 @@ export const BrilleEdit = () => (
                 <SelectInput optionText="id" />
             </ReferenceInput>
             <ReferenceInput source="Fassung" reference="fassung">
-                <SelectInput optionText="Bezeichnung" />
+                <SelectInput optionText="id" />
             </ReferenceInput>
             <ReferenceInput source="Glastyp" reference="glastyp">
-                <SelectInput optionText="Bezeichnung" />
+                <SelectInput optionText="id" />
             </ReferenceInput>
             <TextInput source="RabattBezeichnung" />
             <NumberInput source="Summe" />
@@ -108,10 +122,10 @@ export const BrilleCreate = () => (
                 <SelectInput optionText="id" />
             </ReferenceInput>
             <ReferenceInput source="Fassung" reference="fassung">
-                <SelectInput optionText="Bezeichnung" />
+                <SelectInput optionText="id" />
             </ReferenceInput>
             <ReferenceInput source="Glastyp" reference="glastyp">
-                <SelectInput optionText="Bezeichnung" />
+                <SelectInput optionText="id" />
             </ReferenceInput>
             <TextInput source="RabattBezeichnung" />
             <NumberInput source="Summe" />
@@ -119,3 +133,22 @@ export const BrilleCreate = () => (
         </SimpleForm>
     </Create>
 );
+
+// const OwnerField = (record ) => {
+//     console.log(this)
+//     console.log('OwnerField record:', record);
+//     if (!record) return null;
+//     const { data: mappings, isLoading: mapLoading } = useGetList('kunde_hat_brille', {
+//         pagination: { page: 1, perPage: 1 },
+//         sort: { field: 'id', order: 'ASC' },
+//         filter: { BrillenID: record.id },
+//     });
+//     if (mapLoading) return null;
+//     if (!mappings || mappings.length === 0) return null;
+//     const kundeId = mappings[0].KundenID;
+//     const { data: kunde, isLoading: kundeLoading } = useGetOne('kunde', { id: kundeId });
+//     if (kundeLoading) return <Link to={`/kunde/${kundeId}/show`}>#{kundeId}</Link>;
+//     if (!kunde) return <Link to={`/kunde/${kundeId}/show`}>#{kundeId}</Link>;
+//     const name = `${kunde.Anrede ? kunde.Anrede + ' ' : ''}${kunde.Vorname ? kunde.Vorname + ' ' : ''}${kunde.Nachname || ''}`.trim();
+//     return <Link to={`/kunde/${kundeId}/show`}>{name || `#${kundeId}`}</Link>;
+// };
