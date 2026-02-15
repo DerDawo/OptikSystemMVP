@@ -8,11 +8,9 @@ export const BrilleList = () => (
         <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="BrillenArt" />
-            <ReferenceManyField reference="kunde_hat_brille" target="KundenID" label="Kunde">
-                    <ReferenceField source="KundenID" reference="kunde" link="show">
-                        <TextField source="id" />
-                    </ReferenceField>
-            </ReferenceManyField>
+            <DataTable.Col label="Kunde">
+                <ReferenceField source="kunde_id" reference="kunde" link="show"/>
+            </DataTable.Col>
             {/* <DataTable.Col source="created_at">
                 <DateField source="created_at" />
             </DataTable.Col> */}
