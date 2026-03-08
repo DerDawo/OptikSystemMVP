@@ -1,8 +1,14 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, Create, NumberInput } from 'react-admin';
 
-export const ZusatzleistungList = () => (
-    <List title="Zusatzleistungen" perPage={10}>
-        <DataTable>
+import { useAutoPerPage } from './useAutoPerPage';
+
+export const ZusatzleistungList = () => {
+    const { perPage, containerRef } = useAutoPerPage();
+
+    return (
+        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <List title="Zusatzleistungen" perPage={perPage}>
+                <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="created_at">
                 <DateField source="created_at" />
@@ -11,7 +17,9 @@ export const ZusatzleistungList = () => (
             <DataTable.NumberCol source="Betrag" />
         </DataTable>
     </List>
-);
+        </div>
+    );
+};
 
 export const ZusatzleistungShow = () => (
     <Show>

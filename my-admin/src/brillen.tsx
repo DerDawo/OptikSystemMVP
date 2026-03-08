@@ -3,9 +3,15 @@ import { NumberField, Show, SimpleShowLayout, TextField, ReferenceManyField, Dat
 import { DateInput, Edit, Create, NumberInput, SimpleForm, TextInput, ReferenceInput, SelectInput } from 'react-admin';
 import { Link } from 'react-router-dom';
 
-export const BrilleList = () => (
-    <List title="Brillen" perPage={10}>
-        <DataTable>
+import { useAutoPerPage } from './useAutoPerPage';
+
+export const BrilleList = () => {
+    const { perPage, containerRef } = useAutoPerPage();
+
+    return (
+        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <List title="Brillen" perPage={perPage}>
+                <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="BrillenArt" />
             <ReferenceManyField reference="kunde_hat_brille" target="KundenID" label="Kunde">
@@ -50,7 +56,9 @@ export const BrilleList = () => (
             <DataTable.NumberCol source="Summe" />
         </DataTable>
     </List>
-);
+        </div>
+    );
+};
 
 export const BrilleShow = () => (
     <Show >

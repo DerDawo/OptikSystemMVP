@@ -4,14 +4,16 @@ import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
 
-import SmartphoneIcon from '@mui/icons-material/Smartphone';
-import LocalPhoneIcon from '@mui/icons-material/LocalPhone';
-import EmailIcon from '@mui/icons-material/Email';
+import { useAutoPerPage } from './useAutoPerPage';
 
-export const KundenList = () => (
-    <List title="Kunden" perPage={10}>
-        <DataTable>
-            <DataTable.Col source="id" />
+export const KundenList = () => {
+    const { perPage, containerRef } = useAutoPerPage();
+
+    return (
+        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <List className="list-page" title="Kunden" perPage={perPage}>
+                <DataTable>
+                <DataTable.Col source="id" />
             <DataTable.Col label="Kunde">
                 <FunctionField render={record => {
                     if (!record) return '';
@@ -21,59 +23,39 @@ export const KundenList = () => (
                     return `${anrede} ${vorname} ${nachname}`.trim();
                 }} />
             </DataTable.Col>
-            <DataTable.Col label="Anschrift">
-                <FunctionField render={record => {
-                    if (!record) return '';
-                    const strasse = record.Straße ? record.Straße : '';
-                    const hausnummer = record.Hausnummer ? record.Hausnummer : '';
-                    const plz = record.Postleitzahl ? record.Postleitzahl : '';
-                    const stadt = record.Stadt ? record.Stadt : '';
-                    return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
-                }} />
-            </DataTable.Col>
-            <DataTable.Col source="KundenNummer" />
-            <DataTable.Col source="created_at">
-                <DateField source="created_at" />
-            </DataTable.Col>
-            <DataTable.Col source="Aufnahmedatum">
-                <DateField source="Aufnahmedatum" />
-            </DataTable.Col>
-            <DataTable.Col source="Geburtsdatum">
-                <DateField source="Geburtsdatum" />
-            </DataTable.Col>
-            <DataTable.Col source="Geschlecht" />
-            <DataTable.Col source="Tätigkeit" />
-            <DataTable.Col label="Kontakt">
-                <FunctionField render={record => {
-                    if (!record) return '';
-                    const TelefonnummerPrivat = record.TelefonnummerPrivat ? record.TelefonnummerPrivat : '';
-                    const TelefonnummerGeschaeftlich = record.TelefonnummerGeschaeftlich ? record.TelefonnummerGeschaeftlich : '';
-                    const Email = record.Email ? record.Email : '';
-                    return <>
-                        <p>
-                            <LocalPhoneIcon sx={{ fontSize: 12 }} /> 
-                            &nbsp;
-                            {TelefonnummerPrivat} 
-                        </p>
-                        <p>
-                            <SmartphoneIcon sx={{ fontSize: 12 }} /> 
-                            &nbsp;
-                            {TelefonnummerGeschaeftlich}
-                        </p>
-                        <p>
-                            <EmailIcon sx={{ fontSize: 12 }} /> 
-                            &nbsp;
-                            {Email}
-                        </p>
-                    </>;
-                }} />
-            </DataTable.Col>
-            <DataTable.Col source="KrankenkassenNummer" />
-            <DataTable.Col source="VersichertenNummer" />
-            <DataTable.Col source="KrankenversicherungsTyp" />
-        </DataTable>
-    </List>
-);
+                <DataTable.Col label="Anschrift">
+                    <FunctionField render={record => {
+                        if (!record) return '';
+                        const strasse = record.Straße ? record.Straße : '';
+                        const hausnummer = record.Hausnummer ? record.Hausnummer : '';
+                        const plz = record.Postleitzahl ? record.Postleitzahl : '';
+                        const stadt = record.Stadt ? record.Stadt : '';
+                        return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
+                    }} />
+                </DataTable.Col>
+                <DataTable.Col source="KundenNummer" />
+                <DataTable.Col source="created_at">
+                    <DateField source="created_at" />
+                </DataTable.Col>
+                <DataTable.Col source="Aufnahmedatum">
+                    <DateField source="Aufnahmedatum" />
+                </DataTable.Col>
+                <DataTable.Col source="Geburtsdatum">
+                    <DateField source="Geburtsdatum" />
+                </DataTable.Col>
+                <DataTable.Col source="Geschlecht" />
+                <DataTable.Col source="Tätigkeit" />
+                <DataTable.Col source="TelefonnummerPrivat" />
+                <DataTable.Col source="TelefonnummerGeschaeftlich" />
+                <DataTable.Col source="Email" />
+                <DataTable.Col source="KrankenkassenNummer" />
+                <DataTable.Col source="VersichertenNummer" />
+                <DataTable.Col source="KrankenversicherungsTyp" />
+            </DataTable>
+        </List>
+        </div>
+    );
+};
 
 export const KundeShow = () => (
     <Show>
