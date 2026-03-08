@@ -9,13 +9,13 @@ import { BrilleList, BrilleShow, BrilleEdit, BrilleCreate } from "./brillen";
 import { GlassList, GlassShow, GlassEdit, GlassCreate } from "./glass";
 import { GlastypList, GlastypShow, GlastypEdit, GlastypCreate } from "./glasstyp";
 import { FassungList, FassungShow, FassungEdit, FassungCreate } from "./fassung";
-import { KundebrilleList, KundebrilleShow, KundebrilleEdit, KundebrilleCreate } from "./kundebrille";
 import { Brille_hat_zusatzleistungenList, Brille_hat_zusatzleistungenShow, Brille_hat_zusatzleistungenEdit, Brille_hat_zusatzleistungenCreate } from "./brille_hat_zusatzleistungen";
 import { Kunde_leistet_zauzahlung_fuer_brilleList, Kunde_leistet_zauzahlung_fuer_brilleShow, Kunde_leistet_zauzahlung_fuer_brilleEdit, Kunde_leistet_zauzahlung_fuer_brilleCreate } from "./kunde_leistet_zauzahlung_fuer_brille";
 import { ZusatzleistungList, ZusatzleistungShow, ZusatzleistungEdit, ZusatzleistungCreate } from "./zusatzleistung";
 
 import PersonIcon from '@mui/icons-material/Person';
 import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
+import { CssVarsProvider } from '@mui/joy/styles';
 
 export const App = () => (
     <>

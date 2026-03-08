@@ -58,7 +58,7 @@ export const KundenList = () => {
 };
 
 export const KundeShow = () => (
-    <Show>
+    <Show title="Kunden anzeigen">
         <SimpleShowLayout>
             <TextField source="id" />
             <DateField source="created_at" />
@@ -80,11 +80,30 @@ export const KundeShow = () => (
             <TextField source="Stadt" />
             <TextField source="TelefonnummerGeschaeftlich" />
             <TextField source="KrankenversicherungsTyp" />
-            <ReferenceManyField reference="kunde_hat_brille" target="KundenID" label="Brillen">
+            <ReferenceManyField reference="brille" target="kunde_id" label="Brillen des Kunden">
                 <Datagrid>
-                    <ReferenceField source="BrillenID" reference="brille" link="show">
+                    <TextField source="id" />
+                    <TextField source="BrillenArt" />
+                    <TextField source="Berater" />
+                    <TextField source="Refraktion" />
+                    <DateField source="Datum" />
+                    <TextField source="Werkstatt" />
+                    <DateField source="Abholung" />
+                    <TextField source="Notizen" />
+                    <ReferenceField source="GlasLinks" reference="glass" link="show">
                         <TextField source="id" />
                     </ReferenceField>
+                    <ReferenceField source="GlasRechts" reference="glass" link="show">
+                        <TextField source="id" />
+                    </ReferenceField>
+                    <ReferenceField source="Fassung" reference="fassung" link="show">
+                        <TextField source="id" />
+                    </ReferenceField>
+                    <ReferenceField source="Glastyp" reference="glastyp" link="show">
+                        <TextField source="id" />
+                    </ReferenceField>
+                    <TextField source="RabattBezeichnung" />
+                    <TextField source="Summe" />
                 </Datagrid>
             </ReferenceManyField>
         </SimpleShowLayout>
@@ -92,10 +111,10 @@ export const KundeShow = () => (
 );
 
 export const KundeEdit = () => (
-    <Edit>
+    <Edit title="Kunden bearbeiten">
         <SimpleForm>
-            <TextInput source="id" InputProps={{ disabled: true }}/>
-            <DateInput source="created_at" InputProps={{ disabled: true }}/>
+            <TextInput source="id" InputProps={{ disabled: true }} />
+            <DateInput source="created_at" InputProps={{ disabled: true }} />
             <TextInput source="KundenNummer" />
             <DateInput source="Aufnahmedatum" />
             <TextInput source="Anrede" />
@@ -119,28 +138,83 @@ export const KundeEdit = () => (
 );
 
 export const KundeCreate = () => (
-    <Create>
-        <SimpleForm>
-            <TextInput source="id" />
-            <DateInput source="created_at"/>
-            <TextInput source="KundenNummer" />
-            <DateInput source="Aufnahmedatum" />
+    <Create
+        title="Neuen Kunden anlegen"
+        transform={data => ({ ...data, created_at: new Date().toISOString() })}
+    >
+        <SimpleForm defaultValues={{ created_at: new Date().toISOString() }}>
+            <Typography>
+                Datenbankfelder
+            </Typography>
+            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="id" InputProps={{ disabled: true }} />
+                </Box>
+                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                    <DateInput source="created_at" InputProps={{ disabled: true }} label="Erstellt am" />
+                </Box>
+            </Box>
+            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="KundenNummer" />
+                </Box>
+                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                    <DateInput source="Aufnahmedatum" />
+                </Box>
+            </Box>
+            <Typography>
+                Stammdaten
+            </Typography>
             <TextInput source="Anrede" />
             <TextInput source="Nachname" />
             <TextInput source="Vorname" />
-            <DateInput source="Geburtsdatum" />
             <TextInput source="Geschlecht" />
-            <TextInput source="Straße" />
-            <TextInput source="Tätigkeit" />
-            <TextInput source="TelefonnummerPrivat" />
-            <TextInput source="Email" />
-            <TextInput source="KrankenkassenNummer" />
-            <TextInput source="VersichertenNummer" />
-            <TextInput source="Postleitzahl" />
-            <TextInput source="Hausnummer" />
-            <TextInput source="Stadt" />
-            <TextInput source="TelefonnummerGeschaeftlich" />
-            <TextInput source="KrankenversicherungsTyp" />
+            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    <DateInput source="Geburtsdatum" />
+                </Box>
+                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="Tätigkeit" />
+                </Box>
+            </Box>
+            <Divider />
+            <Typography>
+                Adresse
+            </Typography>
+            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="Straße" />
+                </Box>
+                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="Hausnummer" />
+                </Box>
+            </Box>
+            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="Postleitzahl" />
+                </Box>
+                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="Stadt" />
+                </Box>
+            </Box>
+            <Divider />
+            <Typography>
+                Kontakt
+            </Typography>
+            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="TelefonnummerPrivat" label="Telefonnummer Privat" />
+                </Box>
+                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="TelefonnummerGeschaeftlich" label="Telefonnummer Geschäftlich" />
+                </Box>
+                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                    <TextInput source="Email" />
+                </Box>
+            </Box>
+            <TextInput source="KrankenkassenNummer" label="Krankenkassennummer" />
+            <TextInput source="VersichertenNummer" label="Versichertennummer" />
+            <TextInput source="KrankenversicherungsTyp" label="Krankenversicherungs Typ" />
         </SimpleForm>
     </Create>
 );
