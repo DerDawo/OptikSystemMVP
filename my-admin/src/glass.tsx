@@ -2,9 +2,15 @@ import { BooleanField, DataTable, DateField, List, ReferenceManyField, Datagrid 
 import { NumberField, Show, SimpleShowLayout, TextField } from 'react-admin';
 import { BooleanInput, DateInput, Edit, Create, NumberInput, SimpleForm, TextInput } from 'react-admin';
 
-export const GlassList = () => (
-    <List title="Gläser" perPage={10}>
-        <DataTable>
+import { useAutoPerPage } from './useAutoPerPage';
+
+export const GlassList = () => {
+    const { perPage, containerRef } = useAutoPerPage();
+
+    return (
+        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <List title="Gläser" perPage={perPage}>
+                <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="created_at">
                 <DateField source="created_at" />
@@ -27,7 +33,9 @@ export const GlassList = () => (
             <DataTable.Col source="Seite" />
         </DataTable>
     </List>
-);
+        </div>
+    );
+};
 
 
 export const GlassShow = () => (
