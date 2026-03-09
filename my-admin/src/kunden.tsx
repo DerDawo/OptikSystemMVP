@@ -3,6 +3,7 @@ import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'rea
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
+import { Box, Divider, Typography } from '@mui/material';
 
 import { useAutoPerPage } from './useAutoPerPage';
 
@@ -33,7 +34,7 @@ export const KundenList = () => {
                         return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
                     }} />
                 </DataTable.Col>
-                <DataTable.Col source="KundenNummer" />
+                <DataTable.Col source="KundenNummer" label="Kundennummer" />
                 <DataTable.Col source="created_at">
                     <DateField source="created_at" />
                 </DataTable.Col>
