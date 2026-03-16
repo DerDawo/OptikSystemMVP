@@ -1,14 +1,9 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, Edit, SimpleForm, TextInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
 
-import { useAutoPerPage } from './useAutoPerPage';
 
-export const GlastypList = () => {
-    const { perPage, containerRef } = useAutoPerPage();
-
-    return (
-        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <List title="Glastypen" perPage={perPage}>
-                <DataTable>
+export const GlastypList = () => (
+    <List title="Glastypen" >
+        <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="Bezeichnung" />
             <DataTable.Col source="Hersteller" />
@@ -19,9 +14,7 @@ export const GlastypList = () => {
             <DataTable.Col source="Farbe" />
         </DataTable>
     </List>
-        </div>
-    );
-};
+);
 
 export const GlastypShow = () => (
     <Show>
