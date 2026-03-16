@@ -1,16 +1,49 @@
 import { Menu } from 'react-admin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faUser, faGlasses, faListCheck, faEye, faLayerGroup, faLinesLeaning, faUserPlus } from '@fortawesome/free-solid-svg-icons';
-import Divider from '@mui/material/Divider';
+import {
+    faUser,
+    faGlasses,
+    faListCheck,
+    faEye,
+    faLayerGroup,
+    faLinesLeaning,
+    faUserPlus,
+    faHandPointUp,
+    faReceipt
+} from '@fortawesome/free-solid-svg-icons';
+import {
+    Divider,
+    Typography
+} from '@mui/material';
 
 export const MyMenu = () => (
     <Menu>
+        <Typography sx={{ padding: '0.5em 1em', color: 'text.secondary' }}>
+            Geschäftsprozesse
+        </Typography>
         <Menu.Item
             to="/kunde/create"
             primaryText="neuen Kunden anlegen"
             leftIcon={<FontAwesomeIcon icon={faUserPlus} />}
         />
         <Divider />
+        <Typography sx={{ padding: '0.5em 1em', color: 'text.secondary' }}>
+            Dokumente
+        </Typography>
+        <Menu.Item
+            to=""
+            primaryText="Rechnungen"
+            leftIcon={<FontAwesomeIcon icon={faReceipt} />}
+        />
+        <Menu.Item
+            to=""
+            primaryText="Mahnungen"
+            leftIcon={<FontAwesomeIcon icon={faHandPointUp} />}
+        />
+        <Divider />
+        <Typography sx={{ padding: '0.5em 1em', color: 'text.secondary' }}>
+            Datenbank
+        </Typography>
         <Menu.Item
             to="/kunde"
             primaryText="Kunden"

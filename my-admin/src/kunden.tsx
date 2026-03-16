@@ -5,16 +5,11 @@ import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
 import { Box, Divider, Typography } from '@mui/material';
 
-import { useAutoPerPage } from './useAutoPerPage';
 
-export const KundenList = () => {
-    const { perPage, containerRef } = useAutoPerPage();
-
-    return (
-        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <List className="list-page" title="Kunden" perPage={perPage}>
-                <DataTable>
-                <DataTable.Col source="id" />
+export const KundenList = () => (
+    <List className="list-page" title="Kunden" >
+        <DataTable>
+            <DataTable.Col source="id" />
             <DataTable.Col label="Kunde">
                 <FunctionField render={record => {
                     if (!record) return '';
@@ -24,39 +19,37 @@ export const KundenList = () => {
                     return `${anrede} ${vorname} ${nachname}`.trim();
                 }} />
             </DataTable.Col>
-                <DataTable.Col label="Anschrift">
-                    <FunctionField render={record => {
-                        if (!record) return '';
-                        const strasse = record.Straße ? record.Straße : '';
-                        const hausnummer = record.Hausnummer ? record.Hausnummer : '';
-                        const plz = record.Postleitzahl ? record.Postleitzahl : '';
-                        const stadt = record.Stadt ? record.Stadt : '';
-                        return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
-                    }} />
-                </DataTable.Col>
-                <DataTable.Col source="KundenNummer" label="Kundennummer" />
-                <DataTable.Col source="created_at">
-                    <DateField source="created_at" />
-                </DataTable.Col>
-                <DataTable.Col source="Aufnahmedatum">
-                    <DateField source="Aufnahmedatum" />
-                </DataTable.Col>
-                <DataTable.Col source="Geburtsdatum">
-                    <DateField source="Geburtsdatum" />
-                </DataTable.Col>
-                <DataTable.Col source="Geschlecht" />
-                <DataTable.Col source="Tätigkeit" />
-                <DataTable.Col source="TelefonnummerPrivat" />
-                <DataTable.Col source="TelefonnummerGeschaeftlich" />
-                <DataTable.Col source="Email" />
-                <DataTable.Col source="KrankenkassenNummer" />
-                <DataTable.Col source="VersichertenNummer" />
-                <DataTable.Col source="KrankenversicherungsTyp" />
-            </DataTable>
-        </List>
-        </div>
-    );
-};
+            <DataTable.Col label="Anschrift">
+                <FunctionField render={record => {
+                    if (!record) return '';
+                    const strasse = record.Straße ? record.Straße : '';
+                    const hausnummer = record.Hausnummer ? record.Hausnummer : '';
+                    const plz = record.Postleitzahl ? record.Postleitzahl : '';
+                    const stadt = record.Stadt ? record.Stadt : '';
+                    return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
+                }} />
+            </DataTable.Col>
+            <DataTable.Col source="KundenNummer" label="Kundennummer" />
+            <DataTable.Col source="created_at">
+                <DateField source="created_at" />
+            </DataTable.Col>
+            <DataTable.Col source="Aufnahmedatum">
+                <DateField source="Aufnahmedatum" />
+            </DataTable.Col>
+            <DataTable.Col source="Geburtsdatum">
+                <DateField source="Geburtsdatum" />
+            </DataTable.Col>
+            <DataTable.Col source="Geschlecht" />
+            <DataTable.Col source="Tätigkeit" />
+            <DataTable.Col source="TelefonnummerPrivat" />
+            <DataTable.Col source="TelefonnummerGeschaeftlich" />
+            <DataTable.Col source="Email" />
+            <DataTable.Col source="KrankenkassenNummer" />
+            <DataTable.Col source="VersichertenNummer" />
+            <DataTable.Col source="KrankenversicherungsTyp" />
+        </DataTable>
+    </List>
+);
 
 export const KundeShow = () => (
     <Show title="Kunden anzeigen">

@@ -9,17 +9,9 @@ export const theme = createTheme({
 
     MuiCssBaseline: {
       styleOverrides: (theme) => ({
-        html: {
-          height: "100%",
+        html:{
+          overflowX: "hidden",
         },
-        body: {
-          height: "100%",
-          overflow: "hidden",
-        },
-        "#root": {
-          height: "100%",
-        },
-
         ".RaLayout-contentWithSidebar": {
           maxWidth: "100dvw",
         },
@@ -28,6 +20,7 @@ export const theme = createTheme({
           minWidth: 0,
           minHeight: 0,
           overflow: "hidden",
+          scrollbarGutter: "stable",
         },
         ".list-page": {
           minWidth: 0,

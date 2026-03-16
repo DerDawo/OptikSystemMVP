@@ -13,7 +13,6 @@ import { Brille_hat_zusatzleistungenList, Brille_hat_zusatzleistungenShow, Brill
 import { Kunde_leistet_zauzahlung_fuer_brilleList, Kunde_leistet_zauzahlung_fuer_brilleShow, Kunde_leistet_zauzahlung_fuer_brilleEdit, Kunde_leistet_zauzahlung_fuer_brilleCreate } from "./kunde_leistet_zauzahlung_fuer_brille";
 import { ZusatzleistungList, ZusatzleistungShow, ZusatzleistungEdit, ZusatzleistungCreate } from "./zusatzleistung";
 
-
 import PersonIcon from '@mui/icons-material/Person';
 import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
 

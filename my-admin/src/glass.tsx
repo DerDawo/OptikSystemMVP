@@ -1,41 +1,53 @@
-import { BooleanField, DataTable, DateField, List, ReferenceManyField, Datagrid } from 'react-admin';
-import { NumberField, Show, SimpleShowLayout, TextField } from 'react-admin';
-import { BooleanInput, DateInput, Edit, Create, NumberInput, SimpleForm, TextInput } from 'react-admin';
+import { 
+    BooleanField, 
+    DataTable, 
+    DateField, 
+    List, 
+    ReferenceManyField, 
+    Datagrid,
+    NumberField, 
+    Show, 
+    SimpleShowLayout, 
+    TextField,
+    BooleanInput, 
+    DateInput, 
+    Edit, 
+    Create, 
+    NumberInput, 
+    SimpleForm, 
+    TextInput,
+    FunctionField
+ } from 'react-admin';
 
-import { useAutoPerPage } from './useAutoPerPage';
-
-export const GlassList = () => {
-    const { perPage, containerRef } = useAutoPerPage();
-
-    return (
-        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <List title="Gläser" perPage={perPage}>
-                <DataTable>
+export const GlassList = () => (
+    <List title="Gläser" >
+        <DataTable>
             <DataTable.Col source="id" />
-            <DataTable.Col source="created_at">
-                <DateField source="created_at" />
-            </DataTable.Col>
-            <DataTable.NumberCol source="Sph" />
-            <DataTable.NumberCol source="Cyl" />
-            <DataTable.NumberCol source="A" />
-            <DataTable.NumberCol source="PD" />
-            <DataTable.NumberCol source="Add" />
-            <DataTable.NumberCol source="y_h" />
-            <DataTable.NumberCol source="Pr" />
-            <DataTable.NumberCol source="B" />
-            <DataTable.NumberCol source="HSA" />
-            <DataTable.NumberCol source="Vis" />
-            <DataTable.NumberCol source="iod" />
+            <DataTable.Col source="Seite" />
+            <DataTable.NumberCol source="Sph" label="Sph" />
+            <DataTable.NumberCol source="Cyl" label="Cyl"/>
+            <DataTable.NumberCol source="A" label="A"/>
+            <DataTable.NumberCol source="PD" label="PD" />
+            <DataTable.NumberCol source="Add" label="Add" />
+            <DataTable.NumberCol source="y_h" label="y/h" />
+            <DataTable.NumberCol source="Pr" label="Pr" />
+            <DataTable.NumberCol source="B" label="B" />
+            <DataTable.NumberCol source="HSA" label="HSA" />
+            <DataTable.NumberCol source="Vis" label="Vis" />
+            <DataTable.NumberCol source="iod" label="iod" />
             <DataTable.Col source="Liefern">
                 <BooleanField source="Liefern" />
             </DataTable.Col>
-            <DataTable.NumberCol source="Betrag" />
-            <DataTable.Col source="Seite" />
+            <DataTable.Col sx={{textAlign: 'end'}} source="Betrag">
+                <FunctionField  render={record => {
+                    if (!record.Betrag) return '';
+                    return record.Betrag.toFixed(2) + " €";
+                }} />
+            </DataTable.Col>
         </DataTable>
     </List>
-        </div>
-    );
-};
+);
+
 
 
 export const GlassShow = () => (

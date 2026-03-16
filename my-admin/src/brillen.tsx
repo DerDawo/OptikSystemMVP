@@ -1,25 +1,25 @@
-import { DataTable, DateField, List, ReferenceField, useGetList, useGetOne } from 'react-admin';
-import { NumberField, Show, SimpleShowLayout, TextField, ReferenceManyField, Datagrid } from 'react-admin';
-import { DateInput, Edit, Create, NumberInput, SimpleForm, TextInput, ReferenceInput, SelectInput } from 'react-admin';
-import { Link } from 'react-router-dom';
+import { DataTable, DateField, List, ReferenceField, Pagination } from 'react-admin';
+import { NumberField, Show, SimpleShowLayout, TextField } from 'react-admin';
+import { DateInput, Edit, Create, NumberInput, SimpleForm, TextInput, ReferenceInput, SelectInput, FunctionField } from 'react-admin';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 
-import { useAutoPerPage } from './useAutoPerPage';
-
-export const BrilleList = () => {
-    const { perPage, containerRef } = useAutoPerPage();
-
-    return (
-        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <List title="Brillen" perPage={perPage}>
-                <DataTable>
+export const BrilleList = () => (
+    <List title="Brillen" perPage={5} pagination={<Pagination rowsPerPageOptions={[5]} />}>
+        <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col source="BrillenArt" />
             <DataTable.Col label="Kunde">
-                <ReferenceField source="kunde_id" reference="kunde" link="show"/>
+                <ReferenceField source="kunde_id" reference="kunde" link="show">
+                    <FunctionField render={record => {
+                        if (!record) return '';
+                        const anrede = record.Anrede ? record.Anrede : '';
+                        const nachname = record.Nachname ? record.Nachname : '';
+                        const vorname = record.Vorname ? record.Vorname : '';
+                        return `${anrede} ${vorname} ${nachname}`.trim();
+                    }} />
+                </ReferenceField>
             </DataTable.Col>
-            {/* <DataTable.Col source="created_at">
-                <DateField source="created_at" />
-            </DataTable.Col> */}
             <DataTable.Col source="Berater" />
             <DataTable.Col source="Refraktion" />
             <DataTable.Col source="Datum">
@@ -32,31 +32,36 @@ export const BrilleList = () => {
             <DataTable.Col source="Notizen" />
             <DataTable.NumberCol source="GlasLinks">
                 <ReferenceField source="GlasLinks" reference="glass" link="show">
+                    Nr.
                     <TextField source="id" />
+                    &nbsp;
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
                 </ReferenceField>
             </DataTable.NumberCol>
             <DataTable.NumberCol source="GlasRechts">
                 <ReferenceField source="GlasRechts" reference="glass" link="show">
+                    Nr.
                     <TextField source="id" />
+                    &nbsp;
+                    <FontAwesomeIcon icon={faArrowUpRightFromSquare} />
                 </ReferenceField>
             </DataTable.NumberCol>
             <DataTable.Col source="Fassung">
                 <ReferenceField source="Fassung" reference="fassung" link="show">
-                    <TextField source="id" />
+                    <TextField source="Bezeichnung" />
                 </ReferenceField>
             </DataTable.Col>
             <DataTable.Col source="Glastyp">
                 <ReferenceField source="Glastyp" reference="glastyp" link="show">
-                    <TextField source="id" />
+                    <TextField source="Bezeichnung" />
                 </ReferenceField>
             </DataTable.Col>
             <DataTable.Col source="RabattBezeichnung" />
             <DataTable.NumberCol source="Summe" />
         </DataTable>
     </List>
-        </div>
-    );
-};
+);
+
 
 export const BrilleShow = () => (
     <Show >
@@ -139,22 +144,3 @@ export const BrilleCreate = () => (
         </SimpleForm>
     </Create>
 );
-
-// const OwnerField = (record ) => {
-//     console.log(this)
-//     console.log('OwnerField record:', record);
-//     if (!record) return null;
-//     const { data: mappings, isLoading: mapLoading } = useGetList('kunde_hat_brille', {
-//         pagination: { page: 1, perPage: 1 },
-//         sort: { field: 'id', order: 'ASC' },
-//         filter: { BrillenID: record.id },
-//     });
-//     if (mapLoading) return null;
-//     if (!mappings || mappings.length === 0) return null;
-//     const kundeId = mappings[0].KundenID;
-//     const { data: kunde, isLoading: kundeLoading } = useGetOne('kunde', { id: kundeId });
-//     if (kundeLoading) return <Link to={`/kunde/${kundeId}/show`}>#{kundeId}</Link>;
-//     if (!kunde) return <Link to={`/kunde/${kundeId}/show`}>#{kundeId}</Link>;
-//     const name = `${kunde.Anrede ? kunde.Anrede + ' ' : ''}${kunde.Vorname ? kunde.Vorname + ' ' : ''}${kunde.Nachname || ''}`.trim();
-//     return <Link to={`/kunde/${kundeId}/show`}>{name || `#${kundeId}`}</Link>;
-// };

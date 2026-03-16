@@ -1,20 +1,11 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, NumberInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
 
-import { useAutoPerPage } from './useAutoPerPage';
-
-export const FassungList = () => {
-    const { perPage, containerRef } = useAutoPerPage();
-
-    return (
-        <div ref={containerRef} style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            <List title="Fassungen" perPage={perPage}>
-                <DataTable>
+export const FassungList = () => (
+    <List title="Fassungen">
+        <DataTable>
             <DataTable.Col source="id" />
-            <DataTable.Col source="created_at">
-                <DateField source="created_at" />
-            </DataTable.Col>
-            <DataTable.Col source="Lagernummer" />
             <DataTable.Col source="Bezeichnung" />
+            <DataTable.Col source="Lagernummer" />
             <DataTable.Col source="Linie" />
             <DataTable.Col source="Farbe" />
             <DataTable.Col source="Groesse" />
@@ -22,9 +13,8 @@ export const FassungList = () => {
             <DataTable.Col source="Hersteller" />
         </DataTable>
     </List>
-        </div>
-    );
-};
+);
+
 
 export const FassungShow = () => (
     <Show>
