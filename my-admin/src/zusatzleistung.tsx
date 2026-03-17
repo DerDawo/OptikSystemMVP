@@ -1,4 +1,5 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, Create, NumberInput } from 'react-admin';
+import { CurrencyField } from './CurrencyField';
 
 export const ZusatzleistungList = () => (
     <List title="Zusatzleistungen" >
@@ -8,7 +9,9 @@ export const ZusatzleistungList = () => (
                 <DateField source="created_at" />
             </DataTable.Col>
             <DataTable.Col source="Bezeichnung" />
-            <DataTable.NumberCol source="Betrag" />
+            <DataTable.Col source="Betrag" sx={{ textAlign: 'end' }}>
+                <CurrencyField source="Betrag" />
+            </DataTable.Col>
         </DataTable>
     </List>
 );
@@ -20,7 +23,7 @@ export const ZusatzleistungShow = () => (
             <TextField source="id" />
             <DateField source="created_at" />
             <TextField source="Bezeichnung" />
-            <NumberField source="Betrag" />
+            <CurrencyField source="Betrag" />
         </SimpleShowLayout>
     </Show>
 );

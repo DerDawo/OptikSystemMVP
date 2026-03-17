@@ -1,4 +1,5 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, Create, NumberInput, ReferenceField, ReferenceInput, SelectInput } from 'react-admin';
+import { CurrencyField } from './CurrencyField';
 
 export const Kunde_leistet_zauzahlung_fuer_brilleList = () => (
     <List>
@@ -16,7 +17,9 @@ export const Kunde_leistet_zauzahlung_fuer_brilleList = () => (
             <DataTable.Col source="Datum">
                 <DateField source="Datum" />
             </DataTable.Col>
-            <DataTable.NumberCol source="Betrag" />
+            <DataTable.Col source="Betrag" sx={{ textAlign: 'end' }}>
+                <CurrencyField source="Betrag" />
+            </DataTable.Col>
             <DataTable.NumberCol source="Restbetrag" />
         </DataTable>
     </List>
@@ -30,7 +33,7 @@ export const Kunde_leistet_zauzahlung_fuer_brilleShow = () => (
             <ReferenceField source="KundenID" reference="kunde" link="show" />
             <ReferenceField source="BrillenID" reference="brille" link="show" />
             <DateField source="Datum" />
-            <NumberField source="Betrag" />
+            <CurrencyField source="Betrag" />
             <NumberField source="Restbetrag" />
         </SimpleShowLayout>
     </Show>

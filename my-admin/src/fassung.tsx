@@ -1,4 +1,5 @@
 import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, NumberInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
+import { CurrencyField } from './CurrencyField';
 
 export const FassungList = () => (
     <List title="Fassungen">
@@ -9,7 +10,9 @@ export const FassungList = () => (
             <DataTable.Col source="Linie" />
             <DataTable.Col source="Farbe" />
             <DataTable.Col source="Groesse" />
-            <DataTable.NumberCol source="Betrag" />
+            <DataTable.Col source="Betrag" sx={{ textAlign: 'end' }}>
+                <CurrencyField source="Betrag" />
+            </DataTable.Col>
             <DataTable.Col source="Hersteller" />
         </DataTable>
     </List>
@@ -26,7 +29,7 @@ export const FassungShow = () => (
             <TextField source="Linie" />
             <TextField source="Farbe" />
             <TextField source="Groesse" />
-            <NumberField source="Betrag" />
+            <CurrencyField source="Betrag" />
             <TextField source="Hersteller" />
             <ReferenceManyField reference="brille" target="Fassung" label="Brillen">
                 <Datagrid>

@@ -15,9 +15,9 @@ import {
     Create, 
     NumberInput, 
     SimpleForm, 
-    TextInput,
-    FunctionField
+    TextInput
  } from 'react-admin';
+import { CurrencyField } from './CurrencyField';
 
 export const GlassList = () => (
     <List title="Gläser" >
@@ -39,10 +39,7 @@ export const GlassList = () => (
                 <BooleanField source="Liefern" />
             </DataTable.Col>
             <DataTable.Col sx={{textAlign: 'end'}} source="Betrag">
-                <FunctionField  render={record => {
-                    if (!record.Betrag) return '';
-                    return record.Betrag.toFixed(2) + " €";
-                }} />
+                <CurrencyField source="Betrag" />
             </DataTable.Col>
         </DataTable>
     </List>
@@ -67,7 +64,7 @@ export const GlassShow = () => (
             <NumberField source="Vis" />
             <NumberField source="iod" />
             <BooleanField source="Liefern" />
-            <NumberField source="Betrag" />
+            <CurrencyField source="Betrag" />
             <TextField source="Seite" />
             <ReferenceManyField reference="brille" target="GlasLinks" label="Brillen (Links)">
                 <Datagrid>

@@ -3,6 +3,8 @@ import { NumberField, Show, SimpleShowLayout, TextField } from 'react-admin';
 import { DateInput, Edit, Create, NumberInput, SimpleForm, TextInput, ReferenceInput, SelectInput, FunctionField } from 'react-admin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
+import { CurrencyField } from './CurrencyField';
+
 
 export const BrilleList = () => (
     <List title="Brillen" perPage={5} pagination={<Pagination rowsPerPageOptions={[5]} />}>
@@ -57,7 +59,9 @@ export const BrilleList = () => (
                 </ReferenceField>
             </DataTable.Col>
             <DataTable.Col source="RabattBezeichnung" />
-            <DataTable.NumberCol source="Summe" />
+            <DataTable.Col sx={{textAlign: 'end'}} source="Summe" label="Betrag">
+                <CurrencyField source="Summe" /> 
+            </DataTable.Col>
         </DataTable>
     </List>
 );
