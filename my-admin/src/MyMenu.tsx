@@ -9,7 +9,8 @@ import {
     faLinesLeaning,
     faUserPlus,
     faHandPointUp,
-    faReceipt
+    faReceipt,
+    faMagnifyingGlass
 } from '@fortawesome/free-solid-svg-icons';
 import {
     Divider,
@@ -25,6 +26,11 @@ export const MyMenu = () => (
             to="/kunde/create"
             primaryText="neuen Kunden anlegen"
             leftIcon={<FontAwesomeIcon icon={faUserPlus} />}
+        />
+        <Menu.Item
+            to="/search"
+            primaryText="Suche"
+            leftIcon={<FontAwesomeIcon icon={faMagnifyingGlass} />}
         />
         <Divider />
         <Typography sx={{ padding: '0.5em 1em', color: 'text.secondary' }}>
