@@ -1,5 +1,5 @@
 // in src/App.tsx
-import { Admin, Resource } from "react-admin";
+import { Admin, CustomRoutes, Resource } from "react-admin";
 import { theme } from "./theme";
 import { dataProvider } from './dataProvider';
 import { MyLayout } from './MyLayout';
@@ -15,6 +15,8 @@ import { ZusatzleistungList, ZusatzleistungShow, ZusatzleistungEdit, Zusatzleist
 
 import PersonIcon from '@mui/icons-material/Person';
 import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
+import { Route } from "react-router-dom";
+import Search from "./Search";
 
 export const App = () => {
 
@@ -32,6 +34,9 @@ export const App = () => {
       <Resource name="brille_hat_zusatzleistungen" list={Brille_hat_zusatzleistungenList} show={Brille_hat_zusatzleistungenShow} edit={Brille_hat_zusatzleistungenEdit} create={Brille_hat_zusatzleistungenCreate} />
       <Resource name="kunde_leistet_zauzahlung_fuer_brille" list={Kunde_leistet_zauzahlung_fuer_brilleList} show={Kunde_leistet_zauzahlung_fuer_brilleShow} edit={Kunde_leistet_zauzahlung_fuer_brilleEdit} create={Kunde_leistet_zauzahlung_fuer_brilleCreate} />
       <Resource name="zusatzleistung" list={ZusatzleistungList} show={ZusatzleistungShow} edit={ZusatzleistungEdit} create={ZusatzleistungCreate} />
+      <CustomRoutes>
+        <Route path="/search" element={<Search />} />
+      </CustomRoutes>
     </Admin>
   )
 }
