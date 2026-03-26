@@ -7,6 +7,7 @@ import {
 import { useState } from 'react';
 
 import { Title } from 'react-admin';
+import ExpertSearch from './ExpertSearch';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -54,7 +55,8 @@ const Search = () => {
                     <Tab label="Kunden suchen" {...a11yProps(0)}/>
                     <Tab label="Letzte Kunden" {...a11yProps(1)}/>
                     <Tab label="Erweiterte Suche" {...a11yProps(2)}/>
-                    <Tab label="Expertensuche" {...a11yProps(3)}/>
+                    <Tab label="Expertensuche" {...a11yProps(3)}>
+                    </Tab>
                 </Tabs>
             </Box>
             <Card>
@@ -68,7 +70,7 @@ const Search = () => {
                     Erweiterte Suche
                 </CustomTabPanel>
                 <CustomTabPanel value={value} index={3}>
-                    Expertensuche
+                    <ExpertSearch/>
                 </CustomTabPanel>
             </Card>
         </Box>
