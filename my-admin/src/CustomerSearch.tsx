@@ -12,6 +12,7 @@ import {
     DataTable,
 } from 'react-admin';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 
 const buildFilter = (filters: Record<string, string>) => {
     const result: Record<string, any> = {};
@@ -58,12 +59,14 @@ const CustomerSearch = () => {
             });
     }, [dataProvider, resource]);
 
+    const navigate = useNavigate();
+
     const handleSearch = async () => {
         const filter = buildFilter({
             Nachname: nachname,
             Vorname: vorname,
             Geburtsdatum: geburtsdatum,
-            Kundennummer: kundennummer,
+            KundenNummer: kundennummer,
         });
 
         setIsSearching(true);
@@ -87,7 +90,14 @@ const CustomerSearch = () => {
     };
 
     const handleCreate = () => {
-        window.location.href = `/${resource}/create`;
+        navigate(`/${resource}/create`, {
+            state: {
+                Nachname: nachname,
+                Vorname: vorname,
+                Geburtsdatum: geburtsdatum,
+                KundenNummer: kundennummer,
+            },
+        });
     };
 
     const handleReset = () => {

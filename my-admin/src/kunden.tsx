@@ -4,6 +4,7 @@ import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
 import { Box, Divider, Typography } from '@mui/material';
+import { useLocation } from 'react-router-dom';
 
 
 export const KundenList = () => (
@@ -131,84 +132,98 @@ export const KundeEdit = () => (
     </Edit>
 );
 
-export const KundeCreate = () => (
-    <Create
-        title="Neuen Kunden anlegen"
-        transform={data => ({ ...data, created_at: new Date().toISOString() })}
-    >
-        <SimpleForm defaultValues={{ created_at: new Date().toISOString() }}>
-            <Typography>
-                Datenbankfelder
-            </Typography>
-            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="id" InputProps={{ disabled: true }} />
+export const KundeCreate = () => {
+    const location = useLocation();
+    const locationState = (location.state as Record<string, unknown> | undefined) ?? {};
+
+    const defaultValues = {
+        created_at: new Date().toISOString(),
+        Nachname: '',
+        Vorname: '',
+        Geburtsdatum: '',
+        KundenNummer: '',
+        ...locationState,
+    };
+
+    return (
+        <Create
+            title="Neuen Kunden anlegen"
+            transform={data => ({ ...data, created_at: new Date().toISOString() })}
+        >
+            <SimpleForm defaultValues={defaultValues}>
+                <Typography>
+                    Datenbankfelder
+                </Typography>
+                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="id" InputProps={{ disabled: true }} />
+                    </Box>
+                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                        <DateInput source="created_at" InputProps={{ disabled: true }} label="Erstellt am" />
+                    </Box>
                 </Box>
-                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
-                    <DateInput source="created_at" InputProps={{ disabled: true }} label="Erstellt am" />
+                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="KundenNummer" />
+                    </Box>
+                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                        <DateInput source="Aufnahmedatum" />
+                    </Box>
                 </Box>
-            </Box>
-            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="KundenNummer" />
+                <Typography>
+                    Stammdaten
+                </Typography>
+                <TextInput source="Anrede" />
+                <TextInput source="Nachname" />
+                <TextInput source="Vorname" />
+                <TextInput source="Geschlecht" />
+                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                        <DateInput source="Geburtsdatum" />
+                    </Box>
+                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="Tätigkeit" />
+                    </Box>
                 </Box>
-                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
-                    <DateInput source="Aufnahmedatum" />
+                <Divider />
+                <Typography>
+                    Adresse
+                </Typography>
+                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="Straße" />
+                    </Box>
+                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="Hausnummer" />
+                    </Box>
                 </Box>
-            </Box>
-            <Typography>
-                Stammdaten
-            </Typography>
-            <TextInput source="Anrede" />
-            <TextInput source="Nachname" />
-            <TextInput source="Vorname" />
-            <TextInput source="Geschlecht" />
-            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
-                    <DateInput source="Geburtsdatum" />
+                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="Postleitzahl" />
+                    </Box>
+                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="Stadt" />
+                    </Box>
                 </Box>
-                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="Tätigkeit" />
+                <Divider />
+                <Typography>
+                    Kontakt
+                </Typography>
+                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
+                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="TelefonnummerPrivat" label="Telefonnummer Privat" />
+                    </Box>
+                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="TelefonnummerGeschaeftlich" label="Telefonnummer Geschäftlich" />
+                    </Box>
+                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
+                        <TextInput source="Email" />
+                    </Box>
                 </Box>
-            </Box>
-            <Divider />
-            <Typography>
-                Adresse
-            </Typography>
-            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="Straße" />
-                </Box>
-                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="Hausnummer" />
-                </Box>
-            </Box>
-            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="Postleitzahl" />
-                </Box>
-                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="Stadt" />
-                </Box>
-            </Box>
-            <Divider />
-            <Typography>
-                Kontakt
-            </Typography>
-            <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="TelefonnummerPrivat" label="Telefonnummer Privat" />
-                </Box>
-                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="TelefonnummerGeschaeftlich" label="Telefonnummer Geschäftlich" />
-                </Box>
-                <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
-                    <TextInput source="Email" />
-                </Box>
-            </Box>
-            <TextInput source="KrankenkassenNummer" label="Krankenkassennummer" />
-            <TextInput source="VersichertenNummer" label="Versichertennummer" />
-            <TextInput source="KrankenversicherungsTyp" label="Krankenversicherungs Typ" />
-        </SimpleForm>
-    </Create>
-);
+                <TextInput source="KrankenkassenNummer" label="Krankenkassennummer" />
+                <TextInput source="VersichertenNummer" label="Versichertennummer" />
+                <TextInput source="KrankenversicherungsTyp" label="Krankenversicherungs Typ" />
+            </SimpleForm>
+        </Create>
+    );
+}
