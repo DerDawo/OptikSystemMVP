@@ -6,9 +6,20 @@ import { ReferenceField } from 'react-admin';
 import { Box, Divider, Typography } from '@mui/material';
 import { useLocation } from 'react-router-dom';
 
+const kundenFilter = [
+    <TextInput resettable source="Vorname@ilike" label="Vorname" alwaysOn />,
+    <TextInput resettable source="Nachname@ilike" label="Nachname" alwaysOn/>,
+    <DateInput source="Geburtsdatum@ilike" label="Geburtsdatum" alwaysOn/>,
+    <TextInput resettable source="KundenNummer@ilike" label="Kundennummer" alwaysOn/>,
+];
 
 export const KundenList = () => (
-    <List className="list-page" title="Kunden" >
+    <List
+        className="list-page"
+        title="Kunden"
+        disableSyncWithLocation
+        filters={kundenFilter}
+    >
         <DataTable>
             <DataTable.Col source="id" />
             <DataTable.Col label="Kunde">
