@@ -6,9 +6,9 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 
-import { Title } from 'react-admin';
 import ExpertSearch from './ExpertSearch';
 import CustomerSearch from './CustomerSearch';
+import LastCustomersSearched from './LastCustomersSearched';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -64,7 +64,7 @@ const Search = () => {
                     <CustomerSearch/>
                 </CustomTabPanel>
                 <CustomTabPanel value={value} index={1}>
-                    Letzte Kunden
+                    <LastCustomersSearched/>
                 </CustomTabPanel>
                 <CustomTabPanel value={value} index={2}>
                     Erweiterte Suche
