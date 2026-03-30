@@ -13,6 +13,10 @@ import {
 } from 'react-admin';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { Dayjs } from 'dayjs';
 
 const buildFilter = (filters: Record<string, string>) => {
     const result: Record<string, any> = {};
@@ -21,7 +25,12 @@ const buildFilter = (filters: Record<string, string>) => {
         const trimmed = value.trim();
         if (!trimmed) return;
 
-        result[`${key}@ilike`] = `*${trimmed}*`;
+        // For date fields, use exact match (avoid ilike on timestamp columns)
+        if (key === 'Geburtsdatum' || key.toLowerCase().includes('datum')) {
+            result[key] = trimmed;
+        } else {
+            result[`${key}@ilike`] = `*${trimmed}*`;
+        }
     });
 
     return result;
@@ -32,7 +41,7 @@ const CustomerSearch = () => {
 
     const [nachname, setNachname] = useState('');
     const [vorname, setVorname] = useState('');
-    const [geburtsdatum, setGeburtsdatum] = useState('');
+    const [geburtsdatum, setGeburtsdatum] = useState<Dayjs | null>(null);
     const [kundennummer, setKundennummer] = useState('');
 
     const [attributes, setAttributes] = useState<string[]>([]);
@@ -65,7 +74,7 @@ const CustomerSearch = () => {
         const filter = buildFilter({
             Nachname: nachname,
             Vorname: vorname,
-            Geburtsdatum: geburtsdatum,
+            Geburtsdatum: geburtsdatum ? geburtsdatum.format('YYYY-MM-DD') : '',
             KundenNummer: kundennummer,
         });
 
@@ -94,7 +103,7 @@ const CustomerSearch = () => {
             state: {
                 Nachname: nachname,
                 Vorname: vorname,
-                Geburtsdatum: geburtsdatum,
+                Geburtsdatum: geburtsdatum ? geburtsdatum.format('YYYY-MM-DD') : '',
                 KundenNummer: kundennummer,
             },
         });
@@ -103,7 +112,7 @@ const CustomerSearch = () => {
     const handleReset = () => {
         setNachname('');
         setVorname('');
-        setGeburtsdatum('');
+        setGeburtsdatum(null);
         setKundennummer('');
         setSubmittedFilter({});
         setHasSearched(false);
@@ -144,11 +153,25 @@ const CustomerSearch = () => {
                 </FormControl>
 
                 <FormControl>
-                    <TextField
-                        label="Geburtsdatum"
-                        value={geburtsdatum}
-                        onChange={(e) => setGeburtsdatum(e.target.value)}
-                    />
+                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DatePicker
+                            label="Geburtsdatum"
+                            value={geburtsdatum}
+                            onChange={(value) => setGeburtsdatum(value)}
+                            format="YYYY-MM-DD"
+                            slotProps={{
+                                textField: {
+                                    variant: 'filled',
+                                    fullWidth: true,
+                                },
+                            }}
+                            sx={{
+                                '.MuiPickersInputBase-root': {
+                                    height: '48px'
+                                }
+                            }}
+                        />
+                    </LocalizationProvider>
                 </FormControl>
 
                 <FormControl>
