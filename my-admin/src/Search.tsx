@@ -54,8 +54,7 @@ const Search = () => {
                 <Tabs value={value} onChange={handleChange}>
                     <Tab label="Kunden suchen" {...a11yProps(0)}/>
                     <Tab label="Letzte Kunden" {...a11yProps(1)}/>
-                    <Tab label="Erweiterte Suche" {...a11yProps(2)}/>
-                    <Tab label="Expertensuche" {...a11yProps(3)}>
+                    <Tab label="Expertensuche" {...a11yProps(2)}>
                     </Tab>
                 </Tabs>
             </Box>
@@ -67,9 +66,6 @@ const Search = () => {
                     <LastCustomersSearched/>
                 </CustomTabPanel>
                 <CustomTabPanel value={value} index={2}>
-                    Erweiterte Suche
-                </CustomTabPanel>
-                <CustomTabPanel value={value} index={3}>
                     <ExpertSearch/>
                 </CustomTabPanel>
             </Card>
