@@ -8,6 +8,7 @@ import { useState } from 'react';
 
 import { Title } from 'react-admin';
 import ExpertSearch from './ExpertSearch';
+import CustomerSearch from './CustomerSearch';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -49,7 +50,6 @@ const Search = () => {
 
     return (
         <Box>
-            <Title title="Suche" />
             <Box>
                 <Tabs value={value} onChange={handleChange}>
                     <Tab label="Kunden suchen" {...a11yProps(0)}/>
@@ -61,7 +61,7 @@ const Search = () => {
             </Box>
             <Card>
                 <CustomTabPanel value={value} index={0}>
-                    Kunden suchen
+                    <CustomerSearch/>
                 </CustomTabPanel>
                 <CustomTabPanel value={value} index={1}>
                     Letzte Kunden
