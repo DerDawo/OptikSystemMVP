@@ -8,6 +8,8 @@ import {
     Select,
     SelectChangeEvent,
     TextField,
+    Theme,
+    useMediaQuery,
 } from '@mui/material';
 import {
     useResourceDefinitions,
@@ -115,6 +117,8 @@ const ExpertSearch = () => {
             resource.name !== 'kunde_leistet_zauzahlung_fuer_brille'
     );
 
+    const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+    
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1em' }}>
             <Title title="Expertensuche" />
@@ -123,7 +127,11 @@ const ExpertSearch = () => {
                 Hier können Sie eine Suche auf Basis der Tabellen der Datenbank und deren Spalten  durchführen.
             </Box>
 
-            <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '1em', alignItems: 'baseline' }}>
+            <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', 
+                gap: isMobile ? '.5em' : '1em', 
+                alignItems: 'baseline' }}>
                 <FormControl>
                     <InputLabel id="ressource-select-label-id">Tabelle</InputLabel>
                     <Select
@@ -184,7 +192,12 @@ const ExpertSearch = () => {
                 </FormControl>
             </Box>
 
-            <Box sx={{ display: 'flex', flexDirection: 'row', gap: '1em', justifyContent: 'flex-end' }}>
+            <Box sx={{ 
+                display: 'flex', 
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: '1em', 
+                justifyContent: isMobile ? 'stretch' : 'flex-end',
+            }}>
                 <Button variant="outlined" onClick={handleReset}>
                     Zurücksetzen
                 </Button>

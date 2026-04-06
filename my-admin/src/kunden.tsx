@@ -1,28 +1,35 @@
-import { DataTable, List, ReferenceManyField, Datagrid, useDataProvider, useShowController } from 'react-admin';
+import { DataTable, List, ReferenceManyField, Datagrid, useDataProvider, useShowController, ListActions } from 'react-admin';
 import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'react-admin';
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
-import { Box, Divider, Typography } from '@mui/material';
+import { Box, Divider, Theme, Typography, useMediaQuery } from '@mui/material';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const kundenFilter = [
+const kundenFilterDesktop = [
     <TextInput resettable source="Vorname@ilike" label="Vorname" alwaysOn />,
     <TextInput resettable source="Nachname@ilike" label="Nachname" alwaysOn />,
     <DateInput source="Geburtsdatum@ilike" label="Geburtsdatum" alwaysOn />,
     <TextInput resettable source="KundenNummer@ilike" label="Kundennummer" alwaysOn />,
 ];
+const kundenFilterMobile = [
+    <TextInput resettable source="Vorname@ilike" label="Vorname" />,
+    <TextInput resettable source="Nachname@ilike" label="Nachname" />,
+    <DateInput source="Geburtsdatum@ilike" label="Geburtsdatum" />,
+    <TextInput resettable source="KundenNummer@ilike" label="Kundennummer" />,
+];
 
 export const KundenList = () => {
-
+    const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
 
     return (
         <List
             className="list-page"
             title="Kunden"
             disableSyncWithLocation
-            filters={kundenFilter}
+            filters={isMobile ? kundenFilterMobile : kundenFilterDesktop}
+            actions={<ListActions isMobile={isMobile} />}
 
         >
             <DataTable>
@@ -76,7 +83,7 @@ export const KundeShow = () => {
             try {
                 dataProvider.update('kunde', {
                     'id': showObject.record.id,
-                    'data':{
+                    'data': {
                         'last_viewed_at': new Date().toISOString()
                     },
                     'previousData': showObject.record,

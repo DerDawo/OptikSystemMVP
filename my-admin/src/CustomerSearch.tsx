@@ -4,6 +4,8 @@ import {
     Divider,
     FormControl,
     TextField,
+    Theme,
+    useMediaQuery,
 } from '@mui/material';
 import {
     Title,
@@ -120,6 +122,8 @@ const CustomerSearch = () => {
         setIsSearching(false);
     };
 
+    const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1em' }}>
             <Title title="Kunden suchen" />
@@ -128,13 +132,11 @@ const CustomerSearch = () => {
                 Hier können Sie gezielt nach Kunden suchen oder wenn ein Kunde nicht existiert, diesen anlegen.
             </Box>
 
-            <Box
-                sx={{
-                    display: 'grid',
-                    gridTemplateColumns: '1fr 1fr 1fr 1fr',
-                    gap: '1em',
-                    alignItems: 'baseline',
-                }}
+            <Box sx={{ 
+                display: 'grid', 
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', 
+                gap: isMobile ? '.25em' : '1em', 
+                alignItems: 'baseline' }}
             >
                 <FormControl>
                     <TextField
@@ -153,6 +155,7 @@ const CustomerSearch = () => {
                 </FormControl>
 
                 <FormControl>
+
                     <LocalizationProvider dateAdapter={AdapterDayjs}>
                         <DatePicker
                             label="Geburtsdatum"
@@ -183,14 +186,12 @@ const CustomerSearch = () => {
                 </FormControl>
             </Box>
 
-            <Box
-                sx={{
-                    display: 'flex',
-                    flexDirection: 'row',
-                    gap: '1em',
-                    justifyContent: 'flex-end',
-                }}
-            >
+            <Box sx={{
+                display: 'flex',
+                flexDirection: isMobile ? 'column' : 'row',
+                gap: '1em',
+                justifyContent: isMobile ? 'stretch' : 'flex-end',
+            }}>
                 <Button variant="outlined" onClick={handleReset}>
                     Zurücksetzen
                 </Button>
