@@ -6,9 +6,9 @@ import {
 } from '@mui/material';
 import { useState } from 'react';
 
-import { Title } from 'react-admin';
 import ExpertSearch from './ExpertSearch';
 import CustomerSearch from './CustomerSearch';
+import LastCustomersSearched from './LastCustomersSearched';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -54,8 +54,7 @@ const Search = () => {
                 <Tabs value={value} onChange={handleChange}>
                     <Tab label="Kunden suchen" {...a11yProps(0)}/>
                     <Tab label="Letzte Kunden" {...a11yProps(1)}/>
-                    <Tab label="Erweiterte Suche" {...a11yProps(2)}/>
-                    <Tab label="Expertensuche" {...a11yProps(3)}>
+                    <Tab label="Expertensuche" {...a11yProps(2)}>
                     </Tab>
                 </Tabs>
             </Box>
@@ -64,12 +63,9 @@ const Search = () => {
                     <CustomerSearch/>
                 </CustomTabPanel>
                 <CustomTabPanel value={value} index={1}>
-                    Letzte Kunden
+                    <LastCustomersSearched/>
                 </CustomTabPanel>
                 <CustomTabPanel value={value} index={2}>
-                    Erweiterte Suche
-                </CustomTabPanel>
-                <CustomTabPanel value={value} index={3}>
                     <ExpertSearch/>
                 </CustomTabPanel>
             </Card>

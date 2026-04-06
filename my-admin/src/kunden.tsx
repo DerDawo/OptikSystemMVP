@@ -1,120 +1,154 @@
-import { DataTable, List, ReferenceManyField, Datagrid } from 'react-admin';
+import { DataTable, List, ReferenceManyField, Datagrid, useDataProvider, useShowController, ListActions } from 'react-admin';
 import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'react-admin';
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
-import { Box, Divider, Typography } from '@mui/material';
+import { Box, Divider, Theme, Typography, useMediaQuery } from '@mui/material';
+import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
-const kundenFilter = [
+const kundenFilterDesktop = [
     <TextInput resettable source="Vorname@ilike" label="Vorname" alwaysOn />,
-    <TextInput resettable source="Nachname@ilike" label="Nachname" alwaysOn/>,
-    <DateInput source="Geburtsdatum@ilike" label="Geburtsdatum" alwaysOn/>,
-    <TextInput resettable source="KundenNummer@ilike" label="Kundennummer" alwaysOn/>,
+    <TextInput resettable source="Nachname@ilike" label="Nachname" alwaysOn />,
+    <DateInput source="Geburtsdatum@ilike" label="Geburtsdatum" alwaysOn />,
+    <TextInput resettable source="KundenNummer@ilike" label="Kundennummer" alwaysOn />,
+];
+const kundenFilterMobile = [
+    <TextInput resettable source="Vorname@ilike" label="Vorname" />,
+    <TextInput resettable source="Nachname@ilike" label="Nachname" />,
+    <DateInput source="Geburtsdatum@ilike" label="Geburtsdatum" />,
+    <TextInput resettable source="KundenNummer@ilike" label="Kundennummer" />,
 ];
 
-export const KundenList = () => (
-    <List
-        className="list-page"
-        title="Kunden"
-        disableSyncWithLocation
-        filters={kundenFilter}
-    >
-        <DataTable>
-            <DataTable.Col source="id" />
-            <DataTable.Col label="Kunde">
-                <FunctionField render={record => {
-                    if (!record) return '';
-                    const anrede = record.Anrede ? record.Anrede : '';
-                    const nachname = record.Nachname ? record.Nachname : '';
-                    const vorname = record.Vorname ? record.Vorname : '';
-                    return `${anrede} ${vorname} ${nachname}`.trim();
-                }} />
-            </DataTable.Col>
-            <DataTable.Col label="Anschrift">
-                <FunctionField render={record => {
-                    if (!record) return '';
-                    const strasse = record.Straße ? record.Straße : '';
-                    const hausnummer = record.Hausnummer ? record.Hausnummer : '';
-                    const plz = record.Postleitzahl ? record.Postleitzahl : '';
-                    const stadt = record.Stadt ? record.Stadt : '';
-                    return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
-                }} />
-            </DataTable.Col>
-            <DataTable.Col source="KundenNummer" label="Kundennummer" />
-            <DataTable.Col source="created_at">
-                <DateField source="created_at" />
-            </DataTable.Col>
-            <DataTable.Col source="Aufnahmedatum">
-                <DateField source="Aufnahmedatum" />
-            </DataTable.Col>
-            <DataTable.Col source="Geburtsdatum">
-                <DateField source="Geburtsdatum" />
-            </DataTable.Col>
-            <DataTable.Col source="Geschlecht" />
-            <DataTable.Col source="Tätigkeit" />
-            <DataTable.Col source="TelefonnummerPrivat" />
-            <DataTable.Col source="TelefonnummerGeschaeftlich" />
-            <DataTable.Col source="Email" />
-            <DataTable.Col source="KrankenkassenNummer" />
-            <DataTable.Col source="VersichertenNummer" />
-            <DataTable.Col source="KrankenversicherungsTyp" />
-        </DataTable>
-    </List>
-);
+export const KundenList = () => {
+    const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
 
-export const KundeShow = () => (
-    <Show title="Kunden anzeigen">
-        <SimpleShowLayout>
-            <TextField source="id" />
-            <DateField source="created_at" />
-            <TextField source="KundenNummer" />
-            <DateField source="Aufnahmedatum" />
-            <TextField source="Anrede" />
-            <TextField source="Nachname" />
-            <TextField source="Vorname" />
-            <DateField source="Geburtsdatum" />
-            <TextField source="Geschlecht" />
-            <TextField source="Straße" />
-            <TextField source="Tätigkeit" />
-            <TextField source="TelefonnummerPrivat" />
-            <TextField source="Email" />
-            <TextField source="KrankenkassenNummer" />
-            <TextField source="VersichertenNummer" />
-            <TextField source="Postleitzahl" />
-            <TextField source="Hausnummer" />
-            <TextField source="Stadt" />
-            <TextField source="TelefonnummerGeschaeftlich" />
-            <TextField source="KrankenversicherungsTyp" />
-            <ReferenceManyField reference="brille" target="kunde_id" label="Brillen des Kunden">
-                <Datagrid>
-                    <TextField source="id" />
-                    <TextField source="BrillenArt" />
-                    <TextField source="Berater" />
-                    <TextField source="Refraktion" />
-                    <DateField source="Datum" />
-                    <TextField source="Werkstatt" />
-                    <DateField source="Abholung" />
-                    <TextField source="Notizen" />
-                    <ReferenceField source="GlasLinks" reference="glass" link="show">
+    return (
+        <List
+            className="list-page"
+            title="Kunden"
+            disableSyncWithLocation
+            filters={isMobile ? kundenFilterMobile : kundenFilterDesktop}
+            actions={<ListActions isMobile={isMobile} />}
+
+        >
+            <DataTable>
+                <DataTable.Col source="id" />
+                <DataTable.Col label="Kunde">
+                    <FunctionField render={record => {
+                        if (!record) return '';
+                        const anrede = record.Anrede ? record.Anrede : '';
+                        const nachname = record.Nachname ? record.Nachname : '';
+                        const vorname = record.Vorname ? record.Vorname : '';
+                        return `${anrede} ${vorname} ${nachname}`.trim();
+                    }} />
+                </DataTable.Col>
+                <DataTable.Col label="Anschrift">
+                    <FunctionField render={record => {
+                        if (!record) return '';
+                        const strasse = record.Straße ? record.Straße : '';
+                        const hausnummer = record.Hausnummer ? record.Hausnummer : '';
+                        const plz = record.Postleitzahl ? record.Postleitzahl : '';
+                        const stadt = record.Stadt ? record.Stadt : '';
+                        return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
+                    }} />
+                </DataTable.Col>
+                <DataTable.Col source="KundenNummer" label="Kundennummer" />
+                <DataTable.Col source="Aufnahmedatum">
+                    <DateField source="Aufnahmedatum" />
+                </DataTable.Col>
+                <DataTable.Col source="Geburtsdatum">
+                    <DateField source="Geburtsdatum" />
+                </DataTable.Col>
+                <DataTable.Col source="Geschlecht" />
+                <DataTable.Col source="Tätigkeit" />
+                <DataTable.Col source="TelefonnummerPrivat" />
+                <DataTable.Col source="TelefonnummerGeschaeftlich" />
+                <DataTable.Col source="Email" />
+                <DataTable.Col source="KrankenkassenNummer" />
+                <DataTable.Col source="VersichertenNummer" />
+                <DataTable.Col source="KrankenversicherungsTyp" />
+            </DataTable>
+        </List>
+    );
+}
+
+export const KundeShow = () => {
+
+    const showObject = useShowController();
+    const dataProvider = useDataProvider();
+
+    useEffect(() => {
+        if (showObject?.record?.id) {
+            try {
+                dataProvider.update('kunde', {
+                    'id': showObject.record.id,
+                    'data': {
+                        'last_viewed_at': new Date().toISOString()
+                    },
+                    'previousData': showObject.record,
+                },
+                );
+            } catch (error) {
+                console.error('Fehler beim Setzen last_viewed_at', error);
+            }
+        };
+
+    }, [showObject, dataProvider]);
+
+    return (
+        <Show title="Kunden anzeigen">
+            <SimpleShowLayout>
+                <TextField source="id" />
+                <DateField source="created_at" />
+                <TextField source="KundenNummer" />
+                <DateField source="Aufnahmedatum" />
+                <TextField source="Anrede" />
+                <TextField source="Nachname" />
+                <TextField source="Vorname" />
+                <DateField source="Geburtsdatum" />
+                <TextField source="Geschlecht" />
+                <TextField source="Straße" />
+                <TextField source="Tätigkeit" />
+                <TextField source="TelefonnummerPrivat" />
+                <TextField source="Email" />
+                <TextField source="KrankenkassenNummer" />
+                <TextField source="VersichertenNummer" />
+                <TextField source="Postleitzahl" />
+                <TextField source="Hausnummer" />
+                <TextField source="Stadt" />
+                <TextField source="TelefonnummerGeschaeftlich" />
+                <TextField source="KrankenversicherungsTyp" />
+                <ReferenceManyField reference="brille" target="kunde_id" label="Brillen des Kunden">
+                    <Datagrid>
                         <TextField source="id" />
-                    </ReferenceField>
-                    <ReferenceField source="GlasRechts" reference="glass" link="show">
-                        <TextField source="id" />
-                    </ReferenceField>
-                    <ReferenceField source="Fassung" reference="fassung" link="show">
-                        <TextField source="id" />
-                    </ReferenceField>
-                    <ReferenceField source="Glastyp" reference="glastyp" link="show">
-                        <TextField source="id" />
-                    </ReferenceField>
-                    <TextField source="RabattBezeichnung" />
-                    <TextField source="Summe" />
-                </Datagrid>
-            </ReferenceManyField>
-        </SimpleShowLayout>
-    </Show>
-);
+                        <TextField source="BrillenArt" />
+                        <TextField source="Berater" />
+                        <TextField source="Refraktion" />
+                        <DateField source="Datum" />
+                        <TextField source="Werkstatt" />
+                        <DateField source="Abholung" />
+                        <TextField source="Notizen" />
+                        <ReferenceField source="GlasLinks" reference="glass" link="show">
+                            <TextField source="id" />
+                        </ReferenceField>
+                        <ReferenceField source="GlasRechts" reference="glass" link="show">
+                            <TextField source="id" />
+                        </ReferenceField>
+                        <ReferenceField source="Fassung" reference="fassung" link="show">
+                            <TextField source="id" />
+                        </ReferenceField>
+                        <ReferenceField source="Glastyp" reference="glastyp" link="show">
+                            <TextField source="id" />
+                        </ReferenceField>
+                        <TextField source="RabattBezeichnung" />
+                        <TextField source="Summe" />
+                    </Datagrid>
+                </ReferenceManyField>
+            </SimpleShowLayout>
+        </Show>
+    );
+};
 
 export const KundeEdit = () => (
     <Edit title="Kunden bearbeiten">
