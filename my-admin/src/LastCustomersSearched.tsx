@@ -5,13 +5,11 @@ import {
     Title,
     useDataProvider,
     ListBase,
-    DataTable,
 } from 'react-admin';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { KundenDataTable } from './kunden';
 
 const LastCustomersSearched = () => {
-
-    const [attributes, setAttributes] = useState<string[]>([]);
 
     const dataProvider = useDataProvider();
 
@@ -24,11 +22,9 @@ const LastCustomersSearched = () => {
             })
             .then(({ data }) => {
                 console.log('Daten von getList', data);
-                setAttributes(data.length > 0 ? Object.keys(data[0]) : []);
             })
             .catch(error => {
                 console.error('Fehler getList', error);
-                setAttributes([]);
             });
     }, [dataProvider]);
 
@@ -42,18 +38,9 @@ const LastCustomersSearched = () => {
                     disableSyncWithLocation
                     storeKey={false}
                     sort={{ field: 'last_viewed_at', order: 'DESC' }}
+
                 >
-                    <DataTable>
-                        {attributes.map((col) => (
-                            <DataTable.Col
-                                key={col}
-                                source={col}
-                                label={col}
-                                disableSort
-                                
-                            />
-                        ))}
-                    </DataTable>
+                    <KundenDataTable bulkActionButtons={false} />
                 </ListBase>
             </Box>
         </Box>
