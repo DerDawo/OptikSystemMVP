@@ -20,8 +20,49 @@ const kundenFilterMobile = [
     <TextInput resettable source="KundenNummer@ilike" label="Kundennummer" />,
 ];
 
+export const KundenDataTable = (props:any) => (
+    <DataTable rowClick="show" {...props}>
+        <DataTable.Col source="id" />
+        <DataTable.Col label="Kunde">
+            <FunctionField render={record => {
+                if (!record) return '';
+                const anrede = record.Anrede ? record.Anrede : '';
+                const nachname = record.Nachname ? record.Nachname : '';
+                const vorname = record.Vorname ? record.Vorname : '';
+                return `${anrede} ${vorname} ${nachname}`.trim();
+            }} />
+        </DataTable.Col>
+        <DataTable.Col label="Anschrift">
+            <FunctionField render={record => {
+                if (!record) return '';
+                const strasse = record.Straße ? record.Straße : '';
+                const hausnummer = record.Hausnummer ? record.Hausnummer : '';
+                const plz = record.Postleitzahl ? record.Postleitzahl : '';
+                const stadt = record.Stadt ? record.Stadt : '';
+                return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
+            }} />
+        </DataTable.Col>
+        <DataTable.Col source="KundenNummer" label="Kundennummer" />
+        <DataTable.Col source="Aufnahmedatum">
+            <DateField source="Aufnahmedatum" />
+        </DataTable.Col>
+        <DataTable.Col source="Geburtsdatum">
+            <DateField source="Geburtsdatum" />
+        </DataTable.Col>
+        <DataTable.Col source="Geschlecht" />
+        <DataTable.Col source="Tätigkeit" />
+        <DataTable.Col source="TelefonnummerPrivat" label="Privat Telefonnummer" />
+        <DataTable.Col source="TelefonnummerGeschaeftlich" label="Geschäftliche Telefonnummer" />
+        <DataTable.Col source="Email" />
+        <DataTable.Col source="KrankenkassenNummer" label="Krankenkassennummer" />
+        <DataTable.Col source="VersichertenNummer" label="Versichertenummer" />
+        <DataTable.Col source="KrankenversicherungsTyp" label="Krankenversicherung" />
+    </DataTable>
+);
+
+
 export const KundenList = () => {
-    const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
+    const isMobile: boolean = useMediaQuery((theme: Theme) => theme.breakpoints.down('sm'));
 
     return (
         <List
@@ -30,45 +71,8 @@ export const KundenList = () => {
             disableSyncWithLocation
             filters={isMobile ? kundenFilterMobile : kundenFilterDesktop}
             actions={<ListActions isMobile={isMobile} />}
-
         >
-            <DataTable>
-                <DataTable.Col source="id" />
-                <DataTable.Col label="Kunde">
-                    <FunctionField render={record => {
-                        if (!record) return '';
-                        const anrede = record.Anrede ? record.Anrede : '';
-                        const nachname = record.Nachname ? record.Nachname : '';
-                        const vorname = record.Vorname ? record.Vorname : '';
-                        return `${anrede} ${vorname} ${nachname}`.trim();
-                    }} />
-                </DataTable.Col>
-                <DataTable.Col label="Anschrift">
-                    <FunctionField render={record => {
-                        if (!record) return '';
-                        const strasse = record.Straße ? record.Straße : '';
-                        const hausnummer = record.Hausnummer ? record.Hausnummer : '';
-                        const plz = record.Postleitzahl ? record.Postleitzahl : '';
-                        const stadt = record.Stadt ? record.Stadt : '';
-                        return `${strasse} ${hausnummer}, ${plz} ${stadt}`.trim();
-                    }} />
-                </DataTable.Col>
-                <DataTable.Col source="KundenNummer" label="Kundennummer" />
-                <DataTable.Col source="Aufnahmedatum">
-                    <DateField source="Aufnahmedatum" />
-                </DataTable.Col>
-                <DataTable.Col source="Geburtsdatum">
-                    <DateField source="Geburtsdatum" />
-                </DataTable.Col>
-                <DataTable.Col source="Geschlecht" />
-                <DataTable.Col source="Tätigkeit" />
-                <DataTable.Col source="TelefonnummerPrivat" />
-                <DataTable.Col source="TelefonnummerGeschaeftlich" />
-                <DataTable.Col source="Email" />
-                <DataTable.Col source="KrankenkassenNummer" />
-                <DataTable.Col source="VersichertenNummer" />
-                <DataTable.Col source="KrankenversicherungsTyp" />
-            </DataTable>
+            <KundenDataTable />
         </List>
     );
 }

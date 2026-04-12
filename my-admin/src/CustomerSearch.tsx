@@ -11,7 +11,6 @@ import {
     Title,
     useDataProvider,
     ListBase,
-    DataTable,
 } from 'react-admin';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +18,7 @@ import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { Dayjs } from 'dayjs';
+import { KundenDataTable } from './kunden';
 
 const buildFilter = (filters: Record<string, string>) => {
     const result: Record<string, any> = {};
@@ -46,7 +46,6 @@ const CustomerSearch = () => {
     const [geburtsdatum, setGeburtsdatum] = useState<Dayjs | null>(null);
     const [kundennummer, setKundennummer] = useState('');
 
-    const [attributes, setAttributes] = useState<string[]>([]);
     const [submittedFilter, setSubmittedFilter] = useState<Record<string, any>>({});
     const [hasSearched, setHasSearched] = useState(false);
     const [hasSearchResults, setHasSearchResults] = useState(false);
@@ -61,12 +60,8 @@ const CustomerSearch = () => {
                 sort: { field: 'id', order: 'ASC' },
                 filter: {},
             })
-            .then(({ data }) => {
-                setAttributes(data.length > 0 ? Object.keys(data[0]) : []);
-            })
             .catch(error => {
                 console.error('Fehler getList', error);
-                setAttributes([]);
             });
     }, [dataProvider, resource]);
 
@@ -132,11 +127,12 @@ const CustomerSearch = () => {
                 Hier können Sie gezielt nach Kunden suchen oder wenn ein Kunde nicht existiert, diesen anlegen.
             </Box>
 
-            <Box sx={{ 
-                display: 'grid', 
-                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr', 
-                gap: isMobile ? '.25em' : '1em', 
-                alignItems: 'baseline' }}
+            <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr 1fr',
+                gap: isMobile ? '.25em' : '1em',
+                alignItems: 'baseline'
+            }}
             >
                 <FormControl>
                     <TextField
@@ -225,16 +221,7 @@ const CustomerSearch = () => {
                         storeKey={false}
                         queryOptions={{ enabled: hasSearched }}
                     >
-                        <DataTable>
-                            {attributes.map((col) => (
-                                <DataTable.Col
-                                    key={col}
-                                    source={col}
-                                    label={col}
-                                    disableSort
-                                />
-                            ))}
-                        </DataTable>
+                        <KundenDataTable />
                     </ListBase>
                 ) : null}
             </Box>
