@@ -1,11 +1,11 @@
-import { DataTable, List, ReferenceManyField, Datagrid, useDataProvider, useShowController, ListActions } from 'react-admin';
+import { DataTable, List, ReferenceManyField, Datagrid, useDataProvider, useShowController, ListActions, useRecordContext } from 'react-admin';
 import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'react-admin';
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
-import { Box, Divider, Theme, Typography, useMediaQuery } from '@mui/material';
+import { Box, Button, Divider, Theme, Typography, useMediaQuery } from '@mui/material';
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const kundenFilterDesktop = [
     <TextInput resettable source="Vorname@ilike" label="Vorname" alwaysOn />,
@@ -19,6 +19,16 @@ const kundenFilterMobile = [
     <DateInput source="Geburtsdatum@ilike" label="Geburtsdatum" />,
     <TextInput resettable source="KundenNummer@ilike" label="Kundennummer" />,
 ];
+const MessageButton = () => {
+    const record = useRecordContext();
+    const navigate = useNavigate();
+
+    return (
+        <Button onClick={() => navigate(`/kunde/${record.id}/message`)}>
+            Nachricht senden
+        </Button>
+    );
+};
 
 export const KundenDataTable = (props:any) => (
     <DataTable rowClick="show" {...props}>
@@ -103,6 +113,7 @@ export const KundeShow = () => {
     return (
         <Show title="Kunden anzeigen">
             <SimpleShowLayout>
+                <MessageButton record={undefined} />
                 <TextField source="id" />
                 <DateField source="created_at" />
                 <TextField source="KundenNummer" />
@@ -147,12 +158,15 @@ export const KundeShow = () => {
                         </ReferenceField>
                         <TextField source="RabattBezeichnung" />
                         <TextField source="Summe" />
+
                     </Datagrid>
                 </ReferenceManyField>
             </SimpleShowLayout>
         </Show>
     );
 };
+
+
 
 export const KundeEdit = () => (
     <Edit title="Kunden bearbeiten">
