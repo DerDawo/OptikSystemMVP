@@ -276,3 +276,11 @@ export const KundeCreate = () => {
         </Create>
     );
 }
+
+import { useParams } from 'react-router-dom';
+
+export const KundeMessage = () => {
+    const { id } = useParams();
+
+    return <div>Send message to Kunde {id}</div>;
+};
