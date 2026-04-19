@@ -4,7 +4,7 @@ import { theme } from "./theme";
 import { dataProvider } from './dataProvider';
 import { MyLayout } from './MyLayout';
 // import { authProvider } from './authProvider';
-import { KundenList, KundeShow, KundeEdit, KundeCreate } from "./kunden";
+import { KundenList, KundeShow, KundeEdit, KundeCreate, KundeMessage } from "./kunden";
 import { BrilleList, BrilleShow, BrilleEdit, BrilleCreate } from "./brillen";
 import { GlassList, GlassShow, GlassEdit, GlassCreate } from "./glass";
 import { GlastypList, GlastypShow, GlastypEdit, GlastypCreate } from "./glasstyp";
@@ -36,7 +36,9 @@ export const App = () => {
       <Resource name="zusatzleistung" list={ZusatzleistungList} show={ZusatzleistungShow} edit={ZusatzleistungEdit} create={ZusatzleistungCreate} />
       <CustomRoutes>
         <Route path="/search" element={<Search />} />
+        <Route path="/kunde/:id/message" element={<KundeMessage />} />
       </CustomRoutes>
+
     </Admin>
   )
 }
