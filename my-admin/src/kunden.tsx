@@ -3,7 +3,7 @@ import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'rea
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
-import { Box, Button, Divider, Theme, Typography, useMediaQuery } from '@mui/material';
+import { Box, Button, Card, Checkbox, Divider, FormControlLabel, ListItem, ListItemButton, ListItemText, Theme, Typography, useMediaQuery } from '@mui/material';
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -24,13 +24,13 @@ const MessageButton = () => {
     const navigate = useNavigate();
 
     return (
-        <Button onClick={() => navigate(`/kunde/${record.id}/message`)}>
+        <Button variant='contained' onClick={() => navigate(`/kunde/${record.id}/message`)}>
             Nachricht senden
         </Button>
     );
 };
 
-export const KundenDataTable = (props:any) => (
+export const KundenDataTable = (props: any) => (
     <DataTable rowClick="show" {...props}>
         <DataTable.Col source="id" />
         <DataTable.Col label="Kunde">
@@ -113,7 +113,7 @@ export const KundeShow = () => {
     return (
         <Show title="Kunden anzeigen">
             <SimpleShowLayout>
-                <MessageButton record={undefined} />
+                <MessageButton />
                 <TextField source="id" />
                 <DateField source="created_at" />
                 <TextField source="KundenNummer" />
@@ -294,7 +294,84 @@ export const KundeCreate = () => {
 import { useParams } from 'react-router-dom';
 
 export const KundeMessage = () => {
-    const { id } = useParams();
+    const record = useRecordContext();
+    const recordId = useParams().id;
+    const navigate = useNavigate();
+    const recordName = record ? `${record.Vorname} ${record.Nachname}` : `ID ${recordId}`;
 
-    return <div>Send message to Kunde {id}</div>;
+    return (
+        <Box>
+            <Box sx={{margin: '1em'}}></Box>
+            <Card sx={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gridTemplateRows: '1fr 1fr',
+                gap: '1em',
+                padding: '1em',
+                marginBottom: '1em',
+                maxHeight: '60vh',
+            }}>
+                <Box sx={{
+                    gridColumn: '1 / 2',
+                }}>
+                    <Typography variant='subtitle2'>
+                        Nachricht auswählen
+                    </Typography>
+
+                    <ListItem>
+                        <ListItemButton >
+                            <ListItemText primary="Brille fertig" />
+                        </ListItemButton>
+                    </ListItem>
+                    <ListItem>
+                        <ListItemButton >
+                            <ListItemText primary="Zahlung ausstehend" />
+                        </ListItemButton>
+                    </ListItem>
+                </Box>
+                <Card sx={{
+                    gridRow: '1 / 3',
+                    gridColumn: '2 / 3',
+                }}>
+
+                </Card>
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gridColumn: '1 / 2',
+                    gridRow: '2 / 3',
+                }}>
+                    <Typography variant='subtitle2'>
+                        Nachrichtenkanäle auswählen
+                    </Typography>
+                    <FormControlLabel
+                        label="SMS"
+                        control={<Checkbox />}
+                    />
+                    <FormControlLabel
+                        label="Whatsapp"
+                        control={<Checkbox />}
+                    />
+                    <FormControlLabel
+                        label="Email"
+                        control={<Checkbox />}
+                    />
+                    
+
+                </Box>
+            </Card>
+            <Box sx={{
+                display: 'flex',
+                gap: '1em',
+                justifyContent: 'flex-end',
+            }}>
+                <Button variant='outlined' onClick={() => navigate(`/kunde/${recordId}/show`)}>
+                    Abbrechen
+                </Button>
+                <Button variant='contained' onClick={() => (console.log(`Nachricht an Kunde senden`))}>
+                    Nachricht senden
+                </Button>
+            </Box>
+        </Box>
+    );
 };
