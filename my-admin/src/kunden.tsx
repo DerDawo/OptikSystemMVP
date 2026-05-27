@@ -3,9 +3,182 @@ import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'rea
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
-import { Box, Button, Divider, Theme, Typography, useMediaQuery } from '@mui/material';
-import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { Box, Button, Card, Checkbox, Divider, FormControlLabel, ListItem, ListItemButton, ListItemText, Theme, Typography, useMediaQuery } from '@mui/material';
+import { useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import { supabase } from './utils';
+
+type NachrichtRecord = Record<string, unknown> & {
+    _rowKey: string;
+    id?: string | number;
+};
+
+type KundeMessageSource = Partial<Record<string, unknown>>;
+
+type KundeMessageRouteState = {
+    kunde?: KundeMessageSource;
+};
+
+type KundeMessageCustomer = {
+    id: string;
+    anrede: string;
+    vorname: string;
+    nachname: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    phoneNumberPrivate: string;
+    phoneNumberBusiness: string;
+};
+
+const messageTitleFields = ['titel', 'title', 'name', 'bezeichnung', 'betreff', 'subject', 'ueberschrift', 'headline'];
+const messageContentFields = ['content', 'inhalt', 'text', 'nachricht', 'message', 'body', 'beschreibung', 'vorlage', 'template'];
+const ignoredMessageFields = new Set(['_rowkey', 'id', 'created_at', 'updated_at']);
+
+const getMessageFieldValue = (record: Record<string, unknown>, candidateFields: string[]) => {
+    const entries = Object.entries(record);
+
+    for (const fieldName of candidateFields) {
+        const match = entries.find(([key]) => key.toLowerCase() === fieldName.toLowerCase());
+
+        if (!match) {
+            continue;
+        }
+
+        const [, value] = match;
+
+        if (typeof value === 'string' && value.trim()) {
+            return value.trim();
+        }
+
+        if (typeof value === 'number' || typeof value === 'boolean') {
+            return String(value);
+        }
+    }
+
+    return null;
+};
+
+const getMessageContent = (record: NachrichtRecord) => {
+    const preferredContent = getMessageFieldValue(record, messageContentFields);
+
+    if (preferredContent) {
+        return preferredContent;
+    }
+
+    const fallbackContent = Object.entries(record)
+        .filter(([key, value]) => !ignoredMessageFields.has(key.toLowerCase()) && value !== null && value !== undefined && String(value).trim() !== '')
+        .map(([key, value]) => `${key}: ${String(value).trim()}`)
+        .join('\n');
+
+    return fallbackContent || 'Kein Nachrichteninhalt vorhanden.';
+};
+
+const getMessageTitle = (record: NachrichtRecord) => {
+    const preferredTitle = getMessageFieldValue(record, messageTitleFields);
+
+    if (preferredTitle) {
+        return preferredTitle;
+    }
+
+    const firstLine = getMessageContent(record).split(/\r?\n/, 1)[0]?.trim();
+
+    if (!firstLine) {
+        return `Nachricht ${record.id ?? record._rowKey}`;
+    }
+
+    return firstLine.length > 60 ? `${firstLine.slice(0, 57)}...` : firstLine;
+};
+
+const toTextValue = (value: unknown) => {
+    if (typeof value === 'string') {
+        return value.trim();
+    }
+
+    if (typeof value === 'number') {
+        return String(value);
+    }
+
+    return '';
+};
+
+const getCustomerSourceValue = (source: KundeMessageSource | undefined, candidateKeys: string[]) => {
+    if (!source) {
+        return '';
+    }
+
+    for (const key of candidateKeys) {
+        const value = source[key];
+
+        if (value === null || value === undefined) {
+            continue;
+        }
+
+        const textValue = toTextValue(value);
+
+        if (textValue) {
+            return textValue;
+        }
+    }
+
+    return '';
+};
+
+const normalizeKundeMessageCustomer = (source: KundeMessageSource | undefined, fallbackId = ''): KundeMessageCustomer => {
+    const id = getCustomerSourceValue(source, ['id', 'Id']) || fallbackId;
+    const anrede = getCustomerSourceValue(source, ['Anrede', 'anrede']);
+    const vorname = getCustomerSourceValue(source, ['Vorname', 'vorname', 'name']);
+    const nachname = getCustomerSourceValue(source, ['Nachname', 'nachname', 'lastname']);
+    const email = getCustomerSourceValue(source, ['Email', 'email', 'mail']);
+    const phoneNumberPrivate = getCustomerSourceValue(source, ['TelefonnummerPrivat', 'telefonnummerPrivat', 'telefonnummerprivat', 'phoneNumberPrivate']);
+    const phoneNumberBusiness = getCustomerSourceValue(source, ['TelefonnummerGeschaeftlich', 'telefonnummerGeschaeftlich', 'telefonnummergeschaeftlich', 'phoneNumberBusiness']);
+    const phoneNumber = phoneNumberPrivate || phoneNumberBusiness;
+    const fullName = [vorname, nachname].filter(Boolean).join(' ').trim();
+
+    return {
+        id,
+        anrede,
+        vorname,
+        nachname,
+        fullName,
+        email,
+        phoneNumber,
+        phoneNumberPrivate,
+        phoneNumberBusiness,
+    };
+};
+
+const createMessageMergeValues = (customer: KundeMessageCustomer): Record<string, string> => ({
+    anrede: customer.anrede,
+    vorname: customer.vorname,
+    firstname: customer.vorname,
+    nachname: customer.nachname,
+    lastname: customer.nachname,
+    name: customer.fullName,
+    fullname: customer.fullName,
+    email: customer.email,
+    telefon: customer.phoneNumber,
+    telefonnummer: customer.phoneNumber,
+    phone: customer.phoneNumber,
+    phonenumber: customer.phoneNumber,
+    sms: customer.phoneNumber,
+    whatsapp: customer.phoneNumber,
+    kundeid: customer.id,
+    kundenid: customer.id,
+});
+
+const renderMessageTemplate = (template: string, customer: KundeMessageCustomer) => {
+    const mergeValues = createMessageMergeValues(customer);
+    const replaceToken = (_match: string, token: string) => mergeValues[token.trim().toLowerCase()] ?? '';
+
+    return template
+        .replace(/\{\{\s*([^{}[\]]+?)\s*\}\}/g, replaceToken)
+        .replace(/\[\[\s*([^{}[\]]+?)\s*\]\]/g, replaceToken)
+        .replace(/\{\s*([^{}[\]]+?)\s*\}/g, replaceToken)
+        .replace(/\[\s*([^{}[\]]+?)\s*\]/g, replaceToken)
+        .replace(/\{\s*([^{}[\]]+?)\s*\]/g, replaceToken)
+        .replace(/\[\s*([^{}[\]]+?)\s*\}/g, replaceToken);
+};
 
 const kundenFilterDesktop = [
     <TextInput resettable source="Vorname@ilike" label="Vorname" alwaysOn />,
@@ -23,14 +196,30 @@ const MessageButton = () => {
     const record = useRecordContext();
     const navigate = useNavigate();
 
+    if (!record) {
+        return null;
+    }
+
+    const routeState: KundeMessageRouteState = {
+        kunde: {
+            id: record.id,
+            Anrede: record.Anrede,
+            Vorname: record.Vorname,
+            Nachname: record.Nachname,
+            Email: record.Email,
+            TelefonnummerPrivat: record.TelefonnummerPrivat,
+            TelefonnummerGeschaeftlich: record.TelefonnummerGeschaeftlich,
+        },
+    };
+
     return (
-        <Button onClick={() => navigate(`/kunde/${record.id}/message`)}>
+        <Button variant='contained' onClick={() => navigate(`/kunde/${record.id}/message`, { state: routeState })}>
             Nachricht senden
         </Button>
     );
 };
 
-export const KundenDataTable = (props:any) => (
+export const KundenDataTable = (props: any) => (
     <DataTable rowClick="show" {...props}>
         <DataTable.Col source="id" />
         <DataTable.Col label="Kunde">
@@ -113,7 +302,7 @@ export const KundeShow = () => {
     return (
         <Show title="Kunden anzeigen">
             <SimpleShowLayout>
-                <MessageButton record={undefined} />
+                <MessageButton />
                 <TextField source="id" />
                 <DateField source="created_at" />
                 <TextField source="KundenNummer" />
@@ -165,8 +354,6 @@ export const KundeShow = () => {
         </Show>
     );
 };
-
-
 
 export const KundeEdit = () => (
     <Edit title="Kunden bearbeiten">
@@ -291,10 +478,293 @@ export const KundeCreate = () => {
     );
 }
 
-import { useParams } from 'react-router-dom';
-
 export const KundeMessage = () => {
-    const { id } = useParams();
+    const recordId = useParams().id ?? '';
+    const location = useLocation();
+    const navigate = useNavigate();
+    const routeState = (location.state as KundeMessageRouteState | null) ?? null;
+    const [messages, setMessages] = useState<NachrichtRecord[]>([]);
+    const [selectedMessageKey, setSelectedMessageKey] = useState<string | null>(null);
+    const [isLoadingMessages, setIsLoadingMessages] = useState(true);
+    const [messageError, setMessageError] = useState<string | null>(null);
+    const [customer, setCustomer] = useState<KundeMessageCustomer | null>(() => (
+        routeState?.kunde ? normalizeKundeMessageCustomer(routeState.kunde, recordId) : null
+    ));
+    const [isLoadingCustomer, setIsLoadingCustomer] = useState(!routeState?.kunde);
+    const [customerError, setCustomerError] = useState<string | null>(null);
 
-    return <div>Send message to Kunde {id}</div>;
+    useEffect(() => {
+        let isActive = true;
+
+        const loadMessages = async () => {
+            setIsLoadingMessages(true);
+            setMessageError(null);
+
+            const { data, error } = await supabase
+                .from('nachrichten')
+                .select('*');
+
+            if (!isActive) {
+                return;
+            }
+
+            if (error) {
+                console.error('Fehler beim Laden der Nachrichten', error);
+                setMessages([]);
+                setSelectedMessageKey(null);
+                setMessageError('Nachrichten konnten nicht geladen werden.');
+                setIsLoadingMessages(false);
+                return;
+            }
+
+            const nextMessages = (Array.isArray(data) ? data : [])
+                .map((entry, index) => {
+                    const record = (entry ?? {}) as Record<string, unknown>;
+                    const id = typeof record.id === 'string' || typeof record.id === 'number' ? record.id : undefined;
+
+                    return {
+                        ...record,
+                        id,
+                        _rowKey: id !== undefined ? String(id) : `nachricht-${index}`,
+                    };
+                })
+                .sort((left, right) => {
+                    if (typeof left.id === 'number' && typeof right.id === 'number') {
+                        return left.id - right.id;
+                    }
+
+                    if (typeof left.id === 'string' && typeof right.id === 'string') {
+                        return left.id.localeCompare(right.id);
+                    }
+
+                    return left._rowKey.localeCompare(right._rowKey);
+                });
+
+            setMessages(nextMessages);
+            setSelectedMessageKey(previousKey => (
+                previousKey && nextMessages.some(message => message._rowKey === previousKey)
+                    ? previousKey
+                    : nextMessages[0]?._rowKey ?? null
+            ));
+            setIsLoadingMessages(false);
+        };
+
+        void loadMessages();
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    const selectedMessage = messages.find(message => message._rowKey === selectedMessageKey) ?? null;
+    const fallbackCustomer = normalizeKundeMessageCustomer({ id: recordId }, recordId);
+
+    useEffect(() => {
+        const routeCustomer = routeState?.kunde;
+
+        if (routeCustomer) {
+            setCustomer(normalizeKundeMessageCustomer(routeCustomer, recordId));
+            setCustomerError(null);
+            setIsLoadingCustomer(false);
+            return;
+        }
+
+        if (!recordId) {
+            setCustomer(null);
+            setCustomerError('Keine Kundennummer vorhanden.');
+            setIsLoadingCustomer(false);
+            return;
+        }
+
+        let isActive = true;
+
+        const loadCustomer = async () => {
+            setIsLoadingCustomer(true);
+            setCustomerError(null);
+
+            const { data, error } = await supabase
+                .from('kunde')
+                .select('id, Anrede, Vorname, Nachname, Email, TelefonnummerPrivat, TelefonnummerGeschaeftlich')
+                .eq('id', recordId)
+                .maybeSingle();
+
+            if (!isActive) {
+                return;
+            }
+
+            if (error || !data) {
+                console.error('Fehler beim Laden der Kundendaten', error);
+                setCustomer(null);
+                setCustomerError('Kundendaten konnten nicht geladen werden.');
+                setIsLoadingCustomer(false);
+                return;
+            }
+
+            setCustomer(normalizeKundeMessageCustomer(data, recordId));
+            setIsLoadingCustomer(false);
+        };
+
+        void loadCustomer();
+
+        return () => {
+            isActive = false;
+        };
+    }, [recordId, routeState]);
+
+    const messageCustomer = customer ?? fallbackCustomer;
+    const renderedMessageTitle = selectedMessage ? renderMessageTemplate(getMessageTitle(selectedMessage), messageCustomer) : '';
+    const renderedMessageContent = selectedMessage ? renderMessageTemplate(getMessageContent(selectedMessage), messageCustomer) : '';
+    const recipientName = [messageCustomer.anrede, messageCustomer.vorname, messageCustomer.nachname].filter(Boolean).join(' ').trim() || `ID ${recordId}`;
+    const deliveryTargets = {
+        sms: messageCustomer.phoneNumber,
+        whatsapp: messageCustomer.phoneNumber,
+        email: messageCustomer.email,
+    };
+    const draftMessage = {
+        kundeId: messageCustomer.id || recordId,
+        recipient: messageCustomer,
+        targets: deliveryTargets,
+        title: renderedMessageTitle,
+        content: renderedMessageContent,
+    };
+
+    return (
+        <Box>
+            <Box sx={{ margin: '1em' }}></Box>
+            <Card sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                gridTemplateRows: { xs: 'auto auto auto', md: '1fr 1fr' },
+                gap: '1em',
+                padding: '1em',
+                marginBottom: '1em',
+                minHeight: { md: '60vh' },
+            }}>
+                <Box sx={{
+                    gridColumn: '1 / 2',
+                    minHeight: 0,
+                    overflowY: 'auto',
+                }}>
+                    <Typography variant='subtitle2'>
+                        Nachricht auswählen
+                    </Typography>
+
+                    {isLoadingMessages ? (
+                        <Typography sx={{ mt: 2 }}>
+                            Lade Nachrichten...
+                        </Typography>
+                    ) : null}
+                    {!isLoadingMessages && messageError ? (
+                        <Typography color='error' sx={{ mt: 2 }}>
+                            {messageError}
+                        </Typography>
+                    ) : null}
+                    {!isLoadingMessages && !messageError && messages.length === 0 ? (
+                        <Typography sx={{ mt: 2 }}>
+                            Keine Nachrichten gefunden.
+                        </Typography>
+                    ) : null}
+                    {!isLoadingMessages && !messageError ? messages.map(message => {
+                        const messageTitle = getMessageTitle(message);
+                        const messageContent = getMessageContent(message);
+
+                        return (
+                            <ListItem key={message._rowKey} disablePadding>
+                                <ListItemButton
+                                    selected={selectedMessageKey === message._rowKey}
+                                    onClick={() => setSelectedMessageKey(message._rowKey)}
+                                >
+                                    <ListItemText
+                                        primary={messageTitle}
+                                        primaryTypographyProps={{ noWrap: true }}
+                                        secondary={messageTitle === messageContent ? undefined : messageContent}
+                                        secondaryTypographyProps={{ noWrap: true }}
+                                    />
+                                </ListItemButton>
+                            </ListItem>
+                        );
+                    }) : null}
+                </Box>
+                <Card sx={{
+                    gridRow: { xs: '2 / 3', md: '1 / 3' },
+                    gridColumn: { xs: '1 / 2', md: '2 / 3' },
+                    padding: '1em',
+                    overflowY: 'auto',
+                    minHeight: { xs: '16rem', md: 'auto' },
+                }}>
+                    <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                        Vorschau
+                    </Typography>
+                    {isLoadingCustomer ? (
+                        <Typography sx={{ mb: 2 }}>
+                            Lade Kundendaten...
+                        </Typography>
+                    ) : null}
+                    {customerError ? (
+                        <Typography color='error' sx={{ mb: 2 }}>
+                            {customerError}
+                        </Typography>
+                    ) : null}
+                    <Typography sx={{ color: 'text.secondary' }}>
+                        Empfaenger: {recipientName}
+                    </Typography>
+                    <Typography sx={{ color: 'text.secondary' }}>
+                        Email: {messageCustomer.email || 'nicht vorhanden'}
+                    </Typography>
+                    <Typography sx={{ color: 'text.secondary' }}>
+                        Telefonnummer: {messageCustomer.phoneNumber || 'nicht vorhanden'}
+                    </Typography>
+                    <Divider sx={{ my: 2 }} />
+                    {selectedMessage ? (
+                        <>
+                            <Typography variant='h6' sx={{ mb: 1 }}>
+                                {renderedMessageTitle}
+                            </Typography>
+                            <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                                {renderedMessageContent}
+                            </Typography>
+                        </>
+                    ) : (
+                        <Typography sx={{ color: 'text.secondary' }}>
+                            Waehle eine Nachricht aus, um den Inhalt zu sehen.
+                        </Typography>
+                    )}
+                </Card>
+                <Box sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gridColumn: '1 / 2',
+                    gridRow: { xs: '3 / 4', md: '2 / 3' },
+                }}>
+                    <Typography variant='subtitle2'>
+                        Nachrichtenkanäle auswählen
+                    </Typography>
+                    <FormControlLabel
+                        label={deliveryTargets.sms ? `SMS an ${deliveryTargets.sms}` : 'SMS: keine Telefonnummer vorhanden'}
+                        control={<Checkbox disabled={!deliveryTargets.sms} />}
+                    />
+                    <FormControlLabel
+                        label={deliveryTargets.whatsapp ? `Whatsapp an ${deliveryTargets.whatsapp}` : 'Whatsapp: keine Telefonnummer vorhanden'}
+                        control={<Checkbox disabled={!deliveryTargets.whatsapp} />}
+                    />
+                    <FormControlLabel
+                        label={deliveryTargets.email ? `Email an ${deliveryTargets.email}` : 'Email: keine Email vorhanden'}
+                        control={<Checkbox disabled={!deliveryTargets.email} />}
+                    />
+                </Box>
+            </Card>
+            <Box sx={{
+                display: 'flex',
+                gap: '1em',
+                justifyContent: 'flex-end',
+            }}>
+                <Button variant='outlined' onClick={() => navigate(`/kunde/${recordId}/show`)}>
+                    Abbrechen
+                </Button>
+                <Button variant='contained' onClick={() => (console.log('Nachrichtenentwurf', draftMessage))}>
+                    Nachricht senden
+                </Button>
+            </Box>
+        </Box>
+    );
 };
