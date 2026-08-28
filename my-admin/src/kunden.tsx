@@ -459,78 +459,52 @@ export const KundeCreate = () => {
             transform={data => ({ ...data, created_at: new Date().toISOString() })}
         >
             <SimpleForm defaultValues={defaultValues}>
-                <Typography>
-                    Datenbankfelder
-                </Typography>
-                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                <FormSection title="Datenbankfelder">
+                    <FieldRow>
                         <TextInput source="id" InputProps={{ disabled: true }} />
-                    </Box>
-                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
                         <DateInput source="created_at" InputProps={{ disabled: true }} label="Erstellt am" />
-                    </Box>
-                </Box>
-                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    </FieldRow>
+                    <FieldRow>
                         <TextInput source="KundenNummer" />
-                    </Box>
-                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
                         <DateInput source="Aufnahmedatum" />
-                    </Box>
-                </Box>
-                <Typography>
-                    Stammdaten
-                </Typography>
-                <TextInput source="Anrede" />
-                <TextInput source="Nachname" />
-                <TextInput source="Vorname" />
-                <TextInput source="Geschlecht" />
-                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    </FieldRow>
+                </FormSection>
+                <FormSection title="Stammdaten">
+                    <FieldRow>
+                        <TextInput source="Anrede" />
+                        <TextInput source="Nachname" />
+                        <TextInput source="Vorname" />
+                    </FieldRow>
+                    <FieldRow>
+                        <TextInput source="Geschlecht" />
                         <DateInput source="Geburtsdatum" />
-                    </Box>
-                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
                         <TextInput source="Tätigkeit" />
-                    </Box>
-                </Box>
-                <Divider />
-                <Typography>
-                    Adresse
-                </Typography>
-                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    </FieldRow>
+                </FormSection>
+                <FormSection title="Adresse">
+                    <FieldRow>
                         <TextInput source="Straße" />
-                    </Box>
-                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
                         <TextInput source="Hausnummer" />
-                    </Box>
-                </Box>
-                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    </FieldRow>
+                    <FieldRow>
                         <TextInput source="Postleitzahl" />
-                    </Box>
-                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
                         <TextInput source="Stadt" />
-                    </Box>
-                </Box>
-                <Divider />
-                <Typography>
-                    Kontakt
-                </Typography>
-                <Box sx={{ display: { xs: 'block', sm: 'flex', width: '100%' } }}>
-                    <Box sx={{ flex: 1, mr: { xs: 0, sm: '0.5em' } }}>
+                    </FieldRow>
+                </FormSection>
+                <FormSection title="Kontakt">
+                    <FieldRow>
                         <TextInput source="TelefonnummerPrivat" label="Telefonnummer Privat" />
-                    </Box>
-                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
                         <TextInput source="TelefonnummerGeschaeftlich" label="Telefonnummer Geschäftlich" />
-                    </Box>
-                    <Box sx={{ flex: 1, ml: { xs: 0, sm: '0.5em' } }}>
                         <TextInput source="Email" />
-                    </Box>
-                </Box>
-                <TextInput source="KrankenkassenNummer" label="Krankenkassennummer" />
-                <TextInput source="VersichertenNummer" label="Versichertennummer" />
-                <TextInput source="KrankenversicherungsTyp" label="Krankenversicherungs Typ" />
+                    </FieldRow>
+                </FormSection>
+                <FormSection title="Versicherung">
+                    <FieldRow>
+                        <TextInput source="KrankenkassenNummer" label="Krankenkassennummer" />
+                        <TextInput source="VersichertenNummer" label="Versichertennummer" />
+                        <TextInput source="KrankenversicherungsTyp" label="Krankenversicherungs Typ" />
+                    </FieldRow>
+                </FormSection>
             </SimpleForm>
         </Create>
     );

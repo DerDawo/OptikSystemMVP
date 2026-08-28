@@ -54,12 +54,16 @@ export const Brille_hat_zusatzleistungenEdit = () => (
 export const Brille_hat_zusatzleistungenCreate = () => (
     <Create>
         <SimpleForm>
-            <ReferenceInput source="BrillenID" reference="brille">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <ReferenceInput source="ZusatzleistungID" reference="zusatzleistung">
-                <SelectInput optionText="Bezeichnung" />
-            </ReferenceInput>
+            <FormSection title="Zuordnung">
+                <FieldRow>
+                    <ReferenceInput source="BrillenID" reference="brille">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                    <ReferenceInput source="ZusatzleistungID" reference="zusatzleistung">
+                        <SelectInput optionText="Bezeichnung" />
+                    </ReferenceInput>
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Create>
 );
