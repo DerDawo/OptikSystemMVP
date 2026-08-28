@@ -139,22 +139,40 @@ export const GlassEdit = () => (
 export const GlassCreate = () => (
     <Create>
         <SimpleForm>
-            <TextInput source="id" />
-            <DateInput source="created_at" />
-            <NumberInput source="Sph" />
-            <NumberInput source="Cyl" />
-            <NumberInput source="A" />
-            <NumberInput source="PD" />
-            <NumberInput source="Add" />
-            <NumberInput source="y_h" />
-            <NumberInput source="Pr" />
-            <NumberInput source="B" />
-            <NumberInput source="HSA" />
-            <NumberInput source="Vis" />
-            <NumberInput source="iod" />
-            <BooleanInput source="Liefern" />
-            <NumberInput source="Betrag" />
-            <TextInput source="Seite" />
+            <FormSection title="Datenbankfelder">
+                <FieldRow>
+                    <TextInput source="id" />
+                    <DateInput source="created_at" />
+                    <TextInput source="Seite" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Optische Werte">
+                <FieldRow>
+                    <NumberInput source="Sph" />
+                    <NumberInput source="Cyl" />
+                    <NumberInput source="A" />
+                </FieldRow>
+                <FieldRow>
+                    <NumberInput source="PD" />
+                    <NumberInput source="Add" />
+                    <NumberInput source="y_h" />
+                </FieldRow>
+                <FieldRow>
+                    <NumberInput source="Pr" />
+                    <NumberInput source="B" />
+                    <NumberInput source="HSA" />
+                </FieldRow>
+                <FieldRow>
+                    <NumberInput source="Vis" />
+                    <NumberInput source="iod" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Bestellung">
+                <FieldRow>
+                    <BooleanInput source="Liefern" />
+                    <NumberInput source="Betrag" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Create>
 );

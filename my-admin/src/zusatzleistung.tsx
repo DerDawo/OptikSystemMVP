@@ -50,8 +50,12 @@ export const ZusatzleistungEdit = () => (
 export const ZusatzleistungCreate = () => (
     <Create>
         <SimpleForm>
-            <TextInput source="Bezeichnung" />
-            <NumberInput source="Betrag" />
+            <FormSection title="Details">
+                <FieldRow>
+                    <TextInput source="Bezeichnung" />
+                    <NumberInput source="Betrag" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Create>
 );

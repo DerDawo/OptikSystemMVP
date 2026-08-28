@@ -76,13 +76,21 @@ export const FassungEdit = () => (
 export const FassungCreate = () => (
     <Create>
         <SimpleForm>
-            <TextInput source="Lagernummer" />
-            <TextInput source="Bezeichnung" />
-            <TextInput source="Linie" />
-            <TextInput source="Farbe" />
-            <TextInput source="Groesse" />
-            <NumberInput source="Betrag" />
-            <TextInput source="Hersteller" />
+            <FormSection title="Details">
+                <FieldRow>
+                    <TextInput source="Lagernummer" />
+                    <TextInput source="Bezeichnung" />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="Linie" />
+                    <TextInput source="Farbe" />
+                    <TextInput source="Groesse" />
+                </FieldRow>
+                <TextInput source="Hersteller" />
+            </FormSection>
+            <FormSection title="Preis">
+                <NumberInput source="Betrag" />
+            </FormSection>
         </SimpleForm>
     </Create>
 );

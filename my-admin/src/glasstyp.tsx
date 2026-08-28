@@ -75,13 +75,23 @@ export const GlastypEdit = () => (
 export const GlastypCreate = () => (
     <Create>
         <SimpleForm>
-            <TextInput source="Bezeichnung" />
-            <TextInput source="Hersteller" />
-            <TextInput source="Verguetung" />
-            <TextInput source="GlasGroesse" />
-            <TextInput source="Sonstiges" />
-            <TextInput source="Bestellstatus" />
-            <TextInput source="Farbe" />
+            <FormSection title="Details">
+                <FieldRow>
+                    <TextInput source="Bezeichnung" />
+                    <TextInput source="Hersteller" />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="Verguetung" />
+                    <TextInput source="GlasGroesse" />
+                    <TextInput source="Farbe" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Status">
+                <FieldRow>
+                    <TextInput source="Bestellstatus" />
+                    <TextInput source="Sonstiges" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Create>
 );

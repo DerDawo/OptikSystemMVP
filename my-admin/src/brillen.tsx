@@ -151,29 +151,49 @@ export const BrilleEdit = () => (
 export const BrilleCreate = () => (
     <Create>
         <SimpleForm>
-            <TextInput source="id" />
-            <DateInput source="created_at" />
-            <TextInput source="Berater" />
-            <TextInput source="Refraktion" />
-            <DateInput source="Datum" />
-            <TextInput source="Werkstatt" />
-            <DateInput source="Abholung" />
-            <TextInput source="Notizen" />
-            <ReferenceInput source="GlasLinks" reference="glass">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <ReferenceInput source="GlasRechts" reference="glass">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <ReferenceInput source="Fassung" reference="fassung">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <ReferenceInput source="Glastyp" reference="glastyp">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <TextInput source="RabattBezeichnung" />
-            <NumberInput source="Summe" />
-            <TextInput source="BrillenArt" />
+            <FormSection title="Datenbankfelder">
+                <FieldRow>
+                    <TextInput source="id" />
+                    <DateInput source="created_at" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Auftragsdaten">
+                <FieldRow>
+                    <TextInput source="BrillenArt" />
+                    <TextInput source="Berater" />
+                    <TextInput source="Refraktion" />
+                </FieldRow>
+                <FieldRow>
+                    <DateInput source="Datum" />
+                    <TextInput source="Werkstatt" />
+                    <DateInput source="Abholung" />
+                </FieldRow>
+                <TextInput source="Notizen" multiline fullWidth />
+            </FormSection>
+            <FormSection title="Komponenten">
+                <FieldRow>
+                    <ReferenceInput source="GlasLinks" reference="glass">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                    <ReferenceInput source="GlasRechts" reference="glass">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                </FieldRow>
+                <FieldRow>
+                    <ReferenceInput source="Fassung" reference="fassung">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                    <ReferenceInput source="Glastyp" reference="glastyp">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Preis">
+                <FieldRow>
+                    <TextInput source="RabattBezeichnung" />
+                    <NumberInput source="Summe" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Create>
 );

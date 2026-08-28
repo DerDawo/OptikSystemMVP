@@ -74,15 +74,23 @@ export const Kunde_leistet_zauzahlung_fuer_brilleEdit = () => (
 export const Kunde_leistet_zauzahlung_fuer_brilleCreate = () => (
     <Create>
         <SimpleForm>
-            <ReferenceInput source="KundenID" reference="kunde">
-                <SelectInput optionText="KundenNummer" />
-            </ReferenceInput>
-            <ReferenceInput source="BrillenID" reference="brille">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <TextInput source="Datum" type="date" />
-            <NumberInput source="Betrag" />
-            <NumberInput source="Restbetrag" />
+            <FormSection title="Zuordnung">
+                <FieldRow>
+                    <ReferenceInput source="KundenID" reference="kunde">
+                        <SelectInput optionText="KundenNummer" />
+                    </ReferenceInput>
+                    <ReferenceInput source="BrillenID" reference="brille">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Zahlung">
+                <FieldRow>
+                    <TextInput source="Datum" type="date" />
+                    <NumberInput source="Betrag" />
+                    <NumberInput source="Restbetrag" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Create>
 );
