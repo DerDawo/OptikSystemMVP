@@ -3,7 +3,8 @@ import { Admin, CustomRoutes, Resource } from "react-admin";
 import { theme } from "./theme";
 import { dataProvider } from './dataProvider';
 import { MyLayout } from './MyLayout';
-// import { authProvider } from './authProvider';
+import { authProvider } from './authProvider';
+import { LoginPage } from 'ra-supabase';
 import { KundenList, KundeShow, KundeEdit, KundeCreate, KundeMessage } from "./kunden";
 import { BrilleList, BrilleShow, BrilleEdit, BrilleCreate } from "./brillen";
 import { GlassList, GlassShow, GlassEdit, GlassCreate } from "./glass";
@@ -24,7 +25,10 @@ export const App = () => {
     <Admin
       layout={MyLayout}
       dataProvider={dataProvider}
+      authProvider={authProvider}
+      loginPage={LoginPage}
       theme={theme}
+      requireAuth
     >
       <Resource name="kunde" list={KundenList} show={KundeShow} edit={KundeEdit} create={KundeCreate} icon={PersonIcon} />
       <Resource name="brille" list={BrilleList} show={BrilleShow} edit={BrilleEdit} create={BrilleCreate} />
