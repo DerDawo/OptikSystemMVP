@@ -1,23 +1,23 @@
-import { 
-    BooleanField, 
-    DataTable, 
-    DateField, 
-    List, 
-    ReferenceManyField, 
+import {
+    BooleanField,
+    DataTable,
+    DateField,
+    List,
+    ReferenceManyField,
     Datagrid,
-    NumberField, 
-    Show, 
-    SimpleShowLayout, 
+    NumberField,
+    Show,
     TextField,
-    BooleanInput, 
-    DateInput, 
-    Edit, 
-    Create, 
-    NumberInput, 
-    SimpleForm, 
+    BooleanInput,
+    DateInput,
+    Edit,
+    Create,
+    NumberInput,
+    SimpleForm,
     TextInput
  } from 'react-admin';
 import { CurrencyField } from './CurrencyField';
+import { Field, FieldRow, FormSection, RelatedSection, ShowLayout, ShowSection } from './EntityLayout';
 
 export const GlassList = () => (
     <List title="Gläser" >
@@ -49,38 +49,48 @@ export const GlassList = () => (
 
 export const GlassShow = () => (
     <Show>
-        <SimpleShowLayout>
-            <TextField source="id" />
-            <DateField source="created_at" />
-            <NumberField source="Sph" />
-            <NumberField source="Cyl" />
-            <NumberField source="A" />
-            <NumberField source="PD" />
-            <NumberField source="Add" />
-            <NumberField source="y_h" />
-            <NumberField source="Pr" />
-            <NumberField source="B" />
-            <NumberField source="HSA" />
-            <NumberField source="Vis" />
-            <NumberField source="iod" />
-            <BooleanField source="Liefern" />
-            <CurrencyField source="Betrag" />
-            <TextField source="Seite" />
-            <ReferenceManyField reference="brille" target="GlasLinks" label="Brillen (Links)">
-                <Datagrid>
-                    <TextField source="id" />
-                    <TextField source="Berater" />
-                    <DateField source="Datum" />
-                </Datagrid>
-            </ReferenceManyField>
-            <ReferenceManyField reference="brille" target="GlasRechts" label="Brillen (Rechts)">
-                <Datagrid>
-                    <TextField source="id" />
-                    <TextField source="Berater" />
-                    <DateField source="Datum" />
-                </Datagrid>
-            </ReferenceManyField>
-        </SimpleShowLayout>
+        <ShowLayout>
+            <ShowSection title="Datenbankfelder">
+                <Field><TextField source="id" /></Field>
+                <Field><DateField source="created_at" /></Field>
+                <Field><TextField source="Seite" /></Field>
+            </ShowSection>
+            <ShowSection title="Optische Werte">
+                <Field><NumberField source="Sph" /></Field>
+                <Field><NumberField source="Cyl" /></Field>
+                <Field><NumberField source="A" /></Field>
+                <Field><NumberField source="PD" /></Field>
+                <Field><NumberField source="Add" /></Field>
+                <Field><NumberField source="y_h" /></Field>
+                <Field><NumberField source="Pr" /></Field>
+                <Field><NumberField source="B" /></Field>
+                <Field><NumberField source="HSA" /></Field>
+                <Field><NumberField source="Vis" /></Field>
+                <Field><NumberField source="iod" /></Field>
+            </ShowSection>
+            <ShowSection title="Bestellung">
+                <Field><BooleanField source="Liefern" /></Field>
+                <Field><CurrencyField source="Betrag" /></Field>
+            </ShowSection>
+            <RelatedSection title="Brillen (Links)">
+                <ReferenceManyField reference="brille" target="GlasLinks" label={false}>
+                    <Datagrid>
+                        <TextField source="id" />
+                        <TextField source="Berater" />
+                        <DateField source="Datum" />
+                    </Datagrid>
+                </ReferenceManyField>
+            </RelatedSection>
+            <RelatedSection title="Brillen (Rechts)">
+                <ReferenceManyField reference="brille" target="GlasRechts" label={false}>
+                    <Datagrid>
+                        <TextField source="id" />
+                        <TextField source="Berater" />
+                        <DateField source="Datum" />
+                    </Datagrid>
+                </ReferenceManyField>
+            </RelatedSection>
+        </ShowLayout>
     </Show>
 );
 
@@ -88,22 +98,40 @@ export const GlassShow = () => (
 export const GlassEdit = () => (
     <Edit>
         <SimpleForm>
-            <TextInput source="id" />
-            <DateInput source="created_at" />
-            <NumberInput source="Sph" />
-            <NumberInput source="Cyl" />
-            <NumberInput source="A" />
-            <NumberInput source="PD" />
-            <NumberInput source="Add" />
-            <NumberInput source="y_h" />
-            <NumberInput source="Pr" />
-            <NumberInput source="B" />
-            <NumberInput source="HSA" />
-            <NumberInput source="Vis" />
-            <NumberInput source="iod" />
-            <BooleanInput source="Liefern" />
-            <NumberInput source="Betrag" />
-            <TextInput source="Seite" />
+            <FormSection title="Datenbankfelder">
+                <FieldRow>
+                    <TextInput source="id" />
+                    <DateInput source="created_at" />
+                    <TextInput source="Seite" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Optische Werte">
+                <FieldRow>
+                    <NumberInput source="Sph" />
+                    <NumberInput source="Cyl" />
+                    <NumberInput source="A" />
+                </FieldRow>
+                <FieldRow>
+                    <NumberInput source="PD" />
+                    <NumberInput source="Add" />
+                    <NumberInput source="y_h" />
+                </FieldRow>
+                <FieldRow>
+                    <NumberInput source="Pr" />
+                    <NumberInput source="B" />
+                    <NumberInput source="HSA" />
+                </FieldRow>
+                <FieldRow>
+                    <NumberInput source="Vis" />
+                    <NumberInput source="iod" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Bestellung">
+                <FieldRow>
+                    <BooleanInput source="Liefern" />
+                    <NumberInput source="Betrag" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Edit>
 );
