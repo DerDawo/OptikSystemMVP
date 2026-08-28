@@ -1,9 +1,10 @@
 import { DataTable, DateField, List, ReferenceField, Pagination } from 'react-admin';
-import { NumberField, Show, SimpleShowLayout, TextField } from 'react-admin';
+import { NumberField, Show, TextField } from 'react-admin';
 import { DateInput, Edit, Create, NumberInput, SimpleForm, TextInput, ReferenceInput, SelectInput, FunctionField } from 'react-admin';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { CurrencyField } from './CurrencyField';
+import { Field, FieldRow, FormSection, ShowLayout, ShowSection } from './EntityLayout';
 
 
 export const BrilleList = () => (
@@ -60,7 +61,7 @@ export const BrilleList = () => (
             </DataTable.Col>
             <DataTable.Col source="RabattBezeichnung" />
             <DataTable.Col sx={{textAlign: 'end'}} source="Summe" label="Betrag">
-                <CurrencyField source="Summe" /> 
+                <CurrencyField source="Summe" />
             </DataTable.Col>
         </DataTable>
     </List>
@@ -68,53 +69,81 @@ export const BrilleList = () => (
 
 
 export const BrilleShow = () => (
-    <Show >
-        <SimpleShowLayout>
-            <TextField source="id" />
-            <DateField source="created_at" />
-            <TextField source="Berater" />
-            <TextField source="Refraktion" />
-            <DateField source="Datum" />
-            <TextField source="Werkstatt" />
-            <DateField source="Abholung" />
-            <TextField source="Notizen" />
-            <ReferenceField source="GlasLinks" reference="glass" link="show" />
-            <ReferenceField source="GlasRechts" reference="glass" link="show" />
-            <ReferenceField source="Fassung" reference="fassung" link="show" />
-            <ReferenceField source="Glastyp" reference="glastyp" link="show" />
-            <TextField source="RabattBezeichnung" />
-            <NumberField source="Summe" />
-            <TextField source="BrillenArt" />
-        </SimpleShowLayout>
+    <Show>
+        <ShowLayout>
+            <ShowSection title="Datenbankfelder">
+                <Field><TextField source="id" /></Field>
+                <Field><DateField source="created_at" /></Field>
+            </ShowSection>
+            <ShowSection title="Auftragsdaten">
+                <Field><TextField source="BrillenArt" /></Field>
+                <Field><TextField source="Berater" /></Field>
+                <Field><TextField source="Refraktion" /></Field>
+                <Field><DateField source="Datum" /></Field>
+                <Field><TextField source="Werkstatt" /></Field>
+                <Field><DateField source="Abholung" /></Field>
+                <Field><TextField source="Notizen" /></Field>
+            </ShowSection>
+            <ShowSection title="Komponenten">
+                <Field><ReferenceField source="GlasLinks" reference="glass" link="show" /></Field>
+                <Field><ReferenceField source="GlasRechts" reference="glass" link="show" /></Field>
+                <Field><ReferenceField source="Fassung" reference="fassung" link="show" /></Field>
+                <Field><ReferenceField source="Glastyp" reference="glastyp" link="show" /></Field>
+            </ShowSection>
+            <ShowSection title="Preis">
+                <Field><TextField source="RabattBezeichnung" /></Field>
+                <Field><NumberField source="Summe" /></Field>
+            </ShowSection>
+        </ShowLayout>
     </Show>
 );
 
 export const BrilleEdit = () => (
     <Edit>
         <SimpleForm>
-            <TextInput source="id" />
-            <DateInput source="created_at" />
-            <TextInput source="Berater" />
-            <TextInput source="Refraktion" />
-            <DateInput source="Datum" />
-            <TextInput source="Werkstatt" />
-            <DateInput source="Abholung" />
-            <TextInput source="Notizen" />
-            <ReferenceInput source="GlasLinks" reference="glass">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <ReferenceInput source="GlasRechts" reference="glass">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <ReferenceInput source="Fassung" reference="fassung">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <ReferenceInput source="Glastyp" reference="glastyp">
-                <SelectInput optionText="id" />
-            </ReferenceInput>
-            <TextInput source="RabattBezeichnung" />
-            <NumberInput source="Summe" />
-            <TextInput source="BrillenArt" />
+            <FormSection title="Datenbankfelder">
+                <FieldRow>
+                    <TextInput source="id" />
+                    <DateInput source="created_at" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Auftragsdaten">
+                <FieldRow>
+                    <TextInput source="BrillenArt" />
+                    <TextInput source="Berater" />
+                    <TextInput source="Refraktion" />
+                </FieldRow>
+                <FieldRow>
+                    <DateInput source="Datum" />
+                    <TextInput source="Werkstatt" />
+                    <DateInput source="Abholung" />
+                </FieldRow>
+                <TextInput source="Notizen" multiline fullWidth />
+            </FormSection>
+            <FormSection title="Komponenten">
+                <FieldRow>
+                    <ReferenceInput source="GlasLinks" reference="glass">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                    <ReferenceInput source="GlasRechts" reference="glass">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                </FieldRow>
+                <FieldRow>
+                    <ReferenceInput source="Fassung" reference="fassung">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                    <ReferenceInput source="Glastyp" reference="glastyp">
+                        <SelectInput optionText="id" />
+                    </ReferenceInput>
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Preis">
+                <FieldRow>
+                    <TextInput source="RabattBezeichnung" />
+                    <NumberInput source="Summe" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Edit>
 );

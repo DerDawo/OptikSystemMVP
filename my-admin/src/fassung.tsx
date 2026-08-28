@@ -1,5 +1,6 @@
-import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, NumberInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
+import { DataTable, DateField, List, Show, TextField, NumberInput, Edit, SimpleForm, TextInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
 import { CurrencyField } from './CurrencyField';
+import { Field, FieldRow, FormSection, RelatedSection, ShowLayout, ShowSection } from './EntityLayout';
 
 export const FassungList = () => (
     <List title="Fassungen">
@@ -21,37 +22,53 @@ export const FassungList = () => (
 
 export const FassungShow = () => (
     <Show>
-        <SimpleShowLayout>
-            <TextField source="id" />
-            <DateField source="created_at" />
-            <TextField source="Lagernummer" />
-            <TextField source="Bezeichnung" />
-            <TextField source="Linie" />
-            <TextField source="Farbe" />
-            <TextField source="Groesse" />
-            <CurrencyField source="Betrag" />
-            <TextField source="Hersteller" />
-            <ReferenceManyField reference="brille" target="Fassung" label="Brillen">
-                <Datagrid>
-                    <TextField source="id" />
-                    <TextField source="Berater" />
-                    <DateField source="Datum" />
-                </Datagrid>
-            </ReferenceManyField>
-        </SimpleShowLayout>
+        <ShowLayout>
+            <ShowSection title="Datenbankfelder">
+                <Field><TextField source="id" /></Field>
+                <Field><DateField source="created_at" /></Field>
+            </ShowSection>
+            <ShowSection title="Details">
+                <Field><TextField source="Bezeichnung" /></Field>
+                <Field><TextField source="Lagernummer" /></Field>
+                <Field><TextField source="Linie" /></Field>
+                <Field><TextField source="Farbe" /></Field>
+                <Field><TextField source="Groesse" /></Field>
+                <Field><TextField source="Hersteller" /></Field>
+            </ShowSection>
+            <ShowSection title="Preis">
+                <Field><CurrencyField source="Betrag" /></Field>
+            </ShowSection>
+            <RelatedSection title="Brillen">
+                <ReferenceManyField reference="brille" target="Fassung" label={false}>
+                    <Datagrid>
+                        <TextField source="id" />
+                        <TextField source="Berater" />
+                        <DateField source="Datum" />
+                    </Datagrid>
+                </ReferenceManyField>
+            </RelatedSection>
+        </ShowLayout>
     </Show>
 );
 
 export const FassungEdit = () => (
     <Edit>
         <SimpleForm>
-            <TextInput source="Lagernummer" />
-            <TextInput source="Bezeichnung" />
-            <TextInput source="Linie" />
-            <TextInput source="Farbe" />
-            <TextInput source="Groesse" />
-            <NumberInput source="Betrag" />
-            <TextInput source="Hersteller" />
+            <FormSection title="Details">
+                <FieldRow>
+                    <TextInput source="Lagernummer" />
+                    <TextInput source="Bezeichnung" />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="Linie" />
+                    <TextInput source="Farbe" />
+                    <TextInput source="Groesse" />
+                </FieldRow>
+                <TextInput source="Hersteller" />
+            </FormSection>
+            <FormSection title="Preis">
+                <NumberInput source="Betrag" />
+            </FormSection>
         </SimpleForm>
     </Edit>
 );

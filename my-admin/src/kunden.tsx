@@ -1,5 +1,5 @@
 import { DataTable, List, ReferenceManyField, Datagrid, useDataProvider, useShowController, ListActions, useRecordContext } from 'react-admin';
-import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'react-admin';
+import { DateField, Show, TextField, FunctionField } from 'react-admin';
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
@@ -13,6 +13,7 @@ import EmailIcon from '@mui/icons-material/Email';
 import SendIcon from '@mui/icons-material/Send';
 import { supabase } from './utils';
 import { implementedMessageChannels, MessageChannel, MessageDeliveryResult, normalizePhoneNumberForSms, normalizePhoneNumberForWhatsapp, sendMessage } from './messaging';
+import { Field, FieldRow, FormSection, RelatedSection, ShowLayout, ShowSection } from './EntityLayout';
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
     sms: SmsIcon,
@@ -319,56 +320,69 @@ export const KundeShow = () => {
 
     return (
         <Show title="Kunden anzeigen">
-            <SimpleShowLayout>
-                <MessageButton />
-                <TextField source="id" />
-                <DateField source="created_at" />
-                <TextField source="KundenNummer" />
-                <DateField source="Aufnahmedatum" />
-                <TextField source="Anrede" />
-                <TextField source="Nachname" />
-                <TextField source="Vorname" />
-                <DateField source="Geburtsdatum" />
-                <TextField source="Geschlecht" />
-                <TextField source="Straße" />
-                <TextField source="Tätigkeit" />
-                <TextField source="TelefonnummerPrivat" />
-                <TextField source="Email" />
-                <TextField source="KrankenkassenNummer" />
-                <TextField source="VersichertenNummer" />
-                <TextField source="Postleitzahl" />
-                <TextField source="Hausnummer" />
-                <TextField source="Stadt" />
-                <TextField source="TelefonnummerGeschaeftlich" />
-                <TextField source="KrankenversicherungsTyp" />
-                <ReferenceManyField reference="brille" target="kunde_id" label="Brillen des Kunden">
-                    <Datagrid>
-                        <TextField source="id" />
-                        <TextField source="BrillenArt" />
-                        <TextField source="Berater" />
-                        <TextField source="Refraktion" />
-                        <DateField source="Datum" />
-                        <TextField source="Werkstatt" />
-                        <DateField source="Abholung" />
-                        <TextField source="Notizen" />
-                        <ReferenceField source="GlasLinks" reference="glass" link="show">
+            <ShowLayout>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <MessageButton />
+                </Box>
+                <ShowSection title="Datenbankfelder">
+                    <Field><TextField source="id" /></Field>
+                    <Field><DateField source="created_at" /></Field>
+                    <Field><TextField source="KundenNummer" /></Field>
+                    <Field><DateField source="Aufnahmedatum" /></Field>
+                </ShowSection>
+                <ShowSection title="Stammdaten">
+                    <Field><TextField source="Anrede" /></Field>
+                    <Field><TextField source="Nachname" /></Field>
+                    <Field><TextField source="Vorname" /></Field>
+                    <Field><TextField source="Geschlecht" /></Field>
+                    <Field><DateField source="Geburtsdatum" /></Field>
+                    <Field><TextField source="Tätigkeit" /></Field>
+                </ShowSection>
+                <ShowSection title="Adresse">
+                    <Field><TextField source="Straße" /></Field>
+                    <Field><TextField source="Hausnummer" /></Field>
+                    <Field><TextField source="Postleitzahl" /></Field>
+                    <Field><TextField source="Stadt" /></Field>
+                </ShowSection>
+                <ShowSection title="Kontakt">
+                    <Field><TextField source="TelefonnummerPrivat" /></Field>
+                    <Field><TextField source="TelefonnummerGeschaeftlich" /></Field>
+                    <Field><TextField source="Email" /></Field>
+                </ShowSection>
+                <ShowSection title="Versicherung">
+                    <Field><TextField source="KrankenkassenNummer" /></Field>
+                    <Field><TextField source="VersichertenNummer" /></Field>
+                    <Field><TextField source="KrankenversicherungsTyp" /></Field>
+                </ShowSection>
+                <RelatedSection title="Brillen des Kunden">
+                    <ReferenceManyField reference="brille" target="kunde_id" label={false}>
+                        <Datagrid>
                             <TextField source="id" />
-                        </ReferenceField>
-                        <ReferenceField source="GlasRechts" reference="glass" link="show">
-                            <TextField source="id" />
-                        </ReferenceField>
-                        <ReferenceField source="Fassung" reference="fassung" link="show">
-                            <TextField source="id" />
-                        </ReferenceField>
-                        <ReferenceField source="Glastyp" reference="glastyp" link="show">
-                            <TextField source="id" />
-                        </ReferenceField>
-                        <TextField source="RabattBezeichnung" />
-                        <TextField source="Summe" />
-
-                    </Datagrid>
-                </ReferenceManyField>
-            </SimpleShowLayout>
+                            <TextField source="BrillenArt" />
+                            <TextField source="Berater" />
+                            <TextField source="Refraktion" />
+                            <DateField source="Datum" />
+                            <TextField source="Werkstatt" />
+                            <DateField source="Abholung" />
+                            <TextField source="Notizen" />
+                            <ReferenceField source="GlasLinks" reference="glass" link="show">
+                                <TextField source="id" />
+                            </ReferenceField>
+                            <ReferenceField source="GlasRechts" reference="glass" link="show">
+                                <TextField source="id" />
+                            </ReferenceField>
+                            <ReferenceField source="Fassung" reference="fassung" link="show">
+                                <TextField source="id" />
+                            </ReferenceField>
+                            <ReferenceField source="Glastyp" reference="glastyp" link="show">
+                                <TextField source="id" />
+                            </ReferenceField>
+                            <TextField source="RabattBezeichnung" />
+                            <TextField source="Summe" />
+                        </Datagrid>
+                    </ReferenceManyField>
+                </RelatedSection>
+            </ShowLayout>
         </Show>
     );
 };
@@ -376,26 +390,52 @@ export const KundeShow = () => {
 export const KundeEdit = () => (
     <Edit title="Kunden bearbeiten">
         <SimpleForm>
-            <TextInput source="id" InputProps={{ disabled: true }} />
-            <DateInput source="created_at" InputProps={{ disabled: true }} />
-            <TextInput source="KundenNummer" />
-            <DateInput source="Aufnahmedatum" />
-            <TextInput source="Anrede" />
-            <TextInput source="Nachname" />
-            <TextInput source="Vorname" />
-            <DateInput source="Geburtsdatum" />
-            <TextInput source="Geschlecht" />
-            <TextInput source="Straße" />
-            <TextInput source="Tätigkeit" />
-            <TextInput source="TelefonnummerPrivat" />
-            <TextInput source="Email" />
-            <TextInput source="KrankenkassenNummer" />
-            <TextInput source="VersichertenNummer" />
-            <TextInput source="Postleitzahl" />
-            <TextInput source="Hausnummer" />
-            <TextInput source="Stadt" />
-            <TextInput source="TelefonnummerGeschaeftlich" />
-            <TextInput source="KrankenversicherungsTyp" />
+            <FormSection title="Datenbankfelder">
+                <FieldRow>
+                    <TextInput source="id" InputProps={{ disabled: true }} />
+                    <DateInput source="created_at" InputProps={{ disabled: true }} />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="KundenNummer" />
+                    <DateInput source="Aufnahmedatum" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Stammdaten">
+                <FieldRow>
+                    <TextInput source="Anrede" />
+                    <TextInput source="Nachname" />
+                    <TextInput source="Vorname" />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="Geschlecht" />
+                    <DateInput source="Geburtsdatum" />
+                    <TextInput source="Tätigkeit" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Adresse">
+                <FieldRow>
+                    <TextInput source="Straße" />
+                    <TextInput source="Hausnummer" />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="Postleitzahl" />
+                    <TextInput source="Stadt" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Kontakt">
+                <FieldRow>
+                    <TextInput source="TelefonnummerPrivat" />
+                    <TextInput source="TelefonnummerGeschaeftlich" />
+                    <TextInput source="Email" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Versicherung">
+                <FieldRow>
+                    <TextInput source="KrankenkassenNummer" />
+                    <TextInput source="VersichertenNummer" />
+                    <TextInput source="KrankenversicherungsTyp" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Edit>
 );

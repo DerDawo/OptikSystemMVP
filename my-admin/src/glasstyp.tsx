@@ -1,4 +1,5 @@
-import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, Edit, SimpleForm, TextInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
+import { DataTable, DateField, List, Show, TextField, Edit, SimpleForm, TextInput, Create, ReferenceManyField, Datagrid } from 'react-admin';
+import { Field, FieldRow, FormSection, RelatedSection, ShowLayout, ShowSection } from './EntityLayout';
 
 
 export const GlastypList = () => (
@@ -18,37 +19,55 @@ export const GlastypList = () => (
 
 export const GlastypShow = () => (
     <Show>
-        <SimpleShowLayout>
-            <TextField source="id" />
-            <DateField source="created_at" />
-            <TextField source="Bezeichnung" />
-            <TextField source="Hersteller" />
-            <TextField source="Verguetung" />
-            <TextField source="GlasGroesse" />
-            <TextField source="Sonstiges" />
-            <TextField source="Bestellstatus" />
-            <TextField source="Farbe" />
-            <ReferenceManyField reference="brille" target="Glastyp" label="Brillen">
-                <Datagrid>
-                    <TextField source="id" />
-                    <TextField source="Berater" />
-                    <DateField source="Datum" />
-                </Datagrid>
-            </ReferenceManyField>
-        </SimpleShowLayout>
+        <ShowLayout>
+            <ShowSection title="Datenbankfelder">
+                <Field><TextField source="id" /></Field>
+                <Field><DateField source="created_at" /></Field>
+            </ShowSection>
+            <ShowSection title="Details">
+                <Field><TextField source="Bezeichnung" /></Field>
+                <Field><TextField source="Hersteller" /></Field>
+                <Field><TextField source="Verguetung" /></Field>
+                <Field><TextField source="GlasGroesse" /></Field>
+                <Field><TextField source="Farbe" /></Field>
+            </ShowSection>
+            <ShowSection title="Status">
+                <Field><TextField source="Bestellstatus" /></Field>
+                <Field><TextField source="Sonstiges" /></Field>
+            </ShowSection>
+            <RelatedSection title="Brillen">
+                <ReferenceManyField reference="brille" target="Glastyp" label={false}>
+                    <Datagrid>
+                        <TextField source="id" />
+                        <TextField source="Berater" />
+                        <DateField source="Datum" />
+                    </Datagrid>
+                </ReferenceManyField>
+            </RelatedSection>
+        </ShowLayout>
     </Show>
 );
 
 export const GlastypEdit = () => (
     <Edit>
         <SimpleForm>
-            <TextInput source="Bezeichnung" />
-            <TextInput source="Hersteller" />
-            <TextInput source="Verguetung" />
-            <TextInput source="GlasGroesse" />
-            <TextInput source="Sonstiges" />
-            <TextInput source="Bestellstatus" />
-            <TextInput source="Farbe" />
+            <FormSection title="Details">
+                <FieldRow>
+                    <TextInput source="Bezeichnung" />
+                    <TextInput source="Hersteller" />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="Verguetung" />
+                    <TextInput source="GlasGroesse" />
+                    <TextInput source="Farbe" />
+                </FieldRow>
+            </FormSection>
+            <FormSection title="Status">
+                <FieldRow>
+                    <TextInput source="Bestellstatus" />
+                    <TextInput source="Sonstiges" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Edit>
 );

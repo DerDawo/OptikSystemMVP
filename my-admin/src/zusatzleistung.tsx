@@ -1,5 +1,6 @@
-import { DataTable, DateField, List, Show, SimpleShowLayout, TextField, NumberField, Edit, SimpleForm, TextInput, Create, NumberInput } from 'react-admin';
+import { DataTable, DateField, List, Show, TextField, Edit, SimpleForm, TextInput, Create, NumberInput } from 'react-admin';
 import { CurrencyField } from './CurrencyField';
+import { Field, FieldRow, FormSection, ShowLayout, ShowSection } from './EntityLayout';
 
 export const ZusatzleistungList = () => (
     <List title="Zusatzleistungen" >
@@ -19,21 +20,29 @@ export const ZusatzleistungList = () => (
 
 export const ZusatzleistungShow = () => (
     <Show>
-        <SimpleShowLayout>
-            <TextField source="id" />
-            <DateField source="created_at" />
-            <TextField source="Bezeichnung" />
-            <CurrencyField source="Betrag" />
-        </SimpleShowLayout>
+        <ShowLayout>
+            <ShowSection title="Datenbankfelder">
+                <Field><TextField source="id" /></Field>
+                <Field><DateField source="created_at" /></Field>
+            </ShowSection>
+            <ShowSection title="Details">
+                <Field><TextField source="Bezeichnung" /></Field>
+                <Field><CurrencyField source="Betrag" /></Field>
+            </ShowSection>
+        </ShowLayout>
     </Show>
 );
 
 export const ZusatzleistungEdit = () => (
     <Edit>
         <SimpleForm>
-            <TextInput source="id" disabled />
-            <TextInput source="Bezeichnung" />
-            <NumberInput source="Betrag" />
+            <FormSection title="Details">
+                <TextInput source="id" disabled />
+                <FieldRow>
+                    <TextInput source="Bezeichnung" />
+                    <NumberInput source="Betrag" />
+                </FieldRow>
+            </FormSection>
         </SimpleForm>
     </Edit>
 );
