@@ -3,11 +3,22 @@ import { DateField, Show, SimpleShowLayout, TextField, FunctionField } from 'rea
 import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
-import { Box, Button, Card, Checkbox, Divider, FormControlLabel, ListItem, ListItemButton, ListItemText, Theme, Typography, useMediaQuery } from '@mui/material';
+import { Box, Button, Card, Checkbox, Divider, FormControlLabel, IconButton, ListItem, ListItemButton, ListItemText, Stack, Theme, Typography, useMediaQuery } from '@mui/material';
 import { ChangeEvent, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import SmsIcon from '@mui/icons-material/Sms';
+import WhatsAppIcon from '@mui/icons-material/WhatsApp';
+import EmailIcon from '@mui/icons-material/Email';
+import SendIcon from '@mui/icons-material/Send';
 import { supabase } from './utils';
 import { implementedMessageChannels, MessageChannel, MessageDeliveryResult, normalizePhoneNumberForSms, normalizePhoneNumberForWhatsapp, sendMessage } from './messaging';
+
+const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
+    sms: SmsIcon,
+    whatsapp: WhatsAppIcon,
+    email: EmailIcon,
+};
 
 const messageChannelLabels: Record<MessageChannel, string> = {
     sms: 'SMS',
@@ -681,75 +692,143 @@ export const KundeMessage = () => {
         setIsSending(false);
     };
 
+    const channelOrder: MessageChannel[] = ['sms', 'whatsapp', 'email'];
+
     return (
-        <Box>
-            <Box sx={{ margin: '1em' }}></Box>
-            <Card sx={{
+        <Box sx={{ maxWidth: 1080, margin: '0 auto', padding: { xs: '0.75em', md: '1.5em' }, paddingBottom: { xs: '6em', md: '1.5em' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                <IconButton
+                    aria-label='Zurück zum Kunden'
+                    onClick={() => navigate(`/kunde/${recordId}/show`)}
+                    sx={{ mt: '2px' }}
+                >
+                    <ArrowBackIcon />
+                </IconButton>
+                <Box sx={{ minWidth: 0 }}>
+                    <Typography variant='h5' component='h1' sx={{ fontWeight: 600 }}>
+                        Nachricht senden
+                    </Typography>
+                    <Typography variant='body2' sx={{ color: 'text.secondary' }} noWrap>
+                        an {recipientName}
+                    </Typography>
+                </Box>
+            </Box>
+
+            <Box sx={{
                 display: 'grid',
                 gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
-                gridTemplateRows: { xs: 'auto auto auto', md: '1fr 1fr' },
                 gap: '1em',
-                padding: '1em',
-                marginBottom: '1em',
-                minHeight: { md: '60vh' },
+                alignItems: 'start',
             }}>
-                <Box sx={{
-                    gridColumn: '1 / 2',
-                    minHeight: 0,
-                    overflowY: 'auto',
-                }}>
-                    <Typography variant='subtitle2'>
-                        Nachricht auswählen
-                    </Typography>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1em' }}>
+                    <Card sx={{ padding: '1em' }}>
+                        <Typography variant='subtitle1' sx={{ fontWeight: 600, mb: 1 }}>
+                            Nachricht auswählen
+                        </Typography>
+                        <Divider sx={{ mb: 1 }} />
+                        <Box sx={{ maxHeight: { xs: '13rem', md: '18rem' }, overflowY: 'auto' }}>
+                            {isLoadingMessages ? (
+                                <Typography sx={{ mt: 1, color: 'text.secondary' }}>
+                                    Lade Nachrichten...
+                                </Typography>
+                            ) : null}
+                            {!isLoadingMessages && messageError ? (
+                                <Typography color='error' sx={{ mt: 1 }}>
+                                    {messageError}
+                                </Typography>
+                            ) : null}
+                            {!isLoadingMessages && !messageError && messages.length === 0 ? (
+                                <Typography sx={{ mt: 1, color: 'text.secondary' }}>
+                                    Keine Nachrichten gefunden.
+                                </Typography>
+                            ) : null}
+                            {!isLoadingMessages && !messageError ? messages.map(message => {
+                                const messageTitle = getMessageTitle(message);
+                                const messageContent = getMessageContent(message);
 
-                    {isLoadingMessages ? (
-                        <Typography sx={{ mt: 2 }}>
-                            Lade Nachrichten...
-                        </Typography>
-                    ) : null}
-                    {!isLoadingMessages && messageError ? (
-                        <Typography color='error' sx={{ mt: 2 }}>
-                            {messageError}
-                        </Typography>
-                    ) : null}
-                    {!isLoadingMessages && !messageError && messages.length === 0 ? (
-                        <Typography sx={{ mt: 2 }}>
-                            Keine Nachrichten gefunden.
-                        </Typography>
-                    ) : null}
-                    {!isLoadingMessages && !messageError ? messages.map(message => {
-                        const messageTitle = getMessageTitle(message);
-                        const messageContent = getMessageContent(message);
+                                return (
+                                    <ListItem key={message._rowKey} disablePadding>
+                                        <ListItemButton
+                                            selected={selectedMessageKey === message._rowKey}
+                                            onClick={() => setSelectedMessageKey(message._rowKey)}
+                                            sx={{ borderRadius: 1 }}
+                                        >
+                                            <ListItemText
+                                                primary={messageTitle}
+                                                primaryTypographyProps={{ noWrap: true }}
+                                                secondary={messageTitle === messageContent ? undefined : messageContent}
+                                                secondaryTypographyProps={{ noWrap: true }}
+                                            />
+                                        </ListItemButton>
+                                    </ListItem>
+                                );
+                            }) : null}
+                        </Box>
+                    </Card>
 
-                        return (
-                            <ListItem key={message._rowKey} disablePadding>
-                                <ListItemButton
-                                    selected={selectedMessageKey === message._rowKey}
-                                    onClick={() => setSelectedMessageKey(message._rowKey)}
-                                >
-                                    <ListItemText
-                                        primary={messageTitle}
-                                        primaryTypographyProps={{ noWrap: true }}
-                                        secondary={messageTitle === messageContent ? undefined : messageContent}
-                                        secondaryTypographyProps={{ noWrap: true }}
-                                    />
-                                </ListItemButton>
-                            </ListItem>
-                        );
-                    }) : null}
+                    <Card sx={{ padding: '1em' }}>
+                        <Typography variant='subtitle1' sx={{ fontWeight: 600, mb: 1 }}>
+                            Versandkanäle
+                        </Typography>
+                        <Divider sx={{ mb: 1 }} />
+                        <Stack spacing={1}>
+                            {channelOrder.map(channel => {
+                                const ChannelIcon = messageChannelIcons[channel];
+                                const target = deliveryTargets[channel];
+
+                                return (
+                                    <Box
+                                        key={channel}
+                                        sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: 1,
+                                            border: '1px solid',
+                                            borderColor: selectedChannels[channel] ? 'primary.main' : 'divider',
+                                            borderRadius: 1,
+                                            padding: '0.25em 0.5em',
+                                            opacity: target ? 1 : 0.6,
+                                        }}
+                                    >
+                                        <ChannelIcon fontSize='small' sx={{ color: 'text.secondary' }} />
+                                        <FormControlLabel
+                                            sx={{ flexGrow: 1, minWidth: 0, mr: 0 }}
+                                            label={
+                                                <Box sx={{ minWidth: 0 }}>
+                                                    <Typography variant='body2' noWrap>
+                                                        {messageChannelLabels[channel]}
+                                                    </Typography>
+                                                    <Typography variant='caption' sx={{ color: 'text.secondary' }} noWrap component='div'>
+                                                        {target || 'kein Kontaktweg hinterlegt'}
+                                                    </Typography>
+                                                </Box>
+                                            }
+                                            control={
+                                                <Checkbox
+                                                    checked={selectedChannels[channel]}
+                                                    disabled={!target}
+                                                    onChange={toggleChannel(channel)}
+                                                />
+                                            }
+                                        />
+                                    </Box>
+                                );
+                            })}
+                        </Stack>
+                    </Card>
                 </Box>
+
                 <Card sx={{
-                    gridRow: { xs: '2 / 3', md: '1 / 3' },
-                    gridColumn: { xs: '1 / 2', md: '2 / 3' },
                     padding: '1em',
-                    overflowY: 'auto',
-                    minHeight: { xs: '16rem', md: 'auto' },
+                    position: { md: 'sticky' },
+                    top: { md: '1em' },
                 }}>
-                    <Typography variant='subtitle2' sx={{ mb: 1 }}>
+                    <Typography variant='subtitle1' sx={{ fontWeight: 600, mb: 1 }}>
                         Vorschau
                     </Typography>
+                    <Divider sx={{ mb: 1 }} />
                     {isLoadingCustomer ? (
-                        <Typography sx={{ mb: 2 }}>
+                        <Typography sx={{ mb: 2, color: 'text.secondary' }}>
                             Lade Kundendaten...
                         </Typography>
                     ) : null}
@@ -758,78 +837,85 @@ export const KundeMessage = () => {
                             {customerError}
                         </Typography>
                     ) : null}
-                    <Typography sx={{ color: 'text.secondary' }}>
-                        Empfaenger: {recipientName}
-                    </Typography>
-                    <Typography sx={{ color: 'text.secondary' }}>
-                        Email: {messageCustomer.email || 'nicht vorhanden'}
-                    </Typography>
-                    <Typography sx={{ color: 'text.secondary' }}>
-                        Telefonnummer: {messageCustomer.phoneNumber || 'nicht vorhanden'}
-                    </Typography>
-                    <Divider sx={{ my: 2 }} />
-                    {selectedMessage ? (
-                        <>
-                            <Typography variant='h6' sx={{ mb: 1 }}>
-                                {renderedMessageTitle}
-                            </Typography>
-                            <Typography sx={{ whiteSpace: 'pre-wrap' }}>
-                                {renderedMessageContent}
-                            </Typography>
-                        </>
-                    ) : (
-                        <Typography sx={{ color: 'text.secondary' }}>
-                            Waehle eine Nachricht aus, um den Inhalt zu sehen.
+                    <Stack spacing={0.5} sx={{ mb: 2 }}>
+                        <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                            Empfänger: {recipientName}
                         </Typography>
-                    )}
+                        <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                            Email: {messageCustomer.email || 'nicht vorhanden'}
+                        </Typography>
+                        <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                            Telefonnummer: {messageCustomer.phoneNumber || 'nicht vorhanden'}
+                        </Typography>
+                    </Stack>
+                    <Box sx={{
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 1,
+                        padding: '1em',
+                        backgroundColor: 'action.hover',
+                        minHeight: '8rem',
+                    }}>
+                        {selectedMessage ? (
+                            <>
+                                <Typography variant='h6' sx={{ mb: 1 }}>
+                                    {renderedMessageTitle}
+                                </Typography>
+                                <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                                    {renderedMessageContent}
+                                </Typography>
+                            </>
+                        ) : (
+                            <Typography sx={{ color: 'text.secondary' }}>
+                                Wähle eine Nachricht aus, um den Inhalt zu sehen.
+                            </Typography>
+                        )}
+                    </Box>
                 </Card>
+            </Box>
+
+            <Box sx={{
+                position: { xs: 'fixed', md: 'static' },
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: 10,
+                mt: { xs: 0, md: 2 },
+                padding: { xs: '0.75em', md: 0 },
+                backgroundColor: { xs: 'background.paper', md: 'transparent' },
+                borderTop: { xs: '1px solid', md: 'none' },
+                borderColor: 'divider',
+            }}>
+                {sendFormError ? (
+                    <Typography color='error' sx={{ textAlign: 'right', mb: 1 }}>
+                        {sendFormError}
+                    </Typography>
+                ) : null}
+                {sendResults.map(result => (
+                    <Typography
+                        key={result.channel}
+                        sx={{ textAlign: 'right', mb: 1, color: result.success ? 'success.main' : 'error.main' }}
+                    >
+                        {messageChannelLabels[result.channel]}: {result.success ? 'erfolgreich gesendet' : `fehlgeschlagen (${result.error ?? 'unbekannter Fehler'})`}
+                    </Typography>
+                ))}
                 <Box sx={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    gridColumn: '1 / 2',
-                    gridRow: { xs: '3 / 4', md: '2 / 3' },
+                    gap: '1em',
+                    justifyContent: 'flex-end',
                 }}>
-                    <Typography variant='subtitle2'>
-                        Nachrichtenkanäle auswählen
-                    </Typography>
-                    <FormControlLabel
-                        label={deliveryTargets.sms ? `SMS an ${deliveryTargets.sms}` : 'SMS: keine Telefonnummer vorhanden'}
-                        control={<Checkbox checked={selectedChannels.sms} disabled={!deliveryTargets.sms} onChange={toggleChannel('sms')} />}
-                    />
-                    <FormControlLabel
-                        label={deliveryTargets.whatsapp ? `Whatsapp an ${deliveryTargets.whatsapp}` : 'Whatsapp: keine Telefonnummer vorhanden'}
-                        control={<Checkbox checked={selectedChannels.whatsapp} disabled={!deliveryTargets.whatsapp} onChange={toggleChannel('whatsapp')} />}
-                    />
-                    <FormControlLabel
-                        label={deliveryTargets.email ? `Email an ${deliveryTargets.email}` : 'Email: keine Email vorhanden'}
-                        control={<Checkbox checked={selectedChannels.email} disabled={!deliveryTargets.email} onChange={toggleChannel('email')} />}
-                    />
+                    <Button variant='outlined' onClick={() => navigate(`/kunde/${recordId}/show`)}>
+                        Abbrechen
+                    </Button>
+                    <Button
+                        variant='contained'
+                        startIcon={<SendIcon />}
+                        onClick={() => void handleSend()}
+                        disabled={isSending}
+                    >
+                        {isSending ? 'Wird gesendet...' : 'Nachricht senden'}
+                    </Button>
                 </Box>
-            </Card>
-            {sendFormError ? (
-                <Typography color='error' sx={{ textAlign: 'right', mb: 1 }}>
-                    {sendFormError}
-                </Typography>
-            ) : null}
-            {sendResults.map(result => (
-                <Typography
-                    key={result.channel}
-                    sx={{ textAlign: 'right', mb: 1, color: result.success ? 'success.main' : 'error.main' }}
-                >
-                    {messageChannelLabels[result.channel]}: {result.success ? 'erfolgreich gesendet' : `fehlgeschlagen (${result.error ?? 'unbekannter Fehler'})`}
-                </Typography>
-            ))}
-            <Box sx={{
-                display: 'flex',
-                gap: '1em',
-                justifyContent: 'flex-end',
-            }}>
-                <Button variant='outlined' onClick={() => navigate(`/kunde/${recordId}/show`)}>
-                    Abbrechen
-                </Button>
-                <Button variant='contained' onClick={() => void handleSend()} disabled={isSending}>
-                    {isSending ? 'Wird gesendet...' : 'Nachricht senden'}
-                </Button>
             </Box>
         </Box>
     );
