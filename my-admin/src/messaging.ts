@@ -20,7 +20,7 @@ const edgeFunctionByChannel: Record<MessageChannel, string> = {
     whatsapp: 'send-whatsapp',
 };
 
-export const implementedMessageChannels: MessageChannel[] = ['sms', 'email'];
+export const implementedMessageChannels: MessageChannel[] = ['sms', 'email', 'whatsapp'];
 
 export const sendMessage = async (
     channel: MessageChannel,
@@ -50,3 +50,6 @@ export const normalizePhoneNumberForSms = (phoneNumber: string): string => {
 
     return trimmed;
 };
+
+export const normalizePhoneNumberForWhatsapp = (phoneNumber: string): string =>
+    normalizePhoneNumberForSms(phoneNumber).replace(/^\+/, '');

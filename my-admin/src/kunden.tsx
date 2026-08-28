@@ -7,7 +7,7 @@ import { Box, Button, Card, Checkbox, Divider, FormControlLabel, ListItem, ListI
 import { ChangeEvent, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from './utils';
-import { implementedMessageChannels, MessageChannel, MessageDeliveryResult, normalizePhoneNumberForSms, sendMessage } from './messaging';
+import { implementedMessageChannels, MessageChannel, MessageDeliveryResult, normalizePhoneNumberForSms, normalizePhoneNumberForWhatsapp, sendMessage } from './messaging';
 
 const messageChannelLabels: Record<MessageChannel, string> = {
     sms: 'SMS',
@@ -664,7 +664,11 @@ export const KundeMessage = () => {
                 return Promise.resolve({ channel, success: false, error: 'Dieser Kanal wird noch nicht unterstützt.' });
             }
 
-            const to = channel === 'sms' ? normalizePhoneNumberForSms(deliveryTargets[channel]) : deliveryTargets[channel];
+            const to = channel === 'sms'
+                ? normalizePhoneNumberForSms(deliveryTargets[channel])
+                : channel === 'whatsapp'
+                    ? normalizePhoneNumberForWhatsapp(deliveryTargets[channel])
+                    : deliveryTargets[channel];
 
             return sendMessage(channel, {
                 to,
