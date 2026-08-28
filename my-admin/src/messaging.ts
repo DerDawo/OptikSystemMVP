@@ -20,7 +20,7 @@ const edgeFunctionByChannel: Record<MessageChannel, string> = {
     whatsapp: 'send-whatsapp',
 };
 
-export const implementedMessageChannels: MessageChannel[] = ['sms'];
+export const implementedMessageChannels: MessageChannel[] = ['sms', 'email'];
 
 export const sendMessage = async (
     channel: MessageChannel,
