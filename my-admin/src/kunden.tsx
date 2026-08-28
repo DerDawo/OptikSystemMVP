@@ -695,8 +695,8 @@ export const KundeMessage = () => {
     const channelOrder: MessageChannel[] = ['sms', 'whatsapp', 'email'];
 
     return (
-        <Box sx={{ maxWidth: 1080, margin: '0 auto', padding: { xs: '0.75em', md: '1.5em' }, paddingBottom: { xs: '6em', md: '1.5em' } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+        <Box sx={{ width: '100%', maxWidth: 1080, margin: '0 auto', minWidth: 0, padding: { xs: '0.75em', md: '1.5em' } }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2, minWidth: 0 }}>
                 <IconButton
                     aria-label='Zurück zum Kunden'
                     onClick={() => navigate(`/kunde/${recordId}/show`)}
@@ -705,7 +705,7 @@ export const KundeMessage = () => {
                     <ArrowBackIcon />
                 </IconButton>
                 <Box sx={{ minWidth: 0 }}>
-                    <Typography variant='h5' component='h1' sx={{ fontWeight: 600 }}>
+                    <Typography variant='h5' component='h1' sx={{ fontWeight: 600 }} noWrap>
                         Nachricht senden
                     </Typography>
                     <Typography variant='body2' sx={{ color: 'text.secondary' }} noWrap>
@@ -719,8 +719,9 @@ export const KundeMessage = () => {
                 gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
                 gap: '1em',
                 alignItems: 'start',
+                minWidth: 0,
             }}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1em' }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: '1em', minWidth: 0 }}>
                     <Card sx={{ padding: '1em' }}>
                         <Typography variant='subtitle1' sx={{ fontWeight: 600, mb: 1 }}>
                             Nachricht auswählen
@@ -783,6 +784,7 @@ export const KundeMessage = () => {
                                             display: 'flex',
                                             alignItems: 'center',
                                             gap: 1,
+                                            minWidth: 0,
                                             border: '1px solid',
                                             borderColor: selectedChannels[channel] ? 'primary.main' : 'divider',
                                             borderRadius: 1,
@@ -792,7 +794,7 @@ export const KundeMessage = () => {
                                     >
                                         <ChannelIcon fontSize='small' sx={{ color: 'text.secondary' }} />
                                         <FormControlLabel
-                                            sx={{ flexGrow: 1, minWidth: 0, mr: 0 }}
+                                            sx={{ flexGrow: 1, minWidth: 0, mr: 0, '& .MuiFormControlLabel-label': { minWidth: 0, overflow: 'hidden' } }}
                                             label={
                                                 <Box sx={{ minWidth: 0 }}>
                                                     <Typography variant='body2' noWrap>
@@ -820,6 +822,7 @@ export const KundeMessage = () => {
 
                 <Card sx={{
                     padding: '1em',
+                    minWidth: 0,
                     position: { md: 'sticky' },
                     top: { md: '1em' },
                 }}>
@@ -837,14 +840,14 @@ export const KundeMessage = () => {
                             {customerError}
                         </Typography>
                     ) : null}
-                    <Stack spacing={0.5} sx={{ mb: 2 }}>
-                        <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                    <Stack spacing={0.5} sx={{ mb: 2, minWidth: 0 }}>
+                        <Typography variant='body2' sx={{ color: 'text.secondary', overflowWrap: 'break-word' }}>
                             Empfänger: {recipientName}
                         </Typography>
-                        <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                        <Typography variant='body2' sx={{ color: 'text.secondary', overflowWrap: 'break-word' }}>
                             Email: {messageCustomer.email || 'nicht vorhanden'}
                         </Typography>
-                        <Typography variant='body2' sx={{ color: 'text.secondary' }}>
+                        <Typography variant='body2' sx={{ color: 'text.secondary', overflowWrap: 'break-word' }}>
                             Telefonnummer: {messageCustomer.phoneNumber || 'nicht vorhanden'}
                         </Typography>
                     </Stack>
@@ -855,13 +858,16 @@ export const KundeMessage = () => {
                         padding: '1em',
                         backgroundColor: 'action.hover',
                         minHeight: '8rem',
+                        minWidth: 0,
+                        maxHeight: { md: '18rem' },
+                        overflowY: { md: 'auto' },
                     }}>
                         {selectedMessage ? (
                             <>
-                                <Typography variant='h6' sx={{ mb: 1 }}>
+                                <Typography variant='h6' sx={{ mb: 1, overflowWrap: 'break-word' }}>
                                     {renderedMessageTitle}
                                 </Typography>
-                                <Typography sx={{ whiteSpace: 'pre-wrap' }}>
+                                <Typography sx={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}>
                                     {renderedMessageContent}
                                 </Typography>
                             </>
@@ -875,15 +881,14 @@ export const KundeMessage = () => {
             </Box>
 
             <Box sx={{
-                position: { xs: 'fixed', md: 'static' },
-                left: 0,
-                right: 0,
+                position: 'sticky',
                 bottom: 0,
-                zIndex: 10,
-                mt: { xs: 0, md: 2 },
-                padding: { xs: '0.75em', md: 0 },
-                backgroundColor: { xs: 'background.paper', md: 'transparent' },
-                borderTop: { xs: '1px solid', md: 'none' },
+                zIndex: 4,
+                mt: 2,
+                padding: '0.75em',
+                marginX: { xs: '-0.75em', md: '-1.5em' },
+                backgroundColor: 'background.paper',
+                borderTop: '1px solid',
                 borderColor: 'divider',
             }}>
                 {sendFormError ? (
