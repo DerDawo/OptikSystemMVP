@@ -7,6 +7,33 @@ export const theme = createTheme({
   components: {
     ...defaultTheme.components,
 
+    /*
+     * react-admin's layout root defaults to `minWidth: "fit-content"`, which lets a
+     * single long, unbreakable string anywhere on the page (a long name, a link in a
+     * message, ...) force the *entire* app shell wider than the viewport. Overriding
+     * it lets the page shrink to the viewport again, so per-element wrapping/ellipsis
+     * rules actually take effect instead of being overruled by this floor.
+     */
+    RaLayout: {
+      styleOverrides: {
+        root: {
+          minWidth: 0,
+        },
+      },
+    },
+
+    // Keep per-page top actions (Edit, Show, Create, ...) visible while scrolling
+    RaTopToolbar: {
+      styleOverrides: {
+        root: ({ theme }) => ({
+          position: "sticky",
+          top: 0,
+          zIndex: theme.zIndex.appBar - 1,
+          backgroundColor: theme.palette.background.default,
+        }),
+      },
+    },
+
     MuiCssBaseline: {
       styleOverrides: (theme) => ({
         html:{
@@ -15,12 +42,23 @@ export const theme = createTheme({
         ".RaLayout-contentWithSidebar": {
           maxWidth: "100dvw",
         },
+        /*
+         * The content area scrolls on its own, bounded to the viewport height
+         * below the fixed AppBar. This keeps sticky top actions (Edit/Show/
+         * Create buttons, message send bar, ...) working, since position:
+         * sticky only reacts to scrolling within this exact container.
+         */
         ".RaLayout-content": {
           flex: 1,
           minWidth: 0,
           minHeight: 0,
-          overflow: "hidden",
+          height: "calc(100dvh - 48px)",
+          overflowY: "auto",
+          overflowX: "hidden",
           scrollbarGutter: "stable",
+          [theme.breakpoints.down("sm")]: {
+            height: "calc(100dvh - 56px)",
+          },
         },
         ".list-page": {
           minWidth: 0,

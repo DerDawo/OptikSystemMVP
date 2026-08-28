@@ -4,7 +4,7 @@ import { MyMenu } from './MyMenu';
 import { ReactNode } from 'react';
 
 export const MyLayout = ({ children }: { children: ReactNode }) => (
-    <Layout menu={MyMenu}>
+    <Layout menu={MyMenu} appBarAlwaysOn>
         {children}
     </Layout>
 );
