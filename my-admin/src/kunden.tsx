@@ -4,9 +4,16 @@ import { DateInput, Edit, SimpleForm, TextInput } from 'react-admin';
 import { Create } from 'react-admin';
 import { ReferenceField } from 'react-admin';
 import { Box, Button, Card, Checkbox, Divider, FormControlLabel, ListItem, ListItemButton, ListItemText, Theme, Typography, useMediaQuery } from '@mui/material';
-import { useEffect, useState } from 'react';
+import { ChangeEvent, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { supabase } from './utils';
+import { implementedMessageChannels, MessageChannel, MessageDeliveryResult, normalizePhoneNumberForSms, sendMessage } from './messaging';
+
+const messageChannelLabels: Record<MessageChannel, string> = {
+    sms: 'SMS',
+    whatsapp: 'Whatsapp',
+    email: 'Email',
+};
 
 type NachrichtRecord = Record<string, unknown> & {
     _rowKey: string;
@@ -492,6 +499,14 @@ export const KundeMessage = () => {
     ));
     const [isLoadingCustomer, setIsLoadingCustomer] = useState(!routeState?.kunde);
     const [customerError, setCustomerError] = useState<string | null>(null);
+    const [selectedChannels, setSelectedChannels] = useState<Record<MessageChannel, boolean>>({
+        sms: false,
+        whatsapp: false,
+        email: false,
+    });
+    const [isSending, setIsSending] = useState(false);
+    const [sendFormError, setSendFormError] = useState<string | null>(null);
+    const [sendResults, setSendResults] = useState<MessageDeliveryResult[]>([]);
 
     useEffect(() => {
         let isActive = true;
@@ -620,12 +635,46 @@ export const KundeMessage = () => {
         whatsapp: messageCustomer.phoneNumber,
         email: messageCustomer.email,
     };
-    const draftMessage = {
-        kundeId: messageCustomer.id || recordId,
-        recipient: messageCustomer,
-        targets: deliveryTargets,
-        title: renderedMessageTitle,
-        content: renderedMessageContent,
+    const toggleChannel = (channel: MessageChannel) => (event: ChangeEvent<HTMLInputElement>) => {
+        setSelectedChannels(previous => ({ ...previous, [channel]: event.target.checked }));
+    };
+
+    const handleSend = async () => {
+        setSendFormError(null);
+        setSendResults([]);
+
+        if (!selectedMessage) {
+            setSendFormError('Bitte wähle eine Nachricht aus.');
+            return;
+        }
+
+        const channelsToSend = (Object.keys(selectedChannels) as MessageChannel[]).filter(
+            channel => selectedChannels[channel] && deliveryTargets[channel],
+        );
+
+        if (channelsToSend.length === 0) {
+            setSendFormError('Bitte wähle mindestens einen Nachrichtenkanal aus.');
+            return;
+        }
+
+        setIsSending(true);
+
+        const results = await Promise.all(channelsToSend.map((channel): Promise<MessageDeliveryResult> => {
+            if (!implementedMessageChannels.includes(channel)) {
+                return Promise.resolve({ channel, success: false, error: 'Dieser Kanal wird noch nicht unterstützt.' });
+            }
+
+            const to = channel === 'sms' ? normalizePhoneNumberForSms(deliveryTargets[channel]) : deliveryTargets[channel];
+
+            return sendMessage(channel, {
+                to,
+                message: renderedMessageContent,
+                subject: renderedMessageTitle,
+            });
+        }));
+
+        setSendResults(results);
+        setIsSending(false);
     };
 
     return (
@@ -741,18 +790,31 @@ export const KundeMessage = () => {
                     </Typography>
                     <FormControlLabel
                         label={deliveryTargets.sms ? `SMS an ${deliveryTargets.sms}` : 'SMS: keine Telefonnummer vorhanden'}
-                        control={<Checkbox disabled={!deliveryTargets.sms} />}
+                        control={<Checkbox checked={selectedChannels.sms} disabled={!deliveryTargets.sms} onChange={toggleChannel('sms')} />}
                     />
                     <FormControlLabel
                         label={deliveryTargets.whatsapp ? `Whatsapp an ${deliveryTargets.whatsapp}` : 'Whatsapp: keine Telefonnummer vorhanden'}
-                        control={<Checkbox disabled={!deliveryTargets.whatsapp} />}
+                        control={<Checkbox checked={selectedChannels.whatsapp} disabled={!deliveryTargets.whatsapp} onChange={toggleChannel('whatsapp')} />}
                     />
                     <FormControlLabel
                         label={deliveryTargets.email ? `Email an ${deliveryTargets.email}` : 'Email: keine Email vorhanden'}
-                        control={<Checkbox disabled={!deliveryTargets.email} />}
+                        control={<Checkbox checked={selectedChannels.email} disabled={!deliveryTargets.email} onChange={toggleChannel('email')} />}
                     />
                 </Box>
             </Card>
+            {sendFormError ? (
+                <Typography color='error' sx={{ textAlign: 'right', mb: 1 }}>
+                    {sendFormError}
+                </Typography>
+            ) : null}
+            {sendResults.map(result => (
+                <Typography
+                    key={result.channel}
+                    sx={{ textAlign: 'right', mb: 1, color: result.success ? 'success.main' : 'error.main' }}
+                >
+                    {messageChannelLabels[result.channel]}: {result.success ? 'erfolgreich gesendet' : `fehlgeschlagen (${result.error ?? 'unbekannter Fehler'})`}
+                </Typography>
+            ))}
             <Box sx={{
                 display: 'flex',
                 gap: '1em',
@@ -761,8 +823,8 @@ export const KundeMessage = () => {
                 <Button variant='outlined' onClick={() => navigate(`/kunde/${recordId}/show`)}>
                     Abbrechen
                 </Button>
-                <Button variant='contained' onClick={() => (console.log('Nachrichtenentwurf', draftMessage))}>
-                    Nachricht senden
+                <Button variant='contained' onClick={() => void handleSend()} disabled={isSending}>
+                    {isSending ? 'Wird gesendet...' : 'Nachricht senden'}
                 </Button>
             </Box>
         </Box>
