@@ -1,41 +1,92 @@
 import {
   DataTable,
+  DataTableProps,
+  Datagrid,
   List,
   ReferenceManyField,
-  Datagrid,
   useDataProvider,
   useShowController,
   ListActions,
   useRecordContext,
 } from "react-admin";
 import {
+  BooleanField,
+  BooleanInput,
   DateField,
   Show,
-  SimpleShowLayout,
   TextField,
   FunctionField,
 } from "react-admin";
 import { DateInput, Edit, SimpleForm, TextInput } from "react-admin";
 import { Create } from "react-admin";
-import { ReferenceField } from "react-admin";
 import {
   Box,
   Button,
   Card,
   Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   FormControlLabel,
+  IconButton,
   ListItem,
   ListItemButton,
   ListItemText,
+  Stack,
+  TextField as MuiTextField,
   Theme,
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import { useEffect, useState } from "react";
-import type { ComponentProps } from "react";
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import PrintIcon from "@mui/icons-material/Print";
+import SmsIcon from "@mui/icons-material/Sms";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
+import EmailIcon from "@mui/icons-material/Email";
+import SendIcon from "@mui/icons-material/Send";
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
+import EventIcon from "@mui/icons-material/Event";
 import { supabase } from "./utils";
+import {
+  implementedMessageChannels,
+  MessageChannel,
+  MessageDeliveryResult,
+  normalizePhoneNumberForSms,
+  normalizePhoneNumberForWhatsapp,
+  sendMessage,
+} from "./messaging";
+import {
+  EditActionsBar,
+  Field,
+  FieldRow,
+  FormSection,
+  RelatedSection,
+  ShowActionsBar,
+  ShowColumn,
+  ShowColumns,
+  ShowLayout,
+  ShowSection,
+} from "./EntityLayout";
+import { BrilleHistoryDatagrid } from "./BrilleHistory";
+
+const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
+  sms: SmsIcon,
+  whatsapp: WhatsAppIcon,
+  email: EmailIcon,
+};
+
+const messageChannelLabels: Record<MessageChannel, string> = {
+  sms: "SMS",
+  whatsapp: "Whatsapp",
+  email: "Email",
+};
 
 type NachrichtRecord = Record<string, unknown> & {
   _rowKey: string;
@@ -117,6 +168,25 @@ const getMessageFieldValue = (
   return null;
 };
 
+const getMessageFieldKey = (
+  record: Record<string, unknown>,
+  candidateFields: string[],
+) => {
+  const keys = Object.keys(record);
+
+  for (const fieldName of candidateFields) {
+    const match = keys.find(
+      (key) => key.toLowerCase() === fieldName.toLowerCase(),
+    );
+
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+};
+
 const getMessageContent = (record: NachrichtRecord) => {
   const preferredContent = getMessageFieldValue(record, messageContentFields);
 
@@ -153,6 +223,37 @@ const getMessageTitle = (record: NachrichtRecord) => {
 
   return firstLine.length > 60 ? `${firstLine.slice(0, 57)}...` : firstLine;
 };
+
+type MessageTemplateDraft = {
+  id?: string | number;
+  titleKey: string;
+  contentKey: string;
+  titel: string;
+  text: string;
+};
+
+const defaultTemplateTitleKey = "Titel";
+const defaultTemplateContentKey = "Text";
+
+const createEmptyTemplateDraft = (): MessageTemplateDraft => ({
+  titleKey: defaultTemplateTitleKey,
+  contentKey: defaultTemplateContentKey,
+  titel: "",
+  text: "",
+});
+
+const createTemplateDraftFromRecord = (
+  record: NachrichtRecord,
+): MessageTemplateDraft => ({
+  id: record.id,
+  titleKey:
+    getMessageFieldKey(record, messageTitleFields) ?? defaultTemplateTitleKey,
+  contentKey:
+    getMessageFieldKey(record, messageContentFields) ??
+    defaultTemplateContentKey,
+  titel: getMessageFieldValue(record, messageTitleFields) ?? "",
+  text: getMessageFieldValue(record, messageContentFields) ?? "",
+});
 
 const toTextValue = (value: unknown) => {
   if (typeof value === "string") {
@@ -276,27 +377,27 @@ const renderMessageTemplate = (
 
 const kundenFilterDesktop = [
   <TextInput
-    key="Vorname"
+    key="vorname"
     resettable
     source="Vorname@ilike"
     label="Vorname"
     alwaysOn
   />,
   <TextInput
-    key="Nachname"
+    key="nachname"
     resettable
     source="Nachname@ilike"
     label="Nachname"
     alwaysOn
   />,
   <DateInput
-    key="Geburtsdatum"
+    key="geburtsdatum"
     source="Geburtsdatum@ilike"
     label="Geburtsdatum"
     alwaysOn
   />,
   <TextInput
-    key="KundenNummer"
+    key="kundennummer"
     resettable
     source="KundenNummer@ilike"
     label="Kundennummer"
@@ -304,20 +405,20 @@ const kundenFilterDesktop = [
   />,
 ];
 const kundenFilterMobile = [
-  <TextInput key="Vorname" resettable source="Vorname@ilike" label="Vorname" />,
+  <TextInput key="vorname" resettable source="Vorname@ilike" label="Vorname" />,
   <TextInput
-    key="Nachname"
+    key="nachname"
     resettable
     source="Nachname@ilike"
     label="Nachname"
   />,
   <DateInput
-    key="Geburtsdatum"
+    key="geburtsdatum"
     source="Geburtsdatum@ilike"
     label="Geburtsdatum"
   />,
   <TextInput
-    key="KundenNummer"
+    key="kundennummer"
     resettable
     source="KundenNummer@ilike"
     label="Kundennummer"
@@ -346,6 +447,7 @@ const MessageButton = () => {
   return (
     <Button
       variant="contained"
+      startIcon={<SendIcon />}
       onClick={() =>
         navigate(`/kunde/${record.id}/message`, { state: routeState })
       }
@@ -355,7 +457,38 @@ const MessageButton = () => {
   );
 };
 
-export const KundenDataTable = (props: ComponentProps<typeof DataTable>) => (
+const TerminButton = () => {
+  const record = useRecordContext();
+  const navigate = useNavigate();
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <Button
+      startIcon={<EventIcon />}
+      onClick={() =>
+        navigate("/termin/create", { state: { kunde_id: record.id } })
+      }
+    >
+      Termin anlegen
+    </Button>
+  );
+};
+
+// Central, always-reachable actions for the Kunde detail page (message, print, edit, back).
+const KundeShowActions = () => (
+  <ShowActionsBar>
+    <MessageButton />
+    <TerminButton />
+    <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
+      Drucken
+    </Button>
+  </ShowActionsBar>
+);
+
+export const KundenDataTable = (props: Partial<DataTableProps>) => (
   <DataTable rowClick="show" {...props}>
     <DataTable.Col source="id" />
     <DataTable.Col label="Kunde">
@@ -395,6 +528,7 @@ export const KundenDataTable = (props: ComponentProps<typeof DataTable>) => (
       source="TelefonnummerGeschaeftlich"
       label="Geschäftliche Telefonnummer"
     />
+    <DataTable.Col source="Handy" />
     <DataTable.Col source="Email" />
     <DataTable.Col source="KrankenkassenNummer" label="Krankenkassennummer" />
     <DataTable.Col source="VersichertenNummer" label="Versichertenummer" />
@@ -423,26 +557,6 @@ export const KundenList = () => {
   );
 };
 
-const TerminButton = () => {
-  const record = useRecordContext();
-  const navigate = useNavigate();
-
-  if (!record) {
-    return null;
-  }
-
-  return (
-    <Button
-      variant="outlined"
-      onClick={() =>
-        navigate("/termin/create", { state: { kunde_id: record.id } })
-      }
-    >
-      Termin anlegen
-    </Button>
-  );
-};
-
 export const KundeShow = () => {
   const showObject = useShowController();
   const dataProvider = useDataProvider();
@@ -464,104 +578,214 @@ export const KundeShow = () => {
   }, [showObject, dataProvider]);
 
   return (
-    <Show title="Kunden anzeigen">
-      <SimpleShowLayout>
-        <Box sx={{ display: "flex", gap: "1em", flexWrap: "wrap" }}>
-          <MessageButton />
-          <TerminButton />
-        </Box>
-        <TextField source="id" />
-        <DateField source="created_at" />
-        <TextField source="KundenNummer" />
-        <DateField source="Aufnahmedatum" />
-        <TextField source="Anrede" />
-        <TextField source="Nachname" />
-        <TextField source="Vorname" />
-        <DateField source="Geburtsdatum" />
-        <TextField source="Geschlecht" />
-        <TextField source="Straße" />
-        <TextField source="Tätigkeit" />
-        <TextField source="TelefonnummerPrivat" />
-        <TextField source="Email" />
-        <TextField source="KrankenkassenNummer" />
-        <TextField source="VersichertenNummer" />
-        <TextField source="Postleitzahl" />
-        <TextField source="Hausnummer" />
-        <TextField source="Stadt" />
-        <TextField source="TelefonnummerGeschaeftlich" />
-        <TextField source="KrankenversicherungsTyp" />
-        <ReferenceManyField
-          reference="brille"
-          target="kunde_id"
-          label="Brillen des Kunden"
-        >
-          <Datagrid>
-            <TextField source="id" />
-            <TextField source="BrillenArt" />
-            <TextField source="Berater" />
-            <TextField source="Refraktion" />
-            <DateField source="Datum" />
-            <TextField source="Werkstatt" />
-            <DateField source="Abholung" />
-            <TextField source="Notizen" />
-            <ReferenceField source="GlasLinks" reference="glass" link="show">
-              <TextField source="id" />
-            </ReferenceField>
-            <ReferenceField source="GlasRechts" reference="glass" link="show">
-              <TextField source="id" />
-            </ReferenceField>
-            <ReferenceField source="Fassung" reference="fassung" link="show">
-              <TextField source="id" />
-            </ReferenceField>
-            <ReferenceField source="Glastyp" reference="glastyp" link="show">
-              <TextField source="id" />
-            </ReferenceField>
-            <TextField source="RabattBezeichnung" />
-            <TextField source="Summe" />
-          </Datagrid>
-        </ReferenceManyField>
-        <ReferenceManyField
-          reference="termin"
-          target="kunde_id"
-          label="Termine des Kunden"
-          sort={{ field: "Start", order: "DESC" }}
-        >
-          <Datagrid>
-            <TextField source="id" />
-            <DateField source="Start" showTime />
-            <DateField source="Ende" showTime />
-            <TextField source="Terminart" />
-            <TextField source="Notiz" />
-          </Datagrid>
-        </ReferenceManyField>
-      </SimpleShowLayout>
+    <Show title="Kunden anzeigen" actions={<KundeShowActions />}>
+      <ShowLayout>
+        <ShowColumns>
+          <ShowColumn>
+            <ShowSection title="Datenbankfelder">
+              <Field>
+                <TextField source="id" />
+              </Field>
+              <Field>
+                <DateField source="created_at" />
+              </Field>
+              <Field>
+                <TextField source="KundenNummer" />
+              </Field>
+              <Field>
+                <DateField source="Aufnahmedatum" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Stammdaten">
+              <Field>
+                <TextField source="Anrede" />
+              </Field>
+              <Field>
+                <TextField source="Nachname" />
+              </Field>
+              <Field>
+                <TextField source="Vorname" />
+              </Field>
+              <Field>
+                <TextField source="Geschlecht" />
+              </Field>
+              <Field>
+                <DateField source="Geburtsdatum" />
+              </Field>
+              <Field>
+                <TextField source="Tätigkeit" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Adresse">
+              <Field>
+                <TextField source="Straße" />
+              </Field>
+              <Field>
+                <TextField source="Hausnummer" />
+              </Field>
+              <Field>
+                <TextField source="Postleitzahl" />
+              </Field>
+              <Field>
+                <TextField source="Stadt" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Kontakt">
+              <Field>
+                <TextField source="TelefonnummerPrivat" />
+              </Field>
+              <Field>
+                <TextField source="TelefonnummerGeschaeftlich" />
+              </Field>
+              <Field>
+                <TextField source="Handy" />
+              </Field>
+              <Field>
+                <TextField source="Email" />
+              </Field>
+              <Field label="Bevorzugter Kontaktweg">
+                <BooleanField source="BevorzugterKontaktweg" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Versicherung">
+              <Field>
+                <TextField source="KrankenkassenNummer" />
+              </Field>
+              <Field>
+                <TextField source="VersichertenNummer" />
+              </Field>
+              <Field>
+                <TextField source="KrankenversicherungsTyp" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Marketing">
+              <Field label="Werbeeinwilligung">
+                <BooleanField source="Werbeeinwilligung" />
+              </Field>
+              <Field label="Werbeeinwilligung für">
+                <TextField source="WerbeeinwilligungFuer" />
+              </Field>
+              <Field label="Werbeaktion / Kundenquelle">
+                <TextField source="Kundenquelle" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Merkmale">
+              <Field label="Merkmal 1">
+                <TextField source="Merkmal1" />
+              </Field>
+              <Field label="Merkmal 2">
+                <TextField source="Merkmal2" />
+              </Field>
+              <Field label="Merkmal 3">
+                <TextField source="Merkmal3" />
+              </Field>
+              <Field label="Merkmal 4">
+                <TextField source="Merkmal4" />
+              </Field>
+            </ShowSection>
+          </ShowColumn>
+          <ShowColumn>
+            <RelatedSection title="Aufträge / Verlauf">
+              <ReferenceManyField
+                reference="brille"
+                target="kunde_id"
+                label={false}
+                sort={{ field: "Datum", order: "DESC" }}
+              >
+                <BrilleHistoryDatagrid />
+              </ReferenceManyField>
+            </RelatedSection>
+            <RelatedSection title="Termine des Kunden">
+              <ReferenceManyField
+                reference="termin"
+                target="kunde_id"
+                label={false}
+                sort={{ field: "Start", order: "DESC" }}
+              >
+                <Datagrid>
+                  <TextField source="id" />
+                  <DateField source="Start" showTime />
+                  <DateField source="Ende" showTime />
+                  <TextField source="Terminart" />
+                  <TextField source="Notiz" />
+                </Datagrid>
+              </ReferenceManyField>
+            </RelatedSection>
+          </ShowColumn>
+        </ShowColumns>
+      </ShowLayout>
     </Show>
   );
 };
 
 export const KundeEdit = () => (
-  <Edit title="Kunden bearbeiten">
+  <Edit title="Kunden bearbeiten" actions={<EditActionsBar />}>
     <SimpleForm>
-      <TextInput source="id" InputProps={{ disabled: true }} />
-      <DateInput source="created_at" InputProps={{ disabled: true }} />
-      <TextInput source="KundenNummer" />
-      <DateInput source="Aufnahmedatum" />
-      <TextInput source="Anrede" />
-      <TextInput source="Nachname" />
-      <TextInput source="Vorname" />
-      <DateInput source="Geburtsdatum" />
-      <TextInput source="Geschlecht" />
-      <TextInput source="Straße" />
-      <TextInput source="Tätigkeit" />
-      <TextInput source="TelefonnummerPrivat" />
-      <TextInput source="Email" />
-      <TextInput source="KrankenkassenNummer" />
-      <TextInput source="VersichertenNummer" />
-      <TextInput source="Postleitzahl" />
-      <TextInput source="Hausnummer" />
-      <TextInput source="Stadt" />
-      <TextInput source="TelefonnummerGeschaeftlich" />
-      <TextInput source="KrankenversicherungsTyp" />
+      <FormSection title="Datenbankfelder">
+        <FieldRow>
+          <TextInput source="id" InputProps={{ disabled: true }} />
+          <DateInput source="created_at" InputProps={{ disabled: true }} />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="KundenNummer" />
+          <DateInput source="Aufnahmedatum" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Stammdaten">
+        <FieldRow>
+          <TextInput source="Anrede" />
+          <TextInput source="Nachname" />
+          <TextInput source="Vorname" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Geschlecht" />
+          <DateInput source="Geburtsdatum" />
+          <TextInput source="Tätigkeit" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Adresse">
+        <FieldRow>
+          <TextInput source="Straße" />
+          <TextInput source="Hausnummer" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Postleitzahl" />
+          <TextInput source="Stadt" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Kontakt">
+        <FieldRow>
+          <TextInput source="TelefonnummerPrivat" />
+          <TextInput source="TelefonnummerGeschaeftlich" />
+          <TextInput source="Handy" />
+          <TextInput source="Email" />
+        </FieldRow>
+        <BooleanInput source="BevorzugterKontaktweg" label="Bevorzugter Kontaktweg" />
+      </FormSection>
+      <FormSection title="Versicherung">
+        <FieldRow>
+          <TextInput source="KrankenkassenNummer" />
+          <TextInput source="VersichertenNummer" />
+          <TextInput source="KrankenversicherungsTyp" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Marketing">
+        <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
+        <FieldRow>
+          <TextInput source="WerbeeinwilligungFuer" label="Werbeeinwilligung für" />
+          <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Merkmale">
+        <FieldRow>
+          <TextInput source="Merkmal1" label="Merkmal 1" />
+          <TextInput source="Merkmal2" label="Merkmal 2" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Merkmal3" label="Merkmal 3" />
+          <TextInput source="Merkmal4" label="Merkmal 4" />
+        </FieldRow>
+      </FormSection>
     </SimpleForm>
   </Edit>
 );
@@ -586,83 +810,87 @@ export const KundeCreate = () => {
       transform={(data) => ({ ...data, created_at: new Date().toISOString() })}
     >
       <SimpleForm defaultValues={defaultValues}>
-        <Typography>Datenbankfelder</Typography>
-        <Box sx={{ display: { xs: "block", sm: "flex", width: "100%" } }}>
-          <Box sx={{ flex: 1, mr: { xs: 0, sm: "0.5em" } }}>
+        <FormSection title="Datenbankfelder">
+          <FieldRow>
             <TextInput source="id" InputProps={{ disabled: true }} />
-          </Box>
-          <Box sx={{ flex: 1, ml: { xs: 0, sm: "0.5em" } }}>
             <DateInput
               source="created_at"
               InputProps={{ disabled: true }}
               label="Erstellt am"
             />
-          </Box>
-        </Box>
-        <Box sx={{ display: { xs: "block", sm: "flex", width: "100%" } }}>
-          <Box sx={{ flex: 1, mr: { xs: 0, sm: "0.5em" } }}>
+          </FieldRow>
+          <FieldRow>
             <TextInput source="KundenNummer" />
-          </Box>
-          <Box sx={{ flex: 1, ml: { xs: 0, sm: "0.5em" } }}>
             <DateInput source="Aufnahmedatum" />
-          </Box>
-        </Box>
-        <Typography>Stammdaten</Typography>
-        <TextInput source="Anrede" />
-        <TextInput source="Nachname" />
-        <TextInput source="Vorname" />
-        <TextInput source="Geschlecht" />
-        <Box sx={{ display: { xs: "block", sm: "flex", width: "100%" } }}>
-          <Box sx={{ flex: 1, mr: { xs: 0, sm: "0.5em" } }}>
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Stammdaten">
+          <FieldRow>
+            <TextInput source="Anrede" />
+            <TextInput source="Nachname" />
+            <TextInput source="Vorname" />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Geschlecht" />
             <DateInput source="Geburtsdatum" />
-          </Box>
-          <Box sx={{ flex: 1, ml: { xs: 0, sm: "0.5em" } }}>
             <TextInput source="Tätigkeit" />
-          </Box>
-        </Box>
-        <Divider />
-        <Typography>Adresse</Typography>
-        <Box sx={{ display: { xs: "block", sm: "flex", width: "100%" } }}>
-          <Box sx={{ flex: 1, mr: { xs: 0, sm: "0.5em" } }}>
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Adresse">
+          <FieldRow>
             <TextInput source="Straße" />
-          </Box>
-          <Box sx={{ flex: 1, ml: { xs: 0, sm: "0.5em" } }}>
             <TextInput source="Hausnummer" />
-          </Box>
-        </Box>
-        <Box sx={{ display: { xs: "block", sm: "flex", width: "100%" } }}>
-          <Box sx={{ flex: 1, mr: { xs: 0, sm: "0.5em" } }}>
+          </FieldRow>
+          <FieldRow>
             <TextInput source="Postleitzahl" />
-          </Box>
-          <Box sx={{ flex: 1, ml: { xs: 0, sm: "0.5em" } }}>
             <TextInput source="Stadt" />
-          </Box>
-        </Box>
-        <Divider />
-        <Typography>Kontakt</Typography>
-        <Box sx={{ display: { xs: "block", sm: "flex", width: "100%" } }}>
-          <Box sx={{ flex: 1, mr: { xs: 0, sm: "0.5em" } }}>
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Kontakt">
+          <FieldRow>
             <TextInput
               source="TelefonnummerPrivat"
               label="Telefonnummer Privat"
             />
-          </Box>
-          <Box sx={{ flex: 1, ml: { xs: 0, sm: "0.5em" } }}>
             <TextInput
               source="TelefonnummerGeschaeftlich"
               label="Telefonnummer Geschäftlich"
             />
-          </Box>
-          <Box sx={{ flex: 1, ml: { xs: 0, sm: "0.5em" } }}>
+            <TextInput source="Handy" />
             <TextInput source="Email" />
-          </Box>
-        </Box>
-        <TextInput source="KrankenkassenNummer" label="Krankenkassennummer" />
-        <TextInput source="VersichertenNummer" label="Versichertennummer" />
-        <TextInput
-          source="KrankenversicherungsTyp"
-          label="Krankenversicherungs Typ"
-        />
+          </FieldRow>
+          <BooleanInput source="BevorzugterKontaktweg" label="Bevorzugter Kontaktweg" />
+        </FormSection>
+        <FormSection title="Versicherung">
+          <FieldRow>
+            <TextInput
+              source="KrankenkassenNummer"
+              label="Krankenkassennummer"
+            />
+            <TextInput source="VersichertenNummer" label="Versichertennummer" />
+            <TextInput
+              source="KrankenversicherungsTyp"
+              label="Krankenversicherungs Typ"
+            />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Marketing">
+          <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
+          <FieldRow>
+            <TextInput source="WerbeeinwilligungFuer" label="Werbeeinwilligung für" />
+            <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Merkmale">
+          <FieldRow>
+            <TextInput source="Merkmal1" label="Merkmal 1" />
+            <TextInput source="Merkmal2" label="Merkmal 2" />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Merkmal3" label="Merkmal 3" />
+            <TextInput source="Merkmal4" label="Merkmal 4" />
+          </FieldRow>
+        </FormSection>
       </SimpleForm>
     </Create>
   );
@@ -688,71 +916,99 @@ export const KundeMessage = () => {
     !routeState?.kunde,
   );
   const [customerError, setCustomerError] = useState<string | null>(null);
+  const [selectedChannels, setSelectedChannels] = useState<
+    Record<MessageChannel, boolean>
+  >({
+    sms: false,
+    whatsapp: false,
+    email: false,
+  });
+  const [isSending, setIsSending] = useState(false);
+  const [sendFormError, setSendFormError] = useState<string | null>(null);
+  const [sendResults, setSendResults] = useState<MessageDeliveryResult[]>([]);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState<MessageTemplateDraft>(
+    createEmptyTemplateDraft(),
+  );
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateSaveError, setTemplateSaveError] = useState<string | null>(
+    null,
+  );
+  const [templateToDelete, setTemplateToDelete] =
+    useState<NachrichtRecord | null>(null);
+  const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
+  const [templateDeleteError, setTemplateDeleteError] = useState<string | null>(
+    null,
+  );
+
+  const isMountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    [],
+  );
+
+  const loadMessages = useCallback(async (preferredKey?: string | null) => {
+    setIsLoadingMessages(true);
+    setMessageError(null);
+
+    const { data, error } = await supabase.from("nachrichten").select("*");
+
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    if (error) {
+      console.error("Fehler beim Laden der Nachrichten", error);
+      setMessages([]);
+      setSelectedMessageKey(null);
+      setMessageError("Nachrichten konnten nicht geladen werden.");
+      setIsLoadingMessages(false);
+      return;
+    }
+
+    const nextMessages = (Array.isArray(data) ? data : [])
+      .map((entry, index) => {
+        const record = (entry ?? {}) as Record<string, unknown>;
+        const id =
+          typeof record.id === "string" || typeof record.id === "number"
+            ? record.id
+            : undefined;
+
+        return {
+          ...record,
+          id,
+          _rowKey: id !== undefined ? String(id) : `nachricht-${index}`,
+        };
+      })
+      .sort((left, right) => {
+        if (typeof left.id === "number" && typeof right.id === "number") {
+          return left.id - right.id;
+        }
+
+        if (typeof left.id === "string" && typeof right.id === "string") {
+          return left.id.localeCompare(right.id);
+        }
+
+        return left._rowKey.localeCompare(right._rowKey);
+      });
+
+    setMessages(nextMessages);
+    setSelectedMessageKey((previousKey) => {
+      const targetKey = preferredKey ?? previousKey;
+      return targetKey &&
+        nextMessages.some((message) => message._rowKey === targetKey)
+        ? targetKey
+        : (nextMessages[0]?._rowKey ?? null);
+    });
+    setIsLoadingMessages(false);
+  }, []);
 
   useEffect(() => {
-    let isActive = true;
-
-    const loadMessages = async () => {
-      setIsLoadingMessages(true);
-      setMessageError(null);
-
-      const { data, error } = await supabase.from("nachrichten").select("*");
-
-      if (!isActive) {
-        return;
-      }
-
-      if (error) {
-        console.error("Fehler beim Laden der Nachrichten", error);
-        setMessages([]);
-        setSelectedMessageKey(null);
-        setMessageError("Nachrichten konnten nicht geladen werden.");
-        setIsLoadingMessages(false);
-        return;
-      }
-
-      const nextMessages = (Array.isArray(data) ? data : [])
-        .map((entry, index) => {
-          const record = (entry ?? {}) as Record<string, unknown>;
-          const id =
-            typeof record.id === "string" || typeof record.id === "number"
-              ? record.id
-              : undefined;
-
-          return {
-            ...record,
-            id,
-            _rowKey: id !== undefined ? String(id) : `nachricht-${index}`,
-          };
-        })
-        .sort((left, right) => {
-          if (typeof left.id === "number" && typeof right.id === "number") {
-            return left.id - right.id;
-          }
-
-          if (typeof left.id === "string" && typeof right.id === "string") {
-            return left.id.localeCompare(right.id);
-          }
-
-          return left._rowKey.localeCompare(right._rowKey);
-        });
-
-      setMessages(nextMessages);
-      setSelectedMessageKey((previousKey) =>
-        previousKey &&
-        nextMessages.some((message) => message._rowKey === previousKey)
-          ? previousKey
-          : (nextMessages[0]?._rowKey ?? null),
-      );
-      setIsLoadingMessages(false);
-    };
-
     void loadMessages();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  }, [loadMessages]);
 
   const selectedMessage =
     messages.find((message) => message._rowKey === selectedMessageKey) ?? null;
@@ -832,177 +1088,628 @@ export const KundeMessage = () => {
     whatsapp: messageCustomer.phoneNumber,
     email: messageCustomer.email,
   };
-  const draftMessage = {
-    kundeId: messageCustomer.id || recordId,
-    recipient: messageCustomer,
-    targets: deliveryTargets,
-    title: renderedMessageTitle,
-    content: renderedMessageContent,
+  const toggleChannel =
+    (channel: MessageChannel) => (event: ChangeEvent<HTMLInputElement>) => {
+      setSelectedChannels((previous) => ({
+        ...previous,
+        [channel]: event.target.checked,
+      }));
+    };
+
+  const handleSend = async () => {
+    setSendFormError(null);
+    setSendResults([]);
+
+    if (!selectedMessage) {
+      setSendFormError("Bitte wähle eine Nachricht aus.");
+      return;
+    }
+
+    const channelsToSend = (
+      Object.keys(selectedChannels) as MessageChannel[]
+    ).filter(
+      (channel) => selectedChannels[channel] && deliveryTargets[channel],
+    );
+
+    if (channelsToSend.length === 0) {
+      setSendFormError("Bitte wähle mindestens einen Nachrichtenkanal aus.");
+      return;
+    }
+
+    setIsSending(true);
+
+    const results = await Promise.all(
+      channelsToSend.map((channel): Promise<MessageDeliveryResult> => {
+        if (!implementedMessageChannels.includes(channel)) {
+          return Promise.resolve({
+            channel,
+            success: false,
+            error: "Dieser Kanal wird noch nicht unterstützt.",
+          });
+        }
+
+        const to =
+          channel === "sms"
+            ? normalizePhoneNumberForSms(deliveryTargets[channel])
+            : channel === "whatsapp"
+              ? normalizePhoneNumberForWhatsapp(deliveryTargets[channel])
+              : deliveryTargets[channel];
+
+        return sendMessage(channel, {
+          to,
+          message: renderedMessageContent,
+          subject: renderedMessageTitle,
+        });
+      }),
+    );
+
+    setSendResults(results);
+    setIsSending(false);
   };
 
+  const openCreateTemplateDialog = () => {
+    setTemplateDraft(createEmptyTemplateDraft());
+    setTemplateSaveError(null);
+    setTemplateDialogOpen(true);
+  };
+
+  const openEditTemplateDialog = (message: NachrichtRecord) => {
+    setTemplateDraft(createTemplateDraftFromRecord(message));
+    setTemplateSaveError(null);
+    setTemplateDialogOpen(true);
+  };
+
+  const closeTemplateDialog = () => {
+    if (isSavingTemplate) {
+      return;
+    }
+
+    setTemplateDialogOpen(false);
+  };
+
+  const handleSaveTemplate = async () => {
+    const titel = templateDraft.titel.trim();
+    const text = templateDraft.text.trim();
+
+    if (!titel || !text) {
+      setTemplateSaveError("Bitte Titel und Text angeben.");
+      return;
+    }
+
+    setTemplateSaveError(null);
+    setIsSavingTemplate(true);
+
+    const payload = {
+      [templateDraft.titleKey]: titel,
+      [templateDraft.contentKey]: text,
+    };
+
+    const { data, error } =
+      templateDraft.id !== undefined
+        ? await supabase
+            .from("nachrichten")
+            .update(payload)
+            .eq("id", templateDraft.id)
+            .select("id")
+            .maybeSingle()
+        : await supabase
+            .from("nachrichten")
+            .insert(payload)
+            .select("id")
+            .maybeSingle();
+
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    setIsSavingTemplate(false);
+
+    if (error) {
+      console.error("Fehler beim Speichern der Nachrichtenvorlage", error);
+      setTemplateSaveError("Vorlage konnte nicht gespeichert werden.");
+      return;
+    }
+
+    setTemplateDialogOpen(false);
+
+    const savedId =
+      templateDraft.id ?? (data as { id?: string | number } | null)?.id;
+    await loadMessages(savedId !== undefined ? String(savedId) : undefined);
+  };
+
+  const openDeleteTemplateDialog = (message: NachrichtRecord) => {
+    setTemplateDeleteError(null);
+    setTemplateToDelete(message);
+  };
+
+  const closeDeleteTemplateDialog = () => {
+    if (isDeletingTemplate) {
+      return;
+    }
+
+    setTemplateToDelete(null);
+  };
+
+  const handleConfirmDeleteTemplate = async () => {
+    if (!templateToDelete || templateToDelete.id === undefined) {
+      return;
+    }
+
+    setIsDeletingTemplate(true);
+    setTemplateDeleteError(null);
+
+    const { error } = await supabase
+      .from("nachrichten")
+      .delete()
+      .eq("id", templateToDelete.id);
+
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    setIsDeletingTemplate(false);
+
+    if (error) {
+      console.error("Fehler beim Löschen der Nachrichtenvorlage", error);
+      setTemplateDeleteError("Vorlage konnte nicht gelöscht werden.");
+      return;
+    }
+
+    setTemplateToDelete(null);
+    await loadMessages();
+  };
+
+  const channelOrder: MessageChannel[] = ["sms", "whatsapp", "email"];
+
   return (
-    <Box>
-      <Box sx={{ margin: "1em" }}></Box>
-      <Card
+    <Box
+      sx={{
+        width: "100%",
+        maxWidth: 1080,
+        margin: "0 auto",
+        minWidth: 0,
+        padding: { xs: "0.75em", md: "1.5em" },
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mb: 2,
+          minWidth: 0,
+        }}
+      >
+        <IconButton
+          aria-label="Zurück zum Kunden"
+          onClick={() => navigate(`/kunde/${recordId}/show`)}
+          sx={{ mt: "2px" }}
+        >
+          <ArrowBackIcon />
+        </IconButton>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography
+            variant="h5"
+            component="h1"
+            sx={{ fontWeight: 600 }}
+            noWrap
+          >
+            Nachricht senden
+          </Typography>
+          <Typography variant="body2" sx={{ color: "text.secondary" }} noWrap>
+            an {recipientName}
+          </Typography>
+        </Box>
+      </Box>
+
+      <Box
         sx={{
           display: "grid",
           gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
-          gridTemplateRows: { xs: "auto auto auto", md: "1fr 1fr" },
           gap: "1em",
-          padding: "1em",
-          marginBottom: "1em",
-          minHeight: { md: "60vh" },
+          alignItems: "start",
+          minWidth: 0,
         }}
       >
         <Box
           sx={{
-            gridColumn: "1 / 2",
-            minHeight: 0,
-            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1em",
+            minWidth: 0,
           }}
         >
-          <Typography variant="subtitle2">Nachricht auswählen</Typography>
+          <Card sx={{ padding: "1em" }}>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 1,
+              }}
+            >
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Nachricht auswählen
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={openCreateTemplateDialog}
+              >
+                Neue Vorlage
+              </Button>
+            </Box>
+            <Divider sx={{ mb: 1 }} />
+            <Box
+              sx={{
+                maxHeight: { xs: "13rem", md: "18rem" },
+                overflowY: "auto",
+              }}
+            >
+              {isLoadingMessages ? (
+                <Typography sx={{ mt: 1, color: "text.secondary" }}>
+                  Lade Nachrichten...
+                </Typography>
+              ) : null}
+              {!isLoadingMessages && messageError ? (
+                <Typography color="error" sx={{ mt: 1 }}>
+                  {messageError}
+                </Typography>
+              ) : null}
+              {!isLoadingMessages && !messageError && messages.length === 0 ? (
+                <Typography sx={{ mt: 1, color: "text.secondary" }}>
+                  Keine Nachrichten gefunden.
+                </Typography>
+              ) : null}
+              {!isLoadingMessages && !messageError
+                ? messages.map((message) => {
+                    const messageTitle = getMessageTitle(message);
+                    const messageContent = getMessageContent(message);
 
-          {isLoadingMessages ? (
-            <Typography sx={{ mt: 2 }}>Lade Nachrichten...</Typography>
-          ) : null}
-          {!isLoadingMessages && messageError ? (
-            <Typography color="error" sx={{ mt: 2 }}>
-              {messageError}
+                    return (
+                      <ListItem
+                        key={message._rowKey}
+                        disablePadding
+                        secondaryAction={
+                          <Stack direction="row" spacing={0.5}>
+                            <IconButton
+                              aria-label="Vorlage bearbeiten"
+                              size="small"
+                              onClick={() => openEditTemplateDialog(message)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              aria-label="Vorlage löschen"
+                              size="small"
+                              onClick={() => openDeleteTemplateDialog(message)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        }
+                      >
+                        <ListItemButton
+                          selected={selectedMessageKey === message._rowKey}
+                          onClick={() => setSelectedMessageKey(message._rowKey)}
+                          sx={{ borderRadius: 1, pr: 9 }}
+                        >
+                          <ListItemText
+                            primary={messageTitle}
+                            primaryTypographyProps={{ noWrap: true }}
+                            secondary={
+                              messageTitle === messageContent
+                                ? undefined
+                                : messageContent
+                            }
+                            secondaryTypographyProps={{ noWrap: true }}
+                          />
+                        </ListItemButton>
+                      </ListItem>
+                    );
+                  })
+                : null}
+            </Box>
+          </Card>
+
+          <Card sx={{ padding: "1em" }}>
+            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
+              Versandkanäle
             </Typography>
-          ) : null}
-          {!isLoadingMessages && !messageError && messages.length === 0 ? (
-            <Typography sx={{ mt: 2 }}>Keine Nachrichten gefunden.</Typography>
-          ) : null}
-          {!isLoadingMessages && !messageError
-            ? messages.map((message) => {
-                const messageTitle = getMessageTitle(message);
-                const messageContent = getMessageContent(message);
+            <Divider sx={{ mb: 1 }} />
+            <Stack spacing={1}>
+              {channelOrder.map((channel) => {
+                const ChannelIcon = messageChannelIcons[channel];
+                const target = deliveryTargets[channel];
 
                 return (
-                  <ListItem key={message._rowKey} disablePadding>
-                    <ListItemButton
-                      selected={selectedMessageKey === message._rowKey}
-                      onClick={() => setSelectedMessageKey(message._rowKey)}
-                    >
-                      <ListItemText
-                        primary={messageTitle}
-                        primaryTypographyProps={{ noWrap: true }}
-                        secondary={
-                          messageTitle === messageContent
-                            ? undefined
-                            : messageContent
-                        }
-                        secondaryTypographyProps={{ noWrap: true }}
-                      />
-                    </ListItemButton>
-                  </ListItem>
+                  <Box
+                    key={channel}
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 1,
+                      minWidth: 0,
+                      border: "1px solid",
+                      borderColor: selectedChannels[channel]
+                        ? "primary.main"
+                        : "divider",
+                      borderRadius: 1,
+                      padding: "0.25em 0.5em",
+                      opacity: target ? 1 : 0.6,
+                    }}
+                  >
+                    <ChannelIcon
+                      fontSize="small"
+                      sx={{ color: "text.secondary" }}
+                    />
+                    <FormControlLabel
+                      sx={{
+                        flexGrow: 1,
+                        minWidth: 0,
+                        mr: 0,
+                        "& .MuiFormControlLabel-label": {
+                          minWidth: 0,
+                          overflow: "hidden",
+                        },
+                      }}
+                      label={
+                        <Box sx={{ minWidth: 0 }}>
+                          <Typography variant="body2" noWrap>
+                            {messageChannelLabels[channel]}
+                          </Typography>
+                          <Typography
+                            variant="caption"
+                            sx={{ color: "text.secondary" }}
+                            noWrap
+                            component="div"
+                          >
+                            {target || "kein Kontaktweg hinterlegt"}
+                          </Typography>
+                        </Box>
+                      }
+                      control={
+                        <Checkbox
+                          checked={selectedChannels[channel]}
+                          disabled={!target}
+                          onChange={toggleChannel(channel)}
+                        />
+                      }
+                    />
+                  </Box>
                 );
-              })
-            : null}
+              })}
+            </Stack>
+          </Card>
         </Box>
+
         <Card
           sx={{
-            gridRow: { xs: "2 / 3", md: "1 / 3" },
-            gridColumn: { xs: "1 / 2", md: "2 / 3" },
             padding: "1em",
-            overflowY: "auto",
-            minHeight: { xs: "16rem", md: "auto" },
+            minWidth: 0,
+            position: { md: "sticky" },
+            top: { md: "1em" },
           }}
         >
-          <Typography variant="subtitle2" sx={{ mb: 1 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
             Vorschau
           </Typography>
+          <Divider sx={{ mb: 1 }} />
           {isLoadingCustomer ? (
-            <Typography sx={{ mb: 2 }}>Lade Kundendaten...</Typography>
+            <Typography sx={{ mb: 2, color: "text.secondary" }}>
+              Lade Kundendaten...
+            </Typography>
           ) : null}
           {customerError ? (
             <Typography color="error" sx={{ mb: 2 }}>
               {customerError}
             </Typography>
           ) : null}
-          <Typography sx={{ color: "text.secondary" }}>
-            Empfaenger: {recipientName}
-          </Typography>
-          <Typography sx={{ color: "text.secondary" }}>
-            Email: {messageCustomer.email || "nicht vorhanden"}
-          </Typography>
-          <Typography sx={{ color: "text.secondary" }}>
-            Telefonnummer: {messageCustomer.phoneNumber || "nicht vorhanden"}
-          </Typography>
-          <Divider sx={{ my: 2 }} />
-          {selectedMessage ? (
-            <>
-              <Typography variant="h6" sx={{ mb: 1 }}>
-                {renderedMessageTitle}
-              </Typography>
-              <Typography sx={{ whiteSpace: "pre-wrap" }}>
-                {renderedMessageContent}
-              </Typography>
-            </>
-          ) : (
-            <Typography sx={{ color: "text.secondary" }}>
-              Waehle eine Nachricht aus, um den Inhalt zu sehen.
+          <Stack spacing={0.5} sx={{ mb: 2, minWidth: 0 }}>
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", overflowWrap: "break-word" }}
+            >
+              Empfänger: {recipientName}
             </Typography>
-          )}
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", overflowWrap: "break-word" }}
+            >
+              Email: {messageCustomer.email || "nicht vorhanden"}
+            </Typography>
+            <Typography
+              variant="body2"
+              sx={{ color: "text.secondary", overflowWrap: "break-word" }}
+            >
+              Telefonnummer: {messageCustomer.phoneNumber || "nicht vorhanden"}
+            </Typography>
+          </Stack>
+          <Box
+            sx={{
+              border: "1px solid",
+              borderColor: "divider",
+              borderRadius: 1,
+              padding: "1em",
+              backgroundColor: "action.hover",
+              minHeight: "8rem",
+              minWidth: 0,
+              maxHeight: { md: "18rem" },
+              overflowY: { md: "auto" },
+            }}
+          >
+            {selectedMessage ? (
+              <>
+                <Typography
+                  variant="h6"
+                  sx={{ mb: 1, overflowWrap: "break-word" }}
+                >
+                  {renderedMessageTitle}
+                </Typography>
+                <Typography
+                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
+                >
+                  {renderedMessageContent}
+                </Typography>
+              </>
+            ) : (
+              <Typography sx={{ color: "text.secondary" }}>
+                Wähle eine Nachricht aus, um den Inhalt zu sehen.
+              </Typography>
+            )}
+          </Box>
         </Card>
+      </Box>
+
+      <Box
+        sx={{
+          position: "sticky",
+          bottom: 0,
+          zIndex: 4,
+          mt: 2,
+          padding: "0.75em",
+          marginX: { xs: "-0.75em", md: "-1.5em" },
+          backgroundColor: "background.paper",
+          borderTop: "1px solid",
+          borderColor: "divider",
+        }}
+      >
+        {sendFormError ? (
+          <Typography color="error" sx={{ textAlign: "right", mb: 1 }}>
+            {sendFormError}
+          </Typography>
+        ) : null}
+        {sendResults.map((result) => (
+          <Typography
+            key={result.channel}
+            sx={{
+              textAlign: "right",
+              mb: 1,
+              color: result.success ? "success.main" : "error.main",
+            }}
+          >
+            {messageChannelLabels[result.channel]}:{" "}
+            {result.success
+              ? "erfolgreich gesendet"
+              : `fehlgeschlagen (${result.error ?? "unbekannter Fehler"})`}
+          </Typography>
+        ))}
         <Box
           sx={{
             display: "flex",
-            flexDirection: "column",
-            gridColumn: "1 / 2",
-            gridRow: { xs: "3 / 4", md: "2 / 3" },
+            gap: "1em",
+            justifyContent: "flex-end",
           }}
         >
-          <Typography variant="subtitle2">
-            Nachrichtenkanäle auswählen
-          </Typography>
-          <FormControlLabel
-            label={
-              deliveryTargets.sms
-                ? `SMS an ${deliveryTargets.sms}`
-                : "SMS: keine Telefonnummer vorhanden"
-            }
-            control={<Checkbox disabled={!deliveryTargets.sms} />}
-          />
-          <FormControlLabel
-            label={
-              deliveryTargets.whatsapp
-                ? `Whatsapp an ${deliveryTargets.whatsapp}`
-                : "Whatsapp: keine Telefonnummer vorhanden"
-            }
-            control={<Checkbox disabled={!deliveryTargets.whatsapp} />}
-          />
-          <FormControlLabel
-            label={
-              deliveryTargets.email
-                ? `Email an ${deliveryTargets.email}`
-                : "Email: keine Email vorhanden"
-            }
-            control={<Checkbox disabled={!deliveryTargets.email} />}
-          />
+          <Button
+            variant="outlined"
+            onClick={() => navigate(`/kunde/${recordId}/show`)}
+          >
+            Abbrechen
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<SendIcon />}
+            onClick={() => void handleSend()}
+            disabled={isSending}
+          >
+            {isSending ? "Wird gesendet..." : "Nachricht senden"}
+          </Button>
         </Box>
-      </Card>
-      <Box
-        sx={{
-          display: "flex",
-          gap: "1em",
-          justifyContent: "flex-end",
-        }}
-      >
-        <Button
-          variant="outlined"
-          onClick={() => navigate(`/kunde/${recordId}/show`)}
-        >
-          Abbrechen
-        </Button>
-        <Button
-          variant="contained"
-          onClick={() => console.log("Nachrichtenentwurf", draftMessage)}
-        >
-          Nachricht senden
-        </Button>
       </Box>
+
+      <Dialog
+        open={templateDialogOpen}
+        onClose={closeTemplateDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {templateDraft.id !== undefined
+            ? "Vorlage bearbeiten"
+            : "Neue Vorlage anlegen"}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <MuiTextField
+              label="Titel"
+              value={templateDraft.titel}
+              onChange={(event) =>
+                setTemplateDraft((previous) => ({
+                  ...previous,
+                  titel: event.target.value,
+                }))
+              }
+              fullWidth
+              autoFocus
+            />
+            <MuiTextField
+              label="Text"
+              value={templateDraft.text}
+              onChange={(event) =>
+                setTemplateDraft((previous) => ({
+                  ...previous,
+                  text: event.target.value,
+                }))
+              }
+              fullWidth
+              multiline
+              minRows={4}
+              helperText="Platzhalter wie {{vorname}}, {{nachname}}, {{anrede}}, {{email}} oder {{telefon}} werden beim Versand automatisch ersetzt."
+            />
+            {templateSaveError ? (
+              <Typography color="error">{templateSaveError}</Typography>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeTemplateDialog} disabled={isSavingTemplate}>
+            Abbrechen
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void handleSaveTemplate()}
+            disabled={isSavingTemplate}
+          >
+            {isSavingTemplate ? "Wird gespeichert..." : "Speichern"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={templateToDelete !== null}
+        onClose={closeDeleteTemplateDialog}
+      >
+        <DialogTitle>Vorlage löschen</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Soll die Vorlage „
+            {templateToDelete ? getMessageTitle(templateToDelete) : ""}“
+            wirklich gelöscht werden?
+          </DialogContentText>
+          {templateDeleteError ? (
+            <Typography color="error" sx={{ mt: 1 }}>
+              {templateDeleteError}
+            </Typography>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={closeDeleteTemplateDialog}
+            disabled={isDeletingTemplate}
+          >
+            Abbrechen
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => void handleConfirmDeleteTemplate()}
+            disabled={isDeletingTemplate}
+          >
+            {isDeletingTemplate ? "Wird gelöscht..." : "Löschen"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
