@@ -3,6 +3,7 @@ import {
   DateField,
   List,
   ReferenceField,
+  ReferenceManyField,
   Pagination,
 } from "react-admin";
 import { NumberField, Show, TextField } from "react-admin";
@@ -21,22 +22,29 @@ import {
   ReferenceArrayInput,
   AutocompleteArrayInput,
   ReferenceArrayField,
-  ReferenceManyField,
   Datagrid,
   SingleFieldList,
   ChipField,
 } from "react-admin";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
+import PrintIcon from "@mui/icons-material/Print";
+import { Button } from "@mui/material";
 import { CurrencyField } from "./CurrencyField";
 import {
+  EditActionsBar,
   Field,
   FieldRow,
   FormSection,
   RelatedSection,
+  ShowActionsBar,
+  ShowColumn,
+  ShowColumns,
   ShowLayout,
   ShowSection,
 } from "./EntityLayout";
+import { BrilleHistoryDatagrid } from "./BrilleHistory";
+import { BrilleStatusChip, brilleRowSx } from "./orderStatus";
 
 // Rabatt-Codes aus Issue #22: wirken auf die Summe aus Glas rechts + Glas
 // links + Fassung, nicht auf Zusatzleistungen. "Sonderrabatt" hat keinen
@@ -54,8 +62,13 @@ export const BrilleList = () => (
     perPage={5}
     pagination={<Pagination rowsPerPageOptions={[5]} />}
   >
-    <DataTable>
+    <DataTable rowSx={brilleRowSx}>
       <DataTable.Col source="id" />
+      <DataTable.Col label="Status">
+        <FunctionField
+          render={(record) => <BrilleStatusChip record={record} />}
+        />
+      </DataTable.Col>
       <DataTable.Col source="BrillenArt" />
       <DataTable.Col label="Kunde">
         <ReferenceField source="kunde_id" reference="kunde" link="show">
@@ -124,112 +137,161 @@ export const BrilleList = () => (
   </List>
 );
 
+// Always-reachable actions for the Brille detail page (print, edit, back).
+const BrilleShowActions = () => (
+  <ShowActionsBar>
+    <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
+      Drucken
+    </Button>
+  </ShowActionsBar>
+);
+
 export const BrilleShow = () => (
-  <Show>
+  <Show actions={<BrilleShowActions />}>
     <ShowLayout>
-      <ShowSection title="Datenbankfelder">
-        <Field>
-          <TextField source="id" />
-        </Field>
-        <Field>
-          <DateField source="created_at" />
-        </Field>
-      </ShowSection>
-      <ShowSection title="Auftragsdaten">
-        <Field>
-          <TextField source="BrillenArt" />
-        </Field>
-        <Field>
-          <TextField source="Berater" />
-        </Field>
-        <Field>
-          <TextField source="Refraktion" />
-        </Field>
-        <Field>
-          <DateField source="Datum" />
-        </Field>
-        <Field>
-          <TextField source="Werkstatt" />
-        </Field>
-        <Field>
-          <DateField source="Abholung" />
-        </Field>
-        <Field>
-          <TextField source="Notizen" />
-        </Field>
-      </ShowSection>
-      <ShowSection title="Komponenten">
-        <Field>
-          <ReferenceField source="GlasLinks" reference="glass" link="show" />
-        </Field>
-        <Field>
-          <ReferenceField source="GlasRechts" reference="glass" link="show" />
-        </Field>
-        <Field>
-          <ReferenceField source="Fassung" reference="fassung" link="show" />
-        </Field>
-        <Field>
-          <ReferenceField source="Glastyp" reference="glastyp" link="show" />
-        </Field>
-      </ShowSection>
-      <RelatedSection title="Zusatzleistungen">
-        <ReferenceManyField
-          reference="brille_hat_zusatzleistungen"
-          target="BrillenID"
-          label={false}
-        >
-          <Datagrid bulkActionButtons={false}>
-            <ReferenceField
-              source="ZusatzleistungID"
-              reference="zusatzleistung"
-              link="show"
-              label="Bezeichnung"
+      <ShowColumns>
+        <ShowColumn>
+          <ShowSection title="Datenbankfelder">
+            <Field>
+              <TextField source="id" />
+            </Field>
+            <Field>
+              <DateField source="created_at" />
+            </Field>
+          </ShowSection>
+          <ShowSection title="Auftragsdaten">
+            <Field label="Status">
+              <FunctionField
+                render={(record) => <BrilleStatusChip record={record} />}
+              />
+            </Field>
+            <Field>
+              <TextField source="BrillenArt" />
+            </Field>
+            <Field>
+              <TextField source="Berater" />
+            </Field>
+            <Field>
+              <TextField source="Refraktion" />
+            </Field>
+            <Field>
+              <DateField source="Datum" />
+            </Field>
+            <Field>
+              <TextField source="Werkstatt" />
+            </Field>
+            <Field>
+              <DateField source="Abholung" />
+            </Field>
+            <Field>
+              <TextField source="Notizen" />
+            </Field>
+          </ShowSection>
+          <ShowSection title="Komponenten">
+            <Field>
+              <ReferenceField
+                source="GlasLinks"
+                reference="glass"
+                link="show"
+              />
+            </Field>
+            <Field>
+              <ReferenceField
+                source="GlasRechts"
+                reference="glass"
+                link="show"
+              />
+            </Field>
+            <Field>
+              <ReferenceField
+                source="Fassung"
+                reference="fassung"
+                link="show"
+              />
+            </Field>
+            <Field>
+              <ReferenceField
+                source="Glastyp"
+                reference="glastyp"
+                link="show"
+              />
+            </Field>
+          </ShowSection>
+          <RelatedSection title="Zusatzleistungen">
+            <ReferenceManyField
+              reference="brille_hat_zusatzleistungen"
+              target="BrillenID"
+              label={false}
             >
-              <TextField source="Bezeichnung" />
-            </ReferenceField>
-            <ReferenceField
-              source="ZusatzleistungID"
-              reference="zusatzleistung"
-              link={false}
-              label="Kategorie"
+              <Datagrid bulkActionButtons={false}>
+                <ReferenceField
+                  source="ZusatzleistungID"
+                  reference="zusatzleistung"
+                  link="show"
+                  label="Bezeichnung"
+                >
+                  <TextField source="Bezeichnung" />
+                </ReferenceField>
+                <ReferenceField
+                  source="ZusatzleistungID"
+                  reference="zusatzleistung"
+                  link={false}
+                  label="Kategorie"
+                >
+                  <TextField source="Kategorie" />
+                </ReferenceField>
+                <ReferenceField
+                  source="ZusatzleistungID"
+                  reference="zusatzleistung"
+                  link={false}
+                  label="Preis"
+                >
+                  <CurrencyField source="Betrag" />
+                </ReferenceField>
+              </Datagrid>
+            </ReferenceManyField>
+          </RelatedSection>
+          <ShowSection title="Rabatt">
+            <Field>
+              <TextField source="RabattBezeichnung" />
+            </Field>
+            <Field>
+              <FunctionField
+                source="RabattProzent"
+                render={(record) =>
+                  record?.RabattProzent != null
+                    ? `-${record.RabattProzent} %`
+                    : ""
+                }
+              />
+            </Field>
+          </ShowSection>
+          <ShowSection title="Preis">
+            <Field>
+              <NumberField source="Summe" />
+            </Field>
+          </ShowSection>
+        </ShowColumn>
+        <ShowColumn>
+          <RelatedSection title="Weitere Aufträge dieses Kunden">
+            <ReferenceManyField
+              reference="brille"
+              target="kunde_id"
+              source="kunde_id"
+              label={false}
+              sort={{ field: "Datum", order: "DESC" }}
             >
-              <TextField source="Kategorie" />
-            </ReferenceField>
-            <ReferenceField
-              source="ZusatzleistungID"
-              reference="zusatzleistung"
-              link={false}
-              label="Preis"
-            >
-              <CurrencyField source="Betrag" />
-            </ReferenceField>
-          </Datagrid>
-        </ReferenceManyField>
-      </RelatedSection>
-      <ShowSection title="Rabatt">
-        <Field>
-          <TextField source="RabattBezeichnung" />
-        </Field>
-        <Field>
-          <FunctionField
-            source="RabattProzent"
-            render={(record) =>
-              record?.RabattProzent != null ? `-${record.RabattProzent} %` : ""
-            }
-          />
-        </Field>
-      </ShowSection>
-      <ShowSection title="Preis">
-        <Field>
-          <NumberField source="Summe" />
-        </Field>
-      </ShowSection>
+              <BrilleHistoryDatagrid />
+            </ReferenceManyField>
+          </RelatedSection>
+        </ShowColumn>
+      </ShowColumns>
     </ShowLayout>
   </Show>
 );
 
 export const BrilleEdit = () => (
-  <Edit>
+  <Edit actions={<EditActionsBar />}>
     <SimpleForm>
       <FormSection title="Datenbankfelder">
         <FieldRow>
