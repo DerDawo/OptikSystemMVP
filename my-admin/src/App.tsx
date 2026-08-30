@@ -9,6 +9,7 @@ import { KundenList, KundeShow, KundeEdit, KundeCreate, KundeMessage } from "./k
 import { BrilleList, BrilleShow, BrilleEdit, BrilleCreate } from "./brillen";
 import { GlassList, GlassShow, GlassEdit, GlassCreate } from "./glass";
 import { GlastypList, GlastypShow, GlastypEdit, GlastypCreate } from "./glasstyp";
+import { BrillenartList, BrillenartShow, BrillenartEdit, BrillenartCreate } from "./brillenart";
 import { FassungList, FassungShow, FassungEdit, FassungCreate } from "./fassung";
 import { Brille_hat_zusatzleistungenList, Brille_hat_zusatzleistungenShow, Brille_hat_zusatzleistungenEdit, Brille_hat_zusatzleistungenCreate } from "./brille_hat_zusatzleistungen";
 import { Kunde_leistet_zauzahlung_fuer_brilleList, Kunde_leistet_zauzahlung_fuer_brilleShow, Kunde_leistet_zauzahlung_fuer_brilleEdit, Kunde_leistet_zauzahlung_fuer_brilleCreate } from "./kunde_leistet_zauzahlung_fuer_brille";
@@ -32,6 +33,7 @@ export const App = () => {
     >
       <Resource name="kunde" list={KundenList} show={KundeShow} edit={KundeEdit} create={KundeCreate} icon={PersonIcon} />
       <Resource name="brille" list={BrilleList} show={BrilleShow} edit={BrilleEdit} create={BrilleCreate} />
+      <Resource name="brillenart" list={BrillenartList} show={BrillenartShow} edit={BrillenartEdit} create={BrillenartCreate} />
       <Resource name="glass" list={GlassList} show={GlassShow} edit={GlassEdit} create={GlassCreate} icon={PanoramaFishEyeIcon} />
       <Resource name="glastyp" list={GlastypList} show={GlastypShow} edit={GlastypEdit} create={GlastypCreate} />
       <Resource name="fassung" list={FassungList} show={FassungShow} edit={FassungEdit} create={FassungCreate} />
