@@ -8,7 +8,14 @@ import {
   ListActions,
   useRecordContext,
 } from "react-admin";
-import { DateField, Show, TextField, FunctionField } from "react-admin";
+import {
+  BooleanField,
+  BooleanInput,
+  DateField,
+  Show,
+  TextField,
+  FunctionField,
+} from "react-admin";
 import { DateInput, Edit, SimpleForm, TextInput } from "react-admin";
 import { Create } from "react-admin";
 import {
@@ -498,6 +505,7 @@ export const KundenDataTable = (props: Partial<DataTableProps>) => (
       source="TelefonnummerGeschaeftlich"
       label="Geschäftliche Telefonnummer"
     />
+    <DataTable.Col source="Handy" />
     <DataTable.Col source="Email" />
     <DataTable.Col source="KrankenkassenNummer" label="Krankenkassennummer" />
     <DataTable.Col source="VersichertenNummer" label="Versichertenummer" />
@@ -607,7 +615,13 @@ export const KundeShow = () => {
                 <TextField source="TelefonnummerGeschaeftlich" />
               </Field>
               <Field>
+                <TextField source="Handy" />
+              </Field>
+              <Field>
                 <TextField source="Email" />
+              </Field>
+              <Field label="Bevorzugter Kontaktweg">
+                <BooleanField source="BevorzugterKontaktweg" />
               </Field>
             </ShowSection>
             <ShowSection title="Versicherung">
@@ -619,6 +633,31 @@ export const KundeShow = () => {
               </Field>
               <Field>
                 <TextField source="KrankenversicherungsTyp" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Marketing">
+              <Field label="Werbeeinwilligung">
+                <BooleanField source="Werbeeinwilligung" />
+              </Field>
+              <Field label="Werbeeinwilligung für">
+                <TextField source="WerbeeinwilligungFuer" />
+              </Field>
+              <Field label="Werbeaktion / Kundenquelle">
+                <TextField source="Kundenquelle" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Merkmale">
+              <Field label="Merkmal 1">
+                <TextField source="Merkmal1" />
+              </Field>
+              <Field label="Merkmal 2">
+                <TextField source="Merkmal2" />
+              </Field>
+              <Field label="Merkmal 3">
+                <TextField source="Merkmal3" />
+              </Field>
+              <Field label="Merkmal 4">
+                <TextField source="Merkmal4" />
               </Field>
             </ShowSection>
           </ShowColumn>
@@ -679,14 +718,33 @@ export const KundeEdit = () => (
         <FieldRow>
           <TextInput source="TelefonnummerPrivat" />
           <TextInput source="TelefonnummerGeschaeftlich" />
+          <TextInput source="Handy" />
           <TextInput source="Email" />
         </FieldRow>
+        <BooleanInput source="BevorzugterKontaktweg" label="Bevorzugter Kontaktweg" />
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
           <TextInput source="KrankenkassenNummer" />
           <TextInput source="VersichertenNummer" />
           <TextInput source="KrankenversicherungsTyp" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Marketing">
+        <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
+        <FieldRow>
+          <TextInput source="WerbeeinwilligungFuer" label="Werbeeinwilligung für" />
+          <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Merkmale">
+        <FieldRow>
+          <TextInput source="Merkmal1" label="Merkmal 1" />
+          <TextInput source="Merkmal2" label="Merkmal 2" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Merkmal3" label="Merkmal 3" />
+          <TextInput source="Merkmal4" label="Merkmal 4" />
         </FieldRow>
       </FormSection>
     </SimpleForm>
@@ -759,8 +817,10 @@ export const KundeCreate = () => {
               source="TelefonnummerGeschaeftlich"
               label="Telefonnummer Geschäftlich"
             />
+            <TextInput source="Handy" />
             <TextInput source="Email" />
           </FieldRow>
+          <BooleanInput source="BevorzugterKontaktweg" label="Bevorzugter Kontaktweg" />
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
@@ -773,6 +833,23 @@ export const KundeCreate = () => {
               source="KrankenversicherungsTyp"
               label="Krankenversicherungs Typ"
             />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Marketing">
+          <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
+          <FieldRow>
+            <TextInput source="WerbeeinwilligungFuer" label="Werbeeinwilligung für" />
+            <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Merkmale">
+          <FieldRow>
+            <TextInput source="Merkmal1" label="Merkmal 1" />
+            <TextInput source="Merkmal2" label="Merkmal 2" />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Merkmal3" label="Merkmal 3" />
+            <TextInput source="Merkmal4" label="Merkmal 4" />
           </FieldRow>
         </FormSection>
       </SimpleForm>

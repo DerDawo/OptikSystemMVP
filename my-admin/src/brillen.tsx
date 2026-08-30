@@ -62,6 +62,11 @@ const RABATT_CODES = [
   { id: "Sonderrabatt", name: "Sonderrabatt (individuell)" },
 ];
 
+const zahlungsstatusChoices = [
+  { id: "offen", name: "Offen" },
+  { id: "bezahlt", name: "Bezahlt" },
+];
+
 // `brille.BrillenArt` stays a plain text column so existing free-text values
 // keep working; this input offers the maintained `brillenart` list as
 // choices while still allowing users to create a new, not-yet-listed value.
@@ -176,6 +181,18 @@ export const BrilleList = () => (
       <DataTable.Col sx={{ textAlign: "end" }} source="Summe" label="Betrag">
         <CurrencyField source="Summe" />
       </DataTable.Col>
+      <DataTable.Col sx={{ textAlign: "end" }} source="Anzahlung">
+        <CurrencyField source="Anzahlung" />
+      </DataTable.Col>
+      <DataTable.Col
+        sx={{ textAlign: "end" }}
+        source="KKAnteil"
+        label="KK-Anteil"
+      >
+        <CurrencyField source="KKAnteil" />
+      </DataTable.Col>
+      <DataTable.Col source="Rechnungsnummer" label="Rechnungsnr." />
+      <DataTable.Col source="Zahlungsstatus" />
     </DataTable>
   </List>
 );
@@ -309,9 +326,21 @@ export const BrilleShow = () => (
               />
             </Field>
           </ShowSection>
-          <ShowSection title="Preis">
+          <ShowSection title="Preis & Zahlung">
             <Field>
               <NumberField source="Summe" />
+            </Field>
+            <Field>
+              <NumberField source="Anzahlung" />
+            </Field>
+            <Field label="KK-Anteil">
+              <NumberField source="KKAnteil" />
+            </Field>
+            <Field label="Rechnungsnr.">
+              <TextField source="Rechnungsnummer" />
+            </Field>
+            <Field>
+              <TextField source="Zahlungsstatus" />
             </Field>
           </ShowSection>
         </ShowColumn>
@@ -423,8 +452,16 @@ export const BrilleEdit = () => (
           />
         </FieldRow>
       </FormSection>
-      <FormSection title="Preis">
+      <FormSection title="Preis & Zahlung">
         <NumberInput source="Summe" />
+        <FieldRow>
+          <NumberInput source="Anzahlung" />
+          <NumberInput source="KKAnteil" label="KK-Anteil" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
+          <SelectInput source="Zahlungsstatus" choices={zahlungsstatusChoices} />
+        </FieldRow>
       </FormSection>
     </SimpleForm>
   </Edit>
@@ -496,8 +533,16 @@ export const BrilleCreate = () => (
           />
         </FieldRow>
       </FormSection>
-      <FormSection title="Preis">
+      <FormSection title="Preis & Zahlung">
         <NumberInput source="Summe" />
+        <FieldRow>
+          <NumberInput source="Anzahlung" />
+          <NumberInput source="KKAnteil" label="KK-Anteil" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
+          <SelectInput source="Zahlungsstatus" choices={zahlungsstatusChoices} />
+        </FieldRow>
       </FormSection>
     </SimpleForm>
   </Create>
