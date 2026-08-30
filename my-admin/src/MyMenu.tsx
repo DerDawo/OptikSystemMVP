@@ -11,6 +11,7 @@ import {
     faHandPointUp,
     faReceipt,
     faMagnifyingGlass,
+    faCircleDot,
     faTags,
     faIndustry,
     faFileImport
@@ -62,6 +63,11 @@ export const MyMenu = () => (
             to="/brille"
             primaryText="Brillen"
             leftIcon={<FontAwesomeIcon icon={faGlasses} />}
+        />
+        <Menu.Item
+            to="/kontaktlinse"
+            primaryText="Kontaktlinsen"
+            leftIcon={<FontAwesomeIcon icon={faCircleDot} />}
         />
         <Menu.Item
             to="/glass"
