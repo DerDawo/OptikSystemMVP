@@ -18,6 +18,14 @@ import {
   SelectInput,
   FunctionField,
 } from "react-admin";
+import {
+  ReferenceArrayInput,
+  AutocompleteArrayInput,
+  ReferenceArrayField,
+  Datagrid,
+  SingleFieldList,
+  ChipField,
+} from "react-admin";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import PrintIcon from "@mui/icons-material/Print";
@@ -37,6 +45,16 @@ import {
 } from "./EntityLayout";
 import { BrilleHistoryDatagrid } from "./BrilleHistory";
 import { BrilleStatusChip, brilleRowSx } from "./orderStatus";
+
+// Rabatt-Codes aus Issue #22: wirken auf die Summe aus Glas rechts + Glas
+// links + Fassung, nicht auf Zusatzleistungen. "Sonderrabatt" hat keinen
+// festen Prozentsatz und wird individuell im Feld "RabattProzent" gepflegt.
+const RABATT_CODES = [
+  { id: "VIP-Rabatt", name: "VIP-Rabatt (-15 %)" },
+  { id: "ZNEU-Neukunden-Rabatt", name: "ZNEU-Neukunden-Rabatt (-10 %)" },
+  { id: "zw-Zweitbrillen-Rabatt", name: "zw-Zweitbrillen-Rabatt (-35 %)" },
+  { id: "Sonderrabatt", name: "Sonderrabatt (individuell)" },
+];
 
 export const BrilleList = () => (
   <List
@@ -100,6 +118,16 @@ export const BrilleList = () => (
         <ReferenceField source="Glastyp" reference="glastyp" link="show">
           <TextField source="Bezeichnung" />
         </ReferenceField>
+      </DataTable.Col>
+      <DataTable.Col label="Zusatzleistungen">
+        <ReferenceArrayField
+          source="ZusatzleistungIDs"
+          reference="zusatzleistung"
+        >
+          <SingleFieldList linkType="show">
+            <ChipField source="Bezeichnung" size="small" />
+          </SingleFieldList>
+        </ReferenceArrayField>
       </DataTable.Col>
       <DataTable.Col source="RabattBezeichnung" />
       <DataTable.Col sx={{ textAlign: "end" }} source="Summe" label="Betrag">
@@ -189,10 +217,56 @@ export const BrilleShow = () => (
               />
             </Field>
           </ShowSection>
-          <ShowSection title="Preis">
+          <RelatedSection title="Zusatzleistungen">
+            <ReferenceManyField
+              reference="brille_hat_zusatzleistungen"
+              target="BrillenID"
+              label={false}
+            >
+              <Datagrid bulkActionButtons={false}>
+                <ReferenceField
+                  source="ZusatzleistungID"
+                  reference="zusatzleistung"
+                  link="show"
+                  label="Bezeichnung"
+                >
+                  <TextField source="Bezeichnung" />
+                </ReferenceField>
+                <ReferenceField
+                  source="ZusatzleistungID"
+                  reference="zusatzleistung"
+                  link={false}
+                  label="Kategorie"
+                >
+                  <TextField source="Kategorie" />
+                </ReferenceField>
+                <ReferenceField
+                  source="ZusatzleistungID"
+                  reference="zusatzleistung"
+                  link={false}
+                  label="Preis"
+                >
+                  <CurrencyField source="Betrag" />
+                </ReferenceField>
+              </Datagrid>
+            </ReferenceManyField>
+          </RelatedSection>
+          <ShowSection title="Rabatt">
             <Field>
               <TextField source="RabattBezeichnung" />
             </Field>
+            <Field>
+              <FunctionField
+                source="RabattProzent"
+                render={(record) =>
+                  record?.RabattProzent != null
+                    ? `-${record.RabattProzent} %`
+                    : ""
+                }
+              />
+            </Field>
+          </ShowSection>
+          <ShowSection title="Preis">
             <Field>
               <NumberField source="Summe" />
             </Field>
@@ -256,11 +330,58 @@ export const BrilleEdit = () => (
           </ReferenceInput>
         </FieldRow>
       </FormSection>
-      <FormSection title="Preis">
+      <FormSection title="Zusatzleistungen">
+        <ReferenceArrayInput
+          source="ZusatzleistungIDs"
+          reference="zusatzleistung"
+        >
+          <AutocompleteArrayInput
+            optionText="Bezeichnung"
+            label="Zusatzleistungen"
+            fullWidth
+          />
+        </ReferenceArrayInput>
+        <ReferenceManyField
+          reference="brille_hat_zusatzleistungen"
+          target="BrillenID"
+          label={false}
+        >
+          <Datagrid bulkActionButtons={false}>
+            <ReferenceField
+              source="ZusatzleistungID"
+              reference="zusatzleistung"
+              link={false}
+              label="Bezeichnung"
+            >
+              <TextField source="Bezeichnung" />
+            </ReferenceField>
+            <ReferenceField
+              source="ZusatzleistungID"
+              reference="zusatzleistung"
+              link={false}
+              label="Preis"
+            >
+              <CurrencyField source="Betrag" />
+            </ReferenceField>
+          </Datagrid>
+        </ReferenceManyField>
+      </FormSection>
+      <FormSection title="Rabatt">
         <FieldRow>
-          <TextInput source="RabattBezeichnung" />
-          <NumberInput source="Summe" />
+          <SelectInput
+            source="RabattBezeichnung"
+            choices={RABATT_CODES}
+            helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
+          />
+          <NumberInput
+            source="RabattProzent"
+            label="Rabatt in %"
+            helperText="VIP 15 / ZNEU 10 / zw 35 / Sonderrabatt individuell"
+          />
         </FieldRow>
+      </FormSection>
+      <FormSection title="Preis">
+        <NumberInput source="Summe" />
       </FormSection>
     </SimpleForm>
   </Edit>
@@ -306,11 +427,34 @@ export const BrilleCreate = () => (
           </ReferenceInput>
         </FieldRow>
       </FormSection>
-      <FormSection title="Preis">
+      <FormSection title="Zusatzleistungen">
+        <ReferenceArrayInput
+          source="ZusatzleistungIDs"
+          reference="zusatzleistung"
+        >
+          <AutocompleteArrayInput
+            optionText="Bezeichnung"
+            label="Zusatzleistungen"
+            fullWidth
+          />
+        </ReferenceArrayInput>
+      </FormSection>
+      <FormSection title="Rabatt">
         <FieldRow>
-          <TextInput source="RabattBezeichnung" />
-          <NumberInput source="Summe" />
+          <SelectInput
+            source="RabattBezeichnung"
+            choices={RABATT_CODES}
+            helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
+          />
+          <NumberInput
+            source="RabattProzent"
+            label="Rabatt in %"
+            helperText="VIP 15 / ZNEU 10 / zw 35 / Sonderrabatt individuell"
+          />
         </FieldRow>
+      </FormSection>
+      <FormSection title="Preis">
+        <NumberInput source="Summe" />
       </FormSection>
     </SimpleForm>
   </Create>
