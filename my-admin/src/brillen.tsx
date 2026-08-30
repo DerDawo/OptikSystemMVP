@@ -6,6 +6,10 @@ import { faArrowUpRightFromSquare } from '@fortawesome/free-solid-svg-icons';
 import { CurrencyField } from './CurrencyField';
 import { Field, FieldRow, FormSection, ShowLayout, ShowSection } from './EntityLayout';
 
+const zahlungsstatusChoices = [
+    { id: 'offen', name: 'Offen' },
+    { id: 'bezahlt', name: 'Bezahlt' },
+];
 
 export const BrilleList = () => (
     <List title="Brillen" perPage={5} pagination={<Pagination rowsPerPageOptions={[5]} />}>
@@ -63,6 +67,14 @@ export const BrilleList = () => (
             <DataTable.Col sx={{textAlign: 'end'}} source="Summe" label="Betrag">
                 <CurrencyField source="Summe" />
             </DataTable.Col>
+            <DataTable.Col sx={{textAlign: 'end'}} source="Anzahlung">
+                <CurrencyField source="Anzahlung" />
+            </DataTable.Col>
+            <DataTable.Col sx={{textAlign: 'end'}} source="KKAnteil" label="KK-Anteil">
+                <CurrencyField source="KKAnteil" />
+            </DataTable.Col>
+            <DataTable.Col source="Rechnungsnummer" label="Rechnungsnr." />
+            <DataTable.Col source="Zahlungsstatus" />
         </DataTable>
     </List>
 );
@@ -90,9 +102,13 @@ export const BrilleShow = () => (
                 <Field><ReferenceField source="Fassung" reference="fassung" link="show" /></Field>
                 <Field><ReferenceField source="Glastyp" reference="glastyp" link="show" /></Field>
             </ShowSection>
-            <ShowSection title="Preis">
+            <ShowSection title="Preis & Zahlung">
                 <Field><TextField source="RabattBezeichnung" /></Field>
                 <Field><NumberField source="Summe" /></Field>
+                <Field><NumberField source="Anzahlung" /></Field>
+                <Field label="KK-Anteil"><NumberField source="KKAnteil" /></Field>
+                <Field label="Rechnungsnr."><TextField source="Rechnungsnummer" /></Field>
+                <Field><TextField source="Zahlungsstatus" /></Field>
             </ShowSection>
         </ShowLayout>
     </Show>
@@ -138,10 +154,18 @@ export const BrilleEdit = () => (
                     </ReferenceInput>
                 </FieldRow>
             </FormSection>
-            <FormSection title="Preis">
+            <FormSection title="Preis & Zahlung">
                 <FieldRow>
                     <TextInput source="RabattBezeichnung" />
                     <NumberInput source="Summe" />
+                </FieldRow>
+                <FieldRow>
+                    <NumberInput source="Anzahlung" />
+                    <NumberInput source="KKAnteil" label="KK-Anteil" />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
+                    <SelectInput source="Zahlungsstatus" choices={zahlungsstatusChoices} />
                 </FieldRow>
             </FormSection>
         </SimpleForm>
@@ -188,10 +212,18 @@ export const BrilleCreate = () => (
                     </ReferenceInput>
                 </FieldRow>
             </FormSection>
-            <FormSection title="Preis">
+            <FormSection title="Preis & Zahlung">
                 <FieldRow>
                     <TextInput source="RabattBezeichnung" />
                     <NumberInput source="Summe" />
+                </FieldRow>
+                <FieldRow>
+                    <NumberInput source="Anzahlung" />
+                    <NumberInput source="KKAnteil" label="KK-Anteil" />
+                </FieldRow>
+                <FieldRow>
+                    <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
+                    <SelectInput source="Zahlungsstatus" choices={zahlungsstatusChoices} />
                 </FieldRow>
             </FormSection>
         </SimpleForm>

@@ -13,11 +13,19 @@ import {
     Edit,
     Create,
     NumberInput,
+    SelectInput,
     SimpleForm,
     TextInput
  } from 'react-admin';
 import { CurrencyField } from './CurrencyField';
 import { Field, FieldRow, FormSection, RelatedSection, ShowLayout, ShowSection } from './EntityLayout';
+
+const auftragsstatusChoices = [
+    { id: 'zu bestellen', name: 'Zu bestellen' },
+    { id: 'bestellt', name: 'Bestellt' },
+    { id: 'eingetroffen', name: 'Eingetroffen' },
+    { id: 'abgeholt', name: 'Abgeholt' },
+];
 
 export const GlassList = () => (
     <List title="Gläser" >
@@ -38,6 +46,7 @@ export const GlassList = () => (
             <DataTable.Col source="Liefern">
                 <BooleanField source="Liefern" />
             </DataTable.Col>
+            <DataTable.Col source="Auftragsstatus" />
             <DataTable.Col sx={{textAlign: 'end'}} source="Betrag">
                 <CurrencyField source="Betrag" />
             </DataTable.Col>
@@ -70,6 +79,7 @@ export const GlassShow = () => (
             </ShowSection>
             <ShowSection title="Bestellung">
                 <Field><BooleanField source="Liefern" /></Field>
+                <Field><TextField source="Auftragsstatus" /></Field>
                 <Field><CurrencyField source="Betrag" /></Field>
             </ShowSection>
             <RelatedSection title="Brillen (Links)">
@@ -129,6 +139,7 @@ export const GlassEdit = () => (
             <FormSection title="Bestellung">
                 <FieldRow>
                     <BooleanInput source="Liefern" />
+                    <SelectInput source="Auftragsstatus" choices={auftragsstatusChoices} />
                     <NumberInput source="Betrag" />
                 </FieldRow>
             </FormSection>
@@ -170,6 +181,7 @@ export const GlassCreate = () => (
             <FormSection title="Bestellung">
                 <FieldRow>
                     <BooleanInput source="Liefern" />
+                    <SelectInput source="Auftragsstatus" choices={auftragsstatusChoices} />
                     <NumberInput source="Betrag" />
                 </FieldRow>
             </FormSection>
