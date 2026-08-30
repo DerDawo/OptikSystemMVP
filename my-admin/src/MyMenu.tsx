@@ -11,7 +11,10 @@ import {
     faHandPointUp,
     faReceipt,
     faMagnifyingGlass,
-    faCircleDot
+    faCircleDot,
+    faTags,
+    faIndustry,
+    faFileImport
 } from '@fortawesome/free-solid-svg-icons';
 import {
     Divider,
@@ -74,6 +77,21 @@ export const MyMenu = () => (
             to="/glastyp"
             primaryText="Glastypen"
             leftIcon={<FontAwesomeIcon icon={faLayerGroup} />}
+        />
+        <Menu.Item
+            to="/brillenart"
+            primaryText="Brillenarten"
+            leftIcon={<FontAwesomeIcon icon={faTags} />}
+        />
+        <Menu.Item
+            to="/glaskatalog"
+            primaryText="Glaskatalog (Hersteller)"
+            leftIcon={<FontAwesomeIcon icon={faIndustry} />}
+        />
+        <Menu.Item
+            to="/glaskatalog-import"
+            primaryText="Glaskatalog-Import (SF6)"
+            leftIcon={<FontAwesomeIcon icon={faFileImport} />}
         />
         <Menu.Item
             to="/fassung"

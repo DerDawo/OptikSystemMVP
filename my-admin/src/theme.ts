@@ -4,8 +4,88 @@ import { defaultTheme } from "react-admin";
 
 export const theme = createTheme({
   ...defaultTheme,
+  palette: {
+    ...defaultTheme.palette,
+    mode: "light",
+    primary: {
+      main: "#1d4e89",
+    },
+    secondary: {
+      main: "#0f9b8e",
+    },
+    background: {
+      default: "#f4f6f9",
+      paper: "#ffffff",
+    },
+  },
+  shape: {
+    borderRadius: 10,
+  },
+  typography: {
+    ...defaultTheme.typography,
+    fontFamily: [
+      "Inter",
+      "-apple-system",
+      "BlinkMacSystemFont",
+      '"Segoe UI"',
+      "Roboto",
+      "Arial",
+      "sans-serif",
+    ].join(","),
+    h5: {
+      fontWeight: 700,
+    },
+    h6: {
+      fontWeight: 700,
+    },
+    subtitle1: {
+      fontWeight: 600,
+    },
+    button: {
+      textTransform: "none",
+      fontWeight: 600,
+    },
+  },
   components: {
     ...defaultTheme.components,
+
+    MuiButton: {
+      defaultProps: {
+        disableElevation: true,
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: 8,
+        },
+      },
+    },
+
+    MuiCard: {
+      defaultProps: {
+        elevation: 0,
+      },
+      styleOverrides: {
+        root: {
+          borderRadius: 12,
+        },
+      },
+    },
+
+    MuiChip: {
+      styleOverrides: {
+        root: {
+          fontWeight: 600,
+        },
+      },
+    },
+
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          backgroundColor: "#1d4e89",
+        },
+      },
+    },
 
     /*
      * react-admin's layout root defaults to `minWidth: "fit-content"`, which lets a
@@ -36,7 +116,7 @@ export const theme = createTheme({
 
     MuiCssBaseline: {
       styleOverrides: (theme) => ({
-        html:{
+        html: {
           overflowX: "hidden",
         },
         ".RaLayout-contentWithSidebar": {
@@ -59,6 +139,17 @@ export const theme = createTheme({
           [theme.breakpoints.down("sm")]: {
             height: "calc(100dvh - 56px)",
           },
+        },
+        /*
+         * Keep the form's Save/Delete toolbar reachable while scrolling long
+         * Edit/Create forms, mirroring the sticky top actions above. The mobile
+         * variant is already fixed to the bottom by react-admin itself.
+         */
+        ".RaToolbar-desktopToolbar": {
+          position: "sticky",
+          bottom: 0,
+          zIndex: theme.zIndex.appBar - 1,
+          backgroundColor: theme.palette.background.paper,
         },
         ".list-page": {
           minWidth: 0,
@@ -101,25 +192,27 @@ export const theme = createTheme({
         },
 
         /* sticky checkbox column */
-        ".RaDataTable-table th:first-of-type, .RaDataTable-table td:first-of-type": {
-          position: "sticky",
-          left: 0,
-          zIndex: 2,
-          backgroundColor: theme.palette.background.paper,
-          backgroundImage: "var(--Paper-overlay)",
-        },
+        ".RaDataTable-table th:first-of-type, .RaDataTable-table td:first-of-type":
+          {
+            position: "sticky",
+            left: 0,
+            zIndex: 2,
+            backgroundColor: theme.palette.background.paper,
+            backgroundImage: "var(--Paper-overlay)",
+          },
         ".RaDataTable-table thead th:first-of-type": {
           zIndex: 3,
         },
 
         /* sticky second column */
-        ".RaDataTable-table th:nth-of-type(2), .RaDataTable-table td:nth-of-type(2)": {
-          position: "sticky",
-          left: 40,
-          zIndex: 2,
-          backgroundColor: theme.palette.background.paper,
-          backgroundImage: "var(--Paper-overlay)",
-        },
+        ".RaDataTable-table th:nth-of-type(2), .RaDataTable-table td:nth-of-type(2)":
+          {
+            position: "sticky",
+            left: 40,
+            zIndex: 2,
+            backgroundColor: theme.palette.background.paper,
+            backgroundImage: "var(--Paper-overlay)",
+          },
         ".RaDataTable-table thead th:nth-of-type(2)": {
           zIndex: 3,
         },
