@@ -7,6 +7,7 @@ import { authProvider } from './authProvider';
 import { LoginPage } from 'ra-supabase';
 import { KundenList, KundeShow, KundeEdit, KundeCreate, KundeMessage } from "./kunden";
 import { BrilleList, BrilleShow, BrilleEdit, BrilleCreate } from "./brillen";
+import { KontaktlinseList, KontaktlinseShow, KontaktlinseEdit, KontaktlinseCreate } from "./kontaktlinsen";
 import { GlassList, GlassShow, GlassEdit, GlassCreate } from "./glass";
 import { GlastypList, GlastypShow, GlastypEdit, GlastypCreate } from "./glasstyp";
 import { FassungList, FassungShow, FassungEdit, FassungCreate } from "./fassung";
@@ -16,6 +17,7 @@ import { ZusatzleistungList, ZusatzleistungShow, ZusatzleistungEdit, Zusatzleist
 
 import PersonIcon from '@mui/icons-material/Person';
 import PanoramaFishEyeIcon from '@mui/icons-material/PanoramaFishEye';
+import VisibilityIcon from '@mui/icons-material/Visibility';
 import { Route } from "react-router-dom";
 import Search from "./Search";
 
@@ -32,6 +34,7 @@ export const App = () => {
     >
       <Resource name="kunde" list={KundenList} show={KundeShow} edit={KundeEdit} create={KundeCreate} icon={PersonIcon} />
       <Resource name="brille" list={BrilleList} show={BrilleShow} edit={BrilleEdit} create={BrilleCreate} />
+      <Resource name="kontaktlinse" list={KontaktlinseList} show={KontaktlinseShow} edit={KontaktlinseEdit} create={KontaktlinseCreate} icon={VisibilityIcon} />
       <Resource name="glass" list={GlassList} show={GlassShow} edit={GlassEdit} create={GlassCreate} icon={PanoramaFishEyeIcon} />
       <Resource name="glastyp" list={GlastypList} show={GlastypShow} edit={GlastypEdit} create={GlastypCreate} />
       <Resource name="fassung" list={FassungList} show={FassungShow} edit={FassungEdit} create={FassungCreate} />

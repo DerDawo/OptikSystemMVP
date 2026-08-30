@@ -10,7 +10,8 @@ import {
     faUserPlus,
     faHandPointUp,
     faReceipt,
-    faMagnifyingGlass
+    faMagnifyingGlass,
+    faCircleDot
 } from '@fortawesome/free-solid-svg-icons';
 import {
     Divider,
@@ -59,6 +60,11 @@ export const MyMenu = () => (
             to="/brille"
             primaryText="Brillen"
             leftIcon={<FontAwesomeIcon icon={faGlasses} />}
+        />
+        <Menu.Item
+            to="/kontaktlinse"
+            primaryText="Kontaktlinsen"
+            leftIcon={<FontAwesomeIcon icon={faCircleDot} />}
         />
         <Menu.Item
             to="/glass"

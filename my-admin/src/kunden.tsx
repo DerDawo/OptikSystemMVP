@@ -238,6 +238,21 @@ const MessageButton = () => {
     );
 };
 
+const NewKontaktlinseButton = () => {
+    const record = useRecordContext();
+    const navigate = useNavigate();
+
+    if (!record) {
+        return null;
+    }
+
+    return (
+        <Button variant='outlined' onClick={() => navigate('/kontaktlinse/create', { state: { kunde_id: record.id } })}>
+            Kontaktlinsen
+        </Button>
+    );
+};
+
 export const KundenDataTable = (props: any) => (
     <DataTable rowClick="show" {...props}>
         <DataTable.Col source="id" />
@@ -321,7 +336,8 @@ export const KundeShow = () => {
     return (
         <Show title="Kunden anzeigen">
             <ShowLayout>
-                <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5em' }}>
+                    <NewKontaktlinseButton />
                     <MessageButton />
                 </Box>
                 <ShowSection title="Datenbankfelder">
@@ -378,6 +394,21 @@ export const KundeShow = () => {
                                 <TextField source="id" />
                             </ReferenceField>
                             <TextField source="RabattBezeichnung" />
+                            <TextField source="Summe" />
+                        </Datagrid>
+                    </ReferenceManyField>
+                </RelatedSection>
+                <RelatedSection title="Kontaktlinsen des Kunden">
+                    <ReferenceManyField reference="kontaktlinse" target="kunde_id" label={false}>
+                        <Datagrid>
+                            <TextField source="id" />
+                            <TextField source="Berater" />
+                            <DateField source="Datum" />
+                            <DateField source="Abholung" />
+                            <DateField source="Nachkontrolltermin" />
+                            <TextField source="LinsentypLinks" />
+                            <TextField source="LinsentypRechts" />
+                            <TextField source="Notizen" />
                             <TextField source="Summe" />
                         </Datagrid>
                     </ReferenceManyField>
