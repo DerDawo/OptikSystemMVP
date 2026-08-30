@@ -13,7 +13,12 @@ import {
   KundeMessage,
 } from "./kunden";
 import { BrilleList, BrilleShow, BrilleEdit, BrilleCreate } from "./brillen";
-import { KontaktlinseList, KontaktlinseShow, KontaktlinseEdit, KontaktlinseCreate } from "./kontaktlinsen";
+import {
+  KontaktlinseList,
+  KontaktlinseShow,
+  KontaktlinseEdit,
+  KontaktlinseCreate,
+} from "./kontaktlinsen";
 import { GlassList, GlassShow, GlassEdit, GlassCreate } from "./glass";
 import {
   GlastypList,
