@@ -26,6 +26,12 @@ import {
   SingleFieldList,
   ChipField,
 } from "react-admin";
+import {
+  AutocompleteInput,
+  useDataProvider,
+  useGetList,
+  useNotify,
+} from "react-admin";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import PrintIcon from "@mui/icons-material/Print";
@@ -55,6 +61,43 @@ const RABATT_CODES = [
   { id: "zw-Zweitbrillen-Rabatt", name: "zw-Zweitbrillen-Rabatt (-35 %)" },
   { id: "Sonderrabatt", name: "Sonderrabatt (individuell)" },
 ];
+
+// `brille.BrillenArt` stays a plain text column so existing free-text values
+// keep working; this input offers the maintained `brillenart` list as
+// choices while still allowing users to create a new, not-yet-listed value.
+const BrillenArtInput = () => {
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const { data: brillenartChoices } = useGetList("brillenart", {
+    pagination: { page: 1, perPage: 200 },
+    sort: { field: "Bezeichnung", order: "ASC" },
+  });
+
+  const handleCreateBrillenart = async (value?: string) => {
+    if (!value) return undefined;
+    try {
+      const { data } = await dataProvider.create("brillenart", {
+        data: { Bezeichnung: value },
+      });
+      return { Bezeichnung: data.Bezeichnung };
+    } catch {
+      notify("Brillenart konnte nicht angelegt werden", { type: "error" });
+      return undefined;
+    }
+  };
+
+  return (
+    <AutocompleteInput
+      source="BrillenArt"
+      choices={brillenartChoices ?? []}
+      optionText="Bezeichnung"
+      optionValue="Bezeichnung"
+      onCreate={handleCreateBrillenart}
+      createLabel="Neue Brillenart anlegen"
+      createItemLabel={(filter: string) => `„${filter}“ als neue Brillenart anlegen`}
+    />
+  );
+};
 
 export const BrilleList = () => (
   <List
@@ -301,7 +344,7 @@ export const BrilleEdit = () => (
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
-          <TextInput source="BrillenArt" />
+          <BrillenArtInput />
           <TextInput source="Berater" />
           <TextInput source="Refraktion" />
         </FieldRow>
@@ -398,7 +441,7 @@ export const BrilleCreate = () => (
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
-          <TextInput source="BrillenArt" />
+          <BrillenArtInput />
           <TextInput source="Berater" />
           <TextInput source="Refraktion" />
         </FieldRow>

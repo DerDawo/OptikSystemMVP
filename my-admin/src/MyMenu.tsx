@@ -11,6 +11,7 @@ import {
     faHandPointUp,
     faReceipt,
     faMagnifyingGlass,
+    faTags,
     faIndustry,
     faFileImport
 } from '@fortawesome/free-solid-svg-icons';
@@ -70,6 +71,11 @@ export const MyMenu = () => (
             to="/glastyp"
             primaryText="Glastypen"
             leftIcon={<FontAwesomeIcon icon={faLayerGroup} />}
+        />
+        <Menu.Item
+            to="/brillenart"
+            primaryText="Brillenarten"
+            leftIcon={<FontAwesomeIcon icon={faTags} />}
         />
         <Menu.Item
             to="/glaskatalog"
