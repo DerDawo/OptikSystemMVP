@@ -760,7 +760,10 @@ export const KundeEdit = () => (
           <TextInput source="Handy" />
           <TextInput source="Email" />
         </FieldRow>
-        <BooleanInput source="BevorzugterKontaktweg" label="Bevorzugter Kontaktweg" />
+        <BooleanInput
+          source="BevorzugterKontaktweg"
+          label="Bevorzugter Kontaktweg"
+        />
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
@@ -772,7 +775,10 @@ export const KundeEdit = () => (
       <FormSection title="Marketing">
         <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
         <FieldRow>
-          <TextInput source="WerbeeinwilligungFuer" label="Werbeeinwilligung für" />
+          <TextInput
+            source="WerbeeinwilligungFuer"
+            label="Werbeeinwilligung für"
+          />
           <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
         </FieldRow>
       </FormSection>
@@ -859,7 +865,10 @@ export const KundeCreate = () => {
             <TextInput source="Handy" />
             <TextInput source="Email" />
           </FieldRow>
-          <BooleanInput source="BevorzugterKontaktweg" label="Bevorzugter Kontaktweg" />
+          <BooleanInput
+            source="BevorzugterKontaktweg"
+            label="Bevorzugter Kontaktweg"
+          />
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
@@ -877,8 +886,14 @@ export const KundeCreate = () => {
         <FormSection title="Marketing">
           <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
           <FieldRow>
-            <TextInput source="WerbeeinwilligungFuer" label="Werbeeinwilligung für" />
-            <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+            <TextInput
+              source="WerbeeinwilligungFuer"
+              label="Werbeeinwilligung für"
+            />
+            <TextInput
+              source="Kundenquelle"
+              label="Werbeaktion / Kundenquelle"
+            />
           </FieldRow>
         </FormSection>
         <FormSection title="Merkmale">
