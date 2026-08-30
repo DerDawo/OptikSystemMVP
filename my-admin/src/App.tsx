@@ -13,6 +13,7 @@ import {
   KundeMessage,
 } from "./kunden";
 import { BrilleList, BrilleShow, BrilleEdit, BrilleCreate } from "./brillen";
+import { KontaktlinseList, KontaktlinseShow, KontaktlinseEdit, KontaktlinseCreate } from "./kontaktlinsen";
 import { GlassList, GlassShow, GlassEdit, GlassCreate } from "./glass";
 import {
   GlastypList,
@@ -64,6 +65,7 @@ import { GlaskatalogImportPage } from "./glaskatalog/GlaskatalogImportPage";
 
 import PersonIcon from "@mui/icons-material/Person";
 import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
+import VisibilityIcon from "@mui/icons-material/Visibility";
 import EventIcon from "@mui/icons-material/Event";
 import { Route } from "react-router-dom";
 import Search from "./Search";
@@ -92,6 +94,14 @@ export const App = () => {
         show={BrilleShow}
         edit={BrilleEdit}
         create={BrilleCreate}
+      />
+      <Resource
+        name="kontaktlinse"
+        list={KontaktlinseList}
+        show={KontaktlinseShow}
+        edit={KontaktlinseEdit}
+        create={KontaktlinseCreate}
+        icon={VisibilityIcon}
       />
       <Resource
         name="brillenart"

@@ -477,9 +477,30 @@ const TerminButton = () => {
   );
 };
 
+const NewKontaktlinseButton = () => {
+  const record = useRecordContext();
+  const navigate = useNavigate();
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <Button
+      variant="outlined"
+      onClick={() =>
+        navigate("/kontaktlinse/create", { state: { kunde_id: record.id } })
+      }
+    >
+      Kontaktlinsen
+    </Button>
+  );
+};
+
 // Central, always-reachable actions for the Kunde detail page (message, print, edit, back).
 const KundeShowActions = () => (
   <ShowActionsBar>
+    <NewKontaktlinseButton />
     <MessageButton />
     <TerminButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
@@ -708,6 +729,28 @@ export const KundeShow = () => {
                   <DateField source="Ende" showTime />
                   <TextField source="Terminart" />
                   <TextField source="Notiz" />
+                </Datagrid>
+              </ReferenceManyField>
+            </RelatedSection>
+            <RelatedSection title="Kontaktlinsen des Kunden">
+              <ReferenceManyField
+                reference="kontaktlinse"
+                target="kunde_id"
+                label={false}
+                sort={{ field: "Datum", order: "DESC" }}
+              >
+                <Datagrid rowClick="show" bulkActionButtons={false}>
+                  <DateField source="Datum" label="Datum" />
+                  <TextField source="LinsentypLinks" label="Linsentyp Links" />
+                  <TextField
+                    source="LinsentypRechts"
+                    label="Linsentyp Rechts"
+                  />
+                  <DateField source="Abholung" label="Abholung" />
+                  <DateField
+                    source="Nachkontrolltermin"
+                    label="Nachkontrolle"
+                  />
                 </Datagrid>
               </ReferenceManyField>
             </RelatedSection>
