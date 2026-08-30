@@ -52,6 +52,7 @@ import SendIcon from "@mui/icons-material/Send";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
+import EventIcon from "@mui/icons-material/Event";
 import { supabase } from "./utils";
 import {
   implementedMessageChannels,
@@ -456,6 +457,26 @@ const MessageButton = () => {
   );
 };
 
+const TerminButton = () => {
+  const record = useRecordContext();
+  const navigate = useNavigate();
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <Button
+      startIcon={<EventIcon />}
+      onClick={() =>
+        navigate("/termin/create", { state: { kunde_id: record.id } })
+      }
+    >
+      Termin anlegen
+    </Button>
+  );
+};
+
 const NewKontaktlinseButton = () => {
   const record = useRecordContext();
   const navigate = useNavigate();
@@ -481,6 +502,7 @@ const KundeShowActions = () => (
   <ShowActionsBar>
     <NewKontaktlinseButton />
     <MessageButton />
+    <TerminButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
@@ -694,6 +716,22 @@ export const KundeShow = () => {
                 <BrilleHistoryDatagrid />
               </ReferenceManyField>
             </RelatedSection>
+            <RelatedSection title="Termine des Kunden">
+              <ReferenceManyField
+                reference="termin"
+                target="kunde_id"
+                label={false}
+                sort={{ field: "Start", order: "DESC" }}
+              >
+                <Datagrid>
+                  <TextField source="id" />
+                  <DateField source="Start" showTime />
+                  <DateField source="Ende" showTime />
+                  <TextField source="Terminart" />
+                  <TextField source="Notiz" />
+                </Datagrid>
+              </ReferenceManyField>
+            </RelatedSection>
             <RelatedSection title="Kontaktlinsen des Kunden">
               <ReferenceManyField
                 reference="kontaktlinse"
@@ -765,7 +803,10 @@ export const KundeEdit = () => (
           <TextInput source="Handy" />
           <TextInput source="Email" />
         </FieldRow>
-        <BooleanInput source="BevorzugterKontaktweg" label="Bevorzugter Kontaktweg" />
+        <BooleanInput
+          source="BevorzugterKontaktweg"
+          label="Bevorzugter Kontaktweg"
+        />
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
@@ -777,7 +818,10 @@ export const KundeEdit = () => (
       <FormSection title="Marketing">
         <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
         <FieldRow>
-          <TextInput source="WerbeeinwilligungFuer" label="Werbeeinwilligung für" />
+          <TextInput
+            source="WerbeeinwilligungFuer"
+            label="Werbeeinwilligung für"
+          />
           <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
         </FieldRow>
       </FormSection>
@@ -864,7 +908,10 @@ export const KundeCreate = () => {
             <TextInput source="Handy" />
             <TextInput source="Email" />
           </FieldRow>
-          <BooleanInput source="BevorzugterKontaktweg" label="Bevorzugter Kontaktweg" />
+          <BooleanInput
+            source="BevorzugterKontaktweg"
+            label="Bevorzugter Kontaktweg"
+          />
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
@@ -882,8 +929,14 @@ export const KundeCreate = () => {
         <FormSection title="Marketing">
           <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
           <FieldRow>
-            <TextInput source="WerbeeinwilligungFuer" label="Werbeeinwilligung für" />
-            <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+            <TextInput
+              source="WerbeeinwilligungFuer"
+              label="Werbeeinwilligung für"
+            />
+            <TextInput
+              source="Kundenquelle"
+              label="Werbeaktion / Kundenquelle"
+            />
           </FieldRow>
         </FormSection>
         <FormSection title="Merkmale">
