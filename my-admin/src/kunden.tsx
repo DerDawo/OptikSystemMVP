@@ -16,6 +16,11 @@ import {
   Button,
   Card,
   Checkbox,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   Divider,
   FormControlLabel,
   IconButton,
@@ -23,11 +28,12 @@ import {
   ListItemButton,
   ListItemText,
   Stack,
+  TextField as MuiTextField,
   Theme,
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import { ChangeEvent, useEffect, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import PrintIcon from "@mui/icons-material/Print";
@@ -35,6 +41,9 @@ import SmsIcon from "@mui/icons-material/Sms";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import EmailIcon from "@mui/icons-material/Email";
 import SendIcon from "@mui/icons-material/Send";
+import AddIcon from "@mui/icons-material/Add";
+import EditIcon from "@mui/icons-material/Edit";
+import DeleteIcon from "@mui/icons-material/Delete";
 import { supabase } from "./utils";
 import {
   implementedMessageChannels,
@@ -150,6 +159,25 @@ const getMessageFieldValue = (
   return null;
 };
 
+const getMessageFieldKey = (
+  record: Record<string, unknown>,
+  candidateFields: string[],
+) => {
+  const keys = Object.keys(record);
+
+  for (const fieldName of candidateFields) {
+    const match = keys.find(
+      (key) => key.toLowerCase() === fieldName.toLowerCase(),
+    );
+
+    if (match) {
+      return match;
+    }
+  }
+
+  return null;
+};
+
 const getMessageContent = (record: NachrichtRecord) => {
   const preferredContent = getMessageFieldValue(record, messageContentFields);
 
@@ -186,6 +214,37 @@ const getMessageTitle = (record: NachrichtRecord) => {
 
   return firstLine.length > 60 ? `${firstLine.slice(0, 57)}...` : firstLine;
 };
+
+type MessageTemplateDraft = {
+  id?: string | number;
+  titleKey: string;
+  contentKey: string;
+  titel: string;
+  text: string;
+};
+
+const defaultTemplateTitleKey = "Titel";
+const defaultTemplateContentKey = "Text";
+
+const createEmptyTemplateDraft = (): MessageTemplateDraft => ({
+  titleKey: defaultTemplateTitleKey,
+  contentKey: defaultTemplateContentKey,
+  titel: "",
+  text: "",
+});
+
+const createTemplateDraftFromRecord = (
+  record: NachrichtRecord,
+): MessageTemplateDraft => ({
+  id: record.id,
+  titleKey:
+    getMessageFieldKey(record, messageTitleFields) ?? defaultTemplateTitleKey,
+  contentKey:
+    getMessageFieldKey(record, messageContentFields) ??
+    defaultTemplateContentKey,
+  titel: getMessageFieldValue(record, messageTitleFields) ?? "",
+  text: getMessageFieldValue(record, messageContentFields) ?? "",
+});
 
 const toTextValue = (value: unknown) => {
   if (typeof value === "string") {
@@ -751,71 +810,89 @@ export const KundeMessage = () => {
   const [isSending, setIsSending] = useState(false);
   const [sendFormError, setSendFormError] = useState<string | null>(null);
   const [sendResults, setSendResults] = useState<MessageDeliveryResult[]>([]);
+  const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [templateDraft, setTemplateDraft] = useState<MessageTemplateDraft>(
+    createEmptyTemplateDraft(),
+  );
+  const [isSavingTemplate, setIsSavingTemplate] = useState(false);
+  const [templateSaveError, setTemplateSaveError] = useState<string | null>(
+    null,
+  );
+  const [templateToDelete, setTemplateToDelete] =
+    useState<NachrichtRecord | null>(null);
+  const [isDeletingTemplate, setIsDeletingTemplate] = useState(false);
+  const [templateDeleteError, setTemplateDeleteError] = useState<string | null>(
+    null,
+  );
+
+  const isMountedRef = useRef(true);
+
+  useEffect(
+    () => () => {
+      isMountedRef.current = false;
+    },
+    [],
+  );
+
+  const loadMessages = useCallback(async (preferredKey?: string | null) => {
+    setIsLoadingMessages(true);
+    setMessageError(null);
+
+    const { data, error } = await supabase.from("nachrichten").select("*");
+
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    if (error) {
+      console.error("Fehler beim Laden der Nachrichten", error);
+      setMessages([]);
+      setSelectedMessageKey(null);
+      setMessageError("Nachrichten konnten nicht geladen werden.");
+      setIsLoadingMessages(false);
+      return;
+    }
+
+    const nextMessages = (Array.isArray(data) ? data : [])
+      .map((entry, index) => {
+        const record = (entry ?? {}) as Record<string, unknown>;
+        const id =
+          typeof record.id === "string" || typeof record.id === "number"
+            ? record.id
+            : undefined;
+
+        return {
+          ...record,
+          id,
+          _rowKey: id !== undefined ? String(id) : `nachricht-${index}`,
+        };
+      })
+      .sort((left, right) => {
+        if (typeof left.id === "number" && typeof right.id === "number") {
+          return left.id - right.id;
+        }
+
+        if (typeof left.id === "string" && typeof right.id === "string") {
+          return left.id.localeCompare(right.id);
+        }
+
+        return left._rowKey.localeCompare(right._rowKey);
+      });
+
+    setMessages(nextMessages);
+    setSelectedMessageKey((previousKey) => {
+      const targetKey = preferredKey ?? previousKey;
+      return targetKey &&
+        nextMessages.some((message) => message._rowKey === targetKey)
+        ? targetKey
+        : (nextMessages[0]?._rowKey ?? null);
+    });
+    setIsLoadingMessages(false);
+  }, []);
 
   useEffect(() => {
-    let isActive = true;
-
-    const loadMessages = async () => {
-      setIsLoadingMessages(true);
-      setMessageError(null);
-
-      const { data, error } = await supabase.from("nachrichten").select("*");
-
-      if (!isActive) {
-        return;
-      }
-
-      if (error) {
-        console.error("Fehler beim Laden der Nachrichten", error);
-        setMessages([]);
-        setSelectedMessageKey(null);
-        setMessageError("Nachrichten konnten nicht geladen werden.");
-        setIsLoadingMessages(false);
-        return;
-      }
-
-      const nextMessages = (Array.isArray(data) ? data : [])
-        .map((entry, index) => {
-          const record = (entry ?? {}) as Record<string, unknown>;
-          const id =
-            typeof record.id === "string" || typeof record.id === "number"
-              ? record.id
-              : undefined;
-
-          return {
-            ...record,
-            id,
-            _rowKey: id !== undefined ? String(id) : `nachricht-${index}`,
-          };
-        })
-        .sort((left, right) => {
-          if (typeof left.id === "number" && typeof right.id === "number") {
-            return left.id - right.id;
-          }
-
-          if (typeof left.id === "string" && typeof right.id === "string") {
-            return left.id.localeCompare(right.id);
-          }
-
-          return left._rowKey.localeCompare(right._rowKey);
-        });
-
-      setMessages(nextMessages);
-      setSelectedMessageKey((previousKey) =>
-        previousKey &&
-        nextMessages.some((message) => message._rowKey === previousKey)
-          ? previousKey
-          : (nextMessages[0]?._rowKey ?? null),
-      );
-      setIsLoadingMessages(false);
-    };
-
     void loadMessages();
-
-    return () => {
-      isActive = false;
-    };
-  }, []);
+  }, [loadMessages]);
 
   const selectedMessage =
     messages.find((message) => message._rowKey === selectedMessageKey) ?? null;
@@ -954,6 +1031,118 @@ export const KundeMessage = () => {
     setIsSending(false);
   };
 
+  const openCreateTemplateDialog = () => {
+    setTemplateDraft(createEmptyTemplateDraft());
+    setTemplateSaveError(null);
+    setTemplateDialogOpen(true);
+  };
+
+  const openEditTemplateDialog = (message: NachrichtRecord) => {
+    setTemplateDraft(createTemplateDraftFromRecord(message));
+    setTemplateSaveError(null);
+    setTemplateDialogOpen(true);
+  };
+
+  const closeTemplateDialog = () => {
+    if (isSavingTemplate) {
+      return;
+    }
+
+    setTemplateDialogOpen(false);
+  };
+
+  const handleSaveTemplate = async () => {
+    const titel = templateDraft.titel.trim();
+    const text = templateDraft.text.trim();
+
+    if (!titel || !text) {
+      setTemplateSaveError("Bitte Titel und Text angeben.");
+      return;
+    }
+
+    setTemplateSaveError(null);
+    setIsSavingTemplate(true);
+
+    const payload = {
+      [templateDraft.titleKey]: titel,
+      [templateDraft.contentKey]: text,
+    };
+
+    const { data, error } =
+      templateDraft.id !== undefined
+        ? await supabase
+            .from("nachrichten")
+            .update(payload)
+            .eq("id", templateDraft.id)
+            .select("id")
+            .maybeSingle()
+        : await supabase
+            .from("nachrichten")
+            .insert(payload)
+            .select("id")
+            .maybeSingle();
+
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    setIsSavingTemplate(false);
+
+    if (error) {
+      console.error("Fehler beim Speichern der Nachrichtenvorlage", error);
+      setTemplateSaveError("Vorlage konnte nicht gespeichert werden.");
+      return;
+    }
+
+    setTemplateDialogOpen(false);
+
+    const savedId =
+      templateDraft.id ?? (data as { id?: string | number } | null)?.id;
+    await loadMessages(savedId !== undefined ? String(savedId) : undefined);
+  };
+
+  const openDeleteTemplateDialog = (message: NachrichtRecord) => {
+    setTemplateDeleteError(null);
+    setTemplateToDelete(message);
+  };
+
+  const closeDeleteTemplateDialog = () => {
+    if (isDeletingTemplate) {
+      return;
+    }
+
+    setTemplateToDelete(null);
+  };
+
+  const handleConfirmDeleteTemplate = async () => {
+    if (!templateToDelete || templateToDelete.id === undefined) {
+      return;
+    }
+
+    setIsDeletingTemplate(true);
+    setTemplateDeleteError(null);
+
+    const { error } = await supabase
+      .from("nachrichten")
+      .delete()
+      .eq("id", templateToDelete.id);
+
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    setIsDeletingTemplate(false);
+
+    if (error) {
+      console.error("Fehler beim Löschen der Nachrichtenvorlage", error);
+      setTemplateDeleteError("Vorlage konnte nicht gelöscht werden.");
+      return;
+    }
+
+    setTemplateToDelete(null);
+    await loadMessages();
+  };
+
   const channelOrder: MessageChannel[] = ["sms", "whatsapp", "email"];
 
   return (
@@ -1015,9 +1204,25 @@ export const KundeMessage = () => {
           }}
         >
           <Card sx={{ padding: "1em" }}>
-            <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-              Nachricht auswählen
-            </Typography>
+            <Box
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                mb: 1,
+              }}
+            >
+              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                Nachricht auswählen
+              </Typography>
+              <Button
+                size="small"
+                startIcon={<AddIcon />}
+                onClick={openCreateTemplateDialog}
+              >
+                Neue Vorlage
+              </Button>
+            </Box>
             <Divider sx={{ mb: 1 }} />
             <Box
               sx={{
@@ -1046,11 +1251,32 @@ export const KundeMessage = () => {
                     const messageContent = getMessageContent(message);
 
                     return (
-                      <ListItem key={message._rowKey} disablePadding>
+                      <ListItem
+                        key={message._rowKey}
+                        disablePadding
+                        secondaryAction={
+                          <Stack direction="row" spacing={0.5}>
+                            <IconButton
+                              aria-label="Vorlage bearbeiten"
+                              size="small"
+                              onClick={() => openEditTemplateDialog(message)}
+                            >
+                              <EditIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              aria-label="Vorlage löschen"
+                              size="small"
+                              onClick={() => openDeleteTemplateDialog(message)}
+                            >
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Stack>
+                        }
+                      >
                         <ListItemButton
                           selected={selectedMessageKey === message._rowKey}
                           onClick={() => setSelectedMessageKey(message._rowKey)}
-                          sx={{ borderRadius: 1 }}
+                          sx={{ borderRadius: 1, pr: 9 }}
                         >
                           <ListItemText
                             primary={messageTitle}
@@ -1275,6 +1501,99 @@ export const KundeMessage = () => {
           </Button>
         </Box>
       </Box>
+
+      <Dialog
+        open={templateDialogOpen}
+        onClose={closeTemplateDialog}
+        fullWidth
+        maxWidth="sm"
+      >
+        <DialogTitle>
+          {templateDraft.id !== undefined
+            ? "Vorlage bearbeiten"
+            : "Neue Vorlage anlegen"}
+        </DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ mt: 1 }}>
+            <MuiTextField
+              label="Titel"
+              value={templateDraft.titel}
+              onChange={(event) =>
+                setTemplateDraft((previous) => ({
+                  ...previous,
+                  titel: event.target.value,
+                }))
+              }
+              fullWidth
+              autoFocus
+            />
+            <MuiTextField
+              label="Text"
+              value={templateDraft.text}
+              onChange={(event) =>
+                setTemplateDraft((previous) => ({
+                  ...previous,
+                  text: event.target.value,
+                }))
+              }
+              fullWidth
+              multiline
+              minRows={4}
+              helperText="Platzhalter wie {{vorname}}, {{nachname}}, {{anrede}}, {{email}} oder {{telefon}} werden beim Versand automatisch ersetzt."
+            />
+            {templateSaveError ? (
+              <Typography color="error">{templateSaveError}</Typography>
+            ) : null}
+          </Stack>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={closeTemplateDialog} disabled={isSavingTemplate}>
+            Abbrechen
+          </Button>
+          <Button
+            variant="contained"
+            onClick={() => void handleSaveTemplate()}
+            disabled={isSavingTemplate}
+          >
+            {isSavingTemplate ? "Wird gespeichert..." : "Speichern"}
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={templateToDelete !== null}
+        onClose={closeDeleteTemplateDialog}
+      >
+        <DialogTitle>Vorlage löschen</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Soll die Vorlage „
+            {templateToDelete ? getMessageTitle(templateToDelete) : ""}“
+            wirklich gelöscht werden?
+          </DialogContentText>
+          {templateDeleteError ? (
+            <Typography color="error" sx={{ mt: 1 }}>
+              {templateDeleteError}
+            </Typography>
+          ) : null}
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={closeDeleteTemplateDialog}
+            disabled={isDeletingTemplate}
+          >
+            Abbrechen
+          </Button>
+          <Button
+            color="error"
+            variant="contained"
+            onClick={() => void handleConfirmDeleteTemplate()}
+            disabled={isDeletingTemplate}
+          >
+            {isDeletingTemplate ? "Wird gelöscht..." : "Löschen"}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
