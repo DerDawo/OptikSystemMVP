@@ -39,8 +39,9 @@ import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import PrintIcon from "@mui/icons-material/Print";
-import { Button, TextField as MuiTextField } from "@mui/material";
+import { Box, Button, TextField as MuiTextField } from "@mui/material";
 import { CurrencyField, formatCurrency } from "./CurrencyField";
+import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
   EditActionsBar,
   Field,
@@ -518,6 +519,9 @@ export const BrilleEdit = () => (
             <SelectInput optionText="id" />
           </ReferenceInput>
         </FieldRow>
+        <Box sx={{ mt: 1 }}>
+          <GlasassistentButton />
+        </Box>
       </FormSection>
       <FormSection title="Zusatzleistungen">
         <ReferenceArrayInput
