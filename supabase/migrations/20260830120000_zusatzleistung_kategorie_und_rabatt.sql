@@ -7,6 +7,15 @@
 -- unabhängig von normalen Zusatzleistungs-Positionen, damit #52 (Summenberechnung)
 -- und #56 (Rechnungen) Zusatzleistungen und Rabatt getrennt auswerten können.
 
+-- "Bezeichnung" war bislang ein fester Enum-Typ (zusatzleistungbezeichnung).
+-- Der neue, freie Leistungskatalog (siehe Seed-Migration) und das Frontend
+-- (zusatzleistung.tsx: TextInput source="Bezeichnung") brauchen frei
+-- befüllbaren Text statt einer festen, kleinen Werteliste.
+alter table public.zusatzleistung
+  alter column "Bezeichnung" type text using "Bezeichnung"::text;
+
+drop type if exists public.zusatzleistungbezeichnung;
+
 alter table public.zusatzleistung
   add column if not exists "Kategorie" text;
 
