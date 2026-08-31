@@ -32,7 +32,7 @@ export const MyMenu = () => (
     />
     <Divider />
     <Typography sx={{ padding: "0.5em 1em", color: "text.secondary" }}>
-      Geschäftsprozesse
+      Kunden &amp; Termine
     </Typography>
     <Menu.Item
       to="/kunde/create"
@@ -54,10 +54,30 @@ export const MyMenu = () => (
       primaryText="neuen Termin anlegen"
       leftIcon={<FontAwesomeIcon icon={faCalendarPlus} />}
     />
+    <Menu.Item
+      to="/termin"
+      primaryText="Termine (Liste)"
+      leftIcon={<FontAwesomeIcon icon={faCalendarDays} />}
+    />
+    <Menu.Item
+      to="/kunde"
+      primaryText="Kunden"
+      leftIcon={<FontAwesomeIcon icon={faUser} />}
+    />
     <Divider />
     <Typography sx={{ padding: "0.5em 1em", color: "text.secondary" }}>
-      Dokumente
+      Aufträge &amp; Abrechnung
     </Typography>
+    <Menu.Item
+      to="/brille"
+      primaryText="Brillen"
+      leftIcon={<FontAwesomeIcon icon={faGlasses} />}
+    />
+    <Menu.Item
+      to="/kontaktlinse"
+      primaryText="Kontaktlinsen"
+      leftIcon={<FontAwesomeIcon icon={faCircleDot} />}
+    />
     <Menu.Item
       to="/rechnungen"
       primaryText="Rechnungen"
@@ -70,23 +90,8 @@ export const MyMenu = () => (
     />
     <Divider />
     <Typography sx={{ padding: "0.5em 1em", color: "text.secondary" }}>
-      Datenbank
+      Stammdaten &amp; Katalog
     </Typography>
-    <Menu.Item
-      to="/kunde"
-      primaryText="Kunden"
-      leftIcon={<FontAwesomeIcon icon={faUser} />}
-    />
-    <Menu.Item
-      to="/brille"
-      primaryText="Brillen"
-      leftIcon={<FontAwesomeIcon icon={faGlasses} />}
-    />
-    <Menu.Item
-      to="/kontaktlinse"
-      primaryText="Kontaktlinsen"
-      leftIcon={<FontAwesomeIcon icon={faCircleDot} />}
-    />
     <Menu.Item
       to="/glass"
       primaryText="Gläser"
@@ -123,19 +128,18 @@ export const MyMenu = () => (
       leftIcon={<FontAwesomeIcon icon={faListCheck} />}
     />
     <Menu.Item
-      to="/termin"
-      primaryText="Termine"
-      leftIcon={<FontAwesomeIcon icon={faCalendarDays} />}
+      to="/betrieb/1"
+      primaryText="Betriebsdaten"
+      leftIcon={<FontAwesomeIcon icon={faBuilding} />}
     />
+    <Divider />
+    <Typography sx={{ padding: "0.5em 1em", color: "text.secondary" }}>
+      Vorlagen
+    </Typography>
     <Menu.Item
       to="/dokumentvorlage"
       primaryText="Dokumentvorlagen"
       leftIcon={<FontAwesomeIcon icon={faFileLines} />}
-    />
-    <Menu.Item
-      to="/betrieb/1"
-      primaryText="Betriebsdaten"
-      leftIcon={<FontAwesomeIcon icon={faBuilding} />}
     />
   </Menu>
 );
