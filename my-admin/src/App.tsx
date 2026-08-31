@@ -75,6 +75,7 @@ import {
 import { GlaskatalogImportPage } from "./glaskatalog/GlaskatalogImportPage";
 import { RechnungenList } from "./Rechnungen";
 import { MahnungenList } from "./Mahnungen";
+import { Dashboard } from "./Dashboard";
 
 import PersonIcon from "@mui/icons-material/Person";
 import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
@@ -87,6 +88,7 @@ export const App = () => {
   return (
     <Admin
       layout={MyLayout}
+      dashboard={Dashboard}
       dataProvider={dataProvider}
       authProvider={authProvider}
       loginPage={LoginPage}
