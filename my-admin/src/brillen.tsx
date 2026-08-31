@@ -42,7 +42,11 @@ import PrintIcon from "@mui/icons-material/Print";
 import { Box, Button, TextField as MuiTextField } from "@mui/material";
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
-import { FormulareButton, RechnungErstellenButton } from "./FormulareDialog";
+import {
+  FormulareButton,
+  MahnungErstellenButton,
+  RechnungErstellenButton,
+} from "./FormulareDialog";
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import {
   EditActionsBar,
@@ -310,6 +314,7 @@ export const BrilleList = () => (
 const BrilleShowActions = () => (
   <ShowActionsBar>
     <RechnungErstellenButton />
+    <MahnungErstellenButton />
     <FormulareButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
@@ -465,6 +470,9 @@ export const BrilleShow = () => (
             <Field>
               <TextField source="Zahlungsstatus" />
             </Field>
+            <Field label="Mahnstufe">
+              <NumberField source="Mahnstufe" />
+            </Field>
           </ShowSection>
         </ShowColumn>
         <ShowColumn>
@@ -490,6 +498,7 @@ export const BrilleEdit = () => (
     actions={
       <EditActionsBar>
         <RechnungErstellenButton />
+        <MahnungErstellenButton />
         <FormulareButton />
         <KarteikarteKopierenButton />
       </EditActionsBar>

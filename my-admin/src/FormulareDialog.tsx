@@ -27,6 +27,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ReceiptIcon from "@mui/icons-material/Receipt";
+import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PrintIcon from "@mui/icons-material/Print";
@@ -50,6 +51,19 @@ import {
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
 // Seed-Migration 20260831020100_seed_dokumentvorlage_rechnung.sql).
 const RECHNUNG_KATEGORIE = "Rechnung";
+
+// Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
+// (#57, Seed-Migration 20260831030100_seed_dokumentvorlage_mahnung.sql). Es
+// gibt mehrere aktive Vorlagen der Kategorie "Mahnung" (eine je Stufe), daher
+// reicht die generische "genau ein Treffer"-Auswahl unten nicht aus - der
+// Name der zur aktuellen Mahnstufe passenden Vorlage wird explizit über
+// `initialVorlageName` vorgegeben.
+const MAHNUNG_KATEGORIE = "Mahnung";
+const MAHNUNG_VORLAGE_NACH_STUFE: Record<number, string> = {
+  1: "Zahlungserinnerung",
+  2: "2. Mahnung",
+  3: "3. Mahnung (Inkasso-Ankündigung)",
+};
 
 type Dokumentvorlage = RaRecord & {
   Name: string;
@@ -107,12 +121,17 @@ interface FormulareDialogProps {
   // Beschränkt die Vorlagenauswahl auf eine Kategorie und wählt sie bei
   // genau einem Treffer automatisch aus (Rechnung erstellen, #56).
   initialKategorie?: string;
+  // Wählt innerhalb von `initialKategorie` gezielt die Vorlage mit diesem
+  // Namen aus, falls es dort mehrere aktive Vorlagen gibt (Mahnung
+  // erstellen, #57: eine Vorlage je Mahnstufe).
+  initialVorlageName?: string;
 }
 
 const FormulareDialog = ({
   brille,
   onClose,
   initialKategorie,
+  initialVorlageName,
 }: FormulareDialogProps) => {
   const notify = useNotify();
   const [selectedVorlage, setSelectedVorlage] =
@@ -132,10 +151,21 @@ const FormulareDialog = ({
     const treffer = (vorlagen ?? []).filter(
       (vorlage) => vorlage.Kategorie === initialKategorie,
     );
-    if (treffer.length === 1) {
+    const passende = initialVorlageName
+      ? treffer.filter((vorlage) => vorlage.Name === initialVorlageName)
+      : treffer;
+    if (passende.length === 1) {
+      setSelectedVorlage(passende[0]);
+    } else if (initialVorlageName && treffer.length === 1) {
       setSelectedVorlage(treffer[0]);
     }
-  }, [initialKategorie, vorlagenLoading, vorlagen, selectedVorlage]);
+  }, [
+    initialKategorie,
+    initialVorlageName,
+    vorlagenLoading,
+    vorlagen,
+    selectedVorlage,
+  ]);
 
   const zusatzleistungIds: number[] = (brille.ZusatzleistungIDs ?? []).filter(
     (id: number | null | undefined) => id !== null && id !== undefined,
@@ -465,6 +495,70 @@ export const RechnungErstellenButton = () => {
         <FormulareDialog
           brille={rechnungsBrille}
           initialKategorie={RECHNUNG_KATEGORIE}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// "Mahnung erstellen"-Button für die Brillenkartei und die
+// Mahnungen-Übersicht (#57): zählt zuerst die Mahnstufe des Auftrags hoch
+// (RPC `increment_mahnstufe`, siehe Migration 20260831030000_mahnungen.sql)
+// und öffnet anschließend den Formulare-Dialog mit der zur neuen Mahnstufe
+// passenden Vorlage aus der Kategorie "Mahnung".
+export const MahnungErstellenButton = () => {
+  const record = useRecordContext();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [open, setOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [mahnungsBrille, setMahnungsBrille] = useState<RaRecord | null>(null);
+
+  if (!record) {
+    return null;
+  }
+
+  const handleClick = async () => {
+    setAssigning(true);
+    try {
+      const { data, error } = await supabase.rpc("increment_mahnstufe", {
+        p_brille_id: record.id,
+      });
+      if (error) {
+        throw error;
+      }
+      setMahnungsBrille({ ...record, Mahnstufe: data as number });
+      notify(`Mahnstufe ${data} vergeben.`, { type: "success" });
+      refresh();
+      setOpen(true);
+    } catch {
+      notify("Mahnstufe konnte nicht aktualisiert werden.", {
+        type: "error",
+      });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant="contained"
+        color="warning"
+        startIcon={<WarningAmberIcon />}
+        onClick={handleClick}
+        disabled={assigning}
+      >
+        Mahnung erstellen
+      </Button>
+      {open && mahnungsBrille && (
+        <FormulareDialog
+          brille={mahnungsBrille}
+          initialKategorie={MAHNUNG_KATEGORIE}
+          initialVorlageName={
+            MAHNUNG_VORLAGE_NACH_STUFE[Number(mahnungsBrille.Mahnstufe) || 1]
+          }
           onClose={() => setOpen(false)}
         />
       )}
