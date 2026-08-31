@@ -32,6 +32,7 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PrintIcon from "@mui/icons-material/Print";
 import EditNoteIcon from "@mui/icons-material/EditNote";
+import FactCheckIcon from "@mui/icons-material/FactCheck";
 import {
   RaRecord,
   useGetList,
@@ -51,11 +52,19 @@ import {
   buildRechnungPreviewHtml,
   buildRechnungPrintHtml,
 } from "./rechnungTemplate";
+import {
+  buildBerechtigungsscheinPreviewHtml,
+  buildBerechtigungsscheinPrintHtml,
+} from "./berechtigungsscheinTemplate";
 
 // Kategorie, unter der die Rechnungsvorlage(n) in `dokumentvorlage` angelegt
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
 // Seed-Migration 20260831020100_seed_dokumentvorlage_rechnung.sql).
 const RECHNUNG_KATEGORIE = "Rechnung";
+
+// Kategorie für den Berechtigungsschein (#90, Seed-Migration
+// 20260831150200_seed_dokumentvorlage_berechtigungsschein.sql).
+const BERECHTIGUNGSSCHEIN_KATEGORIE = "Berechtigungsschein";
 
 // Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
 // (#57, Seed-Migration 20260831030100_seed_dokumentvorlage_mahnung.sql). Es
@@ -202,6 +211,7 @@ const FormulareDialog = ({
     { id: brille.Glastyp },
     { enabled: Boolean(brille.Glastyp) },
   );
+  const { data: betrieb } = useGetOne("betrieb", { id: 1 });
 
   const mergeEntities: DocumentMergeEntities = useMemo(
     () => ({
@@ -244,6 +254,22 @@ const FormulareDialog = ({
     ? buildRechnungPrintHtml(rechnungDaten)
     : "";
 
+  // Berechtigungsschein (#90) hat, wie die Rechnung, ein eigenes, code-basiertes
+  // Layout (Ankreuzfelder, Unterschriftszeilen) statt des generischen
+  // Vorlagentexts.
+  const isBerechtigungsschein =
+    selectedVorlage?.Kategorie === BERECHTIGUNGSSCHEIN_KATEGORIE;
+  const berechtigungsscheinDaten = useMemo(
+    () => ({ entities: mergeEntities, betrieb }),
+    [mergeEntities, betrieb],
+  );
+  const berechtigungsscheinPreviewHtml = isBerechtigungsschein
+    ? buildBerechtigungsscheinPreviewHtml(berechtigungsscheinDaten)
+    : "";
+  const berechtigungsscheinPrintHtml = isBerechtigungsschein
+    ? buildBerechtigungsscheinPrintHtml(berechtigungsscheinDaten)
+    : "";
+
   const groupedVorlagen = useMemo(() => {
     const map = new Map<string, Dokumentvorlage[]>();
     (vorlagen ?? [])
@@ -269,7 +295,9 @@ const FormulareDialog = ({
     }
     const html = isRechnung
       ? rechnungPrintHtml
-      : buildPrintHtml(selectedVorlage.Name, renderedText);
+      : isBerechtigungsschein
+        ? berechtigungsscheinPrintHtml
+        : buildPrintHtml(selectedVorlage.Name, renderedText);
     const opened = openDocumentWindow(html, autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
@@ -358,7 +386,7 @@ const FormulareDialog = ({
                   {selectedVorlage.Kategorie}
                 </Typography>
               </Box>
-              {!isRechnung && (
+              {!isRechnung && !isBerechtigungsschein && (
                 <Button
                   size="small"
                   startIcon={<EditNoteIcon />}
@@ -375,6 +403,19 @@ const FormulareDialog = ({
                 component="iframe"
                 title="Rechnungsvorschau"
                 srcDoc={rechnungPreviewHtml}
+                sx={{
+                  width: "100%",
+                  height: 480,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                }}
+              />
+            ) : isBerechtigungsschein ? (
+              <Box
+                component="iframe"
+                title="Berechtigungsschein-Vorschau"
+                srcDoc={berechtigungsscheinPreviewHtml}
                 sx={{
                   width: "100%",
                   height: 480,
@@ -599,6 +640,38 @@ export const MahnungErstellenButton = () => {
           initialVorlageName={
             MAHNUNG_VORLAGE_NACH_STUFE[Number(mahnungsBrille.Mahnstufe) || 1]
           }
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// "Berechtigungsschein erstellen"-Button für die Brillenkartei (#90): öffnet
+// den Formulare-Dialog direkt auf die Kategorie "Berechtigungsschein"
+// gefiltert. Anders als bei Rechnung/Mahnung gibt es hier keine fortlaufende
+// Nummer/Stufe zu vergeben, daher ohne vorgeschalteten RPC-Aufruf.
+export const BerechtigungsscheinErstellenButton = () => {
+  const record = useRecordContext();
+  const [open, setOpen] = useState(false);
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<FactCheckIcon />}
+        onClick={() => setOpen(true)}
+      >
+        Berechtigungsschein erstellen
+      </Button>
+      {open && (
+        <FormulareDialog
+          brille={record}
+          initialKategorie={BERECHTIGUNGSSCHEIN_KATEGORIE}
           onClose={() => setOpen(false)}
         />
       )}

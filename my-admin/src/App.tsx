@@ -76,6 +76,7 @@ import { GlaskatalogImportPage } from "./glaskatalog/GlaskatalogImportPage";
 import { RechnungenList } from "./Rechnungen";
 import { MahnungenList } from "./Mahnungen";
 import { Dashboard } from "./Dashboard";
+import { BetriebEdit } from "./betrieb";
 
 import PersonIcon from "@mui/icons-material/Person";
 import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
@@ -199,6 +200,7 @@ export const App = () => {
         edit={DokumentvorlageEdit}
         create={DokumentvorlageCreate}
       />
+      <Resource name="betrieb" edit={BetriebEdit} />
       <CustomRoutes>
         <Route path="/search" element={<Search />} />
         <Route path="/rechnungen" element={<RechnungenList />} />
