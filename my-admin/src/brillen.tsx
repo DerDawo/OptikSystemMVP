@@ -43,6 +43,7 @@ import { Box, Button, TextField as MuiTextField } from "@mui/material";
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import { FormulareButton } from "./FormulareDialog";
+import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import {
   EditActionsBar,
   Field,
@@ -312,6 +313,7 @@ const BrilleShowActions = () => (
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
+    <KarteikarteKopierenButton />
   </ShowActionsBar>
 );
 
@@ -487,6 +489,7 @@ export const BrilleEdit = () => (
     actions={
       <EditActionsBar>
         <FormulareButton />
+        <KarteikarteKopierenButton />
       </EditActionsBar>
     }
   >
