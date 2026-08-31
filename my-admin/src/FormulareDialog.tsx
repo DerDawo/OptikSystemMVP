@@ -45,7 +45,12 @@ import { supabase } from "./utils";
 import {
   buildDocumentMergeValues,
   renderDocumentTemplate,
+  type DocumentMergeEntities,
 } from "./documentTemplateEngine";
+import {
+  buildRechnungPreviewHtml,
+  buildRechnungPrintHtml,
+} from "./rechnungTemplate";
 
 // Kategorie, unter der die Rechnungsvorlage(n) in `dokumentvorlage` angelegt
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
@@ -96,17 +101,13 @@ const buildPrintHtml = (title: string, body: string) => `<!DOCTYPE html>
 // Leichte, im Browser lauffähige "PDF"-Lösung ohne zusätzliche Bibliothek:
 // ein separates Fenster mit druckoptimiertem CSS, dessen Druckdialog der
 // Nutzer entweder an einen Drucker schickt oder als PDF speichert.
-const openDocumentWindow = (
-  title: string,
-  body: string,
-  autoPrint: boolean,
-): boolean => {
+const openDocumentWindow = (html: string, autoPrint: boolean): boolean => {
   const documentWindow = window.open("", "_blank", "width=850,height=1100");
   if (!documentWindow) {
     return false;
   }
   documentWindow.document.open();
-  documentWindow.document.write(buildPrintHtml(title, body));
+  documentWindow.document.write(html);
   documentWindow.document.close();
   documentWindow.focus();
   if (autoPrint) {
@@ -202,22 +203,45 @@ const FormulareDialog = ({
     { enabled: Boolean(brille.Glastyp) },
   );
 
-  const mergeValues = useMemo(
-    () =>
-      buildDocumentMergeValues({
-        kunde,
-        brille,
-        glasLinks,
-        glasRechts,
-        fassung,
-        glastyp,
-        zusatzleistungen,
-      }),
+  const mergeEntities: DocumentMergeEntities = useMemo(
+    () => ({
+      kunde,
+      brille,
+      glasLinks,
+      glasRechts,
+      fassung,
+      glastyp,
+      zusatzleistungen,
+    }),
     [kunde, brille, glasLinks, glasRechts, fassung, glastyp, zusatzleistungen],
   );
 
+  const mergeValues = useMemo(
+    () => buildDocumentMergeValues(mergeEntities),
+    [mergeEntities],
+  );
+
+  const isRechnung = selectedVorlage?.Kategorie === RECHNUNG_KATEGORIE;
+
   const renderedText = selectedVorlage
     ? renderDocumentTemplate(selectedVorlage.Vorlagentext ?? "", mergeValues)
+    : "";
+
+  // Rechnungen (#88) haben ein eigenes, code-basiertes HTML-Layout statt des
+  // generischen {{platzhalter}}-Fließtexts - der Vorlagentext des
+  // "Rechnung"-Datensatzes wird dafür nicht mehr verwendet.
+  const rechnungDaten = useMemo(
+    () => ({
+      entities: mergeEntities,
+      rechnungsnummer: brille.Rechnungsnummer ?? "",
+    }),
+    [mergeEntities, brille.Rechnungsnummer],
+  );
+  const rechnungPreviewHtml = isRechnung
+    ? buildRechnungPreviewHtml(rechnungDaten)
+    : "";
+  const rechnungPrintHtml = isRechnung
+    ? buildRechnungPrintHtml(rechnungDaten)
     : "";
 
   const groupedVorlagen = useMemo(() => {
@@ -243,11 +267,10 @@ const FormulareDialog = ({
     if (!selectedVorlage) {
       return;
     }
-    const opened = openDocumentWindow(
-      selectedVorlage.Name,
-      renderedText,
-      autoPrint,
-    );
+    const html = isRechnung
+      ? rechnungPrintHtml
+      : buildPrintHtml(selectedVorlage.Name, renderedText);
+    const opened = openDocumentWindow(html, autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
     });
@@ -335,31 +358,48 @@ const FormulareDialog = ({
                   {selectedVorlage.Kategorie}
                 </Typography>
               </Box>
-              <Button
-                size="small"
-                startIcon={<EditNoteIcon />}
-                component={Link}
-                to={`/dokumentvorlage/${selectedVorlage.id}`}
-                target="_blank"
+              {!isRechnung && (
+                <Button
+                  size="small"
+                  startIcon={<EditNoteIcon />}
+                  component={Link}
+                  to={`/dokumentvorlage/${selectedVorlage.id}`}
+                  target="_blank"
+                >
+                  Text ändern
+                </Button>
+              )}
+            </Box>
+            {isRechnung ? (
+              <Box
+                component="iframe"
+                title="Rechnungsvorschau"
+                srcDoc={rechnungPreviewHtml}
+                sx={{
+                  width: "100%",
+                  height: 480,
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                }}
+              />
+            ) : (
+              <Box
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  borderRadius: 1,
+                  p: 2,
+                  maxHeight: 420,
+                  overflowY: "auto",
+                  whiteSpace: "pre-wrap",
+                  overflowWrap: "break-word",
+                  fontFamily: "inherit",
+                }}
               >
-                Text ändern
-              </Button>
-            </Box>
-            <Box
-              sx={{
-                border: "1px solid",
-                borderColor: "divider",
-                borderRadius: 1,
-                p: 2,
-                maxHeight: 420,
-                overflowY: "auto",
-                whiteSpace: "pre-wrap",
-                overflowWrap: "break-word",
-                fontFamily: "inherit",
-              }}
-            >
-              {renderedText || "(Vorlage ist leer)"}
-            </Box>
+                {renderedText || "(Vorlage ist leer)"}
+              </Box>
+            )}
           </>
         )}
       </DialogContent>

@@ -75,81 +75,6 @@ export type DocumentMergeEntities = {
   zusatzleistungen?: MergeSource[];
 };
 
-const formatBetrag = (value: unknown): string =>
-  `${(Number(value) || 0).toLocaleString("de-DE", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  })} €`;
-
-type Positionszeile = { label: string; betrag: number };
-
-// Tab-getrennt statt spaltenbündig, da der Druck-Body (buildPrintHtml in
-// FormulareDialog.tsx) in einer proportionalen Schrift (Arial) gerendert
-// wird - mit Leerzeichen ausgerichtete Tabellen liefen dort schief.
-const formatPositionenTabelle = (zeilen: Positionszeile[]): string => {
-  if (zeilen.length === 0) {
-    return "";
-  }
-  return [
-    "Position\tBetrag",
-    "-".repeat(48),
-    ...zeilen.map(({ label, betrag }) => `${label}\t${formatBetrag(betrag)}`),
-  ].join("\n");
-};
-
-// Baut die Rechnungspositionen (Issue #56) aus Glas links/rechts, Fassung,
-// den ausgewählten Zusatzleistungen (aufgelöst gegen `zusatzleistung`) und
-// dem ggf. angewandten Rabatt (siehe #22/#52: wirkt nur auf Glas + Fassung).
-const buildPositionenText = (entities: DocumentMergeEntities): string => {
-  const brille = entities.brille;
-  const zeilen: Positionszeile[] = [];
-
-  const glasRechtsBetrag = Number(entities.glasRechts?.Betrag) || 0;
-  if (entities.glasRechts) {
-    zeilen.push({ label: "Glas rechts", betrag: glasRechtsBetrag });
-  }
-
-  const glasLinksBetrag = Number(entities.glasLinks?.Betrag) || 0;
-  if (entities.glasLinks) {
-    zeilen.push({ label: "Glas links", betrag: glasLinksBetrag });
-  }
-
-  const fassungBetrag = Number(entities.fassung?.Betrag) || 0;
-  if (entities.fassung) {
-    const bezeichnung = formatMergeValue(entities.fassung.Bezeichnung);
-    zeilen.push({
-      label: bezeichnung ? `Fassung: ${bezeichnung}` : "Fassung",
-      betrag: fassungBetrag,
-    });
-  }
-
-  (entities.zusatzleistungen ?? []).forEach((zusatzleistung) => {
-    if (!zusatzleistung) {
-      return;
-    }
-    const bezeichnung =
-      formatMergeValue(zusatzleistung.Bezeichnung) || "Zusatzleistung";
-    zeilen.push({
-      label: `Zusatzleistung: ${bezeichnung}`,
-      betrag: Number(zusatzleistung.Betrag) || 0,
-    });
-  });
-
-  const rabattProzent = Number(brille?.RabattProzent) || 0;
-  if (rabattProzent > 0) {
-    const rabattBasis = glasRechtsBetrag + glasLinksBetrag + fassungBetrag;
-    const rabattBetrag =
-      Math.round(rabattBasis * (rabattProzent / 100) * 100) / 100;
-    const rabattBezeichnung = formatMergeValue(brille?.RabattBezeichnung);
-    zeilen.push({
-      label: `Rabatt${rabattBezeichnung ? `: ${rabattBezeichnung}` : ""} (-${rabattProzent} %)`,
-      betrag: -rabattBetrag,
-    });
-  }
-
-  return formatPositionenTabelle(zeilen);
-};
-
 // Baut die flache Platzhalter-Map fuer alle bekannten Entitaeten plus ein paar
 // gaengige, abgeleitete Bequemlichkeits-Platzhalter (voller Name, Adresse,
 // Restbetrag, heutiges Datum), die insbesondere fuer Rechnung/Mahnung (#56,
@@ -194,7 +119,6 @@ export const buildDocumentMergeValues = (
     values["brille.restbetrag"] = formatMergeValue(
       Math.round((summe - anzahlung - kkAnteil) * 100) / 100,
     );
-    values["brille.positionen"] = buildPositionenText(entities);
   }
 
   values["heute.datum"] = dayjs().format("DD.MM.YYYY");
