@@ -35,8 +35,9 @@ import {
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import PrintIcon from "@mui/icons-material/Print";
-import { Button } from "@mui/material";
+import { Box, Button } from "@mui/material";
 import { CurrencyField } from "./CurrencyField";
+import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
   EditActionsBar,
   Field,
@@ -99,7 +100,9 @@ const BrillenArtInput = () => {
       optionValue="Bezeichnung"
       onCreate={handleCreateBrillenart}
       createLabel="Neue Brillenart anlegen"
-      createItemLabel={(filter: string) => `„${filter}“ als neue Brillenart anlegen`}
+      createItemLabel={(filter: string) =>
+        `„${filter}“ als neue Brillenart anlegen`
+      }
     />
   );
 };
@@ -401,6 +404,9 @@ export const BrilleEdit = () => (
             <SelectInput optionText="id" />
           </ReferenceInput>
         </FieldRow>
+        <Box sx={{ mt: 1 }}>
+          <GlasassistentButton />
+        </Box>
       </FormSection>
       <FormSection title="Zusatzleistungen">
         <ReferenceArrayInput
@@ -460,7 +466,10 @@ export const BrilleEdit = () => (
         </FieldRow>
         <FieldRow>
           <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
-          <SelectInput source="Zahlungsstatus" choices={zahlungsstatusChoices} />
+          <SelectInput
+            source="Zahlungsstatus"
+            choices={zahlungsstatusChoices}
+          />
         </FieldRow>
       </FormSection>
     </SimpleForm>
@@ -541,7 +550,10 @@ export const BrilleCreate = () => (
         </FieldRow>
         <FieldRow>
           <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
-          <SelectInput source="Zahlungsstatus" choices={zahlungsstatusChoices} />
+          <SelectInput
+            source="Zahlungsstatus"
+            choices={zahlungsstatusChoices}
+          />
         </FieldRow>
       </FormSection>
     </SimpleForm>
