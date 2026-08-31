@@ -6,8 +6,9 @@ import {
   ReferenceManyField,
   Pagination,
 } from "react-admin";
-import { NumberField, Show, TextField } from "react-admin";
+import { BooleanField, NumberField, Show, TextField } from "react-admin";
 import {
+  BooleanInput,
   DateInput,
   Edit,
   Create,
@@ -43,6 +44,7 @@ import { Box, Button, TextField as MuiTextField } from "@mui/material";
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
+  BerechtigungsscheinErstellenButton,
   FormulareButton,
   MahnungErstellenButton,
   RechnungErstellenButton,
@@ -315,6 +317,7 @@ const BrilleShowActions = () => (
   <ShowActionsBar>
     <RechnungErstellenButton />
     <MahnungErstellenButton />
+    <BerechtigungsscheinErstellenButton />
     <FormulareButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
@@ -474,6 +477,14 @@ export const BrilleShow = () => (
               <NumberField source="Mahnstufe" />
             </Field>
           </ShowSection>
+          <ShowSection title="Kassenzulassung (§ 33 SGB V)">
+            <Field label="Erstverordnung (Muster 8) vorhanden">
+              <BooleanField source="ErstverordnungMuster8Vorhanden" />
+            </Field>
+            <Field label="Ausstellungsdatum Muster 8">
+              <DateField source="ErstverordnungMuster8Datum" />
+            </Field>
+          </ShowSection>
         </ShowColumn>
         <ShowColumn>
           <RelatedSection title="Weitere Aufträge dieses Kunden">
@@ -499,6 +510,7 @@ export const BrilleEdit = () => (
       <EditActionsBar>
         <RechnungErstellenButton />
         <MahnungErstellenButton />
+        <BerechtigungsscheinErstellenButton />
         <FormulareButton />
         <KarteikarteKopierenButton />
       </EditActionsBar>
@@ -609,6 +621,18 @@ export const BrilleEdit = () => (
           />
         </FieldRow>
       </FormSection>
+      <FormSection title="Kassenzulassung (§ 33 SGB V)">
+        <FieldRow>
+          <BooleanInput
+            source="ErstverordnungMuster8Vorhanden"
+            label="Erstverordnung (Muster 8) liegt im System vor"
+          />
+          <DateInput
+            source="ErstverordnungMuster8Datum"
+            label="Ausstellungsdatum Muster 8"
+          />
+        </FieldRow>
+      </FormSection>
     </SimpleForm>
   </Edit>
 );
@@ -690,6 +714,18 @@ export const BrilleCreate = () => (
           <SelectInput
             source="Zahlungsstatus"
             choices={zahlungsstatusChoices}
+          />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Kassenzulassung (§ 33 SGB V)">
+        <FieldRow>
+          <BooleanInput
+            source="ErstverordnungMuster8Vorhanden"
+            label="Erstverordnung (Muster 8) liegt im System vor"
+          />
+          <DateInput
+            source="ErstverordnungMuster8Datum"
+            label="Ausstellungsdatum Muster 8"
           />
         </FieldRow>
       </FormSection>

@@ -18,6 +18,7 @@ import {
   faCalendarDays,
   faCalendarPlus,
   faFileLines,
+  faBuilding,
 } from "@fortawesome/free-solid-svg-icons";
 import { Divider, Typography } from "@mui/material";
 
@@ -123,6 +124,11 @@ export const MyMenu = () => (
       to="/dokumentvorlage"
       primaryText="Dokumentvorlagen"
       leftIcon={<FontAwesomeIcon icon={faFileLines} />}
+    />
+    <Menu.Item
+      to="/betrieb/1"
+      primaryText="Betriebsdaten"
+      leftIcon={<FontAwesomeIcon icon={faBuilding} />}
     />
   </Menu>
 );
