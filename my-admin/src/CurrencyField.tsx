@@ -1,6 +1,6 @@
 import { FunctionField, FunctionFieldProps } from "react-admin";
 
-const formatCurrency = (value: unknown): string => {
+export const formatCurrency = (value: unknown): string => {
   if (value === undefined || value === null || value === "") {
     return "";
   }
