@@ -42,7 +42,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import { Box, Button, TextField as MuiTextField } from "@mui/material";
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
-import { FormulareButton } from "./FormulareDialog";
+import { FormulareButton, RechnungErstellenButton } from "./FormulareDialog";
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import {
   EditActionsBar,
@@ -309,6 +309,7 @@ export const BrilleList = () => (
 // Always-reachable actions for the Brille detail page (print, edit, back).
 const BrilleShowActions = () => (
   <ShowActionsBar>
+    <RechnungErstellenButton />
     <FormulareButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
@@ -488,6 +489,7 @@ export const BrilleEdit = () => (
   <Edit
     actions={
       <EditActionsBar>
+        <RechnungErstellenButton />
         <FormulareButton />
         <KarteikarteKopierenButton />
       </EditActionsBar>
