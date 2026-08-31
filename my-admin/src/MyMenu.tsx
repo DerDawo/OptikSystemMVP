@@ -19,11 +19,18 @@ import {
   faCalendarPlus,
   faFileLines,
   faBuilding,
+  faGaugeHigh,
 } from "@fortawesome/free-solid-svg-icons";
 import { Divider, Typography } from "@mui/material";
 
 export const MyMenu = () => (
   <Menu>
+    <Menu.Item
+      to="/"
+      primaryText="Dashboard"
+      leftIcon={<FontAwesomeIcon icon={faGaugeHigh} />}
+    />
+    <Divider />
     <Typography sx={{ padding: "0.5em 1em", color: "text.secondary" }}>
       Geschäftsprozesse
     </Typography>
