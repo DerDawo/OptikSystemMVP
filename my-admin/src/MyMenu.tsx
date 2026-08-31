@@ -51,7 +51,7 @@ export const MyMenu = () => (
       Dokumente
     </Typography>
     <Menu.Item
-      to=""
+      to="/rechnungen"
       primaryText="Rechnungen"
       leftIcon={<FontAwesomeIcon icon={faReceipt} />}
     />

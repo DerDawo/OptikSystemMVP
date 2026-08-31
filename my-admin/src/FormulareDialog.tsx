@@ -7,7 +7,7 @@
 // hierauf aufsetzen, indem sie lediglich weitere `dokumentvorlage`-Datensätze
 // mit Kategorie "Rechnung"/"Mahnung" anlegen - an dieser Dialog-/Render-Logik
 // muss dafür nichts geändert werden.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Alert,
@@ -26,6 +26,7 @@ import {
 import CloseIcon from "@mui/icons-material/Close";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DescriptionIcon from "@mui/icons-material/Description";
+import ReceiptIcon from "@mui/icons-material/Receipt";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PrintIcon from "@mui/icons-material/Print";
@@ -33,14 +34,22 @@ import EditNoteIcon from "@mui/icons-material/EditNote";
 import {
   RaRecord,
   useGetList,
+  useGetMany,
   useGetOne,
   useNotify,
   useRecordContext,
+  useRefresh,
 } from "react-admin";
+import { supabase } from "./utils";
 import {
   buildDocumentMergeValues,
   renderDocumentTemplate,
 } from "./documentTemplateEngine";
+
+// Kategorie, unter der die Rechnungsvorlage(n) in `dokumentvorlage` angelegt
+// werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
+// Seed-Migration 20260831020100_seed_dokumentvorlage_rechnung.sql).
+const RECHNUNG_KATEGORIE = "Rechnung";
 
 type Dokumentvorlage = RaRecord & {
   Name: string;
@@ -95,9 +104,16 @@ const openDocumentWindow = (
 interface FormulareDialogProps {
   brille: RaRecord;
   onClose: () => void;
+  // Beschränkt die Vorlagenauswahl auf eine Kategorie und wählt sie bei
+  // genau einem Treffer automatisch aus (Rechnung erstellen, #56).
+  initialKategorie?: string;
 }
 
-const FormulareDialog = ({ brille, onClose }: FormulareDialogProps) => {
+const FormulareDialog = ({
+  brille,
+  onClose,
+  initialKategorie,
+}: FormulareDialogProps) => {
   const notify = useNotify();
   const [selectedVorlage, setSelectedVorlage] =
     useState<Dokumentvorlage | null>(null);
@@ -108,6 +124,27 @@ const FormulareDialog = ({ brille, onClose }: FormulareDialogProps) => {
       sort: { field: "Kategorie", order: "ASC" },
       filter: { Aktiv: true },
     });
+
+  useEffect(() => {
+    if (!initialKategorie || vorlagenLoading || selectedVorlage) {
+      return;
+    }
+    const treffer = (vorlagen ?? []).filter(
+      (vorlage) => vorlage.Kategorie === initialKategorie,
+    );
+    if (treffer.length === 1) {
+      setSelectedVorlage(treffer[0]);
+    }
+  }, [initialKategorie, vorlagenLoading, vorlagen, selectedVorlage]);
+
+  const zusatzleistungIds: number[] = (brille.ZusatzleistungIDs ?? []).filter(
+    (id: number | null | undefined) => id !== null && id !== undefined,
+  );
+  const { data: zusatzleistungen } = useGetMany(
+    "zusatzleistung",
+    { ids: zusatzleistungIds },
+    { enabled: zusatzleistungIds.length > 0 },
+  );
 
   const { data: kunde } = useGetOne(
     "kunde",
@@ -144,8 +181,9 @@ const FormulareDialog = ({ brille, onClose }: FormulareDialogProps) => {
         glasRechts,
         fassung,
         glastyp,
+        zusatzleistungen,
       }),
-    [kunde, brille, glasLinks, glasRechts, fassung, glastyp],
+    [kunde, brille, glasLinks, glasRechts, fassung, glastyp, zusatzleistungen],
   );
 
   const renderedText = selectedVorlage
@@ -154,13 +192,18 @@ const FormulareDialog = ({ brille, onClose }: FormulareDialogProps) => {
 
   const groupedVorlagen = useMemo(() => {
     const map = new Map<string, Dokumentvorlage[]>();
-    (vorlagen ?? []).forEach((vorlage) => {
-      const list = map.get(vorlage.Kategorie) ?? [];
-      list.push(vorlage);
-      map.set(vorlage.Kategorie, list);
-    });
+    (vorlagen ?? [])
+      .filter(
+        (vorlage) =>
+          !initialKategorie || vorlage.Kategorie === initialKategorie,
+      )
+      .forEach((vorlage) => {
+        const list = map.get(vorlage.Kategorie) ?? [];
+        list.push(vorlage);
+        map.set(vorlage.Kategorie, list);
+      });
     return Array.from(map.entries());
-  }, [vorlagen]);
+  }, [vorlagen, initialKategorie]);
 
   const handleAction = (
     autoPrint: boolean,
@@ -189,7 +232,7 @@ const FormulareDialog = ({ brille, onClose }: FormulareDialogProps) => {
           justifyContent: "space-between",
         }}
       >
-        Formulare
+        {initialKategorie ? `${initialKategorie} erstellen` : "Formulare"}
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
@@ -206,8 +249,9 @@ const FormulareDialog = ({ brille, onClose }: FormulareDialogProps) => {
             )}
             {!vorlagenLoading && groupedVorlagen.length === 0 && (
               <Alert severity="info">
-                Keine aktiven Dokumentvorlagen vorhanden. Vorlagen können unter
-                „Dokumentvorlagen“ angelegt werden.
+                {initialKategorie
+                  ? `Keine aktive Dokumentvorlage der Kategorie „${initialKategorie}“ vorhanden. Vorlagen können unter „Dokumentvorlagen“ angelegt werden.`
+                  : "Keine aktiven Dokumentvorlagen vorhanden. Vorlagen können unter „Dokumentvorlagen“ angelegt werden."}
               </Alert>
             )}
             {groupedVorlagen.map(([kategorie, list]) => (
@@ -359,6 +403,70 @@ export const FormulareButton = () => {
       </Button>
       {open && (
         <FormulareDialog brille={record} onClose={() => setOpen(false)} />
+      )}
+    </>
+  );
+};
+
+// "Rechnung erstellen"-Button für die Brillenkartei (#56): vergibt bei Bedarf
+// zuerst die fortlaufende Rechnungsnummer (RPC `assign_rechnungsnummer`,
+// siehe Migration 20260831020000_rechnungsnummer_vergabe.sql) und öffnet
+// anschließend den Formulare-Dialog, auf die Kategorie "Rechnung" gefiltert.
+export const RechnungErstellenButton = () => {
+  const record = useRecordContext();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [open, setOpen] = useState(false);
+  const [assigning, setAssigning] = useState(false);
+  const [rechnungsBrille, setRechnungsBrille] = useState<RaRecord | null>(null);
+
+  if (!record) {
+    return null;
+  }
+
+  const handleClick = async () => {
+    if (record.Rechnungsnummer) {
+      setRechnungsBrille(record);
+      setOpen(true);
+      return;
+    }
+    setAssigning(true);
+    try {
+      const { data, error } = await supabase.rpc("assign_rechnungsnummer", {
+        p_brille_id: record.id,
+      });
+      if (error) {
+        throw error;
+      }
+      setRechnungsBrille({ ...record, Rechnungsnummer: data as string });
+      notify(`Rechnungsnummer ${data} vergeben.`, { type: "success" });
+      refresh();
+      setOpen(true);
+    } catch {
+      notify("Rechnungsnummer konnte nicht vergeben werden.", {
+        type: "error",
+      });
+    } finally {
+      setAssigning(false);
+    }
+  };
+
+  return (
+    <>
+      <Button
+        variant="contained"
+        startIcon={<ReceiptIcon />}
+        onClick={handleClick}
+        disabled={assigning}
+      >
+        Rechnung erstellen
+      </Button>
+      {open && rechnungsBrille && (
+        <FormulareDialog
+          brille={rechnungsBrille}
+          initialKategorie={RECHNUNG_KATEGORIE}
+          onClose={() => setOpen(false)}
+        />
       )}
     </>
   );
