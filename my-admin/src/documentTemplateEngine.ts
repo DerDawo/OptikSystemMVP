@@ -198,6 +198,9 @@ export const buildDocumentMergeValues = (
   }
 
   values["heute.datum"] = dayjs().format("DD.MM.YYYY");
+  // Zahlungsfrist fuer Mahnungen (#57): pauschal 14 Tage, im Vorlagentext
+  // jederzeit anpassbar, da nur ein Platzhalterwert.
+  values["heute.zahlungsfrist"] = dayjs().add(14, "day").format("DD.MM.YYYY");
 
   return values;
 };
