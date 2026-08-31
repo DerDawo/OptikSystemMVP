@@ -74,6 +74,7 @@ import {
 } from "./glaskatalog/glaskatalogResource";
 import { GlaskatalogImportPage } from "./glaskatalog/GlaskatalogImportPage";
 import { RechnungenList } from "./Rechnungen";
+import { MahnungenList } from "./Mahnungen";
 
 import PersonIcon from "@mui/icons-material/Person";
 import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
@@ -199,6 +200,7 @@ export const App = () => {
       <CustomRoutes>
         <Route path="/search" element={<Search />} />
         <Route path="/rechnungen" element={<RechnungenList />} />
+        <Route path="/mahnungen" element={<MahnungenList />} />
         <Route path="/kalender" element={<TerminKalender />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />
         <Route path="/glaskatalog-import" element={<GlaskatalogImportPage />} />

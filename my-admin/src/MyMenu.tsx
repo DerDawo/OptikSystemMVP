@@ -56,7 +56,7 @@ export const MyMenu = () => (
       leftIcon={<FontAwesomeIcon icon={faReceipt} />}
     />
     <Menu.Item
-      to=""
+      to="/mahnungen"
       primaryText="Mahnungen"
       leftIcon={<FontAwesomeIcon icon={faHandPointUp} />}
     />
