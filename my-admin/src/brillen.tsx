@@ -30,13 +30,17 @@ import {
   AutocompleteInput,
   useDataProvider,
   useGetList,
+  useGetMany,
+  useGetOne,
   useNotify,
 } from "react-admin";
+import { useEffect } from "react";
+import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import PrintIcon from "@mui/icons-material/Print";
-import { Box, Button } from "@mui/material";
-import { CurrencyField } from "./CurrencyField";
+import { Box, Button, TextField as MuiTextField } from "@mui/material";
+import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
   EditActionsBar,
@@ -67,6 +71,106 @@ const zahlungsstatusChoices = [
   { id: "offen", name: "Offen" },
   { id: "bezahlt", name: "Bezahlt" },
 ];
+
+// Live-Vorschau der "Summe" (Issue #52): spiegelt im Formular dieselbe Formel,
+// die serverseitig per Trigger berechnet wird -
+//   (GlasLinks.Betrag + GlasRechts.Betrag + Fassung.Betrag) * (1 - Rabatt%)
+//   + Summe(Zusatzleistung.Betrag)
+// - damit Nutzer den Betrag schon vor dem Speichern sehen. Der eigentliche
+// Wert bleibt serverseitig maßgeblich (Trigger überschreibt ihn beim
+// Speichern ohnehin), die Vorschau schreibt ihn zusätzlich ins Formular, damit
+// er beim Absenden bereits mitgeschickt wird.
+const useZusatzleistungenSumme = (zusatzleistungIds: number[]) => {
+  const { data: zusatzleistungen } = useGetMany(
+    "zusatzleistung",
+    { ids: zusatzleistungIds },
+    { enabled: zusatzleistungIds.length > 0 },
+  );
+  return (zusatzleistungen ?? []).reduce(
+    (summe, zusatzleistung) => summe + (Number(zusatzleistung.Betrag) || 0),
+    0,
+  );
+};
+
+const SummeUndRestbetragVorschau = () => {
+  const [
+    glasLinksId,
+    glasRechtsId,
+    fassungId,
+    rabattProzent,
+    anzahlung,
+    kkAnteil,
+  ] = useWatch({
+    name: [
+      "GlasLinks",
+      "GlasRechts",
+      "Fassung",
+      "RabattProzent",
+      "Anzahlung",
+      "KKAnteil",
+    ],
+  });
+  const zusatzleistungIds: number[] = (
+    useWatch({ name: "ZusatzleistungIDs" }) ?? []
+  ).filter((id: number | null | undefined) => id !== null && id !== undefined);
+  const { setValue } = useFormContext();
+
+  const glasIds = [glasLinksId, glasRechtsId].filter(
+    (id) => id !== null && id !== undefined,
+  );
+  const { data: glaeser } = useGetMany(
+    "glass",
+    { ids: glasIds },
+    { enabled: glasIds.length > 0 },
+  );
+  const { data: fassung } = useGetOne(
+    "fassung",
+    { id: fassungId },
+    { enabled: fassungId !== null && fassungId !== undefined },
+  );
+  const zusatzleistungenSumme = useZusatzleistungenSumme(zusatzleistungIds);
+
+  const betragOf = (id: unknown) =>
+    Number(glaeser?.find((glas) => glas.id === id)?.Betrag) || 0;
+  const glasLinksBetrag = betragOf(glasLinksId);
+  const glasRechtsBetrag = betragOf(glasRechtsId);
+  const fassungBetrag = Number(fassung?.Betrag) || 0;
+  const rabattFaktor = 1 - (Number(rabattProzent) || 0) / 100;
+
+  const summe =
+    Math.round(
+      ((glasLinksBetrag + glasRechtsBetrag + fassungBetrag) * rabattFaktor +
+        zusatzleistungenSumme) *
+        100,
+    ) / 100;
+  const restbetrag =
+    Math.round(
+      (summe - (Number(anzahlung) || 0) - (Number(kkAnteil) || 0)) * 100,
+    ) / 100;
+
+  useEffect(() => {
+    setValue("Summe", summe, { shouldDirty: true, shouldValidate: false });
+  }, [summe, setValue]);
+
+  return (
+    <FieldRow>
+      <MuiTextField
+        label="Summe (berechnet)"
+        value={formatCurrency(summe)}
+        helperText="Automatisch berechnet aus Glas links + Glas rechts + Fassung (abzüglich Rabatt) plus Zusatzleistungen."
+        slotProps={{ input: { readOnly: true } }}
+        fullWidth
+      />
+      <MuiTextField
+        label="Offener Restbetrag"
+        value={formatCurrency(restbetrag)}
+        helperText="Summe abzüglich Anzahlung und KK-Anteil."
+        slotProps={{ input: { readOnly: true } }}
+        fullWidth
+      />
+    </FieldRow>
+  );
+};
 
 // `brille.BrillenArt` stays a plain text column so existing free-text values
 // keep working; this input offers the maintained `brillenart` list as
@@ -331,13 +435,24 @@ export const BrilleShow = () => (
           </ShowSection>
           <ShowSection title="Preis & Zahlung">
             <Field>
-              <NumberField source="Summe" />
+              <CurrencyField source="Summe" />
             </Field>
             <Field>
               <NumberField source="Anzahlung" />
             </Field>
             <Field label="KK-Anteil">
               <NumberField source="KKAnteil" />
+            </Field>
+            <Field label="Offener Restbetrag">
+              <FunctionField
+                render={(record) =>
+                  formatCurrency(
+                    (Number(record?.Summe) || 0) -
+                      (Number(record?.Anzahlung) || 0) -
+                      (Number(record?.KKAnteil) || 0),
+                  )
+                }
+              />
             </Field>
             <Field label="Rechnungsnr.">
               <TextField source="Rechnungsnummer" />
@@ -459,7 +574,7 @@ export const BrilleEdit = () => (
         </FieldRow>
       </FormSection>
       <FormSection title="Preis & Zahlung">
-        <NumberInput source="Summe" />
+        <SummeUndRestbetragVorschau />
         <FieldRow>
           <NumberInput source="Anzahlung" />
           <NumberInput source="KKAnteil" label="KK-Anteil" />
@@ -543,7 +658,7 @@ export const BrilleCreate = () => (
         </FieldRow>
       </FormSection>
       <FormSection title="Preis & Zahlung">
-        <NumberInput source="Summe" />
+        <SummeUndRestbetragVorschau />
         <FieldRow>
           <NumberInput source="Anzahlung" />
           <NumberInput source="KKAnteil" label="KK-Anteil" />
