@@ -1,0 +1,138 @@
+// Generische Merge-Field-Engine fuer die Dokumentenvorlagen-Bibliothek (#58).
+//
+// Platzhalter im Vorlagentext folgen dem Muster {{entitaet.feld}}, z. B.
+// {{kunde.vorname}} oder {{brille.summe}} (analog zum Merge-Field-Muster aus
+// messaging.ts/kunden.tsx, dort aber ohne Namespace). Jede referenzierte
+// Datenbanktabelle (kunde, brille, glass links/rechts, fassung, glastyp) wird
+// per Reflection auf ihre Spalten in einen flachen "entitaet.spalte"-Wert
+// abgebildet - neue Spalten oder neue Vorlagen (z. B. fuer Rechnung/Mahnung
+// aus #56/#57) stehen damit automatisch als Platzhalter zur Verfuegung, ohne
+// dass diese Render-Logik angepasst werden muss.
+import dayjs from "dayjs";
+
+export type MergeSource = Record<string, unknown> | null | undefined;
+
+const isIsoDateString = (value: string) => /^\d{4}-\d{2}-\d{2}/.test(value);
+
+const formatMergeValue = (value: unknown): string => {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  if (typeof value === "boolean") {
+    return value ? "Ja" : "Nein";
+  }
+  if (typeof value === "number") {
+    return Number.isInteger(value)
+      ? String(value)
+      : value.toLocaleString("de-DE", {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2,
+        });
+  }
+  if (typeof value === "string") {
+    if (isIsoDateString(value)) {
+      const parsed = dayjs(value);
+      if (parsed.isValid()) {
+        return value.length > 10
+          ? parsed.format("DD.MM.YYYY HH:mm")
+          : parsed.format("DD.MM.YYYY");
+      }
+    }
+    return value;
+  }
+  return "";
+};
+
+// Fuegt alle Spalten von `source` als "prefix.spalte" (klein geschrieben) in
+// `target` ein. Verschachtelte Objekte/Arrays (z. B. bereits aufgeloeste
+// react-admin Referenzen) werden bewusst uebersprungen, da die Tabellen
+// dieser App flach sind.
+const flattenEntity = (
+  prefix: string,
+  source: MergeSource,
+  target: Record<string, string>,
+) => {
+  if (!source) {
+    return;
+  }
+  Object.entries(source).forEach(([key, value]) => {
+    if (value !== null && typeof value === "object") {
+      return;
+    }
+    target[`${prefix}.${key}`.toLowerCase()] = formatMergeValue(value);
+  });
+};
+
+export type DocumentMergeEntities = {
+  kunde?: MergeSource;
+  brille?: MergeSource;
+  glasLinks?: MergeSource;
+  glasRechts?: MergeSource;
+  fassung?: MergeSource;
+  glastyp?: MergeSource;
+};
+
+// Baut die flache Platzhalter-Map fuer alle bekannten Entitaeten plus ein paar
+// gaengige, abgeleitete Bequemlichkeits-Platzhalter (voller Name, Adresse,
+// Restbetrag, heutiges Datum), die insbesondere fuer Rechnung/Mahnung (#56,
+// #57) nuetzlich sind.
+export const buildDocumentMergeValues = (
+  entities: DocumentMergeEntities,
+): Record<string, string> => {
+  const values: Record<string, string> = {};
+
+  flattenEntity("kunde", entities.kunde, values);
+  flattenEntity("brille", entities.brille, values);
+  flattenEntity("glaslinks", entities.glasLinks, values);
+  flattenEntity("glasrechts", entities.glasRechts, values);
+  flattenEntity("fassung", entities.fassung, values);
+  flattenEntity("glastyp", entities.glastyp, values);
+
+  const kunde = entities.kunde;
+  if (kunde) {
+    const vorname = formatMergeValue(kunde.Vorname);
+    const nachname = formatMergeValue(kunde.Nachname);
+    values["kunde.vollername"] = [vorname, nachname]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+
+    const strasse = formatMergeValue(kunde.Straße);
+    const hausnummer = formatMergeValue(kunde.Hausnummer);
+    const plz = formatMergeValue(kunde.Postleitzahl);
+    const stadt = formatMergeValue(kunde.Stadt);
+    const strassenzeile = [strasse, hausnummer].filter(Boolean).join(" ");
+    const ortszeile = [plz, stadt].filter(Boolean).join(" ");
+    values["kunde.adresse"] = [strassenzeile, ortszeile]
+      .filter(Boolean)
+      .join(", ");
+  }
+
+  const brille = entities.brille;
+  if (brille) {
+    const summe = Number(brille.Summe) || 0;
+    const anzahlung = Number(brille.Anzahlung) || 0;
+    const kkAnteil = Number(brille.KKAnteil) || 0;
+    values["brille.restbetrag"] = formatMergeValue(
+      Math.round((summe - anzahlung - kkAnteil) * 100) / 100,
+    );
+  }
+
+  values["heute.datum"] = dayjs().format("DD.MM.YYYY");
+
+  return values;
+};
+
+// Ersetzt {{entitaet.feld}}-Platzhalter (Groß-/Kleinschreibung und
+// umgebende Leerzeichen werden ignoriert) durch die passenden Werte aus
+// `mergeValues`. Unbekannte Platzhalter werden zu einem leeren String, damit
+// eine unvollstaendige Vorlage nicht mit sichtbaren "{{...}}"-Resten gedruckt
+// wird.
+export const renderDocumentTemplate = (
+  template: string,
+  mergeValues: Record<string, string>,
+): string =>
+  (template ?? "").replace(
+    /\{\{\s*([a-zA-Z0-9_.]+?)\s*\}\}/g,
+    (_match, token: string) => mergeValues[token.trim().toLowerCase()] ?? "",
+  );

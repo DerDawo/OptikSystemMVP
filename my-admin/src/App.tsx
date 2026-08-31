@@ -59,6 +59,12 @@ import {
 import { TerminList, TerminShow, TerminEdit, TerminCreate } from "./termin";
 import { TerminKalender } from "./TerminKalender";
 import {
+  DokumentvorlageList,
+  DokumentvorlageShow,
+  DokumentvorlageEdit,
+  DokumentvorlageCreate,
+} from "./dokumentvorlage";
+import {
   GlashersstellerList,
   GlashersstellerShow,
   GlaskatalogList,
@@ -181,6 +187,13 @@ export const App = () => {
         edit={TerminEdit}
         create={TerminCreate}
         icon={EventIcon}
+      />
+      <Resource
+        name="dokumentvorlage"
+        list={DokumentvorlageList}
+        show={DokumentvorlageShow}
+        edit={DokumentvorlageEdit}
+        create={DokumentvorlageCreate}
       />
       <CustomRoutes>
         <Route path="/search" element={<Search />} />
