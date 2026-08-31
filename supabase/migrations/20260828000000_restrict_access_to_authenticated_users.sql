@@ -11,7 +11,7 @@
 alter table public.kunde enable row level security;
 alter table public.brille enable row level security;
 alter table public.glass enable row level security;
-alter table public.glasstyp enable row level security;
+alter table public.glastyp enable row level security;
 alter table public.fassung enable row level security;
 alter table public.brille_hat_zusatzleistungen enable row level security;
 alter table public.kunde_leistet_zauzahlung_fuer_brille enable row level security;
@@ -38,8 +38,8 @@ create policy "Authenticated users can manage glass" on public.glass
   using (true)
   with check (true);
 
-drop policy if exists "Authenticated users can manage glasstyp" on public.glasstyp;
-create policy "Authenticated users can manage glasstyp" on public.glasstyp
+drop policy if exists "Authenticated users can manage glastyp" on public.glastyp;
+create policy "Authenticated users can manage glastyp" on public.glastyp
   for all
   to authenticated
   using (true)

@@ -11,7 +11,7 @@
 --   glaskatalog_option      -- Beschichtungen/Farben des Herstellers (aus Options.dat / OptionsColor.dat)
 --   glaskatalog_hat_option  -- welche Optionen für welches Grundglas verfügbar sind (aus Combination.dat)
 --
--- glasstyp (das bestehende, in Aufträgen referenzierte Modell) bekommt einen
+-- glastyp (das bestehende, in Aufträgen referenzierte Modell) bekommt einen
 -- optionalen Verweis auf den Katalogeintrag, aus dem es angelegt wurde. Die
 -- bestehenden Freitext-Spalten (Bezeichnung, Hersteller, ...) bleiben
 -- unverändert bestehen, damit bereits erstellte Aufträge (brille, glass)
@@ -40,7 +40,7 @@ create table public.glaskatalog (
 );
 
 comment on column public.glaskatalog.esd_code is 'Bestellcode aus dem SF6-Herstellerkatalog (LensType.dat), zugleich Bestandteil des ESD-Codes einer konkreten Bestellung.';
-comment on column public.glaskatalog.aktiv is 'Wird beim Re-Import auf false gesetzt, wenn der Code im neuen Katalog nicht mehr vorkommt, statt die Zeile zu löschen (Referenzen aus glasstyp bleiben so gültig).';
+comment on column public.glaskatalog.aktiv is 'Wird beim Re-Import auf false gesetzt, wenn der Code im neuen Katalog nicht mehr vorkommt, statt die Zeile zu löschen (Referenzen aus glastyp bleiben so gültig).';
 
 create table public.glaskatalog_option (
   id uuid primary key default gen_random_uuid(),
@@ -64,10 +64,10 @@ create table public.glaskatalog_hat_option (
   unique (glaskatalog_id, glaskatalog_option_id)
 );
 
-alter table public.glasstyp
+alter table public.glastyp
   add column glaskatalog_id uuid references public.glaskatalog(id) on delete set null;
 
-comment on column public.glasstyp.glaskatalog_id is 'Optionaler Verweis auf den Herstellerkatalog-Eintrag (glaskatalog), aus dem dieser Glastyp ausgewählt wurde. Manuell angelegte oder ältere Glastypen haben hier NULL.';
+comment on column public.glastyp.glaskatalog_id is 'Optionaler Verweis auf den Herstellerkatalog-Eintrag (glaskatalog), aus dem dieser Glastyp ausgewählt wurde. Manuell angelegte oder ältere Glastypen haben hier NULL.';
 
 -- Row Level Security passend zum bestehenden Muster aus
 -- 20260828000000_restrict_access_to_authenticated_users.sql
