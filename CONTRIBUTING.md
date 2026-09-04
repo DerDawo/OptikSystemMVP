@@ -87,6 +87,84 @@ regulären `dev` → `main`-Weg warten können:
    zurückfällt und derselbe Fehler nicht versehentlich erneut auftritt, wenn
    als nächstes wieder reguläres `dev` → `main` gemerged wird.
 
+## Hosting (Vercel)
+
+> Tracking-Issue: #104 (Dev/Prod-Trennung). Dieser Abschnitt setzt #99 um
+> (Schritt 4 von 8) und baut auf #97/#98 auf.
+
+`my-admin` wird über [Vercel](https://vercel.com) gehostet, per
+GitHub-Integration an dieses Repository angebunden (kein separates
+Deploy-Tooling nötig; sichtbar am automatischen "Vercel Preview
+Comments"-Check auf PRs). Zusätzliche Konfiguration für sauberes
+Build/Routing liegt in [`my-admin/vercel.json`](my-admin/vercel.json)
+(SPA-Rewrite, damit tiefe Links wie `/kunden/1/show` nicht mit 404
+fehlschlagen, da `my-admin` clientseitiges Routing via `react-router`
+verwendet).
+
+### Einmalige Projekt-Konfiguration (Vercel-Dashboard, manueller Schritt)
+
+Diese Einstellungen lassen sich nicht über Repo-Dateien setzen und
+müssen vom Repo-Owner einmalig im Vercel-Dashboard (Project Settings)
+vorgenommen werden:
+
+- **Root Directory**: `my-admin`. Die Vercel-App liegt nicht im
+  Repo-Root, sondern in diesem Unterverzeichnis - ohne dieses Setting
+  versucht Vercel, das gesamte Repository zu bauen. `vercel.json` wird
+  relativ zum Root Directory gelesen, muss also in `my-admin/` liegen
+  (nicht im Repo-Root). Framework Preset wird danach automatisch als
+  "Vite" erkannt (Build Command `vite build` / `npm run build`, Output
+  Directory `dist`) - Standardwerte übernehmen.
+- **Environment Variables** (Project Settings → Environment Variables),
+  je Vercel-Environment mit den Werten des zugehörigen Supabase-Projekts
+  (siehe [`supabase/README.md`](supabase/README.md#zwei-getrennte-supabase-projekte-dev-und-prod)
+  für die Projekt-Refs; URL und Publishable/Anon-Key stehen im
+  jeweiligen Supabase-Projekt unter Project Settings → API - beide Werte
+  sind bewusst nicht in diesem Repo hinterlegt, siehe
+  `my-admin/.env.example`):
+
+  | Vercel-Environment | Git-Branch | Supabase-Projekt für `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY` |
+  |---|---|---|
+  | Production | `main` | Prod (`cktdtojgrxskihihmnjm`) |
+  | Preview (Standard) bzw. ein dediziertes Custom Environment "Development" | `dev` sowie alle PR-Preview-Deployments | Dev (`psxrxggwqlltfhfskeoa`) |
+
+  Ohne gesetzte Variablen bricht der Build zur Laufzeit ab (siehe
+  `my-admin/src/utils.ts`, #98) - das ist beabsichtigt (Fail-Fast-Guard
+  gegen versehentliches Deployment ohne Konfiguration).
+
+  Vercel stellt standardmäßig die Environments "Production" und
+  "Preview" bereit; zusätzlich lässt sich ein benanntes Custom
+  Environment anlegen, das fest an einen Branch gebunden werden kann.
+  Empfehlung: ein Custom Environment "Development" anlegen, gebunden an
+  `dev`, mit den Dev-Werten - damit läuft `dev` dauerhaft unter einer
+  festen URL statt unter einem sich pro Commit ändernden Preview-Link.
+  Alternativ genügt es, die Dev-Werte im "Preview"-Environment zu
+  hinterlegen; das wirkt dann für alle PR-Previews (unschädlich, da
+  Feature-PRs ohnehin gegen `dev` mit Testdaten laufen, siehe
+  Branch-Strategie oben) und für `dev` selbst.
+
+### Deployment-Ablauf
+
+- Push/Merge nach `dev` → Deployment mit den Dev-Supabase-Werten.
+- Push/Merge nach `main` → Deployment mit den Prod-Supabase-Werten
+  (Production-Environment).
+- Jeder offene PR erhält zusätzlich automatisch ein eigenes
+  Preview-Deployment (Standard-Vercel-Verhalten, sichtbar als Check/
+  Kommentar im PR) - keine Extra-Konfiguration nötig.
+
+### Offene Punkte / manuelle Nacharbeit (Repo-Owner)
+
+- [ ] Root Directory auf `my-admin` setzen.
+- [ ] Environment Variables für Production sowie Preview/Development
+      gemäß obiger Tabelle setzen.
+- [ ] Zugriffsbeschränkung auf das Prod-Deployment (Basic-Auth/
+      IP-Whitelist) ist nicht Teil dieses Schritts, da noch keine
+      vollständige Auth-Absicherung vorausgesetzt wird und die
+      naheliegenden Vercel-Optionen (Password Protection) einen
+      kostenpflichtigen Plan erfordern - als eigenes Follow-up zu
+      bewerten, falls benötigt.
+- [ ] Sobald Production/Preview mit den korrekten Env-Variablen laufen,
+      die finalen URLs hier bzw. in der Repo-Beschreibung ergänzen.
+
 ## Abnahmekriterien
 
 Ein PR gilt als bereit zum Mergen, wenn:

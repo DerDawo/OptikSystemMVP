@@ -61,3 +61,13 @@ Wie Änderungen von einem Feature-Branch über `dev` (Testdaten) nach `main`
 Abnahmekriterien ein PR erfüllen muss, ist in
 [`CONTRIBUTING.md`](../CONTRIBUTING.md) im Repository-Root beschrieben (#97).
 
+## Deployment (Vercel)
+
+Diese App wird über Vercel gehostet, mit getrennten Deployments für `dev`
+und `main` (jeweils mit den zugehörigen Supabase-Env-Variablen).
+`vercel.json` in diesem Verzeichnis enthält die SPA-Rewrite-Regel für das
+clientseitige Routing. Details zur Projekt-Konfiguration im
+Vercel-Dashboard (Root Directory, Environment Variables pro Branch) stehen
+im Abschnitt ["Hosting (Vercel)"](../CONTRIBUTING.md#hosting-vercel) in
+`CONTRIBUTING.md` (#99).
+
