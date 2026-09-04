@@ -41,11 +41,10 @@ VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
 ```
 
 **Wichtig:** Für lokale Entwicklung sollten dies die Zugangsdaten des
-Supabase **Dev-Branches** sein, nicht die von Production. Details zum
-Einrichten und Zurücksetzen des Dev-Branches: siehe
-[`supabase/README.md`](../supabase/README.md#dev-branch-supabase-branching).
-Solange der Dev-Branch noch nicht existiert, zeigen diese Werte zwangsläufig
-auf das einzige vorhandene Projekt.
+Supabase **Dev-Projekts** (`psxrxggwqlltfhfskeoa`, "Optik-System Dev") sein,
+nicht die des Prod-Projekts. Details zu beiden Projekten (URLs, Keys
+ermitteln, Zurücksetzen/Neubefüllen von Dev): siehe
+[`supabase/README.md`](../supabase/README.md#zwei-getrennte-supabase-projekte-dev-und-prod).
 
 ## Customize The Application
 
