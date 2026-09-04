@@ -89,13 +89,74 @@ oder über das Supabase-MCP-Tool (`apply_migration`).
 siehe #78), gehören ausschließlich auf das Dev-Projekt, niemals auf
 Prod.** Alle anderen Migrationen (Schema-Änderungen und "echte" Seeds wie
 Standard-Dokumentvorlagen oder der Leistungskatalog) gehören auf beide
-Projekte.
+Projekte. Details und wie neue Testdaten anzulegen sind: siehe nächster
+Abschnitt.
 
 Trotz Automatisierung gilt weiterhin: **vor dem Schließen eines PRs, der
 Dateien unter `supabase/migrations/` hinzufügt, prüfen, dass der
 zugehörige `Supabase Migrate`-Workflow-Lauf erfolgreich war** (Tab
 "Actions" im Repository, bzw. `list_migrations`-MCP-Tool zur Kontrolle auf
 der Datenbank selbst), nicht nur dass die SQL-Datei im Repo liegt.
+
+## Konvention: Schema-/Seed- vs. Testdaten-Migrationen (#101)
+
+> Tracking-Issue: #104 (Dev/Prod-Trennung), Schritt 6 von 8. Baut auf #100
+> (`supabase-migrate-prod.yml` schließt `*_testdaten.sql` bereits zur
+> Laufzeit vom Prod-Deploy aus) auf und macht daraus eine dauerhafte,
+> technisch durchgesetzte Regel für alle künftigen PRs.
+
+Alle Migrationen liegen weiterhin flach unter `supabase/migrations/*.sql`
+(**keine** Unterverzeichnisse wie `supabase/migrations/seed/`). Grund: Die
+Supabase-CLI wendet ausschließlich `supabase/migrations/*.sql` in
+chronologischer Reihenfolge an; eine Datei in einem Unterverzeichnis würde
+von `supabase db push`/`migration list` schlicht ignoriert und stünde damit
+in keinem der beiden Projekte zur Verfügung, ohne dass das auffällt - das
+Risiko einer Verzeichnisumstrukturierung wiegt schwerer als der Nutzen. Die
+Trennung erfolgt stattdessen ausschließlich über den **Dateinamen**:
+
+| Art | Namenskonvention | Beispiel | Ziel |
+|---|---|---|---|
+| Schema-Migration | `<Timestamp>_<beschreibung>.sql` | `20260830150000_add_kontaktlinse.sql` | Dev **und** Prod |
+| "Echter" Seed (Stammdaten, in beiden Umgebungen benötigt, z. B. Dokumentvorlagen, Leistungskatalog) | `<Timestamp>_seed_<beschreibung>.sql` | `20260830120100_seed_zusatzleistung_katalog.sql` | Dev **und** Prod |
+| Mock-/Testdaten (fiktive Kunden, Aufträge, Termine o. Ä. nur zum Entwickeln/Testen, siehe #78) | `<Timestamp>_..._testdaten.sql` (**muss** auf `_testdaten.sql` enden) | `20260831130000_seed_kunde_testdaten.sql` | **nur** Dev |
+
+Die Endung `_testdaten.sql` ist die einzige Kennzeichnung, die
+`supabase-migrate-prod.yml` auswertet, um eine Datei vor `supabase db push`
+vom Prod-Deploy auszuschließen (siehe Kommentar im Workflow). Eine
+Testdaten-Migration, die nicht exakt auf `_testdaten.sql` endet, landet
+ungewollt auf Prod.
+
+**Technisch durchgesetzt seit #101** über
+[`.github/workflows/supabase-migrations-lint.yml`](../.github/workflows/supabase-migrations-lint.yml):
+Der Workflow läuft auf jedem PR, der Dateien unter `supabase/migrations/`
+hinzufügt, und schlägt fehl, wenn eine neue Datei
+
+- nicht dem Format `<14-stelliger Timestamp>_<beschreibung>.sql` entspricht, oder
+- ein Test-/Mock-Datenkennwort (`test`, `mock`, `dummy`, `demo`, `beispiel`,
+  `sample`) im Namen enthält, aber nicht auf `_testdaten.sql` endet.
+
+Das fängt den häufigsten Fehler (Suffix vergessen oder falsch geschrieben,
+z. B. `..._testdata.sql` oder `..._test_kunde.sql`) bereits im PR ab, bevor
+gemerged wird - nicht erst beim Prod-Deploy.
+
+### Neue Testdaten für Dev anlegen
+
+1. Migration wie gewohnt unter `supabase/migrations/` anlegen, Dateiname mit
+   aktuellem Timestamp (`YYYYMMDDHHMMSS`) beginnen.
+2. Beschreibenden Teil des Dateinamens mit `_testdaten` **beenden**, z. B.
+   `20260901120000_seed_termin_testdaten.sql`. Enthält die Migration sowohl
+   Schema-Änderungen als auch Testdaten, in zwei Dateien aufteilen (Schema
+   ohne, Testdaten mit `_testdaten`-Suffix) - vermeidet, dass eine
+   Schema-Änderung versehentlich mitsamt Testdaten von Prod ausgeschlossen
+   wird.
+3. In der Datei nur Mock-/Testdaten einfügen (z. B. `@example.com`-Adressen
+   wie bei den bestehenden Testdaten aus #78), keine echten Kundendaten.
+   `insert`-Statements idempotent halten (z. B. `on conflict do nothing` oder
+   ein `where not exists (...)`-Guard), damit ein erneutes Anwenden auf Dev
+   (z. B. nach einem Reset, siehe unten) nicht fehlschlägt.
+4. PR gegen `dev` öffnen - `supabase-migrations-lint.yml` prüft automatisch
+   den Dateinamen, `supabase-migrate-dev.yml` wendet die Migration nach dem
+   Merge automatisch auf das Dev-Projekt an.
 
 ## Baseline-Migrationen (Tabellen aus der Zeit vor der Migrationsverwaltung)
 

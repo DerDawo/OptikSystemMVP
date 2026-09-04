@@ -184,6 +184,12 @@ Ein PR gilt als bereit zum Mergen, wenn:
       [`supabase/README.md`](supabase/README.md#migrationen-werden-automatisch-angewendet-cicd-100);
       trotzdem den zugehörigen Actions-Lauf auf Erfolg prüfen, nicht nur dass
       die SQL-Datei im Repo liegt.
+- [ ] Neue Migrationsdateien folgen der Seed-/Testdaten-Namenskonvention aus
+      #101 (Mock-/Testdaten enden zwingend auf `_testdaten.sql`, siehe
+      [`supabase/README.md`](supabase/README.md#konvention-schema-seed--vs-testdaten-migrationen-101)) -
+      wird als Status Check `Namenskonvention neuer Migrationen pruefen`
+      (`supabase-migrations-lint.yml`) automatisch geprüft, sobald der PR
+      Dateien unter `supabase/migrations/` ändert.
 - [ ] Für PRs nach `main`: Die Änderung wurde zuvor auf `dev` mit den
       Testdaten aus #78 manuell getestet (Ausnahme: Hotfixes, siehe oben,
       dort genügt eine gezielte Verifikation des Fixes).
