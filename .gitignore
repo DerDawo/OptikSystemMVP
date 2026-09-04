@@ -1,0 +1,4 @@
+# Von der Supabase-CLI lokal erzeugte Zustandsdateien (z. B. `supabase link`,
+# `supabase db push`) - kein Repo-Inhalt, siehe supabase/README.md.
+supabase/.temp/
+supabase/.branches/

@@ -1,0 +1,53 @@
+name: CI
+
+# Lint/Typecheck/Test/Build fuer my-admin (#100). Laeuft auf jedem PR und bei
+# jedem Push nach dev/main, damit fehlerhafter Code nicht gemerged werden
+# kann. Sobald dieser Workflow existiert, sollte der Repo-Owner den Job
+# "Lint, Typecheck, Test, Build (my-admin)" in den Branch-Protection-Regeln
+# von main als required Status Check eintragen (siehe CONTRIBUTING.md).
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+    branches: [dev, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Lint, Typecheck, Test, Build (my-admin)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: my-admin
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: my-admin/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type-check
+        run: npm run type-check
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
