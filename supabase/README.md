@@ -89,74 +89,13 @@ oder über das Supabase-MCP-Tool (`apply_migration`).
 siehe #78), gehören ausschließlich auf das Dev-Projekt, niemals auf
 Prod.** Alle anderen Migrationen (Schema-Änderungen und "echte" Seeds wie
 Standard-Dokumentvorlagen oder der Leistungskatalog) gehören auf beide
-Projekte. Details und wie neue Testdaten anzulegen sind: siehe nächster
-Abschnitt.
+Projekte.
 
 Trotz Automatisierung gilt weiterhin: **vor dem Schließen eines PRs, der
 Dateien unter `supabase/migrations/` hinzufügt, prüfen, dass der
 zugehörige `Supabase Migrate`-Workflow-Lauf erfolgreich war** (Tab
 "Actions" im Repository, bzw. `list_migrations`-MCP-Tool zur Kontrolle auf
 der Datenbank selbst), nicht nur dass die SQL-Datei im Repo liegt.
-
-## Konvention: Schema-/Seed- vs. Testdaten-Migrationen (#101)
-
-> Tracking-Issue: #104 (Dev/Prod-Trennung), Schritt 6 von 8. Baut auf #100
-> (`supabase-migrate-prod.yml` schließt `*_testdaten.sql` bereits zur
-> Laufzeit vom Prod-Deploy aus) auf und macht daraus eine dauerhafte,
-> technisch durchgesetzte Regel für alle künftigen PRs.
-
-Alle Migrationen liegen weiterhin flach unter `supabase/migrations/*.sql`
-(**keine** Unterverzeichnisse wie `supabase/migrations/seed/`). Grund: Die
-Supabase-CLI wendet ausschließlich `supabase/migrations/*.sql` in
-chronologischer Reihenfolge an; eine Datei in einem Unterverzeichnis würde
-von `supabase db push`/`migration list` schlicht ignoriert und stünde damit
-in keinem der beiden Projekte zur Verfügung, ohne dass das auffällt - das
-Risiko einer Verzeichnisumstrukturierung wiegt schwerer als der Nutzen. Die
-Trennung erfolgt stattdessen ausschließlich über den **Dateinamen**:
-
-| Art | Namenskonvention | Beispiel | Ziel |
-|---|---|---|---|
-| Schema-Migration | `<Timestamp>_<beschreibung>.sql` | `20260830150000_add_kontaktlinse.sql` | Dev **und** Prod |
-| "Echter" Seed (Stammdaten, in beiden Umgebungen benötigt, z. B. Dokumentvorlagen, Leistungskatalog) | `<Timestamp>_seed_<beschreibung>.sql` | `20260830120100_seed_zusatzleistung_katalog.sql` | Dev **und** Prod |
-| Mock-/Testdaten (fiktive Kunden, Aufträge, Termine o. Ä. nur zum Entwickeln/Testen, siehe #78) | `<Timestamp>_..._testdaten.sql` (**muss** auf `_testdaten.sql` enden) | `20260831130000_seed_kunde_testdaten.sql` | **nur** Dev |
-
-Die Endung `_testdaten.sql` ist die einzige Kennzeichnung, die
-`supabase-migrate-prod.yml` auswertet, um eine Datei vor `supabase db push`
-vom Prod-Deploy auszuschließen (siehe Kommentar im Workflow). Eine
-Testdaten-Migration, die nicht exakt auf `_testdaten.sql` endet, landet
-ungewollt auf Prod.
-
-**Technisch durchgesetzt seit #101** über
-[`.github/workflows/supabase-migrations-lint.yml`](../.github/workflows/supabase-migrations-lint.yml):
-Der Workflow läuft auf jedem PR, der Dateien unter `supabase/migrations/`
-hinzufügt, und schlägt fehl, wenn eine neue Datei
-
-- nicht dem Format `<14-stelliger Timestamp>_<beschreibung>.sql` entspricht, oder
-- ein Test-/Mock-Datenkennwort (`test`, `mock`, `dummy`, `demo`, `beispiel`,
-  `sample`) im Namen enthält, aber nicht auf `_testdaten.sql` endet.
-
-Das fängt den häufigsten Fehler (Suffix vergessen oder falsch geschrieben,
-z. B. `..._testdata.sql` oder `..._test_kunde.sql`) bereits im PR ab, bevor
-gemerged wird - nicht erst beim Prod-Deploy.
-
-### Neue Testdaten für Dev anlegen
-
-1. Migration wie gewohnt unter `supabase/migrations/` anlegen, Dateiname mit
-   aktuellem Timestamp (`YYYYMMDDHHMMSS`) beginnen.
-2. Beschreibenden Teil des Dateinamens mit `_testdaten` **beenden**, z. B.
-   `20260901120000_seed_termin_testdaten.sql`. Enthält die Migration sowohl
-   Schema-Änderungen als auch Testdaten, in zwei Dateien aufteilen (Schema
-   ohne, Testdaten mit `_testdaten`-Suffix) - vermeidet, dass eine
-   Schema-Änderung versehentlich mitsamt Testdaten von Prod ausgeschlossen
-   wird.
-3. In der Datei nur Mock-/Testdaten einfügen (z. B. `@example.com`-Adressen
-   wie bei den bestehenden Testdaten aus #78), keine echten Kundendaten.
-   `insert`-Statements idempotent halten (z. B. `on conflict do nothing` oder
-   ein `where not exists (...)`-Guard), damit ein erneutes Anwenden auf Dev
-   (z. B. nach einem Reset, siehe unten) nicht fehlschlägt.
-4. PR gegen `dev` öffnen - `supabase-migrations-lint.yml` prüft automatisch
-   den Dateinamen, `supabase-migrate-dev.yml` wendet die Migration nach dem
-   Merge automatisch auf das Dev-Projekt an.
 
 ## Baseline-Migrationen (Tabellen aus der Zeit vor der Migrationsverwaltung)
 
@@ -234,6 +173,120 @@ Entwicklungs-Workflow abdeckt. Alle MCP-Tools (`apply_migration`,
 `execute_sql`, `list_tables`, ...) akzeptieren aber eine `project_id` als
 Parameter und können damit ebenso gegen das Prod-Projekt
 (`cktdtojgrxskihihmnjm`) genutzt werden, ohne `.mcp.json` anzupassen.
+
+## Edge-Function-Secrets: getrennt für Dev und Prod
+
+> Tracking-Issue: #104 (Dev/Prod-Trennung), dieser Abschnitt setzt #102 um.
+
+Die drei Edge Functions unter `supabase/functions/` (`send-email` via
+Resend, `send-sms` via Twilio, `send-whatsapp` via WhatsApp Cloud API)
+lösen echte, teils kostenpflichtige Aktionen bei externen Anbietern aus.
+Ihre Zugangsdaten werden als **Function-Secrets** hinterlegt
+(`Deno.env.get(...)` im jeweiligen `index.ts`). Diese Secrets sind
+**projektgebunden, nicht projektübergreifend geteilt**: Ein Secret, das auf
+dem Dev-Projekt (`psxrxggwqlltfhfskeoa`) gesetzt ist, existiert nicht
+automatisch auf dem Prod-Projekt (`cktdtojgrxskihihmnjm`) und umgekehrt.
+Jedes Secret muss also **separat auf beiden Projekten** gesetzt werden -
+und zwar mit unterschiedlichen Werten (Dev: Sandbox/Test, Prod: echt),
+siehe unten.
+
+### Benötigte Secrets je Function
+
+| Function | Secret | Pflicht |
+|---|---|---|
+| `send-email` (Resend) | `RESEND_API_KEY` | ja |
+| `send-email` (Resend) | `RESEND_FROM_ADDRESS` | ja |
+| `send-sms` (Twilio) | `TWILIO_ACCOUNT_SID` | ja |
+| `send-sms` (Twilio) | `TWILIO_AUTH_TOKEN` | ja |
+| `send-sms` (Twilio) | `TWILIO_FROM_NUMBER` | ja |
+| `send-whatsapp` (WhatsApp Cloud API) | `WHATSAPP_ACCESS_TOKEN` | ja |
+| `send-whatsapp` (WhatsApp Cloud API) | `WHATSAPP_PHONE_NUMBER_ID` | ja |
+| `send-whatsapp` (WhatsApp Cloud API) | `WHATSAPP_API_VERSION` | nein (Default `v21.0`) |
+| alle drei, optional (siehe unten) | `DEV_ALLOWED_RECIPIENTS` | nein |
+
+Namen und Pflicht-Status sind direkt aus den `Deno.env.get(...)`-Aufrufen
+im jeweiligen `supabase/functions/*/index.ts` abgelesen - bei Änderungen an
+einer Function diese Tabelle mitpflegen.
+
+### Secrets setzen
+
+Getrennt pro Projekt per Supabase-CLI:
+
+```bash
+supabase secrets set --project-ref psxrxggwqlltfhfskeoa \
+  RESEND_API_KEY=... RESEND_FROM_ADDRESS=... \
+  TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_FROM_NUMBER=... \
+  WHATSAPP_ACCESS_TOKEN=... WHATSAPP_PHONE_NUMBER_ID=...
+
+supabase secrets set --project-ref cktdtojgrxskihihmnjm \
+  RESEND_API_KEY=... RESEND_FROM_ADDRESS=... \
+  TWILIO_ACCOUNT_SID=... TWILIO_AUTH_TOKEN=... TWILIO_FROM_NUMBER=... \
+  WHATSAPP_ACCESS_TOKEN=... WHATSAPP_PHONE_NUMBER_ID=...
+```
+
+oder im Supabase-Dashboard je Projekt unter "Edge Functions" → "Secrets".
+`supabase secrets list --project-ref <ref>` zeigt die gesetzten
+Secret-**Namen** (nicht die Werte) zur Kontrolle. Diese Session hat keinen
+authentifizierten Zugriff auf den Supabase-MCP-Server, um den aktuellen
+Stand der Secrets auf beiden Projekten selbst zu prüfen - das muss der
+Repo-Owner einmalig manuell verifizieren (z. B. mit obigem
+`secrets list`-Befehl je Projekt).
+
+### Dev nutzt ausschließlich Sandbox-/Test-Zugangsdaten
+
+Ziel: Ein Testlauf auf Dev kann **niemals** eine echte Nachricht an einen
+echten Kunden auslösen. Das Dev-Projekt (`psxrxggwqlltfhfskeoa`) erhält
+daher bewusst andere Werte als Prod:
+
+- **Twilio**: [Test-Credentials](https://www.twilio.com/docs/iam/test-credentials)
+  verwenden (Twilio-Konsole → Account → API keys & tokens → "Test
+  credentials" - sehen wie echte Live-Keys aus, sind aber nicht
+  abrechenbar und lösen keine echten SMS aus) oder alternativ ein
+  Twilio-Trial-Konto mit einer Testrufnummer, dessen Versand ohnehin auf
+  vorher verifizierte Empfängernummern beschränkt ist. `TWILIO_FROM_NUMBER`
+  des Dev-Secrets entsprechend auf die Test-/Trial-Nummer setzen, niemals
+  auf die produktive Absendernummer.
+- **Resend**: Für Dev einen eigenen Resend-API-Key mit eigener,
+  klar erkennbarer Absenderadresse verwenden (z. B. eine eigene
+  Test-Subdomain) oder einen Key, dessen Domain bewusst nicht verifiziert
+  ist - Resend liefert dann ausschließlich an die im Resend-Konto
+  hinterlegte Account-Owner-Adresse aus. Empfehlung: ein festes, nur
+  intern gelesenes Test-Postfach als einzig erreichbares Ziel in Dev
+  etablieren, unabhängig von der Empfängeradresse im Request.
+- **WhatsApp Cloud API**: Im Meta-App-Dashboard steht pro App eine
+  kostenlose [Test-Rufnummer](https://developers.facebook.com/docs/whatsapp/cloud-api/get-started)
+  bereit, die nur an vorher im Dashboard hinterlegte Test-Empfänger senden
+  kann (max. 5, müssen einzeln per Code verifiziert werden).
+  `WHATSAPP_PHONE_NUMBER_ID` des Dev-Secrets auf diese Test-Nummer setzen,
+  nicht auf die produktive Nummer.
+
+**Die eigentlichen Sandbox-/Test-Zugangsdaten müssen manuell in den
+jeweiligen Anbieter-Dashboards (Twilio, Resend, Meta) erzeugt und
+anschließend wie oben beschrieben als Dev-Secrets gesetzt werden.** Das ist
+reine Konto-Konfiguration bei Drittanbietern, für die diese Session keinen
+Zugriff hat - technisch ist mit dieser Dokumentation und dem Allowlist-Guard
+unten alles vorbereitet, um sie direkt einzutragen.
+
+### Zusätzliche Absicherung: Empfänger-Allowlist für Dev (optional)
+
+Als zusätzliches technisches Sicherheitsnetz - unabhängig davon, ob die
+Sandbox-Zugangsdaten oben schon eingerichtet sind - unterstützen alle drei
+Functions ein optionales Secret `DEV_ALLOWED_RECIPIENTS`: eine
+kommagetrennte Liste erlaubter Empfänger (exakte E-Mail-Adressen bzw.
+Telefonnummern im E.164-Format, z. B. `+491701234567`). Ist dieses Secret
+gesetzt, wird jeder Versand an einen nicht gelisteten Empfänger mit `403`
+abgelehnt, **bevor** der jeweilige Anbieter (Resend/Twilio/Meta) überhaupt
+kontaktiert wird. Ist das Secret **nicht** gesetzt (Standard, auch auf
+Prod), ändert sich am bisherigen Verhalten nichts.
+
+Empfehlung: auf dem Dev-Projekt setzen, z. B.
+
+```bash
+supabase secrets set --project-ref psxrxggwqlltfhfskeoa \
+  DEV_ALLOWED_RECIPIENTS="test@example.com,+15005550006"
+```
+
+Auf dem Prod-Projekt (`cktdtojgrxskihihmnjm`) **nicht setzen**.
 
 ## CI / automatisierte Umgebungen
 
