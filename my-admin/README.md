@@ -50,3 +50,10 @@ ermitteln, Zurücksetzen/Neubefüllen von Dev): siehe
 
 Follow the instructions in your browser console once you start the application.
 
+## Branch- und Umgebungsstrategie
+
+Wie Änderungen von einem Feature-Branch über `dev` (Testdaten) nach `main`
+(Prod) gelangen, welche Regeln für Hotfixes gelten und welche
+Abnahmekriterien ein PR erfüllen muss, ist in
+[`CONTRIBUTING.md`](../CONTRIBUTING.md) im Repository-Root beschrieben (#97).
+

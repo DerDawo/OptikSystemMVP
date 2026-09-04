@@ -156,3 +156,10 @@ Sobald eine CI-Pipeline existiert (#100), sollte diese standardmäßig gegen
 das Dev-Projekt laufen (Migrationen anwenden, Tests ausführen), niemals
 gegen Prod. Die konkrete Umsetzung ist Teil von #100 und #97
 (Branch-/Umgebungsstrategie).
+
+## Git-Branch-Strategie (Code-Ebene)
+
+Die hier beschriebene Trennung der Supabase-Projekte hat ein Gegenstück auf
+Git-Ebene (Branch `dev` als Standard-PR-Ziel, `main` geschützt als
+Produktiv-Branch, Promotion-Workflow `dev` → `main`): siehe
+[`CONTRIBUTING.md`](../CONTRIBUTING.md) im Repository-Root (#97).
