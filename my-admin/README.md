@@ -26,14 +26,26 @@ npm run build
 
 ## Development Setup
 
-Update the `.env` file to populate the environment variables with the values found on your project API settings:
+Copy `.env.example` to `.env` and populate the environment variables with the
+values found on your Supabase project's API settings:
+
+```sh
+cp .env.example .env
+```
 
 ```sh
 # Your supabase instance URL
 VITE_SUPABASE_URL=
-# Your supabase API key. We recommend using the public anonymous key
-VITE_SUPABASE_API_KEY=
+# Your supabase publishable/anonymous key
+VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
 ```
+
+**Wichtig:** Für lokale Entwicklung sollten dies die Zugangsdaten des
+Supabase **Dev-Branches** sein, nicht die von Production. Details zum
+Einrichten und Zurücksetzen des Dev-Branches: siehe
+[`supabase/README.md`](../supabase/README.md#dev-branch-supabase-branching).
+Solange der Dev-Branch noch nicht existiert, zeigen diese Werte zwangsläufig
+auf das einzige vorhandene Projekt.
 
 ## Customize The Application
 
