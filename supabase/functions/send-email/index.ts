@@ -1,4 +1,5 @@
 import { corsHeaders } from '../_shared/cors.ts';
+import { checkRecipientAllowed } from '../_shared/recipientAllowlist.ts';
 
 type SendEmailRequest = {
     to?: string;
@@ -29,6 +30,11 @@ Deno.serve(async (req: Request) => {
 
     if (!to || !message) {
         return jsonResponse({ error: '"to" und "message" sind erforderlich.' }, 400);
+    }
+
+    const allowlistError = checkRecipientAllowed(to);
+    if (allowlistError) {
+        return jsonResponse({ error: allowlistError }, 403);
     }
 
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
