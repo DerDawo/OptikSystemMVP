@@ -37,41 +37,65 @@ unverändert als Dev-Umgebung weiter. Das Prod-Projekt
 (`cktdtojgrxskihihmnjm`) wurde neu angelegt und enthält **nur das Schema**
 (alle Migrationen außer den `*_testdaten.sql`-Seeds), keine Testdaten.
 
-## Wichtig: Migrationen müssen nach dem Merge auf BEIDEN Projekten angewendet werden
+## Migrationen werden automatisch angewendet (CI/CD, #100)
+
+> Löst #81/#95 (vergessene manuelle Migration) dauerhaft: Das Anwenden ist
+> seit #100 kein manueller Schritt mehr, sondern läuft automatisch per
+> GitHub Actions.
 
 Eine neue Datei unter `supabase/migrations/` ändert für sich genommen
-**nichts** an der laufenden Datenbank. Eine Migration muss nach dem Merge
-zusätzlich gegen das jeweilige Projekt angewendet werden, z. B. mit
+**nichts** an der laufenden Datenbank - sie muss zusätzlich gegen das
+jeweilige Projekt angewendet werden. Das übernehmen jetzt zwei Workflows:
+
+- [`.github/workflows/supabase-migrate-dev.yml`](../.github/workflows/supabase-migrate-dev.yml):
+  läuft bei jedem Push nach `dev`, der Dateien unter `supabase/migrations/`
+  ändert, und wendet alle Migrationen (inkl. `*_testdaten.sql`) auf das
+  Dev-Projekt (`psxrxggwqlltfhfskeoa`) an.
+- [`.github/workflows/supabase-migrate-prod.yml`](../.github/workflows/supabase-migrate-prod.yml):
+  läuft bei jedem Push nach `main`, der Dateien unter `supabase/migrations/`
+  ändert, und wendet alle Migrationen **außer** `*_testdaten.sql` auf das
+  Prod-Projekt (`cktdtojgrxskihihmnjm`) an - Testdaten-Migrationen werden
+  vor dem `supabase db push` aus dem Checkout entfernt, sodass sie
+  niemals nach Prod gelangen können (Details siehe Kommentar im Workflow;
+  #101 kann die Testdaten-/Seed-Konvention darauf aufbauend weiter
+  verfeinern).
+
+Beide Workflows lassen sich zusätzlich manuell über "Run workflow"
+(`workflow_dispatch`) in den GitHub Actions auslösen, z. B. um eine
+frühere, verpasste Migration nachträglich anzuwenden.
+
+**Benötigtes Secret:** `SUPABASE_ACCESS_TOKEN` - ein persönlicher Access
+Token aus dem Supabase-Dashboard (Account-Icon → Access Tokens →
+"Generate new token"). Muss vom Repo-Owner einmalig unter
+Settings → Secrets and variables → Actions als Repository-Secret
+hinterlegt werden (diese Session hat keinen Zugriff auf die
+Repository-Settings, um das selbst zu tun). Ohne dieses Secret schlagen
+beide Workflows beim Schritt `supabase link` fehl - das Fehlschlagen ist in
+diesem Fall gewollt (Fail-Fast statt eines stillschweigend übersprungenen
+Migrationsschritts wie bei #81/#95) und im Actions-Log klar erkennbar.
+
+Alternativ (z. B. wenn das Secret noch nicht hinterlegt ist oder ein
+sofortiger Eingriff nötig ist) bleibt das manuelle Anwenden per
+Supabase-CLI oder MCP-Tool weiterhin möglich:
 
 ```bash
 supabase link --project-ref psxrxggwqlltfhfskeoa   # oder cktdtojgrxskihihmnjm für Prod
 supabase db push
 ```
 
-oder über das Supabase-MCP-Tool (`apply_migration`), falls kein lokaler
-CLI-Zugriff verfügbar ist.
+oder über das Supabase-MCP-Tool (`apply_migration`).
 
 **Migrationen, deren Dateiname `_testdaten.sql` enthält (Mock-/Testdaten,
-siehe #78), werden ausschließlich auf dem Dev-Projekt angewendet, niemals
-auf Prod.** Alle anderen Migrationen (Schema-Änderungen und "echte" Seeds
-wie Standard-Dokumentvorlagen oder der Leistungskatalog) gehören auf beide
+siehe #78), gehören ausschließlich auf das Dev-Projekt, niemals auf
+Prod.** Alle anderen Migrationen (Schema-Änderungen und "echte" Seeds wie
+Standard-Dokumentvorlagen oder der Leistungskatalog) gehören auf beide
 Projekte.
 
-Wird dieser Schritt vergessen, sieht das im Frontend wie ein Bug aus - z. B.
-ein Formular/Menüpunkt, der plötzlich keine Daten mehr liefert oder mit
-einem Fehler ins Leere läuft, obwohl der zugehörige Code bereits gemergt
-ist. Genau das ist bereits zweimal passiert:
-
-- #81: mehrere Migrationen aus früheren PRs waren nie auf das Dev-Projekt
-  angewendet worden.
-- #95: `20260831150100_create_betrieb.sql` (Menüpunkt "Betriebsdaten") und
-  drei weitere Migrationen aus demselben Zeitraum waren nach dem Merge von
-  PR #91 nicht angewendet worden.
-
-**Vor dem Schließen eines PRs, der Dateien unter `supabase/migrations/`
-hinzufügt, immer prüfen, dass diese auch tatsächlich auf Dev (und ggf. Prod)
-angewendet wurden** (z. B. mit `supabase migration list` oder dem
-`list_migrations`-MCP-Tool), nicht nur dass die SQL-Datei im Repo liegt.
+Trotz Automatisierung gilt weiterhin: **vor dem Schließen eines PRs, der
+Dateien unter `supabase/migrations/` hinzufügt, prüfen, dass der
+zugehörige `Supabase Migrate`-Workflow-Lauf erfolgreich war** (Tab
+"Actions" im Repository, bzw. `list_migrations`-MCP-Tool zur Kontrolle auf
+der Datenbank selbst), nicht nur dass die SQL-Datei im Repo liegt.
 
 ## Baseline-Migrationen (Tabellen aus der Zeit vor der Migrationsverwaltung)
 
@@ -152,10 +176,11 @@ Parameter und können damit ebenso gegen das Prod-Projekt
 
 ## CI / automatisierte Umgebungen
 
-Sobald eine CI-Pipeline existiert (#100), sollte diese standardmäßig gegen
-das Dev-Projekt laufen (Migrationen anwenden, Tests ausführen), niemals
-gegen Prod. Die konkrete Umsetzung ist Teil von #100 und #97
-(Branch-/Umgebungsstrategie).
+Umgesetzt in #100: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
+führt Lint/Typecheck/Test/Build von `my-admin` auf jedem PR und Push nach
+`dev`/`main` aus (keine Datenbankverbindung nötig, siehe Workflow). Das
+automatische Anwenden der Migrationen auf Dev bzw. Prod ist oben unter
+"Migrationen werden automatisch angewendet (CI/CD, #100)" beschrieben.
 
 ## Git-Branch-Strategie (Code-Ebene)
 

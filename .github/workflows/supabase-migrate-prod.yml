@@ -1,0 +1,72 @@
+name: Supabase Migrate (Prod)
+
+# Wendet supabase/migrations automatisch auf das Supabase-Prod-Projekt an,
+# sobald sich Migrationsdateien auf `main` aendern (Merge oder direkter
+# Push) - loest #81/#95 (vergessene manuelle Migration) dauerhaft.
+#
+# WICHTIG: Dateien, deren Name auf "_testdaten.sql" endet (Mock-/Testdaten
+# aus #78, siehe supabase/README.md), duerfen NIEMALS nach Prod gelangen.
+# Der Schritt "Testdaten-Migrationen ausschliessen" entfernt sie deshalb aus
+# einer Kopie des Checkouts, bevor `supabase db push` laeuft. Das nimmt #101
+# (Seed-/Testdaten-Konvention) nicht die eigentliche Arbeit ab, verhindert
+# aber schon jetzt zuverlaessig, dass neue Testdaten-Migrationen versehentlich
+# auf Prod angewendet werden.
+#
+# Benoetigtes Secret (siehe supabase/README.md):
+#   SUPABASE_ACCESS_TOKEN - persoenlicher Access Token aus dem
+#   Supabase-Dashboard (Account -> Access Tokens), muss in den
+#   Repository-Settings unter Settings -> Secrets and variables -> Actions
+#   hinterlegt werden. Dasselbe Secret wie fuer supabase-migrate-dev.yml.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migrate-prod
+  cancel-in-progress: false
+
+env:
+  SUPABASE_PROJECT_REF: cktdtojgrxskihihmnjm
+
+jobs:
+  migrate:
+    name: Migrationen auf Prod-Projekt anwenden
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Testdaten-Migrationen ausschliessen
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          testdaten=(supabase/migrations/*_testdaten.sql)
+          if [ "${#testdaten[@]}" -eq 0 ]; then
+            echo "Keine *_testdaten.sql-Migrationen vorhanden, nichts zu tun."
+            exit 0
+          fi
+          echo "Entferne folgende Testdaten-Migrationen vor dem Prod-Push:"
+          printf ' - %s\n' "${testdaten[@]}"
+          rm -f -- "${testdaten[@]}"
+
+      - name: Supabase CLI installieren
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Mit Prod-Projekt verlinken
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Migrationen anwenden
+        run: supabase db push --linked
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}

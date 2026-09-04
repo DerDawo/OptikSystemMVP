@@ -1,0 +1,54 @@
+name: Supabase Migrate (Dev)
+
+# Wendet supabase/migrations automatisch auf das Supabase-Dev-Projekt an,
+# sobald sich Migrationsdateien auf `dev` aendern (Merge oder direkter
+# Push) - loest #81/#95 (vergessene manuelle Migration) dauerhaft.
+#
+# Benoetigtes Secret (siehe supabase/README.md):
+#   SUPABASE_ACCESS_TOKEN - persoenlicher Access Token aus dem
+#   Supabase-Dashboard (Account -> Access Tokens), muss in den
+#   Repository-Settings unter Settings -> Secrets and variables -> Actions
+#   hinterlegt werden.
+
+on:
+  push:
+    branches: [dev]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migrate-dev
+  cancel-in-progress: false
+
+env:
+  SUPABASE_PROJECT_REF: psxrxggwqlltfhfskeoa
+
+jobs:
+  migrate:
+    name: Migrationen auf Dev-Projekt anwenden
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Supabase CLI installieren
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Mit Dev-Projekt verlinken
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      # Auf Dev werden alle Migrationen angewendet, inkl. *_testdaten.sql
+      # (Mock-Daten aus #78) - anders als auf Prod, siehe
+      # supabase-migrate-prod.yml.
+      - name: Migrationen anwenden
+        run: supabase db push --linked
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
