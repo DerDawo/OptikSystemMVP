@@ -1,0 +1,147 @@
+name: Supabase Migration Repair
+
+# Gleicht die Migrationshistorie (supabase_migrations.schema_migrations) eines
+# Projekts an supabase/migrations an, damit `supabase db push` wieder laeuft.
+#
+# Hintergrund: Migrationen wurden frueher per MCP `apply_migration` angewendet.
+# Dabei vergibt Supabase eine eigene Version (Zeitpunkt der Anwendung) statt
+# des Zeitstempels aus dem Dateinamen. `db push` findet diese Versionen lokal
+# nicht und bricht ab ("Remote migration versions not found in local
+# migrations directory").
+#
+# Vorgehen (abgeglichen wird ueber den Namen hinter dem Zeitstempel):
+#   1. Jede lokale Datei, deren Name remote bereits eingetragen ist, wird als
+#      "applied" markiert (ihr Inhalt lief also schon).
+#   2. Alle remote eingetragenen Versionen ohne passende lokale Datei werden
+#      als "reverted" markiert (nur der Historieneintrag wird entfernt, am
+#      Schema aendert sich nichts).
+# Lokale Dateien, deren Name remote fehlt, bleiben offen und werden beim
+# naechsten `db push` (supabase-migrate-*.yml) regulaer angewendet - es sei
+# denn, mark_open_as_applied=true (z. B. fuer die Baseline-Migrationen auf
+# Dev, deren Tabellen dort schon vor der Migrationsverwaltung existierten).
+# Achtung: `db push` ohne --include-all wendet keine offenen Dateien an, die
+# aelter sind als die neueste eingetragene Version.
+#
+# Aendert ausschliesslich die Migrationshistorie, nie Tabellen oder Daten.
+# Mit dry_run=true (Standard) wird nur angezeigt, was passieren wuerde.
+#
+# Benoetigtes Secret: SUPABASE_ACCESS_TOKEN (wie supabase-migrate-*.yml).
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Supabase-Projekt"
+        required: true
+        type: choice
+        options: [dev, prod]
+        default: dev
+      dry_run:
+        description: "Nur anzeigen, nichts aendern"
+        required: true
+        type: boolean
+        default: true
+      mark_open_as_applied:
+        description: "Auch offene lokale Dateien als applied markieren (nur wenn deren Inhalt nachweislich schon im Schema steckt)"
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migrate-${{ inputs.project }}
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    name: Migrationshistorie abgleichen (${{ inputs.project }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Projekt-Ref bestimmen
+        run: |
+          if [ "${{ inputs.project }}" = "prod" ]; then
+            echo "SUPABASE_PROJECT_REF=cktdtojgrxskihihmnjm" >> "$GITHUB_ENV"
+          else
+            echo "SUPABASE_PROJECT_REF=psxrxggwqlltfhfskeoa" >> "$GITHUB_ENV"
+          fi
+
+      # Wie in supabase-migrate-prod.yml: Testdaten gehoeren nie nach Prod.
+      - name: Testdaten-Migrationen ausschliessen (nur Prod)
+        if: inputs.project == 'prod'
+        run: rm -f -- supabase/migrations/*_testdaten.sql
+
+      - name: Supabase CLI installieren
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Mit Projekt verlinken
+        run: supabase link --project-ref "$SUPABASE_PROJECT_REF"
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Abgleich berechnen und anwenden
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          DRY_RUN: ${{ inputs.dry_run }}
+          MARK_OPEN_AS_APPLIED: ${{ inputs.mark_open_as_applied }}
+        run: |
+          set -euo pipefail
+
+          curl -sS --fail-with-body \
+            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"select version, name from supabase_migrations.schema_migrations order by version","read_only":true}' \
+            | jq -r '.[] | "\(.version)\t\(.name)"' > remote.tsv
+
+          to_apply=()
+          local_versions=()
+          for f in supabase/migrations/*.sql; do
+            base="$(basename "$f" .sql)"
+            version="${base%%_*}"
+            name="${base#*_}"
+            local_versions+=("$version")
+            if cut -f2 remote.tsv | grep -qxF "$name"; then
+              if ! cut -f1 remote.tsv | grep -qxF "$version"; then
+                to_apply+=("$version")
+              fi
+            elif [ "$MARK_OPEN_AS_APPLIED" = "true" ]; then
+              echo "Offen, wird wegen mark_open_as_applied als applied markiert: $base"
+              to_apply+=("$version")
+            else
+              echo "Offen (wird beim naechsten db push angewendet): $base"
+            fi
+          done
+
+          to_revert=()
+          while IFS=$'\t' read -r version name; do
+            if ! printf '%s\n' "${local_versions[@]}" | grep -qxF "$version"; then
+              to_revert+=("$version")
+            fi
+          done < remote.tsv
+
+          echo
+          echo "Als applied markieren (${#to_apply[@]}): ${to_apply[*]:-}"
+          echo "Als reverted markieren (${#to_revert[@]}): ${to_revert[*]:-}"
+
+          if [ "$DRY_RUN" = "true" ]; then
+            echo
+            echo "dry_run=true: nichts geaendert."
+            exit 0
+          fi
+
+          if [ "${#to_revert[@]}" -gt 0 ]; then
+            supabase migration repair --linked --status reverted "${to_revert[@]}"
+          fi
+          if [ "${#to_apply[@]}" -gt 0 ]; then
+            supabase migration repair --linked --status applied "${to_apply[@]}"
+          fi
+
+          echo
+          supabase migration list --linked
