@@ -17,7 +17,7 @@
 --
 -- "BrillenArt" (brille) und "Bezeichnung" (zusatzleistung) waren ursprünglich
 -- eigene Enum-Typen, die von 20260830130000_add_brillenart_stammdaten.sql
--- bzw. 20260830120000_zusatzleistung_kategorie_und_rabatt.sql per
+-- bzw. 20260830120001_zusatzleistung_kategorie_und_rabatt.sql per
 -- `alter column ... type text` + `drop type if exists ...` auf text
 -- umgestellt wurden. Da beide Migrationen `drop type if exists` verwenden,
 -- werden die Spalten hier direkt als text angelegt (funktional identisch,
