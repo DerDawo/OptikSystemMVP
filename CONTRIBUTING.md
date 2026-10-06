@@ -168,6 +168,20 @@ vorgenommen werden:
 - [ ] Sobald Production/Preview mit den korrekten Env-Variablen laufen,
       die finalen URLs hier bzw. in der Repo-Beschreibung ergänzen.
 
+## Edge-Function-Secrets (Twilio/Resend/WhatsApp)
+
+> Tracking-Issue: #104 (Dev/Prod-Trennung), dieser Abschnitt setzt #102 um.
+
+Wie die Vercel-Environment-Variablen oben sind auch die Secrets der drei
+Edge Functions (`send-email`, `send-sms`, `send-whatsapp` unter
+`supabase/functions/`) **pro Supabase-Projekt getrennt** zu setzen: Dev
+(`psxrxggwqlltfhfskeoa`) erhält Sandbox-/Test-Zugangsdaten der jeweiligen
+Anbieter, Prod (`cktdtojgrxskihihmnjm`) die echten - ein Testlauf auf Dev
+darf nie eine echte Nachricht an einen echten Kunden auslösen. Benötigte
+Secret-Namen je Function, Setup-Befehle sowie eine optionale
+Empfänger-Allowlist für Dev: siehe
+[`supabase/README.md`](supabase/README.md#edge-function-secrets-getrennt-für-dev-und-prod).
+
 ## Abnahmekriterien
 
 Ein PR gilt als bereit zum Mergen, wenn:

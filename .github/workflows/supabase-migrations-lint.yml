@@ -1,0 +1,81 @@
+name: Supabase Migrations Lint
+
+# Setzt #101 um (Schritt 6 von 8 in #104): dauerhafte, technisch durchgesetzte
+# Konvention fuer Seed-/Testdaten-Migrationen, damit sie nicht versehentlich
+# nach Prod gelangen (siehe supabase/README.md, Abschnitt "Konvention:
+# Schema-/Seed- vs. Testdaten-Migrationen").
+#
+# Prueft bei jedem PR, der Dateien unter supabase/migrations/ hinzufuegt:
+#   1. Dateiname folgt dem Supabase-Format <Timestamp>_<beschreibung>.sql
+#   2. Enthaelt der Dateiname ein Test-/Mock-Datenkennwort (test, mock, dummy,
+#      demo, beispiel, sample), muss er zwingend auf "_testdaten.sql" enden -
+#      nur so schliesst supabase-migrate-prod.yml die Datei automatisch vom
+#      Prod-Deploy aus.
+#
+# Ergaenzt supabase-migrate-prod.yml (#100/#111), das den Ausschluss zur
+# Laufzeit durchsetzt: dieser Lint-Check verhindert, dass eine neue
+# Testdaten-Migration ueberhaupt mit falschem/fehlendem Namen gemerged wird.
+
+on:
+  pull_request:
+    branches: [dev, main]
+    paths:
+      - "supabase/migrations/**"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-migrations-lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Namenskonvention neuer Migrationen pruefen
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Neue Migrationsdateien pruefen
+        run: |
+          set -euo pipefail
+
+          git fetch origin "${{ github.base_ref }}" --depth=1
+          added_files=$(git diff --name-only --diff-filter=A "origin/${{ github.base_ref }}"...HEAD -- 'supabase/migrations/*.sql')
+
+          if [ -z "$added_files" ]; then
+            echo "Keine neuen Migrationsdateien in diesem PR, nichts zu pruefen."
+            exit 0
+          fi
+
+          echo "Neue Migrationsdateien:"
+          echo "$added_files"
+          echo
+
+          fail=0
+          while IFS= read -r path; do
+            name="$(basename "$path")"
+
+            if ! [[ "$name" =~ ^[0-9]{14}_[a-z0-9_]+\.sql$ ]]; then
+              echo "::error file=$path::Dateiname entspricht nicht dem Supabase-Format <14-stelliger Timestamp>_<beschreibung>.sql (Kleinbuchstaben/Ziffern/Unterstriche)."
+              fail=1
+              continue
+            fi
+
+            lower="${name,,}"
+            if [[ "$lower" =~ (test|mock|dummy|demo|beispiel|sample) ]] && [[ ! "$lower" == *_testdaten.sql ]]; then
+              echo "::error file=$path::Dateiname enthaelt ein Test-/Mock-Datenkennwort, endet aber nicht auf '_testdaten.sql'. Test-/Mockdaten fuer Dev muessen laut Konvention (siehe supabase/README.md) zwingend auf '_testdaten.sql' enden, sonst schliesst supabase-migrate-prod.yml sie nicht automatisch vom Prod-Deploy aus."
+              fail=1
+            fi
+          done <<< "$added_files"
+
+          if [ "$fail" -ne 0 ]; then
+            echo
+            echo "Siehe supabase/README.md, Abschnitt 'Konvention: Schema-/Seed- vs. Testdaten-Migrationen'."
+            exit 1
+          fi
+
+          echo "Alle neuen Migrationsdateien folgen der Namenskonvention."
