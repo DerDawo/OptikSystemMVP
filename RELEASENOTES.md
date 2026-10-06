@@ -1,11 +1,14 @@
 # Releasenotes
 
-## Stand 04.09.2026 – Nachträge seit 31.08.2026
+## Stand 06.10.2026 – Nachträge seit 31.08.2026
 
 ### Formulare & Abrechnung
 - Berechtigungsschein zur Abrechnung von Sehhilfen (§ 33 SGB V, Muster 8) inkl. neuer Brillenfelder und Dokumentvorlage.
 - Rechnungslayout an das Referenz-Design angeglichen.
 - Betriebsdaten (Betriebsbezeichnung, IK-Nummer, Präqualifizierung) als pflegbare Stammdaten für den Berechtigungsschein.
+
+### Kommunikation
+- Nachrichtenversand öffnet jetzt die passende App (Mail-Programm, SMS, WhatsApp) mit vorausgefüllter Nachricht. Dadurch sind vorerst keine API-Keys für Twilio, Resend oder WhatsApp nötig.
 
 ### Navigation
 - Dashboard als eigener Menüpunkt.
