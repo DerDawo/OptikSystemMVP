@@ -1,0 +1,54 @@
+name: Supabase Migration Status
+
+# Nur lesend: zeigt fuer Dev oder Prod an, welche Migrationen laut
+# supabase_migrations.schema_migrations auf dem Projekt eingetragen sind
+# (Version + Name) und wie sie zu supabase/migrations passen. Dient zur
+# Diagnose, wenn `supabase db push` mit "Remote migration versions not found
+# in local migrations directory" abbricht (z. B. weil Migrationen frueher per
+# MCP `apply_migration` mit abweichendem Zeitstempel angewendet wurden).
+#
+# Benoetigtes Secret: SUPABASE_ACCESS_TOKEN (wie supabase-migrate-*.yml).
+
+on:
+  workflow_dispatch:
+    inputs:
+      project:
+        description: "Supabase-Projekt"
+        required: true
+        type: choice
+        options: [dev, prod]
+        default: dev
+
+permissions:
+  contents: read
+
+jobs:
+  status:
+    name: Migrationsstatus (${{ inputs.project }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Projekt-Ref bestimmen
+        run: |
+          if [ "${{ inputs.project }}" = "prod" ]; then
+            echo "SUPABASE_PROJECT_REF=cktdtojgrxskihihmnjm" >> "$GITHUB_ENV"
+          else
+            echo "SUPABASE_PROJECT_REF=psxrxggwqlltfhfskeoa" >> "$GITHUB_ENV"
+          fi
+
+      - name: Eingetragene Remote-Migrationen (Version, Name)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          curl -sS --fail-with-body \
+            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"query":"select version, name from supabase_migrations.schema_migrations order by version","read_only":true}' \
+            | jq -r '.[] | "\(.version)\t\(.name)"'
+
+      - name: Lokale Migrationsdateien
+        run: ls -1 supabase/migrations
