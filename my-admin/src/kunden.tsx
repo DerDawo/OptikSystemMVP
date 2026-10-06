@@ -55,12 +55,9 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EventIcon from "@mui/icons-material/Event";
 import { supabase } from "./utils";
 import {
-  implementedMessageChannels,
+  buildExternalMessageUrl,
   MessageChannel,
-  MessageDeliveryResult,
-  normalizePhoneNumberForSms,
-  normalizePhoneNumberForWhatsapp,
-  sendMessage,
+  openExternalMessage,
 } from "./messaging";
 import {
   EditActionsBar,
@@ -981,9 +978,10 @@ export const KundeMessage = () => {
     whatsapp: false,
     email: false,
   });
-  const [isSending, setIsSending] = useState(false);
   const [sendFormError, setSendFormError] = useState<string | null>(null);
-  const [sendResults, setSendResults] = useState<MessageDeliveryResult[]>([]);
+  const [externalLinks, setExternalLinks] = useState<
+    { channel: MessageChannel; url: string }[]
+  >([]);
   const [templateDialogOpen, setTemplateDialogOpen] = useState(false);
   const [templateDraft, setTemplateDraft] = useState<MessageTemplateDraft>(
     createEmptyTemplateDraft(),
@@ -1154,9 +1152,14 @@ export const KundeMessage = () => {
       }));
     };
 
-  const handleSend = async () => {
+  // Öffnet die passende App (Mail-Programm, SMS, WhatsApp) mit
+  // vorausgefüllter Nachricht, statt über die Edge Functions zu versenden -
+  // so geht es ohne API-Keys. Bei mehreren Kanälen wird der erste direkt
+  // geöffnet, die übrigen stehen als Links bereit (Browser blockieren sonst
+  // weitere Fenster).
+  const handleSend = () => {
     setSendFormError(null);
-    setSendResults([]);
+    setExternalLinks([]);
 
     if (!selectedMessage) {
       setSendFormError("Bitte wähle eine Nachricht aus.");
@@ -1174,35 +1177,17 @@ export const KundeMessage = () => {
       return;
     }
 
-    setIsSending(true);
-
-    const results = await Promise.all(
-      channelsToSend.map((channel): Promise<MessageDeliveryResult> => {
-        if (!implementedMessageChannels.includes(channel)) {
-          return Promise.resolve({
-            channel,
-            success: false,
-            error: "Dieser Kanal wird noch nicht unterstützt.",
-          });
-        }
-
-        const to =
-          channel === "sms"
-            ? normalizePhoneNumberForSms(deliveryTargets[channel])
-            : channel === "whatsapp"
-              ? normalizePhoneNumberForWhatsapp(deliveryTargets[channel])
-              : deliveryTargets[channel];
-
-        return sendMessage(channel, {
-          to,
-          message: renderedMessageContent,
-          subject: renderedMessageTitle,
-        });
+    const links = channelsToSend.map((channel) => ({
+      channel,
+      url: buildExternalMessageUrl(channel, {
+        to: deliveryTargets[channel],
+        message: renderedMessageContent,
+        subject: renderedMessageTitle,
       }),
-    );
+    }));
 
-    setSendResults(results);
-    setIsSending(false);
+    setExternalLinks(links);
+    openExternalMessage(links[0].url);
   };
 
   const openCreateTemplateDialog = () => {
@@ -1637,21 +1622,32 @@ export const KundeMessage = () => {
             {sendFormError}
           </Typography>
         ) : null}
-        {sendResults.map((result) => (
-          <Typography
-            key={result.channel}
+        {externalLinks.length > 0 ? (
+          <Box
             sx={{
-              textAlign: "right",
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "0.5em",
+              justifyContent: "flex-end",
+              alignItems: "center",
               mb: 1,
-              color: result.success ? "success.main" : "error.main",
             }}
           >
-            {messageChannelLabels[result.channel]}:{" "}
-            {result.success
-              ? "erfolgreich gesendet"
-              : `fehlgeschlagen (${result.error ?? "unbekannter Fehler"})`}
-          </Typography>
-        ))}
+            <Typography variant="body2" color="text.secondary">
+              Bitte in der geöffneten App absenden. Erneut öffnen:
+            </Typography>
+            {externalLinks.map((link) => (
+              <Button
+                key={link.channel}
+                size="small"
+                variant="text"
+                onClick={() => openExternalMessage(link.url)}
+              >
+                {messageChannelLabels[link.channel]}
+              </Button>
+            ))}
+          </Box>
+        ) : null}
         <Box
           sx={{
             display: "flex",
@@ -1668,10 +1664,9 @@ export const KundeMessage = () => {
           <Button
             variant="contained"
             startIcon={<SendIcon />}
-            onClick={() => void handleSend()}
-            disabled={isSending}
+            onClick={handleSend}
           >
-            {isSending ? "Wird gesendet..." : "Nachricht senden"}
+            In App öffnen
           </Button>
         </Box>
       </Box>

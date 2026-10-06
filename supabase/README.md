@@ -176,6 +176,12 @@ Parameter und können damit ebenso gegen das Prod-Projekt
 
 ## Edge-Function-Secrets: getrennt für Dev und Prod
 
+> **Aktuell nicht nötig:** Die Oberfläche versendet Nachrichten derzeit nicht
+> über die Edge Functions, sondern öffnet die passende App (Mail-Programm,
+> SMS, WhatsApp) mit vorausgefüllter Nachricht (`buildExternalMessageUrl` in
+> `my-admin/src/messaging.ts`). Die Secrets unten werden erst gebraucht, wenn
+> der Versand später wieder direkt aus der App ohne Medienbruch laufen soll.
+
 > Tracking-Issue: #104 (Dev/Prod-Trennung), dieser Abschnitt setzt #102 um.
 
 Die drei Edge Functions unter `supabase/functions/` (`send-email` via
