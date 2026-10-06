@@ -67,6 +67,9 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
       - name: Migrationen anwenden
-        run: supabase db push --linked
+        # --include-all: wendet auch offene Migrationen an, deren Zeitstempel
+        # aelter ist als die neueste eingetragene (z. B. nach einem Abgleich
+        # per supabase-migration-repair.yml). Die Migrationen sind idempotent.
+        run: supabase db push --linked --include-all
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
