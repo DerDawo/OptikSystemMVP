@@ -636,4 +636,7 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except KeyboardInterrupt:
+        sys.exit("\nAbgebrochen (Ctrl+C) - offene Änderungen wurden nicht gespeichert.")
