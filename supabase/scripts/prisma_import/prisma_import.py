@@ -43,6 +43,12 @@ import sf6_to_sql as sf6  # noqa: E402
 
 DEFAULT_POOLER_HOST = "aws-1-eu-west-1.pooler.supabase.com"
 
+# Supabase signiert die Datenbank-Zertifikate mit einer eigenen Root-CA, die
+# nicht im System-Zertifikatsspeicher liegt (Dashboard -> Project Settings ->
+# Database -> SSL Configuration -> Download certificate; öffentlich, gültig
+# bis 2031, SHA256 80:70:25:AD:...:CA:FA).
+SUPABASE_CA = HERE / "supabase-prod-ca-2021.crt"
+
 BETRIEB = {
     "Name": "Augenoptik Ulm, Werdauer Str. 38, 07551 Gera",
     "IKNummer": "311600532",
@@ -557,7 +563,7 @@ def main():
     print(f"2/4 Verbinde mit {args.host} (Projekt {args.project_ref}) ...")
     con = pg8000.native.Connection(
         user=f"postgres.{args.project_ref}", password=password, host=args.host, port=args.port,
-        database="postgres", ssl_context=ssl.create_default_context(), timeout=600,
+        database="postgres", ssl_context=ssl.create_default_context(cafile=str(SUPABASE_CA)), timeout=600,
     )
     con.run("set statement_timeout = 0")
 
