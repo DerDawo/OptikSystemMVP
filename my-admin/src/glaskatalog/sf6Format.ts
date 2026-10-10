@@ -19,15 +19,33 @@
  *    Bezeichnung in Spalte 7-62 (56 Zeichen, rechts leerzeichengepolstert).
  *  - Der Brechungsindex (z. B. "1.50", "1.60") ist nicht separat kodiert,
  *    sondern Teil der Freitext-Bezeichnung und wird per Regex extrahiert.
- *  - LensPrice.dat enthält den Basispreis eines Grundglases in Eurocent
- *    (Rohwert / 100); OptionsPrice.dat enthält Options-Aufpreise dagegen
- *    bereits in vollen Euro (ohne Division). Diese Annahme wurde nicht
- *    anhand der Originalspezifikation verifiziert, sondern anhand
- *    plausibler Größenordnungen (Grundglas ca. 2-80 €, Options-Aufpreis
- *    ca. 20-110 €) aus der Beispieldatei abgeleitet.
- *  - Einzelne, weit über dem sonstigen Preisniveau liegende LensPrice-Werte
- *    (> 1000 €) werden als "nicht verfügbar"-Platzhalter behandelt und bei
- *    der Basispreis-Ermittlung ignoriert.
+ *  - LensPrice.dat / OptionsPrice.dat (Layout aus 22 echten Herstellerkatalogen
+ *    abgeleitet: POL, Zeiss, Hoya, Essilor, Nika, Wetzlich, AVM, BOW, Leica,
+ *    Lux-Lens, FrameTec u. a., SF6 6.10.1-6.10.3). Alle Hersteller nutzen
+ *    denselben Spaltenaufbau, nur unterschiedlich viele Preisfelder:
+ *      LensPrice:    Code[0:6] Durchmesser/Bereich[6:10] Kennz.[10]
+ *                    Stärkengruppe[11:18]
+ *      OptionsPrice: Code[0:6] Untercode[6:12] Kennzeichen[12:18]
+ *      danach Preisfeld n (1-basiert) in [18+7(n-1) : 25+7(n-1)], 7 Ziffern
+ *      in Cent (bzw. rechtsbündig mit Leerzeichen gepolstert).
+ *    Bekannte Zeilenbreiten: 32 (2 Preisfelder, Zeiss/Hoya/Essilor/...),
+ *    53 (5 Preisfelder, FrameTec, OptionsPrice bei POL/Leica/Lux) und
+ *    69 (5 Preisfelder + 16 Zeichen Reserve, LensPrice bei POL/Leica/Lux).
+ *    Andere oder gemischte Breiten gelten als unbekanntes Layout - dann
+ *    werden bewusst KEINE Preise geliefert statt geratener Werte.
+ *  - Was in welchem Preisfeld steht, deklariert Head.dat über
+ *    "pricefield-01".."pricefield-05": 10 = Einkaufspreis (netto, EK),
+ *    20 = unverbindliche Preisempfehlung (UVP), 00 = unbelegt. Fast alle
+ *    Kataloge nutzen 01=10/02=20, BOW aber 01=20/02=10. Abgeleitet daraus,
+ *    dass der Typ-10-Wert in allen Katalogen praktisch immer kleiner ist
+ *    als der Typ-20-Wert (Faktor ca. 2,5-5, übliche Kalkulation). Die
+ *    offizielle b2boptic-Spezifikation war nicht abrufbar.
+ *  - Als Basis- bzw. Options-Aufpreis wird die UVP (Typ 20) übernommen, da
+ *    der Glasassistent daraus den Verkaufsbetrag des Auftrags bildet.
+ *    Kataloge ohne UVP-Feld (z. B. FrameTec, nur EK) liefern keine Preise.
+ *    Ein Preis von 0 gilt als "kein Preis".
+ *  - "pricefield-decimals" muss leer oder 0 sein (Preise in ganzen Cent);
+ *    andere Werte gelten ebenfalls als unbekanntes Layout.
  *  - Options.dat-Codes, die in OptionsColor.dat als Gruppen-Code auftreten
  *    (im Beispiel: "120", "C00", "G00"), werden als Typ "farbe" importiert,
  *    alle anderen Options.dat-Zeilen als "beschichtung". Das Beispiel
@@ -73,8 +91,30 @@ export interface Sf6Katalog {
   verfuegbareOptionen: Map<string, Set<string>>;
 }
 
-/** Grenzwert, ab dem ein LensPrice-Eintrag als "nicht verfügbar"-Platzhalter statt als echter Preis behandelt wird. */
-const LENS_PRICE_SENTINEL_EUR = 1000;
+/** Preisfeld-Typen aus Head.dat ("pricefield-01".."pricefield-05"). */
+export const SF6_PREISTYP_EINKAUF = "10";
+export const SF6_PREISTYP_UVP = "20";
+
+/** Übliche Belegung (01 = EK, 02 = UVP), z. B. für Tests ohne Head.dat. */
+export const SF6_STANDARD_PREISFELDER: readonly string[] = [
+  SF6_PREISTYP_EINKAUF,
+  SF6_PREISTYP_UVP,
+  "00",
+  "00",
+  "00",
+];
+
+/**
+ * Bekannte Zeilenbreiten von LensPrice.dat/OptionsPrice.dat und die Anzahl
+ * der darin enthaltenen Preisfelder (siehe Dateikommentar).
+ */
+const PREISZEILEN_LAYOUTS = new Map<number, number>([
+  [32, 2],
+  [53, 5],
+  [69, 5],
+]);
+const PREISFELD_START = 18;
+const PREISFELD_BREITE = 7;
 
 function splitLines(text: string): string[] {
   return text.split(/\r\n|\r|\n/).filter((line) => line.trim().length > 0);
@@ -121,17 +161,72 @@ export function parseLensType(text: string): Sf6Produkt[] {
   return produkte;
 }
 
-/** LensPrice.dat: mehrere Preiszeilen (je Stärkenbereich/Variante) pro Grundglas-Code. */
-export function parseLensPrice(text: string): Map<string, number> {
-  const basispreise = new Map<string, number>();
+/**
+ * Head.dat: Preisfeld-Typen in Feldreihenfolge (Index 0 = "pricefield-01").
+ * Liefert ein leeres Array, wenn der Katalog keine Preisfelder deklariert
+ * oder "pricefield-decimals" nicht leer/0 ist (unbekannte Preis-Einheit).
+ */
+export function parsePreisfeldTypen(text: string): string[] {
+  const values = new Map<string, string>();
   for (const line of splitLines(text)) {
-    if (line.length < 31) continue;
-    const esdCode = line.slice(0, 6).trim();
-    const priceField = line.slice(23, 31);
-    if (!esdCode || !/^\d+$/.test(priceField)) continue;
-    const preis = Number.parseInt(priceField, 10) / 100;
-    if (preis <= 0 || preis > LENS_PRICE_SENTINEL_EUR) continue;
+    const match = /^(\S+)\s*(.*)$/.exec(line);
+    if (match) values.set(match[1].toLowerCase(), match[2].trim());
+  }
+  const decimals = values.get("pricefield-decimals") ?? "";
+  if (decimals !== "" && decimals !== "0") return [];
 
+  const typen: string[] = [];
+  for (let i = 1; i <= 5; i++) {
+    typen.push(values.get(`pricefield-0${i}`) ?? "");
+  }
+  return typen.some((typ) => typ !== "") ? typen : [];
+}
+
+/**
+ * Zerlegt eine Preisdatei in (Schlüssel, Preis in Euro) je Zeile. Das Layout
+ * wird an der Zeilenbreite erkannt; bei unbekannter oder uneinheitlicher
+ * Breite bzw. fehlendem UVP-Preisfeld wird nichts geliefert.
+ */
+function parsePreiszeilen(
+  text: string,
+  schluesselBreite: number,
+  preisfeldTypen: readonly string[],
+): Array<[string, number]> {
+  const lines = splitLines(text);
+  const breiten = new Set(lines.map((line) => line.length));
+  if (breiten.size !== 1) return [];
+  const anzahlFelder = PREISZEILEN_LAYOUTS.get(lines[0].length);
+  const feldIndex = preisfeldTypen.indexOf(SF6_PREISTYP_UVP);
+  if (
+    anzahlFelder === undefined ||
+    feldIndex < 0 ||
+    feldIndex >= anzahlFelder
+  ) {
+    return [];
+  }
+
+  const start = PREISFELD_START + feldIndex * PREISFELD_BREITE;
+  const zeilen: Array<[string, number]> = [];
+  for (const line of lines) {
+    const schluessel = line.slice(0, schluesselBreite).trim();
+    const priceField = line.slice(start, start + PREISFELD_BREITE).trim();
+    if (!schluessel || !/^\d+$/.test(priceField)) continue;
+    const preis = Number.parseInt(priceField, 10) / 100;
+    if (preis > 0) zeilen.push([schluessel, preis]);
+  }
+  return zeilen;
+}
+
+/**
+ * LensPrice.dat: mehrere Preiszeilen (je Stärkenbereich/Variante) pro
+ * Grundglas-Code; Basispreis ist die niedrigste UVP über alle Zeilen.
+ */
+export function parseLensPrice(
+  text: string,
+  preisfeldTypen: readonly string[] = SF6_STANDARD_PREISFELDER,
+): Map<string, number> {
+  const basispreise = new Map<string, number>();
+  for (const [esdCode, preis] of parsePreiszeilen(text, 6, preisfeldTypen)) {
     const bisher = basispreise.get(esdCode);
     if (bisher === undefined || preis < bisher) {
       basispreise.set(esdCode, preis);
@@ -155,17 +250,16 @@ function parseOptionsBase(
   return optionen;
 }
 
-/** OptionsPrice.dat: Aufpreis je Options.dat-Code. */
-export function parseOptionsPrice(text: string): Map<string, number> {
-  const preise = new Map<string, number>();
-  for (const line of splitLines(text)) {
-    if (line.length < 30) continue;
-    const code = line.slice(0, 12).trim();
-    const priceField = line.slice(25, 30);
-    if (!code || !/^\d+$/.test(priceField)) continue;
-    preise.set(code, Number.parseInt(priceField, 10));
-  }
-  return preise;
+/**
+ * OptionsPrice.dat: Aufpreis (UVP) je Options.dat-Code. Zeilen mit Untercode
+ * (Spalte 7-12, gilt nur für bestimmte Grundgläser) landen unter
+ * "Code Untercode" und werden von parseOptions nicht zugeordnet.
+ */
+export function parseOptionsPrice(
+  text: string,
+  preisfeldTypen: readonly string[] = SF6_STANDARD_PREISFELDER,
+): Map<string, number> {
+  return new Map(parsePreiszeilen(text, 12, preisfeldTypen));
 }
 
 /** OptionsColor.dat: konkrete Farbtöne, gruppiert per Referenz auf einen Options.dat-Code. */
@@ -187,8 +281,9 @@ export function parseOptions(
   optionsText: string,
   optionsPriceText: string,
   optionsColorText: string,
+  preisfeldTypen: readonly string[] = SF6_STANDARD_PREISFELDER,
 ): Sf6Option[] {
-  const preise = parseOptionsPrice(optionsPriceText);
+  const preise = parseOptionsPrice(optionsPriceText, preisfeldTypen);
   const farbGruppen = parseOptionsColorGroups(optionsColorText);
 
   return parseOptionsBase(optionsText).map(({ code, bezeichnung }) => ({
@@ -232,14 +327,16 @@ export interface Sf6SourceFiles {
 }
 
 export function parseSf6Katalog(files: Sf6SourceFiles): Sf6Katalog {
+  const preisfeldTypen = parsePreisfeldTypen(files.head);
   return {
     hersteller: parseHead(files.head),
     produkte: parseLensType(files.lensType),
-    basispreise: parseLensPrice(files.lensPrice),
+    basispreise: parseLensPrice(files.lensPrice, preisfeldTypen),
     optionen: parseOptions(
       files.options,
       files.optionsPrice,
       files.optionsColor,
+      preisfeldTypen,
     ),
     verfuegbareOptionen: parseCombination(files.combination),
   };

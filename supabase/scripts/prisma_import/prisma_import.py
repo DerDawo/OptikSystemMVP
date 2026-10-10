@@ -424,14 +424,11 @@ def load_sf6_catalogs(sf6_dir):
             continue
         t = {v: (files[k].read_text(encoding="iso-8859-1") if k in files else "") for k, v in sf6.REQUIRED_FILES.items()}
         hersteller = sf6.parse_head(t["head"])
-        # Die Preisspalten sind nur für das 69 Zeichen breite LensPrice- bzw.
-        # 53 Zeichen breite OptionsPrice-Layout (POL, SF6 6.10) verifiziert;
-        # andere Layouts liefern mit diesen Positionen falsche Werte -> ohne
-        # Preise importieren statt falsche Preise zu speichern.
-        lens_widths = {len(x) for x in sf6.split_lines(t["lensPrice"])}
-        opt_widths = {len(x) for x in sf6.split_lines(t["optionsPrice"])}
-        basispreise = sf6.parse_lens_price(t["lensPrice"]) if lens_widths == {69} else {}
-        option_preise = sf6.parse_options_price(t["optionsPrice"]) if opt_widths == {53} else {}
+        # Layout (32/53/69 Zeichen) und UVP-Preisfeld erkennt der Parser selbst;
+        # bei unbekanntem Layout liefert er keine Preise statt falscher Werte.
+        preisfeld_typen = sf6.parse_preisfeld_typen(t["head"])
+        basispreise = sf6.parse_lens_price(t["lensPrice"], preisfeld_typen)
+        option_preise = sf6.parse_options_price(t["optionsPrice"], preisfeld_typen)
         farb_gruppen = sf6.parse_options_color_groups(t["optionsColor"])
         produkte = dict(sf6.parse_code_name_lines(t["lensType"]))
         optionen = dict(sf6.parse_code_name_lines(t["options"]))

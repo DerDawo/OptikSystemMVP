@@ -6,6 +6,8 @@ import {
   parseLensPrice,
   parseLensType,
   parseOptions,
+  parseOptionsPrice,
+  parsePreisfeldTypen,
   parseSf6Katalog,
 } from "./sf6Format";
 
@@ -26,6 +28,11 @@ const headText = [
   line(["version", 31], ["6.10.1", 10]),
   line(["manufacturer-code", 31], ["TST", 10]),
   line(["manufacturer-name", 31], ["Testglas GmbH", 20]),
+  line(["pricefield-01", 30], ["10", 2]),
+  line(["pricefield-02", 30], ["20", 2]),
+  line(["pricefield-03", 30], ["00", 2]),
+  line(["pricefield-04", 30], ["00", 2]),
+  line(["pricefield-05", 30], ["00", 2]),
 ].join("\r\n");
 
 const lensTypeText = [
@@ -34,41 +41,39 @@ const lensTypeText = [
   line(["TST003", 6], ["Testglas ohne Index", 56], ["", 40]),
 ].join("\r\n");
 
-// code(6) + range(4) + flag(1) + sentinel(4) + Feld1(8) + Preisfeld(8) in Cent.
+/** Preisfeld als 7-stellige, nullgepolsterte Cent-Angabe. */
+function cent(euro: number): string {
+  return String(Math.round(euro * 100)).padStart(7, "0");
+}
+
+// LensPrice im 32-Zeichen-Layout (Zeiss, Hoya, Essilor, ...):
+// Code(6) + Bereich(4) + Kennz.(1) + Stärkengruppe(7) + EK(7) + UVP(7).
+function lensPrice32(code: string, bereich: string, ek: number, uvp: number) {
+  return (
+    line([code, 6], [bereich, 4], ["", 1], ["0804000", 7]) +
+    cent(ek) +
+    cent(uvp)
+  );
+}
+
+// LensPrice im 69-Zeichen-Layout (POL, Leica, Lux-Lens): wie oben, plus
+// drei weitere Preisfelder und 16 Zeichen Reserve.
+function lensPrice69(code: string, bereich: string, ek: number, uvp: number) {
+  return lensPrice32(code, bereich, ek, uvp) + "0".repeat(21) + " ".repeat(16);
+}
+
 const lensPriceText = [
-  line(
-    ["TST001", 6],
-    ["50", 4],
-    ["", 1],
-    ["9999", 4],
-    ["00000000", 8],
-    ["00002500", 8],
-  ),
-  line(
-    ["TST001", 6],
-    ["55", 4],
-    ["", 1],
-    ["9999", 4],
-    ["00000000", 8],
-    ["00001800", 8],
-  ),
-  line(
-    ["TST002", 6],
-    ["50", 4],
-    ["", 1],
-    ["9999", 4],
-    ["00000000", 8],
-    ["00004200", 8],
-  ),
-  // Ausreißer über der Plausibilitätsgrenze - wird als "nicht verfügbar" ignoriert.
-  line(
-    ["TST002", 6],
-    ["99", 4],
-    ["", 1],
-    ["9999", 4],
-    ["00000000", 8],
-    ["80000790", 8],
-  ),
+  lensPrice32("TST001", "50", 7.4, 25),
+  lensPrice32("TST001", "55", 6.1, 18),
+  lensPrice32("TST002", "50", 12, 42),
+  // UVP 0 = kein Preis, wird ignoriert.
+  lensPrice32("TST002", "55", 3, 0),
+].join("\r\n");
+
+const lensPriceText69 = [
+  lensPrice69("TST001", "50", 104, 443),
+  lensPrice69("TST001", "55", 98.5, 410.5),
+  lensPrice69("TST002", "50", 74, 281),
 ].join("\r\n");
 
 const optionsText = [
@@ -76,10 +81,26 @@ const optionsText = [
   line(["C01", 6], ["Color full all", 56]),
 ].join("\r\n");
 
-// code(12) + Füllfeld(13) + Preis(5), Preis in EUR (siehe sf6Format.ts).
+// OptionsPrice: Code(6) + Untercode(6) + Kennzeichen(6) + EK(7) + UVP(7),
+// 32 Zeichen breit (Zeiss, Hoya, ...) bzw. 53 mit drei weiteren
+// Preisfeldern (POL).
+function optionsPrice32(code: string, ek: number, uvp: number) {
+  return line([code, 12], ["001110", 6]) + cent(ek) + cent(uvp);
+}
+function optionsPrice53(code: string, ek: number, uvp: number) {
+  return optionsPrice32(code, ek, uvp) + "0".repeat(21);
+}
+
 const optionsPriceText = [
-  line(["AR1", 12], ["0", 13], ["00035", 5]),
-  line(["C01", 12], ["0", 13], ["00060", 5]),
+  optionsPrice32("AR1", 14, 35),
+  optionsPrice32("C01", 24, 60),
+  // Zeile mit Untercode (nur für ein bestimmtes Grundglas), kein Basis-Aufpreis.
+  line(["AR1", 6], ["TST002", 6], ["001111", 6]) + cent(0) + cent(20),
+].join("\r\n");
+
+const optionsPriceText53 = [
+  optionsPrice53("AR1", 9, 48),
+  optionsPrice53("C01", 12, 53),
 ].join("\r\n");
 
 const optionsColorText = [
@@ -133,17 +154,99 @@ describe("parseLensType", () => {
   });
 });
 
+const BOW_PREISFELDER = ["20", "10", "00", "00", "00"];
+const NUR_EK_PREISFELDER = ["10", "00", "00", "00", "00"];
+const UVP_IM_DRITTEN_FELD = ["10", "00", "20", "00", "00"];
+
+describe("parsePreisfeldTypen", () => {
+  it("liest die Preisfeld-Belegung aus Head.dat", () => {
+    expect(parsePreisfeldTypen(headText)).toEqual([
+      "10",
+      "20",
+      "00",
+      "00",
+      "00",
+    ]);
+  });
+
+  it("liefert nichts, wenn keine Preisfelder deklariert sind", () => {
+    const head = line(["manufacturer-code", 30], ["TST", 3]);
+    expect(parsePreisfeldTypen(head)).toEqual([]);
+  });
+
+  it("liefert nichts bei unbekannten Preis-Nachkommastellen", () => {
+    const head = [headText, line(["pricefield-decimals", 30], ["2", 1])].join(
+      "\r\n",
+    );
+    expect(parsePreisfeldTypen(head)).toEqual([]);
+  });
+});
+
 describe("parseLensPrice", () => {
-  it("ermittelt je Grundglas den niedrigsten gültigen Preis in Euro", () => {
+  it("liest die UVP im 32-Zeichen-Layout und nimmt je Grundglas die niedrigste", () => {
     const basispreise = parseLensPrice(lensPriceText);
     expect(basispreise.get("TST001")).toBe(18);
     expect(basispreise.get("TST002")).toBe(42);
   });
 
-  it("ignoriert Ausreißer weit über dem üblichen Preisniveau", () => {
-    const basispreise = parseLensPrice(lensPriceText);
-    // 80000790 Cent (= 800.007,90 €) ist ein Platzhalterwert, kein echter Preis.
-    expect(basispreise.get("TST002")).not.toBeGreaterThan(1000);
+  it("liest die UVP im 69-Zeichen-Layout (POL)", () => {
+    const basispreise = parseLensPrice(lensPriceText69);
+    expect(basispreise.get("TST001")).toBe(410.5);
+    expect(basispreise.get("TST002")).toBe(281);
+  });
+
+  it("liest echte Herstellerzeilen (Zeiss, Hoya) korrekt", () => {
+    const basispreise = parseLensPrice(
+      [
+        "10653 65   080200000033800016800",
+        "ABD31 6570 080400000039000009200",
+      ].join("\r\n"),
+    );
+    expect(basispreise.get("10653")).toBe(168);
+    expect(basispreise.get("ABD31")).toBe(92);
+  });
+
+  it("folgt der Preisfeld-Belegung aus Head.dat (UVP im ersten Feld, wie BOW)", () => {
+    const basispreise = parseLensPrice(lensPriceText, BOW_PREISFELDER);
+    expect(basispreise.get("TST001")).toBe(6.1);
+  });
+
+  it("liefert keine Preise ohne UVP-Preisfeld (z. B. nur Einkaufspreise)", () => {
+    expect(parseLensPrice(lensPriceText, NUR_EK_PREISFELDER).size).toBe(0);
+    expect(parseLensPrice(lensPriceText, [])).toEqual(new Map());
+  });
+
+  it("liefert keine Preise für unbekannte oder uneinheitliche Zeilenbreiten", () => {
+    // Altes, synthetisches 31-Zeichen-Layout.
+    expect(parseLensPrice("TST00150   99990000000000002500").size).toBe(0);
+    expect(parseLensPrice(lensPriceText + "X").size).toBe(0);
+    const gemischt = [
+      lensPrice32("TST001", "50", 7, 25),
+      lensPrice69("TST002", "50", 7, 25),
+    ].join("\r\n");
+    expect(parseLensPrice(gemischt).size).toBe(0);
+  });
+
+  it("liefert keine Preise, wenn das UVP-Feld im 32-Zeichen-Layout nicht existiert", () => {
+    expect(parseLensPrice(lensPriceText, UVP_IM_DRITTEN_FELD).size).toBe(0);
+    expect(parseLensPrice(lensPriceText69, UVP_IM_DRITTEN_FELD).size).toBe(0);
+  });
+});
+
+describe("parseOptionsPrice", () => {
+  it("liest die UVP im 32- und 53-Zeichen-Layout", () => {
+    expect(parseOptionsPrice(optionsPriceText).get("AR1")).toBe(35);
+    expect(parseOptionsPrice(optionsPriceText53)).toEqual(
+      new Map([
+        ["AR1", 48],
+        ["C01", 53],
+      ]),
+    );
+  });
+
+  it("liefert keine Preise für unbekannte Zeilenbreiten", () => {
+    const altesLayout = line(["AR1", 12], ["0", 13], ["00035", 5]);
+    expect(parseOptionsPrice(altesLayout).size).toBe(0);
   });
 });
 
