@@ -294,6 +294,77 @@ supabase secrets set --project-ref psxrxggwqlltfhfskeoa \
 
 Auf dem Prod-Projekt (`cktdtojgrxskihihmnjm`) **nicht setzen**.
 
+## Echtdaten aus dem Altsystem Prisma übernehmen (#80)
+
+> Tracking-Issue: #104 (Dev/Prod-Trennung), Schritt 8 von 8.
+
+Prod wurde ohne Testdaten aufgebaut (siehe oben) und erhält die echten Daten
+einmalig aus einer Datensicherung des bisherigen Programms **Prisma (AOWin)**:
+
+- `prismadb/backupN.dat` - PostgreSQL-Dump (custom format) der Prisma-Datenbank
+- `Resource/prisma/glaspreise/<Hersteller>/` - SF6-Glaskataloge
+
+Das Werkzeug
+[`scripts/prisma_import/prisma_import.py`](scripts/prisma_import/prisma_import.py)
+liest beides direkt (ohne `pg_restore`) und schreibt in **einer Transaktion**:
+
+| Prisma | Ziel |
+|---|---|
+| `kunden` | `kunde` (id = Prisma-Kundennummer; Straße/Hausnummer und PLZ/Ort getrennt; Memo -> `Notizen`) |
+| `brillen` | `brille` + `fassung` + `glastyp` + `glass` (links/rechts); Leistungen, Kassenabrechnung, Merkmale -> `Notizen` |
+| `cl` | `kontaktlinse` |
+| SF6-Kataloge | `glashersteller`, `glaskatalog`, `glaskatalog_option`, `glaskatalog_hat_option` |
+| - | `betrieb` (Name, IK-Nummer, Präqualifizierung) |
+
+Festgelegte Regeln:
+
+- Prisma-Filiale 999 (gelöschte Datensätze) wird mit übernommen und in den
+  Notizen als gelöscht markiert.
+- Alle übernommenen Aufträge gelten als **bezahlt** (sonst erschienen
+  Tausende Altaufträge in der Mahnungen-Übersicht). Die Auftragssumme wird
+  aus Prisma übernommen; `brille_calc_summe_trigger` ist dafür nur während
+  des Imports deaktiviert, weil die Leistungen als Freitext ohne
+  Katalogbezug vorliegen. Eine spätere Bearbeitung in der App berechnet die
+  Summe neu (ohne diese Freitext-Leistungen).
+- Glas-Auftragsstatus `abgeholt`, außer bei Aufträgen der letzten 60 Tage.
+- Termine: In Prisma leer, es wird nichts übernommen.
+- SF6-Preise werden nur aus dem verifizierten Preislayout (POL, SF6 6.10,
+  `LensPrice.dat` 69 / `OptionsPrice.dat` 53 Zeichen breit) übernommen.
+  Kataloge mit anderem Layout werden ohne Preise importiert, statt falsche
+  Preise zu speichern.
+
+Voraussetzungen: Migration `20261010120000_kunde_notizen_anrede_optional.sql`
+ist auf Prod angewendet, Prod enthält noch keine Kunden/Aufträge (das
+Werkzeug bricht sonst ab), Python-Paket `pg8000` (`pip3 install --user pg8000`).
+
+```bash
+# 1. Probelauf: importiert, prüft und rollt alles zurück
+python3 supabase/scripts/prisma_import/prisma_import.py \
+  --dump "<Sicherung>/prismadb/backup4.dat" \
+  --sf6-dir "<Sicherung>/Resource/prisma/glaspreise" \
+  --project-ref cktdtojgrxskihihmnjm
+
+# 2. Wenn der Probelauf passt: dasselbe mit --commit
+```
+
+Das Datenbank-Passwort (Dashboard -> Project Settings -> Database) wird
+abgefragt und nirgends gespeichert. Verbindung über den Session-Pooler
+(`aws-1-eu-west-1.pooler.supabase.com`, die direkte Datenbank-Adresse ist nur
+per IPv6 erreichbar). **Dump und Kataloge enthalten echte Kunden- und
+Gesundheitsdaten und gehören nie ins Repository.**
+
+Rückgängig machen (nur direkt nach dem Import, solange noch nicht in der App
+gearbeitet wurde):
+
+```sql
+truncate public.kunde, public.brille, public.glass, public.glastyp,
+  public.fassung, public.kontaktlinse restart identity cascade;
+```
+
+Einzelne SF6-Kataloge lassen sich auch ohne Prisma als SQL erzeugen
+(`scripts/sf6_to_sql.py KATALOG.ZIP AUSGABE_VERZEICHNIS`) und im SQL Editor
+ausführen.
+
 ## CI / automatisierte Umgebungen
 
 Umgesetzt in #100: [`.github/workflows/ci.yml`](../.github/workflows/ci.yml)
