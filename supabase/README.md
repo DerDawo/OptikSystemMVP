@@ -326,7 +326,8 @@ Festgelegte Regeln:
   des Imports deaktiviert, weil die Leistungen als Freitext ohne
   Katalogbezug vorliegen. Eine spätere Bearbeitung in der App berechnet die
   Summe neu (ohne diese Freitext-Leistungen).
-- Glas-Auftragsstatus `abgeholt`, außer bei Aufträgen der letzten 60 Tage.
+- Glas-Auftragsstatus `abgeholt`; Aufträge der letzten 60 Tage `bestellt` bzw.
+  `zu bestellen` je nach Prisma-Bestellkennzeichen (`glbest` J/F).
 - Termine: In Prisma leer, es wird nichts übernommen.
 - SF6-Preise werden nur aus dem verifizierten Preislayout (POL, SF6 6.10,
   `LensPrice.dat` 69 / `OptionsPrice.dat` 53 Zeichen breit) übernommen.

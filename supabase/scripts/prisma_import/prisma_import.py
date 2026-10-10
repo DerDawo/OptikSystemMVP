@@ -59,9 +59,11 @@ BETRIEB = {
 # aber in den Notizen gekennzeichnet.
 FILIALE_GELOESCHT = "999"
 
-# Aufträge, die jünger sind, gelten evtl. noch als in Arbeit - für sie wird
-# kein Glas-Auftragsstatus gesetzt statt pauschal "abgeholt".
+# Aufträge, die jünger sind, gelten evtl. noch als in Arbeit: Ihr Glas-
+# Auftragsstatus (Pflichtfeld) kommt aus dem Prisma-Bestellkennzeichen
+# glbest/glbest_l statt pauschal "abgeholt".
 OFFENE_AUFTRAEGE_TAGE = 60
+PRISMA_BESTELLT = {"J", "F"}
 
 GUELTIGE_JAHRE = range(1900, 2031)
 
@@ -307,7 +309,13 @@ def map_brillen(dump, kunden_ids, heute):
             })
 
         glas_ids = {}
-        for seite, s in (("Rechts", "r"), ("Links", "l")):
+        for seite, s, best in (("Rechts", "r", "glbest"), ("Links", "l", "glbest_l")):
+            if not noch_offen:
+                status = "abgeholt"
+            elif (r[best] or "").strip() in PRISMA_BESTELLT:
+                status = "bestellt"
+            else:
+                status = "zu bestellen"
             werte = {
                 "Sph": num(r[f"sph{s}"]), "Cyl": num(r[f"cyl{s}"]), "A": num(r[f"a{s}"]),
                 "PD": num(r[f"pd{s}"]), "Add": num(r[f"add{s}"]), "y_h": num(r[f"nh{s}"]),
@@ -319,7 +327,7 @@ def map_brillen(dump, kunden_ids, heute):
             glas_ids[seite] = len(glaeser) + 1
             glaeser.append({
                 "id": glas_ids[seite], **werte, "Seite": seite,
-                "Auftragsstatus": None if noch_offen else "abgeholt",
+                "Auftragsstatus": status,
             })
 
         kabrechnung = re.sub(r"\s{2,}", " ", clean(r["kabrechnung"]) or "")
@@ -454,6 +462,26 @@ def load_sf6_catalogs(sf6_dir):
 
 MAX_PARAMS = 30000
 
+APP_NAME = "prisma_import"
+
+# Andere offene Transaktionen dieses Werkzeugs (ältere Läufe ohne
+# application_name werden an ihren typischen Befehlen erkannt).
+ALTE_LAEUFE_SQL = """
+select pid, date_trunc('second', now() - xact_start)::text
+from pg_stat_activity
+where pid <> pg_backend_pid()
+  and usename = 'postgres'
+  and xact_start is not null
+  and (application_name = 'prisma_import'
+       or query ilike 'update public.betrieb set%'
+       or query ilike 'insert into public.glaskatalog%'
+       or query ilike 'delete from public.glaskatalog_hat_option%'
+       or query ilike 'insert into public.kunde %'
+       or query ilike 'insert into public.brille %'
+       or query ilike 'insert into public.glass %')
+order by xact_start
+"""
+
 # Enum-Spalten: Parameter explizit casten, damit Postgres den Text annimmt.
 CASTS = {"Anrede": "anrede", "KrankenversicherungsTyp": "krankenversicherung", "Seite": "seite"}
 
@@ -501,6 +529,10 @@ def import_sf6(con, catalogs):
             for c, b, t, p in cat["optionen"]
         ], 'on conflict (glashersteller_id, code) do update set bezeichnung = excluded.bezeichnung, '
            'typ = excluded.typ, preis = excluded.preis, updated_at = now()')
+        # Tabellenstatistik nach den Inserts auffrischen: sonst plant Postgres
+        # mit "leere Tabelle" und das Delete läuft quadratisch (Minuten).
+        con.run("analyze public.glaskatalog")
+        con.run("analyze public.glaskatalog_hat_option")
         con.run("delete from public.glaskatalog_hat_option where glaskatalog_id in "
                 "(select id from public.glaskatalog where glashersteller_id = :h and aktiv)", h=h)
         produkt_ids = dict(con.run("select esd_code, id from public.glaskatalog where glashersteller_id = :h", h=h))
@@ -544,6 +576,8 @@ def main():
     ap.add_argument("--host", default=DEFAULT_POOLER_HOST, help="Session-Pooler-Host (Dashboard -> Connect)")
     ap.add_argument("--port", type=int, default=5432)
     ap.add_argument("--commit", action="store_true", help="Änderungen speichern (sonst Probelauf mit Rollback)")
+    ap.add_argument("--alte-laeufe-beenden", action="store_true",
+                    help="hängengebliebene, nicht gespeicherte Sitzungen früherer Import-Läufe beenden")
     args = ap.parse_args()
 
     import pg8000.native
@@ -564,8 +598,23 @@ def main():
     con = pg8000.native.Connection(
         user=f"postgres.{args.project_ref}", password=password, host=args.host, port=args.port,
         database="postgres", ssl_context=ssl.create_default_context(cafile=str(SUPABASE_CA)), timeout=600,
+        application_name=APP_NAME,
     )
     con.run("set statement_timeout = 0")
+
+    # Ctrl+C beendet nur das Programm; die Datenbank arbeitet den letzten
+    # Befehl eines abgebrochenen Laufs weiter ab und hält dessen Sperren.
+    alte = con.run(ALTE_LAEUFE_SQL)
+    if alte:
+        print(f"    {len(alte)} noch laufende, nicht gespeicherte Import-Sitzung(en) aus früheren Läufen:")
+        for pid, laufzeit in alte:
+            print(f"      Sitzung {pid}, läuft seit {laufzeit}")
+        if not args.alte_laeufe_beenden:
+            sys.exit("Abbruch: Bitte mit --alte-laeufe-beenden erneut starten, um diese Sitzungen zu beenden "
+                     "(ihre Änderungen waren nie gespeichert und werden verworfen).")
+        for pid, _ in alte:
+            con.run("select pg_terminate_backend(:pid)", pid=pid)
+        print("    Beendet.")
 
     vorhanden = con.run("select (select count(*) from public.kunde), (select count(*) from public.brille), "
                         "(select count(*) from public.kontaktlinse)")[0]
@@ -599,6 +648,8 @@ def main():
             reset_identity(con, t)
 
         print("4/4 Prüfe ...")
+        for tabelle in ("kunde", "brille", "glass", "glastyp", "fassung", "kontaktlinse"):
+            con.run(f"analyze public.{tabelle}")
         result = validate(con)
         summen = con.run("select coalesce(sum(\"Summe\"), 0) from public.brille")[0][0]
         erwartet = sum((b["Summe"] or 0) for b in brillen)
