@@ -59,9 +59,11 @@ BETRIEB = {
 # aber in den Notizen gekennzeichnet.
 FILIALE_GELOESCHT = "999"
 
-# Aufträge, die jünger sind, gelten evtl. noch als in Arbeit - für sie wird
-# kein Glas-Auftragsstatus gesetzt statt pauschal "abgeholt".
+# Aufträge, die jünger sind, gelten evtl. noch als in Arbeit: Ihr Glas-
+# Auftragsstatus (Pflichtfeld) kommt aus dem Prisma-Bestellkennzeichen
+# glbest/glbest_l statt pauschal "abgeholt".
 OFFENE_AUFTRAEGE_TAGE = 60
+PRISMA_BESTELLT = {"J", "F"}
 
 GUELTIGE_JAHRE = range(1900, 2031)
 
@@ -307,7 +309,13 @@ def map_brillen(dump, kunden_ids, heute):
             })
 
         glas_ids = {}
-        for seite, s in (("Rechts", "r"), ("Links", "l")):
+        for seite, s, best in (("Rechts", "r", "glbest"), ("Links", "l", "glbest_l")):
+            if not noch_offen:
+                status = "abgeholt"
+            elif (r[best] or "").strip() in PRISMA_BESTELLT:
+                status = "bestellt"
+            else:
+                status = "zu bestellen"
             werte = {
                 "Sph": num(r[f"sph{s}"]), "Cyl": num(r[f"cyl{s}"]), "A": num(r[f"a{s}"]),
                 "PD": num(r[f"pd{s}"]), "Add": num(r[f"add{s}"]), "y_h": num(r[f"nh{s}"]),
@@ -319,7 +327,7 @@ def map_brillen(dump, kunden_ids, heute):
             glas_ids[seite] = len(glaeser) + 1
             glaeser.append({
                 "id": glas_ids[seite], **werte, "Seite": seite,
-                "Auftragsstatus": None if noch_offen else "abgeholt",
+                "Auftragsstatus": status,
             })
 
         kabrechnung = re.sub(r"\s{2,}", " ", clean(r["kabrechnung"]) or "")
