@@ -25,6 +25,7 @@ import {
   FormSection,
   ShowLayout,
   ShowSection,
+  DatenbankInfo,
 } from "./EntityLayout";
 
 const KundeOptionText = (record?: Record<string, unknown>) => {
@@ -71,20 +72,14 @@ export const KontaktlinseList = () => (
 export const KontaktlinseShow = () => (
   <Show>
     <ShowLayout>
-      <ShowSection title="Datenbankfelder">
-        <Field>
-          <TextField source="id" />
-        </Field>
-        <Field>
-          <DateField source="created_at" />
+      <ShowSection title="Beratung">
+        <Field label="Bedient von">
+          <TextField source="Berater" />
         </Field>
       </ShowSection>
       <ShowSection title="Auftragsdaten">
         <Field>
           <ReferenceField source="kunde_id" reference="kunde" link="show" />
-        </Field>
-        <Field>
-          <TextField source="Berater" />
         </Field>
         <Field>
           <DateField source="Datum" />
@@ -168,6 +163,7 @@ export const KontaktlinseShow = () => (
           <NumberField source="Summe" />
         </Field>
       </ShowSection>
+      <DatenbankInfo />
     </ShowLayout>
   </Show>
 );
@@ -175,18 +171,14 @@ export const KontaktlinseShow = () => (
 export const KontaktlinseEdit = () => (
   <Edit>
     <SimpleForm>
-      <FormSection title="Datenbankfelder">
-        <FieldRow>
-          <TextInput source="id" InputProps={{ disabled: true }} />
-          <DateInput source="created_at" InputProps={{ disabled: true }} />
-        </FieldRow>
+      <FormSection title="Beratung">
+        <TextInput source="Berater" label="Bedient von" />
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
           <ReferenceInput source="kunde_id" reference="kunde">
             <SelectInput optionText={KundeOptionText} />
           </ReferenceInput>
-          <TextInput source="Berater" />
         </FieldRow>
         <FieldRow>
           <DateInput source="Datum" />
@@ -234,6 +226,7 @@ export const KontaktlinseEdit = () => (
       <FormSection title="Preis">
         <NumberInput source="Summe" />
       </FormSection>
+      <DatenbankInfo />
     </SimpleForm>
   </Edit>
 );
@@ -253,18 +246,14 @@ export const KontaktlinseCreate = () => {
       transform={(data) => ({ ...data, created_at: new Date().toISOString() })}
     >
       <SimpleForm defaultValues={defaultValues}>
-        <FormSection title="Datenbankfelder">
-          <FieldRow>
-            <TextInput source="id" InputProps={{ disabled: true }} />
-            <DateInput source="created_at" InputProps={{ disabled: true }} />
-          </FieldRow>
+        <FormSection title="Beratung">
+          <TextInput source="Berater" label="Bedient von" />
         </FormSection>
         <FormSection title="Auftragsdaten">
           <FieldRow>
             <ReferenceInput source="kunde_id" reference="kunde">
               <SelectInput optionText={KundeOptionText} />
             </ReferenceInput>
-            <TextInput source="Berater" />
           </FieldRow>
           <FieldRow>
             <DateInput source="Datum" />

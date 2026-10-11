@@ -6,6 +6,7 @@ import {
   ListButton,
   ShowButton,
   TopToolbar,
+  useRecordContext,
 } from "react-admin";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 
@@ -155,3 +156,25 @@ export const FieldRow = ({ children }: { children: ReactNode }) => (
     ))}
   </Box>
 );
+
+/*
+ * Technical record info (ID, created date) as a small grey line at the end of
+ * a Show/Edit page. Renders nothing while the record does not exist yet.
+ */
+export const DatenbankInfo = () => {
+  const record = useRecordContext();
+  if (record?.id == null) return null;
+  const angelegt = record.created_at
+    ? new Date(record.created_at).toLocaleDateString("de-DE")
+    : null;
+  return (
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      sx={{ display: "block", mt: 1 }}
+    >
+      ID {record.id}
+      {angelegt ? ` · angelegt am ${angelegt}` : ""}
+    </Typography>
+  );
+};

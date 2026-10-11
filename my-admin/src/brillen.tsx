@@ -62,6 +62,7 @@ import {
   ShowColumns,
   ShowLayout,
   ShowSection,
+  DatenbankInfo,
 } from "./EntityLayout";
 import { BrilleHistoryDatagrid } from "./BrilleHistory";
 import { BrilleStatusChip, brilleRowSx } from "./orderStatus";
@@ -336,12 +337,12 @@ export const BrilleShow = () => (
     <ShowLayout>
       <ShowColumns>
         <ShowColumn>
-          <ShowSection title="Datenbankfelder">
-            <Field>
-              <TextField source="id" />
+          <ShowSection title="Beratung">
+            <Field label="Bedient von">
+              <TextField source="Berater" />
             </Field>
-            <Field>
-              <DateField source="created_at" />
+            <Field label="Refraktion durch (Mitarbeiter / Arzt)">
+              <TextField source="Refraktion" />
             </Field>
           </ShowSection>
           <ShowSection title="Auftragsdaten">
@@ -352,12 +353,6 @@ export const BrilleShow = () => (
             </Field>
             <Field>
               <TextField source="BrillenArt" />
-            </Field>
-            <Field>
-              <TextField source="Berater" />
-            </Field>
-            <Field>
-              <TextField source="Refraktion" />
             </Field>
             <Field>
               <DateField source="Datum" />
@@ -504,6 +499,7 @@ export const BrilleShow = () => (
               <DateField source="ErstverordnungMuster8Datum" />
             </Field>
           </ShowSection>
+          <DatenbankInfo />
         </ShowColumn>
         <ShowColumn>
           <RelatedSection title="Weitere Aufträge dieses Kunden">
@@ -537,20 +533,22 @@ export const BrilleEdit = () => (
     }
   >
     <SimpleForm>
-      <FormSection title="Datenbankfelder">
+      <FormSection title="Beratung">
         <FieldRow>
-          <TextInput source="id" />
-          <DateInput source="created_at" />
+          <TextInput source="Berater" label="Bedient von" />
+          <TextInput
+            source="Refraktion"
+            label="Refraktion durch (Mitarbeiter / Arzt)"
+            helperText="Name, Praxis oder z. B. lt. ärztl. Verordnung"
+          />
         </FieldRow>
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
           <BrillenArtInput />
-          <TextInput source="Berater" />
-          <TextInput source="Refraktion" />
+          <DateInput source="Datum" />
         </FieldRow>
         <FieldRow>
-          <DateInput source="Datum" />
           <TextInput source="Werkstatt" />
           <DateInput source="Abholung" />
         </FieldRow>
@@ -665,6 +663,7 @@ export const BrilleEdit = () => (
           />
         </FieldRow>
       </FormSection>
+      <DatenbankInfo />
     </SimpleForm>
   </Edit>
 );
@@ -672,20 +671,22 @@ export const BrilleEdit = () => (
 export const BrilleCreate = () => (
   <Create>
     <SimpleForm>
-      <FormSection title="Datenbankfelder">
+      <FormSection title="Beratung">
         <FieldRow>
-          <TextInput source="id" />
-          <DateInput source="created_at" />
+          <TextInput source="Berater" label="Bedient von" />
+          <TextInput
+            source="Refraktion"
+            label="Refraktion durch (Mitarbeiter / Arzt)"
+            helperText="Name, Praxis oder z. B. lt. ärztl. Verordnung"
+          />
         </FieldRow>
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
           <BrillenArtInput />
-          <TextInput source="Berater" />
-          <TextInput source="Refraktion" />
+          <DateInput source="Datum" />
         </FieldRow>
         <FieldRow>
-          <DateInput source="Datum" />
           <TextInput source="Werkstatt" />
           <DateInput source="Abholung" />
         </FieldRow>
