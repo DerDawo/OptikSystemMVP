@@ -9,7 +9,7 @@ import {
 } from "@mui/material";
 import { Title, useDataProvider, ListBase } from "react-admin";
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
@@ -32,6 +32,13 @@ const buildFilter = (filters: Record<string, string>) => {
   });
 
   return result;
+};
+
+type SearchFields = {
+  nachname: string;
+  vorname: string;
+  geburtsdatum: Dayjs | null;
+  kundennummer: string;
 };
 
 const CustomerSearch = () => {
@@ -64,13 +71,16 @@ const CustomerSearch = () => {
   }, [dataProvider, resource]);
 
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const handleSearch = async () => {
+  const runSearch = async (fields: SearchFields) => {
     const filter = buildFilter({
-      Nachname: nachname,
-      Vorname: vorname,
-      Geburtsdatum: geburtsdatum ? geburtsdatum.format("YYYY-MM-DD") : "",
-      KundenNummer: kundennummer,
+      Nachname: fields.nachname,
+      Vorname: fields.vorname,
+      Geburtsdatum: fields.geburtsdatum
+        ? fields.geburtsdatum.format("YYYY-MM-DD")
+        : "",
+      KundenNummer: fields.kundennummer,
     });
 
     setIsSearching(true);
@@ -92,6 +102,36 @@ const CustomerSearch = () => {
       setIsSearching(false);
     }
   };
+
+  const handleSearch = () =>
+    runSearch({ nachname, vorname, geburtsdatum, kundennummer });
+
+  // Suchbegriff aus der globalen Suche in der Toolbar (MyAppBar.tsx), per
+  // Router-State übergeben: Zahl = Kundennummer, "Vorname Nachname" wird
+  // aufgeteilt, sonst Nachname.
+  const globalSearch = location.state as { q?: string; ts?: number } | null;
+  useEffect(() => {
+    const q = globalSearch?.q?.trim();
+    if (!q) return;
+    const words = q.split(/\s+/);
+    const fields: SearchFields = /^\d+$/.test(q)
+      ? { nachname: "", vorname: "", geburtsdatum: null, kundennummer: q }
+      : words.length > 1
+        ? {
+            nachname: words.slice(1).join(" "),
+            vorname: words[0],
+            geburtsdatum: null,
+            kundennummer: "",
+          }
+        : { nachname: q, vorname: "", geburtsdatum: null, kundennummer: "" };
+    setNachname(fields.nachname);
+    setVorname(fields.vorname);
+    setGeburtsdatum(null);
+    setKundennummer(fields.kundennummer);
+    runSearch(fields);
+    // runSearch nur bei einer neuen globalen Suche auslösen
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [globalSearch?.q, globalSearch?.ts]);
 
   const handleCreate = () => {
     navigate(`/${resource}/create`, {

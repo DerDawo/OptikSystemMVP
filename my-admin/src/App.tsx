@@ -1,6 +1,6 @@
 // in src/App.tsx
 import { Admin, CustomRoutes, Resource } from "react-admin";
-import { theme } from "./theme";
+import { lightTheme, darkTheme } from "./theme";
 import { dataProvider } from "./dataProvider";
 import { MyLayout } from "./MyLayout";
 import { authProvider } from "./authProvider";
@@ -93,7 +93,9 @@ export const App = () => {
       dataProvider={dataProvider}
       authProvider={authProvider}
       loginPage={LoginPage}
-      theme={theme}
+      theme={lightTheme}
+      darkTheme={darkTheme}
+      defaultTheme="light"
       requireAuth
     >
       <Resource
