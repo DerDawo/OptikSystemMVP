@@ -17,6 +17,7 @@ import {
   kaestchen,
   versorgungVorschlaege,
 } from "./formularVorschlaege";
+import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 export type RezeptanfrageDaten = { entities: DocumentMergeEntities };
 
@@ -104,7 +105,7 @@ export const buildRezeptanfrageBodyHtml = ({
 <div class="anfrage">
   <div class="titelzeile">
     <h1>Rezeptanfrage an den Augenarzt</h1>
-    <div class="meta">Datum: ${e(heute)}<br />Bearbeiter: ${e(text(brille.Berater))}</div>
+    <div class="meta">Datum: ${e(heute)}<br />Bearbeiter: ${e(text(mitarbeiterAnzeige(brille.Berater)))}</div>
   </div>
 
   <h2>1 Patientendaten</h2>

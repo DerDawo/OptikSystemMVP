@@ -41,6 +41,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import PrintIcon from "@mui/icons-material/Print";
 import { Box, Button, TextField as MuiTextField } from "@mui/material";
+import {
+  MitarbeiterField,
+  MitarbeiterInput,
+  RefraktionInput,
+} from "./mitarbeiter";
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
@@ -62,6 +67,7 @@ import {
   ShowColumns,
   ShowLayout,
   ShowSection,
+  DatenbankInfo,
 } from "./EntityLayout";
 import { BrilleHistoryDatagrid } from "./BrilleHistory";
 import { BrilleStatusChip, brilleRowSx } from "./orderStatus";
@@ -250,8 +256,12 @@ export const BrilleList = () => (
           />
         </ReferenceField>
       </DataTable.Col>
-      <DataTable.Col source="Berater" />
-      <DataTable.Col source="Refraktion" />
+      <DataTable.Col source="Berater" label="Bedient von">
+        <MitarbeiterField source="Berater" label="Bedient von" />
+      </DataTable.Col>
+      <DataTable.Col source="Refraktion" label="Refraktion durch">
+        <MitarbeiterField source="Refraktion" label="Refraktion durch" />
+      </DataTable.Col>
       <DataTable.Col source="Datum">
         <DateField source="Datum" />
       </DataTable.Col>
@@ -336,12 +346,15 @@ export const BrilleShow = () => (
     <ShowLayout>
       <ShowColumns>
         <ShowColumn>
-          <ShowSection title="Datenbankfelder">
-            <Field>
-              <TextField source="id" />
+          <ShowSection title="Beratung">
+            <Field label="Bedient von">
+              <MitarbeiterField source="Berater" label="Bedient von" />
             </Field>
-            <Field>
-              <DateField source="created_at" />
+            <Field label="Refraktion durch (Mitarbeiter / Arzt)">
+              <MitarbeiterField
+                source="Refraktion"
+                label="Refraktion durch (Mitarbeiter / Arzt)"
+              />
             </Field>
           </ShowSection>
           <ShowSection title="Auftragsdaten">
@@ -352,12 +365,6 @@ export const BrilleShow = () => (
             </Field>
             <Field>
               <TextField source="BrillenArt" />
-            </Field>
-            <Field>
-              <TextField source="Berater" />
-            </Field>
-            <Field>
-              <TextField source="Refraktion" />
             </Field>
             <Field>
               <DateField source="Datum" />
@@ -504,6 +511,7 @@ export const BrilleShow = () => (
               <DateField source="ErstverordnungMuster8Datum" />
             </Field>
           </ShowSection>
+          <DatenbankInfo />
         </ShowColumn>
         <ShowColumn>
           <RelatedSection title="Weitere Aufträge dieses Kunden">
@@ -537,20 +545,21 @@ export const BrilleEdit = () => (
     }
   >
     <SimpleForm>
-      <FormSection title="Datenbankfelder">
+      <FormSection title="Beratung">
         <FieldRow>
-          <TextInput source="id" />
-          <DateInput source="created_at" />
+          <MitarbeiterInput source="Berater" label="Bedient von" />
+          <RefraktionInput
+            source="Refraktion"
+            label="Refraktion durch (Mitarbeiter / Arzt)"
+          />
         </FieldRow>
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
           <BrillenArtInput />
-          <TextInput source="Berater" />
-          <TextInput source="Refraktion" />
+          <DateInput source="Datum" />
         </FieldRow>
         <FieldRow>
-          <DateInput source="Datum" />
           <TextInput source="Werkstatt" />
           <DateInput source="Abholung" />
         </FieldRow>
@@ -665,6 +674,7 @@ export const BrilleEdit = () => (
           />
         </FieldRow>
       </FormSection>
+      <DatenbankInfo />
     </SimpleForm>
   </Edit>
 );
@@ -672,20 +682,21 @@ export const BrilleEdit = () => (
 export const BrilleCreate = () => (
   <Create>
     <SimpleForm>
-      <FormSection title="Datenbankfelder">
+      <FormSection title="Beratung">
         <FieldRow>
-          <TextInput source="id" />
-          <DateInput source="created_at" />
+          <MitarbeiterInput source="Berater" label="Bedient von" />
+          <RefraktionInput
+            source="Refraktion"
+            label="Refraktion durch (Mitarbeiter / Arzt)"
+          />
         </FieldRow>
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
           <BrillenArtInput />
-          <TextInput source="Berater" />
-          <TextInput source="Refraktion" />
+          <DateInput source="Datum" />
         </FieldRow>
         <FieldRow>
-          <DateInput source="Datum" />
           <TextInput source="Werkstatt" />
           <DateInput source="Abholung" />
         </FieldRow>

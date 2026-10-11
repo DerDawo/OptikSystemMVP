@@ -22,6 +22,7 @@ import {
   brillenartKategorie,
   sehstaerkeVeraendert,
 } from "./formularVorschlaege";
+import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
 export type PdfFeldwerte = Record<string, string | boolean>;
@@ -73,7 +74,7 @@ const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
     Adresse: adresse(k),
     Telefon: telefon(k),
     Geburtstag: formatDatum(k.Geburtsdatum),
-    Mitarbeiter: text(brille.Berater),
+    Mitarbeiter: text(mitarbeiterAnzeige(brille.Berater)),
     Datum: dayjs().format("DD.MM.YYYY"),
     ...werte(entities.glasRechts, "OD"),
     ...werte(entities.glasLinks, "OS"),
@@ -134,7 +135,7 @@ const bapFelder = (entities: DocumentMergeEntities) => {
   // Kunden-Nr. (Protokoll-Nr. und Uhrzeit bleiben frei)
   const kopf = (start: number) => ({
     [`hd_${start + 1}`]: messdatum,
-    [`hd_${start + 3}`]: text(brille.Berater),
+    [`hd_${start + 3}`]: text(mitarbeiterAnzeige(brille.Berater)),
     [`hd_${start + 4}`]: text(k.KundenNummer),
   });
 
