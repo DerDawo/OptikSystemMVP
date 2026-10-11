@@ -1204,29 +1204,3 @@ export const WerkstattauftragButton = () => {
     </>
   );
 };
-
-// "Anamnesebogen" auf der Kundenseite: öffnet den Formulare-Dialog ohne
-// Auftrag, nur mit den Kundendaten.
-export const AnamnesebogenButton = () => {
-  const record = useRecordContext();
-  const [open, setOpen] = useState(false);
-
-  if (!record) {
-    return null;
-  }
-
-  return (
-    <>
-      <Button startIcon={<DescriptionIcon />} onClick={() => setOpen(true)}>
-        Anamnesebogen
-      </Button>
-      {open && (
-        <FormulareDialog
-          brille={{ id: undefined as unknown as number, kunde_id: record.id }}
-          initialKategorie={ANAMNESE_KATEGORIE}
-          onClose={() => setOpen(false)}
-        />
-      )}
-    </>
-  );
-};
