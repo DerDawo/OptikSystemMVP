@@ -31,7 +31,11 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { formatCurrency } from "./CurrencyField";
-import { MITARBEITER, mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import {
+  MITARBEITER,
+  REFRAKTION,
+  mitarbeiterAnzeige,
+} from "./mitarbeiterNamen";
 import { Auswahl, Eingabe, Haken, useKarteiSpeichern } from "./KarteiEingabe";
 import { brillenartOptionen } from "./brillenarten";
 import {
@@ -90,6 +94,7 @@ const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
 const WERTE_LINKS = WERTE.slice(0, 8);
 
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
+const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
 
 const ZAHLUNGSSTATUS = [
   { id: "offen", name: "offen" },
@@ -800,16 +805,12 @@ export const BrilleKarteikarte = () => {
               Refraktion
             </Beschriftung>
             <Feld z={3} s={LINKS}>
-              {textFeld(
-                "Refraktion",
-                "Refraktion",
-                auftrag("Refraktion"),
-                brille.Refraktion,
-                {
-                  anzeige: mitarbeiterAnzeige(brille.Refraktion),
-                  vorschlaege: MITARBEITER,
-                },
-              )}
+              <Auswahl
+                name="Refraktion"
+                wert={mitarbeiterAnzeige(brille.Refraktion) || null}
+                optionen={REFRAKTION_AUSWAHL}
+                speichere={auftrag("Refraktion")}
+              />
             </Feld>
             <Beschriftung z={3} s="5 / 6">
               Abholung
