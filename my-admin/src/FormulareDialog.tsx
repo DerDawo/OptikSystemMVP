@@ -18,13 +18,12 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  List as MuiList,
-  ListItemButton,
-  ListItemText,
   Typography,
   TextField,
   CircularProgress,
+  MenuItem,
 } from "@mui/material";
+import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -113,6 +112,18 @@ const VERORDNUNG_KATEGORIE = "Optometrische Verordnung";
 const VERORDNUNG_GKV_KATEGORIE = "Optometrische Verordnung GKV";
 // Kostenvoranschlag im Rechnungsdesign (rechnungTemplate.ts)
 const KOSTENVORANSCHLAG_KATEGORIE = "Kostenvoranschlag";
+
+// Knöpfe im Auswahlfenster wie in Prisma: dunkelblau, weiße fette Schrift
+const PRISMA_KNOPF = {
+  bgcolor: "#1d4e8f",
+  "&:hover": { bgcolor: "#173f74" },
+  color: "#fff",
+  fontWeight: 700,
+  textTransform: "none",
+  fontSize: "1rem",
+  borderRadius: "4px",
+  py: 1,
+} as const;
 
 type LayoutDaten = {
   entities: DocumentMergeEntities;
@@ -281,6 +292,9 @@ const FormulareDialog = ({
   const notify = useNotify();
   const [selectedVorlage, setSelectedVorlage] =
     useState<Dokumentvorlage | null>(null);
+  // "liste" = Auswahlfenster wie in Prisma, "vorschau" = Seitenansicht
+  const [ansicht, setAnsicht] = useState<"liste" | "vorschau">("liste");
+  const [typ, setTyp] = useState<string>("");
 
   const { data: vorlagen, isPending: vorlagenLoading } =
     useGetList<Dokumentvorlage>("dokumentvorlage", {
@@ -301,8 +315,10 @@ const FormulareDialog = ({
       : treffer;
     if (passende.length === 1) {
       setSelectedVorlage(passende[0]);
+      setAnsicht("vorschau");
     } else if (initialVorlageName && treffer.length === 1) {
       setSelectedVorlage(treffer[0]);
+      setAnsicht("vorschau");
     }
   }, [
     initialKategorie,
@@ -518,20 +534,29 @@ const FormulareDialog = ({
     };
   }, [pdfVorlage, mergeEntities]);
 
-  const groupedVorlagen = useMemo(() => {
-    const map = new Map<string, Dokumentvorlage[]>();
-    (vorlagen ?? [])
-      .filter(
+  const auswahlVorlagen = useMemo(
+    () =>
+      (vorlagen ?? []).filter(
         (vorlage) =>
           !initialKategorie || vorlage.Kategorie === initialKategorie,
-      )
-      .forEach((vorlage) => {
-        const list = map.get(vorlage.Kategorie) ?? [];
-        list.push(vorlage);
-        map.set(vorlage.Kategorie, list);
-      });
-    return Array.from(map.entries());
-  }, [vorlagen, initialKategorie]);
+      ),
+    [vorlagen, initialKategorie],
+  );
+  const typen = useMemo(
+    () =>
+      [...new Set(auswahlVorlagen.map((v) => v.Kategorie))].sort((x, y) =>
+        x.localeCompare(y, "de"),
+      ),
+    [auswahlVorlagen],
+  );
+  const listenVorlagen = useMemo(
+    () =>
+      auswahlVorlagen
+        .filter((v) => !typ || v.Kategorie === typ)
+        .sort((x, y) => x.Name.localeCompare(y.Name, "de")),
+    [auswahlVorlagen, typ],
+  );
+  const textAenderbar = Boolean(selectedVorlage) && !layout && !pdfVorlage;
 
   const handleAction = (
     autoPrint: boolean,
@@ -584,52 +609,178 @@ const FormulareDialog = ({
         </IconButton>
       </DialogTitle>
       <DialogContent dividers>
-        {!selectedVorlage ? (
-          <>
-            <Typography color="text.secondary" sx={{ mb: 2 }}>
-              Vorlage auswählen, um sie mit den Daten dieses Auftrags und Kunden
-              zu befüllen.
-            </Typography>
-            {vorlagenLoading && (
-              <Typography color="text.secondary">Lade Vorlagen…</Typography>
-            )}
-            {!vorlagenLoading && groupedVorlagen.length === 0 && (
-              <Alert severity="info">
-                {initialKategorie
-                  ? `Keine aktive Dokumentvorlage der Kategorie „${initialKategorie}“ vorhanden. Vorlagen können unter „Dokumentvorlagen“ angelegt werden.`
-                  : "Keine aktiven Dokumentvorlagen vorhanden. Vorlagen können unter „Dokumentvorlagen“ angelegt werden."}
-              </Alert>
-            )}
-            {groupedVorlagen.map(([kategorie, list]) => (
-              <Box key={kategorie} sx={{ mb: 2 }}>
-                <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
-                  {kategorie}
-                </Typography>
-                <MuiList
-                  dense
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 1,
-                  }}
-                >
-                  {list.map((vorlage) => (
-                    <ListItemButton
+        {ansicht === "liste" ? (
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: { xs: "1fr", sm: "minmax(0, 1fr) 230px" },
+              gap: { xs: 2, sm: 3 },
+            }}
+          >
+            <Box sx={{ minWidth: 0 }}>
+              <Typography sx={{ fontStyle: "italic", mb: 0.5 }}>
+                Name
+              </Typography>
+              <Box
+                role="listbox"
+                aria-label="Formulare"
+                sx={{
+                  border: "1px solid",
+                  borderColor: "divider",
+                  height: { xs: 300, sm: 360 },
+                  overflowY: "auto",
+                  p: "2px",
+                  bgcolor: "background.paper",
+                }}
+              >
+                {vorlagenLoading && (
+                  <Typography color="text.secondary" sx={{ p: 1 }}>
+                    Lade Vorlagen…
+                  </Typography>
+                )}
+                {!vorlagenLoading && listenVorlagen.length === 0 && (
+                  <Typography color="text.secondary" sx={{ p: 1 }}>
+                    Keine aktiven Dokumentvorlagen. Vorlagen können unter
+                    „Dokumentvorlagen“ angelegt werden.
+                  </Typography>
+                )}
+                {listenVorlagen.map((vorlage) => {
+                  const gewaehlt = vorlage.id === selectedVorlage?.id;
+                  return (
+                    <Box
                       key={vorlage.id}
+                      role="option"
+                      aria-selected={gewaehlt}
+                      tabIndex={0}
                       onClick={() => setSelectedVorlage(vorlage)}
+                      onDoubleClick={() => {
+                        setSelectedVorlage(vorlage);
+                        setAnsicht("vorschau");
+                      }}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter") {
+                          setSelectedVorlage(vorlage);
+                          setAnsicht("vorschau");
+                        }
+                      }}
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1,
+                        px: 0.75,
+                        py: "3px",
+                        cursor: "pointer",
+                        color: gewaehlt ? "#fff" : "text.primary",
+                        bgcolor: gewaehlt ? "#0a63d6" : "transparent",
+                        "&:hover": {
+                          bgcolor: gewaehlt ? "#0a58bf" : "action.hover",
+                        },
+                        "&:focus-visible": {
+                          outline: "1px dotted",
+                          outlineColor: "text.primary",
+                        },
+                      }}
                     >
-                      <ListItemText primary={vorlage.Name} />
-                    </ListItemButton>
-                  ))}
-                </MuiList>
+                      <InsertDriveFileOutlinedIcon sx={{ fontSize: 18 }} />
+                      <Box
+                        component="span"
+                        sx={{
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                          whiteSpace: "nowrap",
+                        }}
+                      >
+                        {vorlage.Name}
+                      </Box>
+                    </Box>
+                  );
+                })}
               </Box>
-            ))}
-          </>
-        ) : (
+              <Typography sx={{ fontStyle: "italic", mt: 2, mb: 0.5 }}>
+                Typ
+              </Typography>
+              <TextField
+                select
+                size="small"
+                fullWidth
+                hiddenLabel
+                value={typ}
+                onChange={(event) => setTyp(event.target.value)}
+                SelectProps={{ displayEmpty: true }}
+              >
+                <MenuItem value="">Alle Formulare</MenuItem>
+                {typen.map((t) => (
+                  <MenuItem key={t} value={t}>
+                    {t}
+                  </MenuItem>
+                ))}
+              </TextField>
+            </Box>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 1.5,
+                pt: { sm: 3.5 },
+              }}
+            >
+              {[
+                {
+                  text: "Drucken",
+                  onClick: () =>
+                    handleAction(
+                      true,
+                      "Druckdialog geöffnet.",
+                      "Dokument konnte nicht gedruckt werden (Pop-up blockiert?).",
+                    ),
+                  aus: !selectedVorlage,
+                },
+                { text: "Abbrechen", onClick: onClose, aus: false },
+                {
+                  text: "Seitenansicht",
+                  onClick: () => setAnsicht("vorschau"),
+                  aus: !selectedVorlage,
+                },
+                {
+                  text: "PDF erstellen",
+                  onClick: () =>
+                    handleAction(
+                      true,
+                      "Druckdialog geöffnet – bitte „Als PDF speichern“ als Ziel wählen.",
+                      "PDF konnte nicht erstellt werden (Pop-up blockiert?).",
+                    ),
+                  aus: !selectedVorlage,
+                },
+              ].map((knopf) => (
+                <Button
+                  key={knopf.text}
+                  variant="contained"
+                  disableElevation
+                  disabled={knopf.aus}
+                  onClick={knopf.onClick}
+                  sx={PRISMA_KNOPF}
+                >
+                  {knopf.text}
+                </Button>
+              ))}
+              <Button
+                variant="contained"
+                disableElevation
+                disabled={!textAenderbar}
+                component={Link}
+                to={`/dokumentvorlage/${selectedVorlage?.id ?? ""}`}
+                target="_blank"
+                sx={PRISMA_KNOPF}
+              >
+                Text ändern
+              </Button>
+            </Box>
+          </Box>
+        ) : !selectedVorlage ? null : (
           <>
             <Button
               startIcon={<ArrowBackIcon />}
-              onClick={() => setSelectedVorlage(null)}
+              onClick={() => setAnsicht("liste")}
               sx={{ mb: 2 }}
             >
               Zurück zur Auswahl
@@ -773,51 +924,53 @@ const FormulareDialog = ({
           </>
         )}
       </DialogContent>
-      <DialogActions sx={{ flexWrap: "wrap", gap: 1 }}>
-        {selectedVorlage && (
-          <>
-            <Button
-              startIcon={<VisibilityIcon />}
-              onClick={() =>
-                handleAction(
-                  false,
-                  "Seitenansicht geöffnet.",
-                  "Seitenansicht konnte nicht geöffnet werden (Pop-up blockiert?).",
-                )
-              }
-            >
-              Seitenansicht
-            </Button>
-            <Button
-              startIcon={<PictureAsPdfIcon />}
-              onClick={() =>
-                handleAction(
-                  true,
-                  "Druckdialog geöffnet – bitte „Als PDF speichern“ als Ziel wählen.",
-                  "PDF konnte nicht erstellt werden (Pop-up blockiert?).",
-                )
-              }
-            >
-              PDF erstellen
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<PrintIcon />}
-              onClick={() =>
-                handleAction(
-                  true,
-                  "Druckdialog geöffnet.",
-                  "Dokument konnte nicht gedruckt werden (Pop-up blockiert?).",
-                )
-              }
-            >
-              Drucken
-            </Button>
-          </>
-        )}
-        <Box sx={{ flex: 1 }} />
-        <Button onClick={onClose}>Schließen</Button>
-      </DialogActions>
+      {ansicht === "vorschau" && (
+        <DialogActions sx={{ flexWrap: "wrap", gap: 1 }}>
+          {selectedVorlage && (
+            <>
+              <Button
+                startIcon={<VisibilityIcon />}
+                onClick={() =>
+                  handleAction(
+                    false,
+                    "Seitenansicht geöffnet.",
+                    "Seitenansicht konnte nicht geöffnet werden (Pop-up blockiert?).",
+                  )
+                }
+              >
+                Seitenansicht
+              </Button>
+              <Button
+                startIcon={<PictureAsPdfIcon />}
+                onClick={() =>
+                  handleAction(
+                    true,
+                    "Druckdialog geöffnet – bitte „Als PDF speichern“ als Ziel wählen.",
+                    "PDF konnte nicht erstellt werden (Pop-up blockiert?).",
+                  )
+                }
+              >
+                PDF erstellen
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<PrintIcon />}
+                onClick={() =>
+                  handleAction(
+                    true,
+                    "Druckdialog geöffnet.",
+                    "Dokument konnte nicht gedruckt werden (Pop-up blockiert?).",
+                  )
+                }
+              >
+                Drucken
+              </Button>
+            </>
+          )}
+          <Box sx={{ flex: 1 }} />
+          <Button onClick={onClose}>Schließen</Button>
+        </DialogActions>
+      )}
     </Dialog>
   );
 };

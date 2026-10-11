@@ -38,6 +38,7 @@ import {
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { KundeInput } from "./KundeInput";
+import { OptionenMenu } from "./PrismaMenues";
 import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -65,8 +66,6 @@ import {
   FormSection,
   RelatedSection,
   ShowActionsBar,
-  ShowColumn,
-  ShowColumns,
   ShowLayout,
   DatenbankInfo,
 } from "./EntityLayout";
@@ -331,39 +330,35 @@ export const BrilleList = () => (
 const BrilleShowActions = () => (
   <ShowActionsBar>
     <RechnungErstellenButton />
-    <MahnungErstellenButton />
-    <BerechtigungsscheinErstellenButton />
-    <WerkstattauftragButton />
     <FormulareButton />
-    <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
-      Drucken
-    </Button>
-    <KarteikarteKopierenButton />
+    <OptionenMenu>
+      <KarteikarteKopierenButton />
+      <BerechtigungsscheinErstellenButton />
+      <WerkstattauftragButton />
+      <MahnungErstellenButton />
+      <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
+        Drucken
+      </Button>
+    </OptionenMenu>
   </ShowActionsBar>
 );
 
 export const BrilleShow = () => (
   <Show actions={<BrilleShowActions />}>
     <ShowLayout>
-      <ShowColumns>
-        <ShowColumn>
-          <BrilleKarteikarte />
-          <DatenbankInfo />
-        </ShowColumn>
-        <ShowColumn>
-          <RelatedSection title="Weitere Aufträge dieses Kunden">
-            <ReferenceManyField
-              reference="brille"
-              target="kunde_id"
-              source="kunde_id"
-              label={false}
-              sort={{ field: "Datum", order: "DESC" }}
-            >
-              <BrilleHistoryDatagrid />
-            </ReferenceManyField>
-          </RelatedSection>
-        </ShowColumn>
-      </ShowColumns>
+      <BrilleKarteikarte />
+      <RelatedSection title="Weitere Aufträge dieses Kunden">
+        <ReferenceManyField
+          reference="brille"
+          target="kunde_id"
+          source="kunde_id"
+          label={false}
+          sort={{ field: "Datum", order: "DESC" }}
+        >
+          <BrilleHistoryDatagrid />
+        </ReferenceManyField>
+      </RelatedSection>
+      <DatenbankInfo />
     </ShowLayout>
   </Show>
 );

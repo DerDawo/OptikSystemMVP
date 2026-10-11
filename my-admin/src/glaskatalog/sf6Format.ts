@@ -55,6 +55,17 @@
  *    Options.dat-Codes (nicht mit einzelnen OptionsColor-Farbtönen). Genaue
  *    Kombinationsregeln (z. B. gegenseitiger Ausschluss einzelner Optionen)
  *    werden nicht ausgewertet - das ist Aufgabe des Glasassistenten (#51).
+ *  - LensType.dat enthält nach der Bezeichnung einen Kennzahlenblock. Aus
+ *    22 Herstellerkatalogen abgeleitet (Abgleich mit den Bezeichnungen):
+ *    Spalte 63 = Glasart (0 Einstärken, 1 Bifokal, 2 Trifokal,
+ *    3 Gleitsicht, 4 Office/Arbeitsplatz), Spalte 72 = Material
+ *    (1 Mineral, 2 Kunststoff, 3 Polycarbonat, 4 Trivex), Spalte 73-76 =
+ *    Brechungsindex ohne Punkt (z. B. 1500). Andere Werte gelten als
+ *    unbekannt (null).
+ *  - LensPrice.dat Spalte 7-10 ist der Durchmesser: "65  " = 65 mm,
+ *    "6570" = 65/70 (oval), "9999" = ohne Angabe. Je Durchmesser wird die
+ *    niedrigste UVP übernommen (Grundlage für den Schritt "Durchmesser" im
+ *    Glasassistenten).
  *  - Nicht ausgewertet werden LensGeo.dat, LensRange.dat, BaseCurve.dat,
  *    OrderOptions*.dat, CodeSubstitution.dat und ProductGroup.dat
  *    (Geometrie-/Stärkenbereiche und Aufpreisstaffeln je nach Rezept),
@@ -70,6 +81,10 @@ export interface Sf6Produkt {
   esdCode: string;
   bezeichnung: string;
   brechungsindex: number | null;
+  /** 0 Einstärken, 1 Bifokal, 2 Trifokal, 3 Gleitsicht, 4 Office */
+  glasart: number | null;
+  /** 1 Mineral, 2 Kunststoff, 3 Polycarbonat, 4 Trivex */
+  material: number | null;
 }
 
 export type Sf6OptionTyp = "beschichtung" | "farbe";
@@ -86,6 +101,8 @@ export interface Sf6Katalog {
   produkte: Sf6Produkt[];
   /** Basispreis je Grundglas in Euro (niedrigster gültiger Preis über alle Stärkenbereiche). */
   basispreise: Map<string, number>;
+  /** Je Grundglas: Durchmesser ("65", "65/70") -> niedrigste UVP in Euro. */
+  durchmesser: Map<string, Record<string, number>>;
   optionen: Sf6Option[];
   /** Je Grundglas-Code die Menge der dafür verfügbaren Options.dat-Codes. */
   verfuegbareOptionen: Map<string, Set<string>>;
@@ -144,6 +161,13 @@ export function extractBrechungsindex(bezeichnung: string): number | null {
   return match ? Number.parseFloat(match[1]) : null;
 }
 
+// Einstellige Kennzahl aus dem LensType-Kennzahlenblock, sonst null
+function kennziffer(zeichen: string | undefined, erlaubt: number[]) {
+  if (!zeichen || !/^\d$/.test(zeichen)) return null;
+  const wert = Number(zeichen);
+  return erlaubt.includes(wert) ? wert : null;
+}
+
 /** LensType.dat: Grundglas-Stammdaten, ein Produkt pro Zeile. */
 export function parseLensType(text: string): Sf6Produkt[] {
   const produkte: Sf6Produkt[] = [];
@@ -156,6 +180,8 @@ export function parseLensType(text: string): Sf6Produkt[] {
       esdCode,
       bezeichnung,
       brechungsindex: extractBrechungsindex(bezeichnung),
+      glasart: kennziffer(line[62], [0, 1, 2, 3, 4]),
+      material: kennziffer(line[71], [1, 2, 3, 4]),
     });
   }
   return produkte;
@@ -233,6 +259,43 @@ export function parseLensPrice(
     }
   }
   return basispreise;
+}
+
+/** "65  " -> "65", "6570" -> "65/70", "9999"/leer -> null */
+export function durchmesserText(feld: string): string | null {
+  const roh = feld.trim();
+  if (/^\d{2}$/.test(roh)) return roh;
+  if (/^\d{4}$/.test(roh) && roh !== "9999") {
+    const a = roh.slice(0, 2);
+    const b = roh.slice(2);
+    return a === b ? a : `${a}/${b}`;
+  }
+  return null;
+}
+
+/**
+ * LensPrice.dat: niedrigste UVP je Grundglas und Durchmesser (Spalte 7-10).
+ */
+export function parseLensDurchmesser(
+  text: string,
+  preisfeldTypen: readonly string[] = SF6_STANDARD_PREISFELDER,
+): Map<string, Record<string, number>> {
+  const ergebnis = new Map<string, Record<string, number>>();
+  for (const [schluessel, preis] of parsePreiszeilen(
+    text,
+    10,
+    preisfeldTypen,
+  )) {
+    const esdCode = schluessel.slice(0, 6).trim();
+    const durchmesser = durchmesserText(schluessel.slice(6, 10));
+    if (!esdCode || !durchmesser) continue;
+    const je = ergebnis.get(esdCode) ?? {};
+    if (je[durchmesser] === undefined || preis < je[durchmesser]) {
+      je[durchmesser] = preis;
+    }
+    ergebnis.set(esdCode, je);
+  }
+  return ergebnis;
 }
 
 /** Options.dat: Beschichtungs-/Farbgruppen-Katalog, ein Eintrag pro Zeile. */
@@ -332,6 +395,7 @@ export function parseSf6Katalog(files: Sf6SourceFiles): Sf6Katalog {
     hersteller: parseHead(files.head),
     produkte: parseLensType(files.lensType),
     basispreise: parseLensPrice(files.lensPrice, preisfeldTypen),
+    durchmesser: parseLensDurchmesser(files.lensPrice, preisfeldTypen),
     optionen: parseOptions(
       files.options,
       files.optionsPrice,

@@ -50,6 +50,16 @@ export const GlassesIcon = lineIcon(
   "M2 14a4 4 0 1 0 8 0 4 4 0 0 0-8 0M14 14a4 4 0 1 0 8 0 4 4 0 0 0-8 0M10 14c.6-.8 1.3-1 2-1s1.4.2 2 1M2.5 12 5 6h2M21.5 12 19 6h-2",
   "GlassesIcon",
 );
+// Markenzeichen von UNICORN: gefüllte Einhorn-Silhouette (Kopf mit Horn
+// und Mähne, Blick nach rechts), eigene Zeichnung
+export const UnicornIcon = (props: SvgIconProps) => (
+  <SvgIcon viewBox="0 0 100 100" {...props}>
+    <path
+      fillRule="evenodd"
+      d="M60 26 L91 7 L68 33 C73 39 79 46 84 53 C88 58 88 64 83 66 C80 67 78 66 76 64 C74 66 71 66 69 64 C65 61 61 58 58 55 C57 62 59 70 63 78 C67 86 65 93 58 98 C54 92 46 88 38 86 C42 82 43 78 41 75 C34 76 26 72 18 66 C25 64 29 61 30 58 C22 57 14 52 8 44 C16 45 23 43 26 40 C20 37 17 31 16 24 C23 27 28 26 31 24 C31 19 34 15 38 11 C41 15 45 16 49 16 L53 7 L57 17 C58 20 59 23 60 26 Z M68.5 38.5 a2 1.1 25 1 0 3.6 1.6 a2 1.1 25 1 0 -3.6 -1.6 Z"
+    />
+  </SvgIcon>
+);
 export const EyeIcon = lineIcon(
   "M3 12c2.5-4 5.5-6 9-6s6.5 2 9 6c-2.5 4-5.5 6-9 6s-6.5-2-9-6zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6",
   "EyeIcon",

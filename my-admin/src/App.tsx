@@ -95,7 +95,7 @@ import Search from "./Search";
 export const App = () => {
   return (
     <Admin
-      title="Optik-System"
+      title="UNICORN"
       layout={MyLayout}
       dashboard={Dashboard}
       dataProvider={dataProvider}

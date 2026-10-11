@@ -9,29 +9,31 @@ import {
 } from "react-admin";
 import {
   Box,
+  Button,
   Card,
-  Divider,
   IconButton,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
-  Tooltip,
   Typography,
 } from "@mui/material";
+import { Theme } from "@mui/material/styles";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CheckIcon from "@mui/icons-material/Check";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import { formatCurrency } from "./CurrencyField";
-import { BrilleStatusChip } from "./orderStatus";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
-import { kundeAuswahlText } from "./KundeInput";
 
 /*
- * Brillenauftrag als kompakte Karteikarte wie in Prisma: Kopf mit Kunde und
- * "Auftrag x von y", Auftragsdaten, Werte-Tabelle R/L mit Preis je Glas,
- * Glas/Fassung/Zusatzleistungen mit Beträgen und rechts unten die Summen.
+ * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
+ * der Kundenname, rechts ein festes Raster aus kursiven Beschriftungen und
+ * hellen Feldern - Auftragsdaten, Werte R/L, Glas, Fassung,
+ * Zusatzleistungen, Rabatt, Notizen und Zahlungen mit den Summen rechts
+ * unten.
  */
 
 type Datensatz = Record<string, unknown> & { id: number };
@@ -54,6 +56,10 @@ const dioptrie = new Intl.NumberFormat("de-DE", {
   signDisplay: "exceptZero",
 });
 const dezimal = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
+const betrag = new Intl.NumberFormat("de-DE", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
   { feld: "Sph", titel: "Sph", vorzeichen: true },
@@ -68,6 +74,8 @@ const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
   { feld: "Vis", titel: "Vis" },
   { feld: "iod", titel: "iod" },
 ];
+const WERTE_LINKS = WERTE.slice(0, 8);
+const WERTE_RECHTS = WERTE.slice(8);
 
 const wertText = (glas: Datensatz | undefined, feld: string, vz?: boolean) => {
   const n = zahl(glas?.[feld]);
@@ -75,94 +83,209 @@ const wertText = (glas: Datensatz | undefined, feld: string, vz?: boolean) => {
   return vz ? dioptrie.format(n) : dezimal.format(n);
 };
 
-// Beschriftetes Feld im Karteikarten-Raster
-const Angabe = ({
-  titel,
-  children,
-  breit,
-}: {
-  titel: string;
-  children: ReactNode;
-  breit?: boolean;
-}) => (
-  <Box sx={{ minWidth: 0, gridColumn: breit ? "1 / -1" : undefined }}>
-    <Typography variant="caption" color="text.secondary" component="div">
-      {titel}
-    </Typography>
-    <Typography
-      variant="body2"
-      component="div"
-      sx={{
-        minHeight: "1.4em",
-        whiteSpace: "pre-wrap",
-        wordBreak: "break-word",
-      }}
-    >
-      {children}
-    </Typography>
-  </Box>
-);
+const betragText = (wert: unknown) => {
+  const n = zahl(wert);
+  return n === null ? "" : betrag.format(n);
+};
 
-const Raster = ({ children }: { children: ReactNode }) => (
+/*
+ * Raster wie in Prisma (Breiten aus dem Original, Felder wachsen mit):
+ * 1 Beschriftung | 2 Lagernr. | 3 Rest links | 4 Abstand |
+ * 5 Beschriftung rechts | 6 Feld rechts | 7 Summen-Beschriftung | 8 Betrag
+ */
+const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
+const LINKS = "2 / 4";
+const RECHTS = "6 / 9";
+const BREIT = "2 / 7";
+
+const feldFarbe = (theme: Theme) =>
+  theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#e8eef6";
+const summenFarbe = (theme: Theme) =>
+  theme.palette.mode === "dark" ? "rgba(255,255,255,0.14)" : "#e2e3e5";
+
+type Platz = { z: number; s: string; h?: number };
+
+// Kursive, graue Beschriftung wie in Prisma
+const Beschriftung = ({
+  z,
+  s,
+  children,
+  rechts,
+}: Platz & { children: ReactNode; rechts?: boolean }) => (
   <Box
     sx={{
-      display: "grid",
-      gridTemplateColumns: { xs: "1fr 1fr", md: "repeat(3, 1fr)" },
-      gap: "0.5em 1.5em",
+      gridRow: z,
+      gridColumn: s,
+      alignSelf: "center",
+      fontStyle: "italic",
+      fontSize: "0.78rem",
+      color: "text.secondary",
+      textAlign: rechts ? "right" : "left",
+      pr: rechts ? 1 : 0,
+      whiteSpace: "nowrap",
+      overflow: "hidden",
     }}
   >
     {children}
   </Box>
 );
 
-const Abschnitt = ({ titel }: { titel: string }) => (
-  <Typography
-    variant="overline"
-    color="text.secondary"
-    sx={{ display: "block", mt: 2, mb: 0.5, lineHeight: 1.5 }}
-  >
-    {titel}
-  </Typography>
-);
-
-// Zeile "Bezeichnung ...... Betrag" für Glas, Fassung, Zusatzleistungen
-const Posten = ({
-  bezeichnung,
-  zusatz,
-  betrag,
-}: {
-  bezeichnung: ReactNode;
-  zusatz?: ReactNode;
-  betrag: unknown;
+// Helles Feld mit Wert
+const Feld = ({
+  z,
+  s,
+  h = 1,
+  children,
+  rechts,
+  summe,
+  mehrzeilig,
+}: Platz & {
+  children?: ReactNode;
+  rechts?: boolean;
+  summe?: boolean;
+  mehrzeilig?: boolean;
 }) => (
   <Box
-    sx={{
+    sx={(theme) => ({
+      gridRow: `${z} / span ${h}`,
+      gridColumn: s,
+      bgcolor: summe ? summenFarbe(theme) : feldFarbe(theme),
+      minHeight: 28,
+      minWidth: 0,
+      px: "6px",
+      py: mehrzeilig ? "4px" : 0,
       display: "flex",
-      gap: 2,
-      py: 0.5,
-      borderBottom: 1,
-      borderColor: "divider",
-      alignItems: "baseline",
-    }}
+      alignItems: mehrzeilig ? "flex-start" : "center",
+      justifyContent: rechts ? "flex-end" : "flex-start",
+      fontSize: "0.95rem",
+      lineHeight: 1.35,
+      fontWeight: summe ? 600 : 400,
+      color: "text.primary",
+      whiteSpace: mehrzeilig ? "pre-wrap" : "nowrap",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      wordBreak: mehrzeilig ? "break-word" : "normal",
+    })}
   >
-    <Box sx={{ flex: 1, minWidth: 0 }}>
-      <Typography variant="body2" component="div">
-        {bezeichnung}
-      </Typography>
-      {zusatz && (
-        <Typography variant="caption" color="text.secondary" component="div">
-          {zusatz}
-        </Typography>
-      )}
-    </Box>
-    <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
-      {formatCurrency(betrag)}
-    </Typography>
+    {children}
   </Box>
 );
 
+// Mehrere gleich breite Zellen in einem Rasterbereich (Werte, Farbe/Größe)
+const Zellen = ({
+  z,
+  s,
+  spalten,
+  children,
+}: Platz & { spalten: string; children: ReactNode }) => (
+  <Box
+    sx={{
+      gridRow: z,
+      gridColumn: s,
+      display: "grid",
+      gridTemplateColumns: spalten,
+      gap: "4px",
+      minWidth: 0,
+    }}
+  >
+    {children}
+  </Box>
+);
+
+const Wert = ({
+  children,
+  rechts,
+  links,
+}: {
+  children?: ReactNode;
+  rechts?: boolean;
+  links?: boolean;
+}) => (
+  <Box
+    sx={(theme) => ({
+      bgcolor: feldFarbe(theme),
+      minHeight: 28,
+      px: "6px",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: rechts ? "flex-end" : links ? "flex-start" : "center",
+      fontSize: "0.95rem",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+    })}
+  >
+    {children}
+  </Box>
+);
+
+const Spaltentitel = ({ children }: { children: ReactNode }) => (
+  <Box
+    sx={{
+      fontStyle: "italic",
+      fontSize: "0.78rem",
+      color: "text.secondary",
+      alignSelf: "end",
+      whiteSpace: "nowrap",
+      overflow: "hidden",
+    }}
+  >
+    {children}
+  </Box>
+);
+
+// "4-4" wie in Prisma (Auftrag 4 von 4), mit Blättern zu den anderen
+// Brillenaufträgen des Kunden
+const AuftragPosition = ({ brille, z, s }: Platz & { brille: Datensatz }) => {
+  const navigate = useNavigate();
+  const { data } = useGetList<Datensatz>(
+    "brille",
+    {
+      filter: { kunde_id: brille.kunde_id },
+      sort: { field: "Datum", order: "ASC" },
+      pagination: { page: 1, perPage: 1000 },
+    },
+    { enabled: brille.kunde_id != null },
+  );
+  const ids = (data ?? []).map((b) => b.id);
+  const pos = ids.indexOf(brille.id);
+  const gehe = (id: number) => navigate(`/brille/${id}/show`);
+  return (
+    <Box
+      sx={{
+        gridRow: z,
+        gridColumn: s,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        minHeight: 28,
+        fontSize: "0.95rem",
+      }}
+    >
+      <IconButton
+        size="small"
+        aria-label="Vorheriger Auftrag"
+        disabled={pos <= 0}
+        onClick={() => gehe(ids[pos - 1])}
+        sx={{ p: 0.25 }}
+      >
+        <ChevronLeftIcon fontSize="small" />
+      </IconButton>
+      <span>{pos >= 0 ? `${pos + 1}-${ids.length}` : ""}</span>
+      <IconButton
+        size="small"
+        aria-label="Nächster Auftrag"
+        disabled={pos < 0 || pos >= ids.length - 1}
+        onClick={() => gehe(ids[pos + 1])}
+        sx={{ p: 0.25 }}
+      >
+        <ChevronRightIcon fontSize="small" />
+      </IconButton>
+    </Box>
+  );
+};
+
 // Werte-Tabelle R/L aus den Glas-Datensätzen eines Auftrags, mit Liefern
-// und Betrag je Glas. Wird in Ansicht und Bearbeiten verwendet.
+// und Betrag je Glas. Wird im Bearbeiten-Formular verwendet.
 export const WerteTabelle = ({
   rechtsId,
   linksId,
@@ -235,59 +358,22 @@ export const WerteTabelle = ({
   );
 };
 
-const AuftragBlaettern = ({ brille }: { brille: Datensatz }) => {
-  const navigate = useNavigate();
-  const { data } = useGetList<Datensatz>(
-    "brille",
-    {
-      filter: { kunde_id: brille.kunde_id },
-      sort: { field: "Datum", order: "ASC" },
-      pagination: { page: 1, perPage: 1000 },
-    },
-    { enabled: brille.kunde_id != null },
-  );
-  const ids = (data ?? []).map((b) => b.id);
-  const pos = ids.indexOf(brille.id);
-  if (pos < 0) return null;
-  const gehe = (id: number) => navigate(`/brille/${id}/show`);
-  return (
-    <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
-      <Tooltip title="Vorheriger Auftrag">
-        <span>
-          <IconButton
-            size="small"
-            disabled={pos === 0}
-            onClick={() => gehe(ids[pos - 1])}
-          >
-            <ChevronLeftIcon />
-          </IconButton>
-        </span>
-      </Tooltip>
-      <Typography variant="body2" sx={{ whiteSpace: "nowrap" }}>
-        Auftrag {pos + 1} von {ids.length}
-      </Typography>
-      <Tooltip title="Nächster Auftrag">
-        <span>
-          <IconButton
-            size="small"
-            disabled={pos === ids.length - 1}
-            onClick={() => gehe(ids[pos + 1])}
-          >
-            <ChevronRightIcon />
-          </IconButton>
-        </span>
-      </Tooltip>
-    </Box>
-  );
-};
-
 export const BrilleKarteikarte = () => {
   const brille = useRecordContext<Datensatz>();
+  const navigate = useNavigate();
 
   const { data: kunde } = useGetOne<Datensatz>(
     "kunde",
     { id: brille?.kunde_id as number },
     { enabled: brille?.kunde_id != null },
+  );
+  const glasIds = [brille?.GlasRechts, brille?.GlasLinks].filter(
+    (id) => id !== null && id !== undefined,
+  );
+  const { data: glaeser } = useGetMany<Datensatz>(
+    "glass",
+    { ids: glasIds },
+    { enabled: glasIds.length > 0 },
   );
   const { data: glastyp } = useGetOne<Datensatz>(
     "glastyp",
@@ -320,234 +406,494 @@ export const BrilleKarteikarte = () => {
 
   if (!brille) return null;
 
-  const leistungNach = (id: unknown) => leistungen?.find((l) => l.id === id);
+  const glasNach = (id: unknown) => glaeser?.find((g) => g.id === id);
+  const augen = [
+    { seite: "R", glas: glasNach(brille.GlasRechts) },
+    { seite: "L", glas: glasNach(brille.GlasLinks) },
+  ];
 
-  const summe = zahl(brille.Summe) ?? 0;
-  const anzahlung = zahl(brille.Anzahlung) ?? 0;
-  const kkAnteil = zahl(brille.KKAnteil) ?? 0;
-  const rest = zahl(brille.Restbetrag) ?? summe - anzahlung - kkAnteil;
-  const rabatt = zahl(brille.RabattProzent);
+  // Zusatzleistungen plus "Weitere Leistungen" (Freitext aus Prisma),
+  // mindestens drei Zeilen wie in Prisma
   const weitere = zahl(brille.WeitereLeistungen);
+  const posten: { bezeichnung: string; betrag: unknown }[] = [
+    ...(zuordnungen ?? []).map((z) => {
+      const l = leistungen?.find((x) => x.id === z.ZusatzleistungID);
+      return { bezeichnung: text(l?.Bezeichnung), betrag: l?.Betrag };
+    }),
+    ...(weitere
+      ? [
+          {
+            bezeichnung:
+              weitere < 0
+                ? "Nachlass (siehe Notizen)"
+                : "Weitere Leistungen (siehe Notizen)",
+            betrag: weitere,
+          },
+        ]
+      : []),
+  ];
+  while (posten.length < 3) posten.push({ bezeichnung: "", betrag: null });
+
+  const rabattProzent = zahl(brille.RabattProzent);
+  const rabattBasis =
+    (zahl(augen[0].glas?.Betrag) ?? 0) +
+    (zahl(augen[1].glas?.Betrag) ?? 0) +
+    (zahl(fassung?.Betrag) ?? 0);
+  const rabattBetrag =
+    rabattProzent && rabattBasis ? -(rabattBasis * rabattProzent) / 100 : null;
+
+  const summe = zahl(brille.Summe);
+  const kkAnteil = zahl(brille.KKAnteil);
+  const zuzahlung = summe === null ? null : summe - (kkAnteil ?? 0);
+  const anzahlung = zahl(brille.Anzahlung);
+  const rest =
+    zahl(brille.Restbetrag) ??
+    (summe === null ? null : summe - (anzahlung ?? 0) - (kkAnteil ?? 0));
+
+  const kundeName = kunde
+    ? [text(kunde.Nachname), text(kunde.Vorname)].filter(Boolean).join(", ")
+    : "";
+
+  // Zeilen des Rasters
+  const zZusatz = 17;
+  const zRabatt = zZusatz + posten.length;
+  const zSumme = zRabatt + 1;
+  const zNotizen = zSumme + 1;
+  const zZahlungen = zNotizen + 2;
+  const zRest = zZahlungen + 1;
+  const zArzt = zRest + 2;
 
   return (
-    <Card variant="outlined" sx={{ p: { xs: "0.75em", md: "1.25em" } }}>
-      {/* Kopf */}
-      <Box
-        sx={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: 1,
-          alignItems: "center",
-          justifyContent: "space-between",
-        }}
-      >
-        <Box sx={{ minWidth: 0 }}>
-          <Typography variant="h6" sx={{ lineHeight: 1.2 }}>
-            {kunde ? (
-              <Link to={`/kunde/${kunde.id}/show`} underline="hover">
-                {kundeAuswahlText(kunde)}
-              </Link>
-            ) : (
-              " "
-            )}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
-            {text(brille.BrillenArt) || "Brille"} · Auftrag-Nr. {brille.id}
-          </Typography>
-        </Box>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <BrilleStatusChip record={brille} />
-          <AuftragBlaettern brille={brille} />
-        </Box>
-      </Box>
-      <Divider sx={{ my: 1.5 }} />
-
-      {/* Auftragsdaten */}
-      <Raster>
-        <Angabe titel="Bedient von">
-          {mitarbeiterAnzeige(brille.Berater)}
-        </Angabe>
-        <Angabe titel="Refraktion durch">
-          {mitarbeiterAnzeige(brille.Refraktion)}
-        </Angabe>
-        <Angabe titel="Datum">{datum(brille.Datum)}</Angabe>
-        <Angabe titel="Brillenart">{text(brille.BrillenArt)}</Angabe>
-        <Angabe titel="Werkstatt">{text(brille.Werkstatt)}</Angabe>
-        <Angabe titel="Abholung">{datum(brille.Abholung)}</Angabe>
-      </Raster>
-
-      {/* Werte */}
-      <Abschnitt titel="Werte" />
-      <WerteTabelle rechtsId={brille.GlasRechts} linksId={brille.GlasLinks} />
-
+    <Card
+      variant="outlined"
+      sx={(theme) => ({
+        p: { xs: 1.5, md: 2.5 },
+        background:
+          theme.palette.mode === "dark"
+            ? undefined
+            : "linear-gradient(180deg, #ffffff 0%, #f3f4f6 100%)",
+      })}
+    >
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: {
-            xs: "1fr",
-            md: "minmax(0, 1.7fr) minmax(14em, 1fr)",
-          },
-          gap: { xs: 1, md: 3 },
-          alignItems: "start",
+          gridTemplateColumns: { xs: "1fr", xl: "minmax(160px, 230px) 1fr" },
+          gap: { xs: 1.5, xl: 3 },
         }}
       >
-        <Box sx={{ minWidth: 0 }}>
-          {/* Glas */}
-          <Abschnitt titel="Glas" />
-          <Raster>
-            <Angabe titel="Glastyp">{text(glastyp?.Bezeichnung)}</Angabe>
-            <Angabe titel="Hersteller">{text(glastyp?.Hersteller)}</Angabe>
-            <Angabe titel="Vergütung">{text(glastyp?.Verguetung)}</Angabe>
-            <Angabe titel="Farbe">{text(glastyp?.Farbe)}</Angabe>
-            <Angabe titel="Größe">{text(glastyp?.GlasGroesse)}</Angabe>
-            <Angabe titel="Status">{text(glastyp?.Bestellstatus)}</Angabe>
-          </Raster>
-
-          {/* Fassung und Leistungen */}
-          <Abschnitt titel="Fassung und Leistungen" />
-          {fassung ? (
-            <Posten
-              bezeichnung={
-                <Link to={`/fassung/${fassung.id}/show`} underline="hover">
-                  {[text(fassung.Hersteller), text(fassung.Bezeichnung)]
-                    .filter(Boolean)
-                    .join(" ") || `Fassung Nr. ${fassung.id}`}
-                </Link>
-              }
-              zusatz={[
-                fassung.Lagernummer
-                  ? `Lager-Nr. ${text(fassung.Lagernummer)}`
-                  : "",
-                text(fassung.Farbe) ? `Farbe ${text(fassung.Farbe)}` : "",
-                text(fassung.Groesse) ? `Größe ${text(fassung.Groesse)}` : "",
-              ]
-                .filter(Boolean)
-                .join(" · ")}
-              betrag={fassung.Betrag}
-            />
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 0.5 }}>
-              Keine Fassung
-            </Typography>
-          )}
-          {(zuordnungen ?? []).map((z) => {
-            const l = leistungNach(z.ZusatzleistungID);
-            return (
-              <Posten
-                key={z.id}
-                bezeichnung={text(l?.Bezeichnung) || "Zusatzleistung"}
-                betrag={l?.Betrag}
-              />
-            );
-          })}
-          {weitere !== null && weitere !== 0 && (
-            <Posten
-              bezeichnung={
-                weitere < 0
-                  ? "Nachlass (siehe Notizen)"
-                  : "Weitere Leistungen (siehe Notizen)"
-              }
-              betrag={weitere}
-            />
-          )}
-          {rabatt !== null && rabatt !== 0 && (
-            <Typography variant="body2" color="text.secondary" sx={{ py: 0.5 }}>
-              {text(brille.RabattBezeichnung) || "Rabatt"}: −
-              {dezimal.format(rabatt)} % auf Gläser und Fassung
-            </Typography>
-          )}
-        </Box>
-
-        {/* Summen */}
-        <Box
-          sx={{
-            mt: { xs: 1, md: 4.5 },
-            p: 1.5,
-            borderRadius: 1,
-            bgcolor: "action.hover",
-            display: "grid",
-            gridTemplateColumns: "1fr auto",
-            gap: "0.25em 1em",
-            alignSelf: "end",
-          }}
+        <Typography
+          variant="h5"
+          component="div"
+          sx={{ fontWeight: 400, color: "text.secondary", lineHeight: 1.2 }}
         >
-          <Typography variant="body2">Summe</Typography>
-          <Typography
-            variant="body2"
-            sx={{ fontWeight: 600, textAlign: "right" }}
-          >
-            {formatCurrency(summe)}
-          </Typography>
-          <Typography variant="body2">KK-Anteil</Typography>
-          <Typography variant="body2" sx={{ textAlign: "right" }}>
-            {formatCurrency(kkAnteil)}
-          </Typography>
-          <Typography variant="body2">Anzahlung</Typography>
-          <Typography variant="body2" sx={{ textAlign: "right" }}>
-            {formatCurrency(anzahlung)}
-          </Typography>
-          <Divider sx={{ gridColumn: "1 / -1", my: 0.5 }} />
-          <Typography variant="body2" sx={{ fontWeight: 600 }}>
-            Restbetrag
-          </Typography>
-          <Typography
-            variant="body2"
+          {kunde ? (
+            <Link
+              to={`/kunde/${kunde.id}/show`}
+              underline="hover"
+              color="inherit"
+            >
+              {kundeName || `Kunde Nr. ${kunde.id}`}
+            </Link>
+          ) : null}
+        </Typography>
+
+        <Box sx={{ overflowX: "auto", minWidth: 0 }}>
+          <Box
             sx={{
-              fontWeight: 600,
-              textAlign: "right",
-              color: rest > 0.005 ? "error.main" : undefined,
+              display: "grid",
+              gridTemplateColumns: SPALTEN,
+              columnGap: "6px",
+              rowGap: "4px",
+              minWidth: 820,
             }}
           >
-            {formatCurrency(rest)}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            Zahlung
-          </Typography>
-          <Typography
-            variant="caption"
-            color="text.secondary"
-            sx={{ textAlign: "right" }}
-          >
-            {text(brille.Zahlungsstatus)}
-          </Typography>
-          {text(brille.Rechnungsnummer) && (
-            <>
-              <Typography variant="caption" color="text.secondary">
-                Rechnungsnr.
-              </Typography>
-              <Typography
-                variant="caption"
-                color="text.secondary"
-                sx={{ textAlign: "right" }}
-              >
+            {/* Auftragsdaten */}
+            <Beschriftung z={1} s="1 / 2">
+              Brillenart
+            </Beschriftung>
+            <Feld z={1} s={LINKS}>
+              {text(brille.BrillenArt)}
+            </Feld>
+            <Beschriftung z={1} s="5 / 6">
+              Datum
+            </Beschriftung>
+            <Feld z={1} s="6 / 7">
+              {datum(brille.Datum)}
+            </Feld>
+            <Box
+              sx={{
+                gridRow: 1,
+                gridColumn: "7 / 8",
+                alignSelf: "center",
+                textAlign: "right",
+                pr: 1,
+                fontSize: "0.95rem",
+              }}
+            >
+              {brille.id}
+            </Box>
+            <AuftragPosition brille={brille} z={1} s="8 / 9" />
+
+            <Beschriftung z={2} s="1 / 2">
+              Berater
+            </Beschriftung>
+            <Feld z={2} s={LINKS}>
+              {mitarbeiterAnzeige(brille.Berater)}
+            </Feld>
+            <Beschriftung z={2} s="5 / 6">
+              Werkstatt
+            </Beschriftung>
+            <Feld z={2} s={RECHTS}>
+              {mitarbeiterAnzeige(brille.Werkstatt)}
+            </Feld>
+
+            <Beschriftung z={3} s="1 / 2">
+              Refraktion
+            </Beschriftung>
+            <Feld z={3} s={LINKS}>
+              {mitarbeiterAnzeige(brille.Refraktion)}
+            </Feld>
+            <Beschriftung z={3} s="5 / 6">
+              Abholung
+            </Beschriftung>
+            <Feld z={3} s="6 / 7">
+              {datum(brille.Abholung)}
+            </Feld>
+            <Beschriftung z={3} s="7 / 8" rechts>
+              Rechnungsnr.
+            </Beschriftung>
+            <Feld z={3} s="8 / 9" summe>
+              <Box component="span" sx={{ fontWeight: 400 }}>
                 {text(brille.Rechnungsnummer)}
-              </Typography>
-            </>
-          )}
+              </Box>
+            </Feld>
+
+            {/* Werte R/L */}
+            <Zellen z={4} s={LINKS} spalten="repeat(8, 1fr)">
+              {WERTE_LINKS.map((w) => (
+                <Spaltentitel key={w.feld}>{w.titel}</Spaltentitel>
+              ))}
+            </Zellen>
+            <Zellen z={4} s="6 / 8" spalten="repeat(3, 1fr) 0.8fr">
+              {WERTE_RECHTS.map((w) => (
+                <Spaltentitel key={w.feld}>{w.titel}</Spaltentitel>
+              ))}
+              <Spaltentitel>Liefern</Spaltentitel>
+            </Zellen>
+            <Box sx={{ gridRow: 4, gridColumn: "8 / 9" }}>
+              <Spaltentitel>Betrag</Spaltentitel>
+            </Box>
+            {augen.map(({ seite, glas }, i) => {
+              const z = 5 + i;
+              const marke = glas ? (
+                <Link
+                  to={`/glass/${glas.id}/show`}
+                  underline="hover"
+                  color="inherit"
+                >
+                  {seite}
+                </Link>
+              ) : (
+                seite
+              );
+              return [
+                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2">
+                  <Box component="span" sx={{ pl: 3 }}>
+                    {marke}
+                  </Box>
+                </Beschriftung>,
+                <Zellen
+                  key={`${seite}-w`}
+                  z={z}
+                  s={LINKS}
+                  spalten="repeat(8, 1fr)"
+                >
+                  {WERTE_LINKS.map((w) => (
+                    <Wert key={w.feld} rechts>
+                      {wertText(glas, w.feld, w.vorzeichen)}
+                    </Wert>
+                  ))}
+                </Zellen>,
+                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6">
+                  {seite}
+                </Beschriftung>,
+                <Zellen
+                  key={`${seite}-h`}
+                  z={z}
+                  s="6 / 8"
+                  spalten="repeat(3, 1fr) 0.8fr"
+                >
+                  {WERTE_RECHTS.map((w) => (
+                    <Wert key={w.feld} rechts>
+                      {wertText(glas, w.feld, w.vorzeichen)}
+                    </Wert>
+                  ))}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {glas?.Liefern ? (
+                      <CheckBoxIcon fontSize="small" />
+                    ) : (
+                      <CheckBoxOutlineBlankIcon
+                        fontSize="small"
+                        sx={{ color: "text.disabled" }}
+                      />
+                    )}
+                  </Box>
+                </Zellen>,
+                <Feld key={`${seite}-b`} z={z} s="8 / 9" rechts>
+                  {betragText(glas?.Betrag)}
+                </Feld>,
+              ];
+            })}
+
+            {/* Glasassistent (im Bearbeiten-Formular) */}
+            <Box sx={{ gridRow: 7, gridColumn: LINKS, py: "4px" }}>
+              <Button
+                variant="contained"
+                disableElevation
+                onClick={() => navigate(`/brille/${brille.id}`)}
+                sx={{
+                  bgcolor: "#1d4e8f",
+                  "&:hover": { bgcolor: "#173f74" },
+                  color: "#fff",
+                  fontWeight: 700,
+                  textTransform: "none",
+                  borderRadius: "3px",
+                  minHeight: 30,
+                  py: 0.25,
+                  px: 3,
+                  width: 210,
+                }}
+              >
+                Glasassistent
+              </Button>
+            </Box>
+
+            {/* Glas */}
+            <Beschriftung z={8} s="1 / 2">
+              Glastyp
+            </Beschriftung>
+            <Feld z={8} s={LINKS}>
+              {text(glastyp?.Bezeichnung)}
+            </Feld>
+            <Beschriftung z={8} s="5 / 6">
+              Größe
+            </Beschriftung>
+            <Feld z={8} s="6 / 7">
+              {text(glastyp?.GlasGroesse)}
+            </Feld>
+            <Beschriftung z={9} s="1 / 2">
+              Hersteller
+            </Beschriftung>
+            <Feld z={9} s={LINKS}>
+              {text(glastyp?.Hersteller)}
+            </Feld>
+            <Beschriftung z={9} s="5 / 6">
+              Sonstiges
+            </Beschriftung>
+            <Feld z={9} s={RECHTS}>
+              {text(glastyp?.Sonstiges)}
+            </Feld>
+            <Beschriftung z={10} s="1 / 2">
+              Vergütung
+            </Beschriftung>
+            <Feld z={10} s={LINKS}>
+              {text(glastyp?.Verguetung)}
+            </Feld>
+            <Beschriftung z={10} s="5 / 6">
+              Sonstiges
+            </Beschriftung>
+            <Feld z={10} s={RECHTS} />
+            <Beschriftung z={11} s="1 / 2">
+              Farbe
+            </Beschriftung>
+            <Feld z={11} s={LINKS}>
+              {text(glastyp?.Farbe)}
+            </Feld>
+            <Beschriftung z={11} s="5 / 6">
+              Status
+            </Beschriftung>
+            <Feld z={11} s={RECHTS}>
+              {text(glastyp?.Bestellstatus)}
+            </Feld>
+
+            <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 24 }} />
+
+            {/* Fassung */}
+            <Box sx={{ gridRow: 13, gridColumn: "2 / 3" }}>
+              <Spaltentitel>Lagernr.</Spaltentitel>
+            </Box>
+            <Box sx={{ gridRow: 13, gridColumn: "3 / 4" }}>
+              <Spaltentitel>Fassung</Spaltentitel>
+            </Box>
+            <Zellen z={13} s="6 / 8" spalten="100fr 165fr">
+              <Spaltentitel>Farbe</Spaltentitel>
+              <Spaltentitel>Größe</Spaltentitel>
+            </Zellen>
+            <Box sx={{ gridRow: 13, gridColumn: "8 / 9" }}>
+              <Spaltentitel>Betrag</Spaltentitel>
+            </Box>
+            <Feld z={14} s="2 / 3">
+              {text(fassung?.Lagernummer)}
+            </Feld>
+            <Feld z={14} s="3 / 4">
+              {fassung ? (
+                <Link
+                  to={`/fassung/${fassung.id}/show`}
+                  underline="hover"
+                  color="inherit"
+                >
+                  {text(fassung.Bezeichnung) || `Fassung Nr. ${fassung.id}`}
+                </Link>
+              ) : null}
+            </Feld>
+            <Zellen z={14} s="6 / 8" spalten="100fr 165fr">
+              <Wert links>{text(fassung?.Farbe)}</Wert>
+              <Wert links>{text(fassung?.Groesse)}</Wert>
+            </Zellen>
+            <Feld z={14} s="8 / 9" rechts>
+              {betragText(fassung?.Betrag)}
+            </Feld>
+            <Beschriftung z={15} s="2 / 3" rechts>
+              Linie
+            </Beschriftung>
+            <Feld z={15} s="3 / 4">
+              {text(fassung?.Linie)}
+            </Feld>
+            <Beschriftung z={15} s="5 / 6">
+              Hersteller
+            </Beschriftung>
+            <Feld z={15} s={RECHTS}>
+              {text(fassung?.Hersteller)}
+            </Feld>
+
+            {/* Zusatzleistungen */}
+            <Box sx={{ gridRow: 16, gridColumn: "2 / 3", pt: 1.5 }}>
+              <Spaltentitel>Lagernr.</Spaltentitel>
+            </Box>
+            <Box sx={{ gridRow: 16, gridColumn: "3 / 7", pt: 1.5 }}>
+              <Spaltentitel>Zusatzleistungen</Spaltentitel>
+            </Box>
+            {posten.map((p, i) => [
+              <Feld key={`zl-n-${i}`} z={zZusatz + i} s="2 / 3" />,
+              <Feld key={`zl-b-${i}`} z={zZusatz + i} s="3 / 7">
+                {p.bezeichnung}
+              </Feld>,
+              <Feld key={`zl-e-${i}`} z={zZusatz + i} s="8 / 9" rechts>
+                {betragText(p.betrag)}
+              </Feld>,
+            ])}
+
+            <Beschriftung z={zRabatt} s="1 / 2">
+              Rabatt
+            </Beschriftung>
+            <Feld z={zRabatt} s={BREIT}>
+              {rabattProzent
+                ? `${text(brille.RabattBezeichnung) || "Rabatt"} ${dezimal.format(rabattProzent)} %`
+                : text(brille.RabattBezeichnung)}
+            </Feld>
+            <Feld z={zRabatt} s="8 / 9" rechts>
+              {rabattBetrag === null ? "" : betrag.format(rabattBetrag)}
+            </Feld>
+
+            {/* Summen */}
+            <Beschriftung z={zSumme} s="7 / 8">
+              <Box component="span" sx={{ pl: 2 }}>
+                Summe
+              </Box>
+            </Beschriftung>
+            <Feld z={zSumme} s="8 / 9" rechts summe>
+              {betragText(summe)}
+            </Feld>
+
+            <Beschriftung z={zNotizen} s="1 / 2">
+              Notizen
+            </Beschriftung>
+            <Feld z={zNotizen} s={BREIT} h={2} mehrzeilig>
+              {text(brille.Notizen)}
+            </Feld>
+            <Beschriftung z={zNotizen} s="7 / 8">
+              <Box component="span" sx={{ pl: 2 }}>
+                KK-Anteil
+              </Box>
+            </Beschriftung>
+            <Feld z={zNotizen} s="8 / 9" rechts>
+              {betragText(kkAnteil)}
+            </Feld>
+            <Beschriftung z={zNotizen + 1} s="7 / 8">
+              <Box component="span" sx={{ pl: 2 }}>
+                Zuzahlung
+              </Box>
+            </Beschriftung>
+            <Feld z={zNotizen + 1} s="8 / 9" rechts>
+              {betragText(zuzahlung)}
+            </Feld>
+
+            <Beschriftung z={zZahlungen} s="1 / 2">
+              Zahlungen
+            </Beschriftung>
+            <Feld z={zZahlungen} s={LINKS}>
+              {text(brille.Zahlungsstatus)}
+            </Feld>
+            <Beschriftung z={zZahlungen} s="5 / 6">
+              Datum
+            </Beschriftung>
+            <Feld z={zZahlungen} s="6 / 7" />
+            <Beschriftung z={zZahlungen} s="7 / 8">
+              <Box component="span" sx={{ pl: 2 }}>
+                Anzahlung
+              </Box>
+            </Beschriftung>
+            <Feld z={zZahlungen} s="8 / 9" rechts>
+              {betragText(anzahlung)}
+            </Feld>
+            <Beschriftung z={zRest} s="7 / 8">
+              <Box component="span" sx={{ pl: 2 }}>
+                Restbetrag
+              </Box>
+            </Beschriftung>
+            <Feld z={zRest} s="8 / 9" rechts summe>
+              {betragText(rest)}
+            </Feld>
+
+            {/* Verordnung (für Kassenanträge) */}
+            <Box
+              sx={{ gridRow: zRest + 1, gridColumn: "1 / -1", height: 16 }}
+            />
+            <Beschriftung z={zArzt} s="1 / 2">
+              Arzt
+            </Beschriftung>
+            <Feld z={zArzt} s={LINKS}>
+              {text(brille.VerordnenderArzt)}
+            </Feld>
+            <Beschriftung z={zArzt} s="5 / 6">
+              Verordnung
+            </Beschriftung>
+            <Feld z={zArzt} s="6 / 7">
+              {datum(brille.Verordnungsdatum)}
+            </Feld>
+            <Beschriftung z={zArzt} s="7 / 8" rechts>
+              Muster 8
+            </Beschriftung>
+            <Feld z={zArzt} s="8 / 9">
+              {brille.ErstverordnungMuster8Vorhanden
+                ? datum(brille.ErstverordnungMuster8Datum) || "ja"
+                : ""}
+            </Feld>
+            <Beschriftung z={zArzt + 1} s="1 / 2">
+              Diagnose
+            </Beschriftung>
+            <Feld z={zArzt + 1} s={BREIT}>
+              {text(brille.Diagnose)}
+            </Feld>
+          </Box>
         </Box>
       </Box>
-
-      {/* Verordnung, Kasse, Notizen */}
-      <Abschnitt titel="Verordnung und Notizen" />
-      <Raster>
-        <Angabe titel="Verordnender Arzt">
-          {text(brille.VerordnenderArzt)}
-        </Angabe>
-        <Angabe titel="Verordnungsdatum">
-          {datum(brille.Verordnungsdatum)}
-        </Angabe>
-        <Angabe titel="Muster 8 vorhanden">
-          {brille.ErstverordnungMuster8Vorhanden
-            ? `ja${brille.ErstverordnungMuster8Datum ? `, vom ${datum(brille.ErstverordnungMuster8Datum)}` : ""}`
-            : "nein"}
-        </Angabe>
-        <Angabe titel="Diagnose" breit>
-          {text(brille.Diagnose)}
-        </Angabe>
-        <Angabe titel="Notizen" breit>
-          {text(brille.Notizen)}
-        </Angabe>
-      </Raster>
     </Card>
   );
 };

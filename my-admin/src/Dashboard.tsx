@@ -58,6 +58,7 @@ type TerminRow = {
   kunde_id?: number | string | null;
   Start: string;
   Terminart?: string | null;
+  Titel?: string | null;
 };
 
 type KundeRow = {
@@ -534,7 +535,11 @@ export const Dashboard = () => {
         termine: {
           heute: termineHeuteRows.map((t) => ({
             ...t,
-            kundeName: kundeName(t.kunde_id),
+            // Google-Termine ohne erkannten Kunden: Titel statt "Unbekannt"
+            kundeName:
+              t.kunde_id == null
+                ? t.Titel || "Kunde offen"
+                : kundeName(t.kunde_id),
           })),
           anzahlHeute: termineHeuteRows.length,
           anzahlWoche: termineRows.length,
