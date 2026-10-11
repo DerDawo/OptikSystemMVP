@@ -33,6 +33,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PrintIcon from "@mui/icons-material/Print";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
+import BuildIcon from "@mui/icons-material/Build";
 import {
   RaRecord,
   useGetList,
@@ -56,6 +57,25 @@ import {
   buildBerechtigungsscheinPreviewHtml,
   buildBerechtigungsscheinPrintHtml,
 } from "./berechtigungsscheinTemplate";
+import {
+  buildWerkstattauftragPreviewHtml,
+  buildWerkstattauftragPrintHtml,
+} from "./werkstattauftragTemplate";
+import {
+  type AntragArt,
+  buildAntragPreviewHtml,
+  buildAntragPrintHtml,
+} from "./antragTemplate";
+import {
+  buildAokBerechtigungsscheinPreviewHtml,
+  buildAokBerechtigungsscheinPrintHtml,
+} from "./aokBerechtigungsscheinTemplate";
+import {
+  buildOptometrischeVerordnungPreviewHtml,
+  buildOptometrischeVerordnungPrintHtml,
+  buildVerordnungKurzPreviewHtml,
+  buildVerordnungKurzPrintHtml,
+} from "./optometrischeVerordnungTemplate";
 
 // Kategorie, unter der die Rechnungsvorlage(n) in `dokumentvorlage` angelegt
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
@@ -65,6 +85,21 @@ const RECHNUNG_KATEGORIE = "Rechnung";
 // Kategorie für den Berechtigungsschein (#90, Seed-Migration
 // 20260831150200_seed_dokumentvorlage_berechtigungsschein.sql).
 const BERECHTIGUNGSSCHEIN_KATEGORIE = "Berechtigungsschein";
+
+// Kategorie des Werkstattauftrags (Seed-Migration
+// 20260831010100_seed_dokumentvorlage.sql, Vorlage "Werkstattkarte"); das
+// Layout kommt aus werkstattauftragTemplate.ts.
+const WERKSTATTKARTE_KATEGORIE = "Werkstattkarte";
+
+// Anträge auf Kostenübernahme und der AOK-Berechtigungsschein (Seed-Migration
+// 20261011120000_seed_dokumentvorlage_antraege.sql)
+const ANTRAG_KATEGORIEN: Record<string, AntragArt> = {
+  "Antrag Zuschuss": "zuschuss",
+  "Antrag Sozialamt": "sozialamt",
+};
+const BERECHTIGUNGSSCHEIN_AOK_KATEGORIE = "Berechtigungsschein AOK";
+const VERORDNUNG_KATEGORIE = "Optometrische Verordnung";
+const VERORDNUNG_GKV_KATEGORIE = "Optometrische Verordnung GKV";
 
 // Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
 // (#57, Seed-Migration 20260831030100_seed_dokumentvorlage_mahnung.sql). Es
@@ -270,6 +305,78 @@ const FormulareDialog = ({
     ? buildBerechtigungsscheinPrintHtml(berechtigungsscheinDaten)
     : "";
 
+  // Werkstattauftrag: eigenes A4-Layout nach dem bisherigen Papierformular
+  const isWerkstattauftrag =
+    selectedVorlage?.Kategorie === WERKSTATTKARTE_KATEGORIE;
+  const werkstattauftragDaten = useMemo(
+    () => ({ entities: mergeEntities }),
+    [mergeEntities],
+  );
+
+  const antragArt = selectedVorlage
+    ? ANTRAG_KATEGORIEN[selectedVorlage.Kategorie]
+    : undefined;
+  const isAokBerechtigungsschein =
+    selectedVorlage?.Kategorie === BERECHTIGUNGSSCHEIN_AOK_KATEGORIE;
+  const isVerordnung = selectedVorlage?.Kategorie === VERORDNUNG_KATEGORIE;
+  const isVerordnungGkv =
+    selectedVorlage?.Kategorie === VERORDNUNG_GKV_KATEGORIE;
+
+  // Kategorien mit eigenem, code-basiertem Layout statt des Vorlagentexts
+  const layout = isRechnung
+    ? {
+        title: "Rechnungsvorschau",
+        preview: rechnungPreviewHtml,
+        print: rechnungPrintHtml,
+      }
+    : isBerechtigungsschein
+      ? {
+          title: "Berechtigungsschein-Vorschau",
+          preview: berechtigungsscheinPreviewHtml,
+          print: berechtigungsscheinPrintHtml,
+        }
+      : isWerkstattauftrag
+        ? {
+            title: "Werkstattauftrag-Vorschau",
+            preview: buildWerkstattauftragPreviewHtml(werkstattauftragDaten),
+            print: buildWerkstattauftragPrintHtml(werkstattauftragDaten),
+          }
+        : antragArt
+          ? {
+              title: "Antrag-Vorschau",
+              preview: buildAntragPreviewHtml(antragArt, werkstattauftragDaten),
+              print: buildAntragPrintHtml(antragArt, werkstattauftragDaten),
+            }
+          : isAokBerechtigungsschein
+            ? {
+                title: "Berechtigungsschein-Vorschau",
+                preview: buildAokBerechtigungsscheinPreviewHtml(
+                  berechtigungsscheinDaten,
+                ),
+                print: buildAokBerechtigungsscheinPrintHtml(
+                  berechtigungsscheinDaten,
+                ),
+              }
+            : isVerordnung
+              ? {
+                  title: "Verordnung-Vorschau",
+                  preview: buildVerordnungKurzPreviewHtml(
+                    werkstattauftragDaten,
+                  ),
+                  print: buildVerordnungKurzPrintHtml(werkstattauftragDaten),
+                }
+              : isVerordnungGkv
+                ? {
+                    title: "Verordnung-Vorschau",
+                    preview: buildOptometrischeVerordnungPreviewHtml(
+                      werkstattauftragDaten,
+                    ),
+                    print: buildOptometrischeVerordnungPrintHtml(
+                      werkstattauftragDaten,
+                    ),
+                  }
+                : null;
+
   const groupedVorlagen = useMemo(() => {
     const map = new Map<string, Dokumentvorlage[]>();
     (vorlagen ?? [])
@@ -293,11 +400,8 @@ const FormulareDialog = ({
     if (!selectedVorlage) {
       return;
     }
-    const html = isRechnung
-      ? rechnungPrintHtml
-      : isBerechtigungsschein
-        ? berechtigungsscheinPrintHtml
-        : buildPrintHtml(selectedVorlage.Name, renderedText);
+    const html =
+      layout?.print ?? buildPrintHtml(selectedVorlage.Name, renderedText);
     const opened = openDocumentWindow(html, autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
@@ -313,7 +417,11 @@ const FormulareDialog = ({
           justifyContent: "space-between",
         }}
       >
-        {initialKategorie ? `${initialKategorie} erstellen` : "Formulare"}
+        {initialKategorie === WERKSTATTKARTE_KATEGORIE
+          ? "Werkstattauftrag"
+          : initialKategorie
+            ? `${initialKategorie} erstellen`
+            : "Formulare"}
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
@@ -386,7 +494,7 @@ const FormulareDialog = ({
                   {selectedVorlage.Kategorie}
                 </Typography>
               </Box>
-              {!isRechnung && !isBerechtigungsschein && (
+              {!layout && (
                 <Button
                   size="small"
                   startIcon={<EditNoteIcon />}
@@ -398,24 +506,11 @@ const FormulareDialog = ({
                 </Button>
               )}
             </Box>
-            {isRechnung ? (
+            {layout ? (
               <Box
                 component="iframe"
-                title="Rechnungsvorschau"
-                srcDoc={rechnungPreviewHtml}
-                sx={{
-                  width: "100%",
-                  height: 480,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                }}
-              />
-            ) : isBerechtigungsschein ? (
-              <Box
-                component="iframe"
-                title="Berechtigungsschein-Vorschau"
-                srcDoc={berechtigungsscheinPreviewHtml}
+                title={layout.title}
+                srcDoc={layout.preview}
                 sx={{
                   width: "100%",
                   height: 480,
@@ -672,6 +767,36 @@ export const BerechtigungsscheinErstellenButton = () => {
         <FormulareDialog
           brille={record}
           initialKategorie={BERECHTIGUNGSSCHEIN_KATEGORIE}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// "Werkstattauftrag"-Button für die Brillenkartei: öffnet den Formulare-Dialog
+// direkt mit dem Werkstattauftrag (Kategorie "Werkstattkarte") zum Drucken.
+export const WerkstattauftragButton = () => {
+  const record = useRecordContext();
+  const [open, setOpen] = useState(false);
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<BuildIcon />}
+        onClick={() => setOpen(true)}
+      >
+        Werkstattauftrag
+      </Button>
+      {open && (
+        <FormulareDialog
+          brille={record}
+          initialKategorie={WERKSTATTKARTE_KATEGORIE}
           onClose={() => setOpen(false)}
         />
       )}

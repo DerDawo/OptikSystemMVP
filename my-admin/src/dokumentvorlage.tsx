@@ -38,6 +38,11 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Reparaturschein", name: "Reparaturschein" },
   { id: "Rechnung", name: "Rechnung" },
   { id: "Mahnung", name: "Mahnung" },
+  { id: "Antrag Zuschuss", name: "Antrag Zuschuss" },
+  { id: "Antrag Sozialamt", name: "Antrag Sozialamt" },
+  { id: "Berechtigungsschein AOK", name: "Berechtigungsschein AOK" },
+  { id: "Optometrische Verordnung", name: "Optometrische Verordnung" },
+  { id: "Optometrische Verordnung GKV", name: "Optometrische Verordnung GKV" },
 ];
 
 const PLATZHALTER_HINWEIS =

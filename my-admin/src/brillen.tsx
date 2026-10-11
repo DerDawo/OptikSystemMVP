@@ -48,6 +48,7 @@ import {
   FormulareButton,
   MahnungErstellenButton,
   RechnungErstellenButton,
+  WerkstattauftragButton,
 } from "./FormulareDialog";
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import {
@@ -318,6 +319,7 @@ const BrilleShowActions = () => (
     <RechnungErstellenButton />
     <MahnungErstellenButton />
     <BerechtigungsscheinErstellenButton />
+    <WerkstattauftragButton />
     <FormulareButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
@@ -511,6 +513,7 @@ export const BrilleEdit = () => (
         <RechnungErstellenButton />
         <MahnungErstellenButton />
         <BerechtigungsscheinErstellenButton />
+        <WerkstattauftragButton />
         <FormulareButton />
         <KarteikarteKopierenButton />
       </EditActionsBar>
