@@ -1,254 +1,299 @@
 import {
+  Alert,
+  Autocomplete,
   Box,
   Button,
-  Divider,
-  FormControl,
-  InputLabel,
+  IconButton,
   MenuItem,
-  Select,
-  SelectChangeEvent,
   TextField,
-  Theme,
-  useMediaQuery,
+  Typography,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import CloseIcon from "@mui/icons-material/Close";
 import {
-  useResourceDefinitions,
+  ListBase,
+  Pagination,
   Title,
   useDataProvider,
-  ListBase,
-  DataTable,
+  useListContext,
 } from "react-admin";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { KundenDataTable } from "./kunden";
+import {
+  Bedingung,
+  Feld,
+  SpaltenTyp,
+  TABELLEN,
+  VERGLEICHE,
+  expertenAbfrage,
+  istVollstaendig,
+  spaltenTyp,
+} from "./expertensuche";
 
-type Operator = "" | "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7";
+// Expertensuche wie in Prisma: Feld (kunden.*, brillen.*, kontaktlinsen.*),
+// Vergleich und Wert; mehrere Bedingungen gelten zusammen. Ergebnis sind
+// Kunden (bei Auftragsfeldern: Kunden mit mindestens einem passenden
+// Auftrag).
 
-const buildFilter = (attribute: string, operator: string, value: string) => {
-  if (!attribute || !value) return {};
+// Vom dataProvider ergänzte bzw. rein technische Felder
+const AUSGEBLENDET = new Set(["ZusatzleistungIDs"]);
 
-  switch (operator) {
-    case "0":
-      return { [attribute]: value }; // eq
-    case "1":
-      return { [`${attribute}@neq`]: value };
-    case "2":
-      return { [`${attribute}@gt`]: value };
-    case "3":
-      return { [`${attribute}@gte`]: value };
-    case "4":
-      return { [`${attribute}@lt`]: value };
-    case "5":
-      return { [`${attribute}@lte`]: value };
-    case "6":
-      return { [`${attribute}@ilike`]: `*${value}*` };
-    case "7":
-      return { [`${attribute}@not`]: `ilike.*${value}*` };
-    default:
-      return {};
-  }
+const praefix = (feld: Feld) =>
+  TABELLEN.find((t) => t.id === feld.tabelle)?.praefix ?? feld.tabelle;
+const feldName = (feld: Feld) => `${praefix(feld)}.${feld.spalte}`;
+
+const platzhalter: Record<SpaltenTyp, string> = {
+  text: "Wert",
+  zahl: "Zahl, z. B. 120,50",
+  datum: "TT.MM.JJJJ",
+  zeitpunkt: "TT.MM.JJJJ",
+  bool: "ja / nein",
 };
 
-const resourceLabels: Record<string, string> = {
-  kunde: "Kunden",
-  brille: "Brillen",
-  glass: "Gläser",
-  glastyp: "Glastypen",
-  fassung: "Fassungen",
-  zusatzleistung: "Zusatzleistungen",
+const leereBedingung = (): Bedingung => ({
+  feld: null,
+  vergleich: "gleich",
+  wert: "",
+});
+
+const Treffer = () => {
+  const { total, error, isPending } = useListContext();
+  if (error)
+    return (
+      <Alert severity="error" sx={{ mb: 1 }}>
+        Die Suche ist mit diesen Angaben nicht möglich (
+        {error instanceof Error ? error.message : String(error)}).
+      </Alert>
+    );
+  if (isPending) return null;
+  return (
+    <Typography color="text.secondary" sx={{ mb: 1 }}>
+      {total === 1 ? "1 Kunde gefunden" : `${total ?? 0} Kunden gefunden`}
+    </Typography>
+  );
 };
 
 const ExpertSearch = () => {
-  const [ressource, setRessource] = useState("");
-  const [attribute, setAttribute] = useState("");
-  const [operator, setOperator] = useState<Operator>("");
-  const [attributes, setAttributes] = useState<string[]>([]);
-  const [value, setValue] = useState("");
-
-  // only these values trigger the actual query
-  const [submittedResource, setSubmittedResource] = useState("");
-  const [submittedFilter, setSubmittedFilter] = useState<
-    Record<string, unknown>
-  >({});
-  const [hasSearched, setHasSearched] = useState(false);
-
   const dataProvider = useDataProvider();
+  const [felder, setFelder] = useState<Feld[]>([]);
+  const [bedingungen, setBedingungen] = useState<Bedingung[]>([
+    leereBedingung(),
+  ]);
+  const [abfrage, setAbfrage] = useState<ReturnType<
+    typeof expertenAbfrage
+  > | null>(null);
+  const [suchNr, setSuchNr] = useState(0);
 
+  // Felder je Tabelle aus Beispieldatensätzen (Spaltenname und Typ)
   useEffect(() => {
-    if (!ressource) {
-      setAttributes([]);
-      setAttribute("");
-      return;
-    }
+    let aktiv = true;
+    Promise.all(
+      TABELLEN.map(async ({ id }) => {
+        const { data } = await dataProvider.getList(id, {
+          pagination: { page: 1, perPage: 100 },
+          sort: { field: "id", order: "DESC" },
+          filter: {},
+        });
+        const spalten = new Set<string>();
+        data.forEach((zeile) =>
+          Object.keys(zeile).forEach((k) => spalten.add(k)),
+        );
+        return [...spalten]
+          .filter(
+            (spalte) =>
+              !AUSGEBLENDET.has(spalte) &&
+              !data.some(
+                (zeile) =>
+                  zeile[spalte] !== null && typeof zeile[spalte] === "object",
+              ),
+          )
+          .sort((a, b) => a.localeCompare(b, "de"))
+          .map((spalte) => ({
+            tabelle: id,
+            spalte,
+            typ: spaltenTyp(data.map((zeile) => zeile[spalte])),
+          }));
+      }),
+    )
+      .then((listen) => aktiv && setFelder(listen.flat()))
+      .catch((error) => console.error("Felder der Expertensuche", error));
+    return () => {
+      aktiv = false;
+    };
+  }, [dataProvider]);
 
-    dataProvider
-      .getList(ressource, {
-        pagination: { page: 1, perPage: 1 },
-        sort: { field: "id", order: "ASC" },
-        filter: {},
-      })
-      .then(({ data }) => {
-        setAttributes(data.length > 0 ? Object.keys(data[0]) : []);
-      })
-      .catch((error) => {
-        console.error("Fehler getList", error);
-        setAttributes([]);
-      });
-  }, [ressource, dataProvider]);
+  const aendern = (index: number, teil: Partial<Bedingung>) =>
+    setBedingungen((alt) =>
+      alt.map((b, i) => {
+        if (i !== index) return b;
+        const neu = { ...b, ...teil };
+        const erlaubt = VERGLEICHE.filter(
+          (v) => !neu.feld || v.typen.includes(neu.feld.typ),
+        );
+        if (!erlaubt.some((v) => v.id === neu.vergleich))
+          neu.vergleich = "gleich";
+        return neu;
+      }),
+    );
 
-  const handleSearch = () => {
-    setSubmittedResource(ressource);
-    setSubmittedFilter(buildFilter(attribute, operator, value));
-    setHasSearched(true);
+  const startbereit = bedingungen.some(istVollstaendig);
+
+  const suchen = () => {
+    if (!startbereit) return;
+    setAbfrage(expertenAbfrage(bedingungen));
+    setSuchNr((n) => n + 1);
   };
 
-  const handleReset = () => {
-    setRessource("");
-    setAttribute("");
-    setOperator("");
-    setValue("");
-    setAttributes([]);
-
-    setSubmittedResource("");
-    setSubmittedFilter({});
-    setHasSearched(false);
+  const zuruecksetzen = () => {
+    setBedingungen([leereBedingung()]);
+    setAbfrage(null);
   };
 
-  const resources = useResourceDefinitions();
-  const visibleResources = Object.values(resources).filter(
-    (resource) =>
-      resource.name !== "brille_hat_zusatzleistungen" &&
-      resource.name !== "kunde_leistet_zauzahlung_fuer_brille",
-  );
-
-  const isMobile = useMediaQuery((theme: Theme) =>
-    theme.breakpoints.down("sm"),
-  );
+  const optionen = useMemo(() => felder, [felder]);
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: "1em" }}>
       <Title title="Expertensuche" />
-
-      <Box>
-        Hier können Sie eine Suche auf Basis der Tabellen der Datenbank und
-        deren Spalten durchführen.
-      </Box>
-
-      <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr",
-          gap: isMobile ? ".5em" : "1em",
-          alignItems: "baseline",
-        }}
-      >
-        <FormControl>
-          <InputLabel id="ressource-select-label-id">Tabelle</InputLabel>
-          <Select
-            labelId="ressource-select-label-id"
-            value={ressource}
-            label="Tabelle"
-            onChange={(e: SelectChangeEvent) => setRessource(e.target.value)}
-          >
-            {visibleResources.map((r) => (
-              <MenuItem key={r.name} value={r.name}>
-                {resourceLabels[r.name] ?? r.name}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl>
-          <InputLabel id="attribute-select-label-id">Spalte</InputLabel>
-          <Select
-            labelId="attribute-select-label-id"
-            value={attribute}
-            label="Spalte"
-            onChange={(e: SelectChangeEvent) => setAttribute(e.target.value)}
-          >
-            {attributes.map((a) => (
-              <MenuItem key={a} value={a}>
-                {a}
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
-
-        <FormControl>
-          <InputLabel id="operator-select-label-id">Operator</InputLabel>
-          <Select
-            labelId="operator-select-label-id"
-            value={operator}
-            label="Operator"
-            onChange={(e: SelectChangeEvent) =>
-              setOperator(e.target.value as Operator)
-            }
-          >
-            <MenuItem value={"0"}>gleich</MenuItem>
-            <MenuItem value={"1"}>ungleich</MenuItem>
-            <MenuItem value={"2"}>größer als</MenuItem>
-            <MenuItem value={"3"}>größer gleich</MenuItem>
-            <MenuItem value={"4"}>kleiner als</MenuItem>
-            <MenuItem value={"5"}>kleiner gleich</MenuItem>
-            <MenuItem value={"6"}>enthält</MenuItem>
-            <MenuItem value={"7"}>enthält nicht</MenuItem>
-          </Select>
-        </FormControl>
-
-        <FormControl>
-          <TextField
-            label="Wert"
-            value={value}
-            onChange={(e) => setValue(e.target.value)}
-          />
-        </FormControl>
-      </Box>
+      <Typography color="text.secondary">
+        Feld, Vergleich und Wert wählen; mehrere Bedingungen gelten zusammen.
+        Gefunden werden Kunden – bei brillen.* und kontaktlinsen.* Kunden mit
+        einem passenden Auftrag.
+      </Typography>
 
       <Box
-        sx={{
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          gap: "1em",
-          justifyContent: isMobile ? "stretch" : "flex-end",
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          suchen();
         }}
+        sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}
       >
-        <Button variant="outlined" onClick={handleReset}>
-          Zurücksetzen
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSearch}
-          disabled={!ressource}
+        {bedingungen.map((b, index) => {
+          const vergleiche = VERGLEICHE.filter(
+            (v) => !b.feld || v.typen.includes(b.feld.typ),
+          );
+          const ohneWert =
+            b.vergleich === "leer" || b.vergleich === "nichtLeer";
+          return (
+            <Box
+              key={index}
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "minmax(220px, 1.3fr) minmax(150px, 0.7fr) minmax(160px, 1fr) auto",
+                },
+                gap: 1,
+                alignItems: "center",
+              }}
+            >
+              <Autocomplete
+                options={optionen}
+                groupBy={praefix}
+                getOptionLabel={feldName}
+                isOptionEqualToValue={(a, v) =>
+                  a.tabelle === v.tabelle && a.spalte === v.spalte
+                }
+                value={b.feld}
+                onChange={(_, feld) => aendern(index, { feld })}
+                loading={felder.length === 0}
+                loadingText="Felder werden geladen …"
+                noOptionsText="Kein Feld gefunden"
+                renderInput={(params) => (
+                  <TextField {...params} label="Feld" size="small" />
+                )}
+              />
+              <TextField
+                select
+                size="small"
+                label="Vergleich"
+                value={b.vergleich}
+                onChange={(e) =>
+                  aendern(index, {
+                    vergleich: e.target.value as Bedingung["vergleich"],
+                  })
+                }
+              >
+                {vergleiche.map((v) => (
+                  <MenuItem key={v.id} value={v.id}>
+                    {v.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+              <TextField
+                size="small"
+                label="Wert"
+                placeholder={b.feld ? platzhalter[b.feld.typ] : "Wert"}
+                value={ohneWert ? "" : b.wert}
+                disabled={ohneWert}
+                onChange={(e) => aendern(index, { wert: e.target.value })}
+              />
+              <IconButton
+                aria-label="Bedingung entfernen"
+                size="small"
+                disabled={bedingungen.length === 1}
+                onClick={() =>
+                  setBedingungen((alt) => alt.filter((_, i) => i !== index))
+                }
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
+            </Box>
+          );
+        })}
+
+        <Box
+          sx={{
+            display: "flex",
+            gap: 1,
+            flexWrap: "wrap",
+            alignItems: "center",
+          }}
         >
-          Suchen
-        </Button>
-      </Box>
-
-      <Divider />
-
-      <Box>Hier werden die Suchergebnisse angezeigt.</Box>
-
-      {/* table frame always visible */}
-      <Box sx={{ minHeight: 300 }}>
-        {submittedResource ? (
-          <ListBase
-            key={`${submittedResource}-${hasSearched ? "searched" : "idle"}`}
-            resource={submittedResource}
-            filter={submittedFilter}
-            perPage={10}
-            sort={{ field: "id", order: "ASC" }}
-            disableSyncWithLocation
-            storeKey={false}
-            queryOptions={{ enabled: hasSearched && !!submittedResource }}
+          <Button
+            startIcon={<AddIcon />}
+            onClick={() => setBedingungen((alt) => [...alt, leereBedingung()])}
           >
-            <DataTable>
-              {attributes.map((col) => (
-                <DataTable.Col key={col} source={col} label={col} disableSort />
-              ))}
-            </DataTable>
-          </ListBase>
-        ) : (
-          <></>
-        )}
+            weitere Bedingung
+          </Button>
+          <Box sx={{ flex: 1 }} />
+          <Button variant="outlined" onClick={zuruecksetzen}>
+            Zurücksetzen
+          </Button>
+          <Button
+            type="submit"
+            variant="contained"
+            disableElevation
+            disabled={!startbereit}
+            sx={{
+              bgcolor: "#1d4e8f",
+              "&:hover": { bgcolor: "#173f74" },
+              fontWeight: 700,
+              textTransform: "none",
+              px: 4,
+            }}
+          >
+            Suche starten
+          </Button>
+        </Box>
       </Box>
+
+      {abfrage && (
+        <ListBase
+          key={suchNr}
+          resource="kunde"
+          filter={abfrage.filter}
+          perPage={25}
+          sort={{ field: "Nachname", order: "ASC" }}
+          disableSyncWithLocation
+          storeKey={false}
+          queryOptions={{ meta: { columns: abfrage.spalten } }}
+        >
+          <Treffer />
+          <KundenDataTable bulkActionButtons={false} />
+          <Pagination rowsPerPageOptions={[25, 50, 100]} />
+        </ListBase>
+      )}
     </Box>
   );
 };
