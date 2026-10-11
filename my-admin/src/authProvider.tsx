@@ -18,7 +18,9 @@ export const authProvider = {
     params: Parameters<typeof baseAuthProvider.resetPassword>[0],
   ) =>
     baseAuthProvider.resetPassword({
-      redirectTo: authCallbackUrl(window.location.href),
       ...params,
+      // Nach dem Spread, damit ein mitgegebenes redirectTo: undefined die
+      // Rücksprungadresse nicht überschreibt.
+      redirectTo: params.redirectTo ?? authCallbackUrl(window.location.href),
     }),
 };
