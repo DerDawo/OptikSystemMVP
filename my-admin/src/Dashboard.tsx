@@ -235,6 +235,8 @@ const KpiTile = ({
         display: "flex",
         flexDirection: "column",
         alignItems: "stretch",
+        // ButtonBase zentriert sonst senkrecht: Kacheln ohne hint rutschen ab
+        justifyContent: "flex-start",
         gap: 1.25,
         padding: "16px 18px",
         textAlign: "left",
@@ -670,7 +672,13 @@ export const Dashboard = () => {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))",
+              // 6 Kacheln: 1, 2, 3 oder 6 pro Zeile, damit keine allein umbricht
+              gridTemplateColumns: {
+                xs: "1fr",
+                sm: "repeat(2, minmax(0, 1fr))",
+                md: "repeat(3, minmax(0, 1fr))",
+                xl: "repeat(6, minmax(0, 1fr))",
+              },
               gap: 1.75,
             }}
           >

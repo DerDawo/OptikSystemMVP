@@ -1,6 +1,18 @@
 import polyglotI18nProvider from "ra-i18n-polyglot";
 import { TranslationMessages } from "react-admin";
 
+// Feldnamen, die in (fast) jeder Tabelle vorkommen
+const commonFields = {
+  id: "ID",
+  created_at: "Angelegt am",
+  updated_at: "Geändert am",
+};
+
+const resource = (name: string, fields: Record<string, string> = {}) => ({
+  name,
+  fields: { ...commonFields, ...fields },
+});
+
 // Deutsche Oberflächentexte für react-admin 5 und ra-supabase (Login,
 // Passwort zurücksetzen). Die npm-Pakete ra-language-german und
 // @haleos/ra-language-german sind auf react-admin 3 bzw. 4 stehen geblieben,
@@ -238,32 +250,56 @@ export const germanMessages: TranslationMessages = {
       },
     },
   },
-  // Namen der Datensätze (Singular |||| Plural), wie in der Sidebar. Ohne
-  // Eintrag hängt react-admin ein englisches "s" an ("Kundes").
+  // Namen der Datensätze (Singular |||| Plural), wie in der Sidebar, und
+  // Feldnamen für Felder ohne eigenes label. Ohne Eintrag erzeugt react-admin
+  // sie aus dem Spaltennamen ("Kundes", "Created at", "Brillen i d").
   resources: {
-    kunde: { name: "Kunde |||| Kunden" },
-    brille: { name: "Brille |||| Brillen" },
-    kontaktlinse: { name: "Kontaktlinse |||| Kontaktlinsen" },
-    brillenart: { name: "Brillenart |||| Brillenarten" },
-    glass: { name: "Glas |||| Gläser" },
-    glastyp: { name: "Glastyp |||| Glastypen" },
-    glashersteller: { name: "Glashersteller |||| Glashersteller" },
-    glaskatalog: { name: "Grundglas |||| Grundgläser" },
-    glaskatalog_option: {
-      name: "Glaskatalog-Option |||| Glaskatalog-Optionen",
-    },
-    glaskatalog_hat_option: {
-      name: "Optionszuordnung |||| Optionszuordnungen",
-    },
-    fassung: { name: "Fassung |||| Fassungen" },
-    brille_hat_zusatzleistungen: {
-      name: "Brillen-Zusatzleistung |||| Brillen-Zusatzleistungen",
-    },
-    kunde_leistet_zauzahlung_fuer_brille: { name: "Zahlung |||| Zahlungen" },
-    zusatzleistung: { name: "Zusatzleistung |||| Zusatzleistungen" },
-    termin: { name: "Termin |||| Termine" },
-    dokumentvorlage: { name: "Dokumentvorlage |||| Dokumentvorlagen" },
-    betrieb: { name: "Betrieb |||| Betriebe" },
+    kunde: resource("Kunde |||| Kunden", {
+      KundenNummer: "Kundennummer",
+      TelefonnummerPrivat: "Telefonnummer privat",
+      TelefonnummerGeschaeftlich: "Telefonnummer geschäftlich",
+      KrankenkassenNummer: "Krankenkassennummer",
+      VersichertenNummer: "Versichertennummer",
+      KrankenversicherungsTyp: "Krankenversicherungstyp",
+    }),
+    brille: resource("Brille |||| Brillen", {
+      BrillenArt: "Brillenart",
+      RabattBezeichnung: "Rabattbezeichnung",
+      RabattProzent: "Rabatt in %",
+    }),
+    kontaktlinse: resource("Kontaktlinse |||| Kontaktlinsen"),
+    brillenart: resource("Brillenart |||| Brillenarten"),
+    glass: resource("Glas |||| Gläser", {
+      PD: "PD",
+      y_h: "Y/H",
+      HSA: "HSA",
+      iod: "IOD",
+    }),
+    glastyp: resource("Glastyp |||| Glastypen", {
+      Verguetung: "Vergütung",
+      GlasGroesse: "Glasgröße",
+    }),
+    glashersteller: resource("Glashersteller |||| Glashersteller"),
+    glaskatalog: resource("Grundglas |||| Grundgläser"),
+    glaskatalog_option: resource(
+      "Glaskatalog-Option |||| Glaskatalog-Optionen",
+    ),
+    glaskatalog_hat_option: resource(
+      "Optionszuordnung |||| Optionszuordnungen",
+    ),
+    fassung: resource("Fassung |||| Fassungen", { Groesse: "Größe" }),
+    brille_hat_zusatzleistungen: resource(
+      "Brillen-Zusatzleistung |||| Brillen-Zusatzleistungen",
+      { BrillenID: "Brille", ZusatzleistungID: "Zusatzleistung" },
+    ),
+    kunde_leistet_zauzahlung_fuer_brille: resource("Zahlung |||| Zahlungen", {
+      KundenID: "Kunde",
+      BrillenID: "Brille",
+    }),
+    zusatzleistung: resource("Zusatzleistung |||| Zusatzleistungen"),
+    termin: resource("Termin |||| Termine"),
+    dokumentvorlage: resource("Dokumentvorlage |||| Dokumentvorlagen"),
+    betrieb: resource("Betrieb |||| Betriebe"),
   },
   "ra-supabase": {
     auth: {

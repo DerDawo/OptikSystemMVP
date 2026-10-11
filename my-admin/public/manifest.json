@@ -1,6 +1,6 @@
 {
-    "short_name": "my-admin",
-    "name": "{{name}}",
+    "short_name": "Optik-System",
+    "name": "Optik-System",
     "icons": [
         {
             "src": "favicon.ico",

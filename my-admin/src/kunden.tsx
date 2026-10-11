@@ -8,6 +8,7 @@ import {
   useShowController,
   ListActions,
   useRecordContext,
+  Title,
 } from "react-admin";
 import {
   BooleanField,
@@ -541,7 +542,7 @@ export const KundenDataTable = (props: Partial<DataTableProps>) => (
     </DataTable.Col>
     <DataTable.Col source="Geschlecht" />
     <DataTable.Col source="Tätigkeit" />
-    <DataTable.Col source="TelefonnummerPrivat" label="Privat Telefonnummer" />
+    <DataTable.Col source="TelefonnummerPrivat" label="Private Telefonnummer" />
     <DataTable.Col
       source="TelefonnummerGeschaeftlich"
       label="Geschäftliche Telefonnummer"
@@ -549,7 +550,7 @@ export const KundenDataTable = (props: Partial<DataTableProps>) => (
     <DataTable.Col source="Handy" />
     <DataTable.Col source="Email" />
     <DataTable.Col source="KrankenkassenNummer" label="Krankenkassennummer" />
-    <DataTable.Col source="VersichertenNummer" label="Versichertenummer" />
+    <DataTable.Col source="VersichertenNummer" label="Versichertennummer" />
     <DataTable.Col
       source="KrankenversicherungsTyp"
       label="Krankenversicherung"
@@ -568,7 +569,7 @@ export const KundenList = () => {
       title="Kunden"
       disableSyncWithLocation
       filters={isMobile ? kundenFilterMobile : kundenFilterDesktop}
-      actions={<ListActions isMobile={isMobile} />}
+      actions={<ListActions />}
     >
       <KundenDataTable />
     </List>
@@ -596,7 +597,7 @@ export const KundeShow = () => {
   }, [showObject, dataProvider]);
 
   return (
-    <Show title="Kunden anzeigen" actions={<KundeShowActions />}>
+    <Show title="Kunde anzeigen" actions={<KundeShowActions />}>
       <ShowLayout>
         <ShowColumns>
           <ShowColumn>
@@ -759,7 +760,7 @@ export const KundeShow = () => {
 };
 
 export const KundeEdit = () => (
-  <Edit title="Kunden bearbeiten" actions={<EditActionsBar />}>
+  <Edit title="Kunde bearbeiten" actions={<EditActionsBar />}>
     <SimpleForm>
       <FormSection title="Datenbankfelder">
         <FieldRow>
@@ -999,12 +1000,14 @@ export const KundeMessage = () => {
 
   const isMountedRef = useRef(true);
 
-  useEffect(
-    () => () => {
+  // StrictMode mountet Effekte im Dev-Modus zweimal: der Merker muss beim
+  // erneuten Mount wieder auf true, sonst bleibt "Lade Nachrichten..." stehen.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
       isMountedRef.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const loadMessages = useCallback(async (preferredKey?: string | null) => {
     setIsLoadingMessages(true);
@@ -1314,6 +1317,7 @@ export const KundeMessage = () => {
         padding: { xs: "0.75em", md: "1.5em" },
       }}
     >
+      <Title title="Nachricht senden" />
       <Box
         sx={{
           display: "flex",

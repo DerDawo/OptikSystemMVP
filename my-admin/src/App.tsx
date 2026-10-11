@@ -5,6 +5,12 @@ import { dataProvider } from "./dataProvider";
 import { MyLayout } from "./MyLayout";
 import { authProvider } from "./authProvider";
 import { i18nProvider } from "./i18nProvider";
+import {
+  byField,
+  fassungRepresentation,
+  glassRepresentation,
+  kundeRepresentation,
+} from "./recordRepresentations";
 import { ForgotPasswordPage, LoginPage, SetPasswordPage } from "ra-supabase";
 import {
   KundenList,
@@ -89,6 +95,7 @@ import Search from "./Search";
 export const App = () => {
   return (
     <Admin
+      title="Optik-System"
       layout={MyLayout}
       dashboard={Dashboard}
       dataProvider={dataProvider}
@@ -102,6 +109,7 @@ export const App = () => {
     >
       <Resource
         name="kunde"
+        recordRepresentation={kundeRepresentation}
         list={KundenList}
         show={KundeShow}
         edit={KundeEdit}
@@ -125,6 +133,7 @@ export const App = () => {
       />
       <Resource
         name="brillenart"
+        recordRepresentation={byField("Bezeichnung")}
         list={BrillenartList}
         show={BrillenartShow}
         edit={BrillenartEdit}
@@ -132,6 +141,7 @@ export const App = () => {
       />
       <Resource
         name="glass"
+        recordRepresentation={glassRepresentation}
         list={GlassList}
         show={GlassShow}
         edit={GlassEdit}
@@ -140,6 +150,7 @@ export const App = () => {
       />
       <Resource
         name="glastyp"
+        recordRepresentation={byField("Bezeichnung")}
         list={GlastypList}
         show={GlastypShow}
         edit={GlastypEdit}
@@ -152,17 +163,20 @@ export const App = () => {
       />
       <Resource
         name="glaskatalog"
+        recordRepresentation={byField("bezeichnung")}
         list={GlaskatalogList}
         show={GlaskatalogShow}
       />
       <Resource
         name="glaskatalog_option"
+        recordRepresentation={byField("bezeichnung")}
         list={GlaskatalogOptionList}
         show={GlaskatalogOptionShow}
       />
       <Resource name="glaskatalog_hat_option" />
       <Resource
         name="fassung"
+        recordRepresentation={fassungRepresentation}
         list={FassungList}
         show={FassungShow}
         edit={FassungEdit}
@@ -184,6 +198,7 @@ export const App = () => {
       />
       <Resource
         name="zusatzleistung"
+        recordRepresentation={byField("Bezeichnung")}
         list={ZusatzleistungList}
         show={ZusatzleistungShow}
         edit={ZusatzleistungEdit}

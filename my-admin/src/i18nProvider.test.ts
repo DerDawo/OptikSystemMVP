@@ -72,6 +72,20 @@ describe("i18nProvider (deutsche Oberflächentexte)", () => {
     ).toBe("Glas");
   });
 
+  it("übersetzt Feldnamen ohne eigenes label", () => {
+    expect(i18nProvider.translate("resources.termin.fields.created_at")).toBe(
+      "Angelegt am",
+    );
+    expect(i18nProvider.translate("resources.brille.fields.BrillenArt")).toBe(
+      "Brillenart",
+    );
+    expect(
+      i18nProvider.translate(
+        "resources.kunde_leistet_zauzahlung_fuer_brille.fields.KundenID",
+      ),
+    ).toBe("Kunde");
+  });
+
   it("wählt Singular und Plural über smart_count", () => {
     expect(
       i18nProvider.translate("ra.notification.deleted", { smart_count: 3 }),
