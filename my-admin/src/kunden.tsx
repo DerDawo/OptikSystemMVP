@@ -61,6 +61,7 @@ import {
 } from "./nachrichtenPlatzhalter";
 import {
   buildExternalMessageUrl,
+  choosePhoneNumberForMessaging,
   MessageChannel,
   openExternalMessage,
 } from "./messaging";
@@ -109,6 +110,7 @@ type KundeMessageCustomer = {
   fullName: string;
   email: string;
   phoneNumber: string;
+  phoneNumberMobile: string;
   phoneNumberPrivate: string;
   phoneNumberBusiness: string;
 };
@@ -323,7 +325,17 @@ const normalizeKundeMessageCustomer = (
     "telefonnummergeschaeftlich",
     "phoneNumberBusiness",
   ]);
-  const phoneNumber = phoneNumberPrivate || phoneNumberBusiness;
+  const phoneNumberMobile = getCustomerSourceValue(source, [
+    "Handy",
+    "handy",
+    "phoneNumberMobile",
+  ]);
+  // SMS/WhatsApp: erste Handynummer, sonst die erste vorhandene Nummer
+  const phoneNumber = choosePhoneNumberForMessaging([
+    phoneNumberMobile,
+    phoneNumberPrivate,
+    phoneNumberBusiness,
+  ]);
   const fullName = [vorname, nachname].filter(Boolean).join(" ").trim();
 
   return {
@@ -334,6 +346,7 @@ const normalizeKundeMessageCustomer = (
     fullName,
     email,
     phoneNumber,
+    phoneNumberMobile,
     phoneNumberPrivate,
     phoneNumberBusiness,
   };
