@@ -27,6 +27,7 @@ import {
   ShowSection,
   DatenbankInfo,
 } from "./EntityLayout";
+import { zurueckNachSpeichern } from "./seitenVerlauf";
 
 const KundeOptionText = (record?: Record<string, unknown>) => {
   if (!record) return "";
@@ -171,7 +172,7 @@ export const KontaktlinseShow = () => (
 );
 
 export const KontaktlinseEdit = () => (
-  <Edit>
+  <Edit redirect={zurueckNachSpeichern}>
     <SimpleForm>
       <FormSection title="Beratung">
         <MitarbeiterInput source="Berater" label="Bedient von" />

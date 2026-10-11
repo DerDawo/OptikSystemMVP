@@ -36,6 +36,7 @@ import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { brillenartOptionen } from "./brillenarten";
 import { rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
+import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
@@ -373,6 +374,7 @@ const WerteVorschau = () => {
 
 export const BrilleEdit = () => (
   <Edit
+    redirect={zurueckNachSpeichern}
     actions={
       <EditActionsBar>
         <RechnungErstellenButton />

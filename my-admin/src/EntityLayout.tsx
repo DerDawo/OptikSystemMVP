@@ -41,11 +41,18 @@ export const ShowLayout = ({ children }: { children: ReactNode }) => (
  * verlauf/history column on the right. Stacks to a single column below the
  * `lg` breakpoint so it stays usable on tablets/phones.
  */
-export const ShowColumns = ({ children }: { children: ReactNode }) => (
+export const ShowColumns = ({
+  children,
+  spalten = "minmax(0, 1.4fr) minmax(0, 1fr)",
+}: {
+  children: ReactNode;
+  // Spaltenaufteilung ab breiten Bildschirmen (lg)
+  spalten?: string;
+}) => (
   <Box
     sx={{
       display: "grid",
-      gridTemplateColumns: { xs: "1fr", lg: "minmax(0, 1.4fr) minmax(0, 1fr)" },
+      gridTemplateColumns: { xs: "1fr", lg: spalten },
       gap: "1em",
       width: "100%",
       minWidth: 0,
@@ -56,9 +63,33 @@ export const ShowColumns = ({ children }: { children: ReactNode }) => (
   </Box>
 );
 
-export const ShowColumn = ({ children }: { children: ReactNode }) => (
+export const ShowColumn = ({
+  children,
+  kompakt,
+}: {
+  children: ReactNode;
+  // kleinere Abschnitte (weniger Abstand, kleinere Schrift)
+  kompakt?: boolean;
+}) => (
   <Box
-    sx={{ display: "flex", flexDirection: "column", gap: "1em", minWidth: 0 }}
+    sx={{
+      display: "flex",
+      flexDirection: "column",
+      gap: kompakt ? "0.6em" : "1em",
+      minWidth: 0,
+      ...(kompakt
+        ? {
+            "& > .MuiCard-root": { padding: "0.6em 0.9em" },
+            "& .MuiCard-root .MuiTypography-subtitle1": {
+              fontSize: "0.9rem",
+              mb: 0.5,
+            },
+            "& .MuiCard-root .MuiDivider-root": { mb: 0.75 },
+            "& .MuiCard-root .MuiTypography-body2": { fontSize: "0.85rem" },
+            "& .MuiCard-root .RaLabeled-label": { fontSize: "0.7rem", mb: 0 },
+          }
+        : {}),
+    }}
   >
     {children}
   </Box>
