@@ -1,7 +1,8 @@
 import { useEffect } from "react";
-import { Box, Typography } from "@mui/material";
+import { Box, Chip, Typography } from "@mui/material";
 import {
   DateInput,
+  SelectArrayInput,
   SelectInput,
   TextInput,
   useRecordContext,
@@ -64,3 +65,48 @@ export const KundeVerwaltung = () => (
     <DatenbankInfo />
   </Box>
 );
+
+// Kurz-Hinweise bei den Notizen (Spalte kunde."Hinweise", Mehrfachauswahl)
+export const HINWEISE = ["CAT-op", "Sicca", "GKB", "GK", "NH", "BH", "PSY"];
+
+export const HinweiseInput = () => {
+  const record = useRecordContext();
+  // in der Datenbank vorhandene, hier nicht gelistete Hinweise bleiben wählbar
+  const vorhandene: string[] = Array.isArray(record?.Hinweise)
+    ? record.Hinweise
+    : [];
+  const alle = [
+    ...HINWEISE,
+    ...vorhandene.filter((h) => !HINWEISE.includes(h)),
+  ];
+  return (
+    <SelectArrayInput
+      source="Hinweise"
+      label="Hinweise"
+      choices={alle.map((h) => ({ id: h, name: h }))}
+      helperText="Mehrfachauswahl"
+      format={(wert) => (Array.isArray(wert) ? wert : [])}
+    />
+  );
+};
+
+export const HinweiseChips = () => {
+  const record = useRecordContext();
+  const hinweise: string[] = Array.isArray(record?.Hinweise)
+    ? record.Hinweise
+    : [];
+  if (hinweise.length === 0) return null;
+  return (
+    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+      {hinweise.map((h) => (
+        <Chip
+          key={h}
+          label={h}
+          size="small"
+          color="warning"
+          variant="outlined"
+        />
+      ))}
+    </Box>
+  );
+};

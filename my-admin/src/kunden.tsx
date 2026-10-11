@@ -81,6 +81,8 @@ import {
   AnredeInput,
   GeschlechtAusAnrede,
   GeschlechtInput,
+  HinweiseChips,
+  HinweiseInput,
   KundeVerwaltung,
 } from "./KundeFelder";
 import { KundenAuftraege } from "./KundenAuftraege";
@@ -579,6 +581,9 @@ export const KundeShow = () => {
               </Field>
             </ShowSection>
             <ShowSection title="Notizen">
+              <Field label="Hinweise">
+                <HinweiseChips />
+              </Field>
               <Field label="Notizen">
                 <TextField
                   source="Notizen"
@@ -684,6 +689,7 @@ export const KundeEdit = () => (
         </FieldRow>
       </FormSection>
       <FormSection title="Notizen">
+        <HinweiseInput />
         <TextInput source="Notizen" label="Notizen" multiline fullWidth />
       </FormSection>
       <FormSection title="Merkmale">
@@ -773,6 +779,7 @@ export const KundeCreate = () => {
           </FieldRow>
         </FormSection>
         <FormSection title="Notizen">
+          <HinweiseInput />
           <TextInput source="Notizen" label="Notizen" multiline fullWidth />
         </FormSection>
         <FormSection title="Merkmale">
