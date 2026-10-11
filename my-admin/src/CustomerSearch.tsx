@@ -73,7 +73,8 @@ const CustomerSearch = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const runSearch = async (fields: SearchFields) => {
+  // Liefert, ob es Treffer gab (für den Fallback der globalen Suche).
+  const runSearch = async (fields: SearchFields): Promise<boolean> => {
     const filter = buildFilter({
       Nachname: fields.nachname,
       Vorname: fields.vorname,
@@ -93,10 +94,13 @@ const CustomerSearch = () => {
         filter,
       });
 
-      setHasSearchResults((total ?? data.length) > 0);
+      const found = (total ?? data.length) > 0;
+      setHasSearchResults(found);
+      return found;
     } catch (error) {
       console.error("Fehler bei der Kundensuche", error);
       setHasSearchResults(false);
+      return false;
     } finally {
       setHasSearched(true);
       setIsSearching(false);
@@ -107,28 +111,44 @@ const CustomerSearch = () => {
     runSearch({ nachname, vorname, geburtsdatum, kundennummer });
 
   // Suchbegriff aus der globalen Suche in der Toolbar (MyAppBar.tsx), per
-  // Router-State übergeben: Zahl = Kundennummer, "Vorname Nachname" wird
-  // aufgeteilt, sonst Nachname.
+  // Router-State übergeben: Zahl = Kundennummer, sonst Namenssuche. Bei
+  // mehreren Wörtern ist die Reihenfolge offen ("Hans Müller", "Müller Hans",
+  // "von der Heide"), daher nacheinander: Vorname Nachname, Nachname Vorname,
+  // alles als Nachname - die erste Variante mit Treffern gewinnt.
   const globalSearch = location.state as { q?: string; ts?: number } | null;
   useEffect(() => {
     const q = globalSearch?.q?.trim();
     if (!q) return;
+    const leer: SearchFields = {
+      nachname: "",
+      vorname: "",
+      geburtsdatum: null,
+      kundennummer: "",
+    };
     const words = q.split(/\s+/);
-    const fields: SearchFields = /^\d+$/.test(q)
-      ? { nachname: "", vorname: "", geburtsdatum: null, kundennummer: q }
+    const varianten: SearchFields[] = /^\d+$/.test(q)
+      ? [{ ...leer, kundennummer: q }]
       : words.length > 1
-        ? {
-            nachname: words.slice(1).join(" "),
-            vorname: words[0],
-            geburtsdatum: null,
-            kundennummer: "",
-          }
-        : { nachname: q, vorname: "", geburtsdatum: null, kundennummer: "" };
-    setNachname(fields.nachname);
-    setVorname(fields.vorname);
-    setGeburtsdatum(null);
-    setKundennummer(fields.kundennummer);
-    runSearch(fields);
+        ? [
+            { ...leer, vorname: words[0], nachname: words.slice(1).join(" ") },
+            { ...leer, nachname: words[0], vorname: words.slice(1).join(" ") },
+            { ...leer, nachname: q },
+          ]
+        : [{ ...leer, nachname: q }];
+    let abgebrochen = false;
+    (async () => {
+      for (const fields of varianten) {
+        if (abgebrochen) return;
+        setNachname(fields.nachname);
+        setVorname(fields.vorname);
+        setGeburtsdatum(null);
+        setKundennummer(fields.kundennummer);
+        if (await runSearch(fields)) return;
+      }
+    })();
+    return () => {
+      abgebrochen = true;
+    };
     // runSearch nur bei einer neuen globalen Suche auslösen
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [globalSearch?.q, globalSearch?.ts]);

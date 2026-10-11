@@ -33,4 +33,19 @@ describe("authProvider (Passwort zurücksetzen)", () => {
       redirectTo: "https://optik.example/auth-callback.html",
     });
   });
+
+  it("behält die Rücksprungadresse bei redirectTo: undefined", async () => {
+    vi.stubGlobal("window", {
+      location: { href: "https://optik.example/#/forgot-password" },
+    });
+
+    await authProvider.resetPassword({
+      email: "kunde@example.com",
+      redirectTo: undefined,
+    });
+
+    expect(resetPasswordForEmail).toHaveBeenCalledWith("kunde@example.com", {
+      redirectTo: "https://optik.example/auth-callback.html",
+    });
+  });
 });

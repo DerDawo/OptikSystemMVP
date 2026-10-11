@@ -677,6 +677,14 @@ export const KundeShow = () => {
                 <TextField source="Merkmal4" />
               </Field>
             </ShowSection>
+            <ShowSection title="Notizen">
+              <Field label="Notizen">
+                <TextField
+                  source="Notizen"
+                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
+                />
+              </Field>
+            </ShowSection>
           </ShowColumn>
           <ShowColumn>
             <RelatedSection title="Aufträge / Verlauf">
@@ -813,6 +821,9 @@ export const KundeEdit = () => (
           <TextInput source="Merkmal4" label="Merkmal 4" />
         </FieldRow>
       </FormSection>
+      <FormSection title="Notizen">
+        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+      </FormSection>
     </SimpleForm>
   </Edit>
 );
@@ -931,6 +942,9 @@ export const KundeCreate = () => {
             <TextInput source="Merkmal3" label="Merkmal 3" />
             <TextInput source="Merkmal4" label="Merkmal 4" />
           </FieldRow>
+        </FormSection>
+        <FormSection title="Notizen">
+          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
         </FormSection>
       </SimpleForm>
     </Create>
