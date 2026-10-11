@@ -46,6 +46,8 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Beobachtungsbogen", name: "Beobachtungsbogen" },
   { id: "Antrag BAP", name: "Antrag BAP" },
   { id: "Kostenvoranschlag", name: "Kostenvoranschlag" },
+  { id: "Erprobungsprotokoll", name: "Erprobungsprotokoll" },
+  { id: "Rezeptanfrage Augenarzt", name: "Rezeptanfrage Augenarzt" },
 ];
 
 const PLATZHALTER_HINWEIS =

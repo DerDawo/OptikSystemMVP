@@ -14,6 +14,9 @@
 --     ausfüllbare PDF-Vorlagen (my-admin/public/formulare/*.pdf), die
 --     my-admin/src/pdfFormulare.ts vorausfüllt
 --   - "Kostenvoranschlag" im Rechnungsdesign (my-admin/src/rechnungTemplate.ts)
+--   - "Erprobungsprotokoll" vergrößernde Sehhilfen (Muster 8A) und
+--     "Rezeptanfrage Augenarzt" (erprobungsprotokollTemplate.ts,
+--     rezeptanfrageTemplate.ts)
 -- Alle haben ein code-basiertes Layout; der Vorlagentext wird wie bei
 -- Rechnung und Berechtigungsschein nicht gerendert, der Datensatz macht die
 -- Vorlage im Dialog auswählbar.
@@ -37,7 +40,9 @@ alter table public.dokumentvorlage
     'Optometrische Verordnung GKV',
     'Beobachtungsbogen',
     'Antrag BAP',
-    'Kostenvoranschlag'
+    'Kostenvoranschlag',
+    'Erprobungsprotokoll',
+    'Rezeptanfrage Augenarzt'
   ));
 
 insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
@@ -118,4 +123,24 @@ select
   true
 where not exists (
   select 1 from public.dokumentvorlage where "Kategorie" = 'Kostenvoranschlag'
+);
+
+insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
+select
+  'Erprobungsprotokoll vergrößernde Sehhilfen',
+  'Erprobungsprotokoll',
+  'Hinweis: Der Text dieser Vorlage wird nicht verwendet. Das Formular ist im Code hinterlegt (my-admin/src/erprobungsprotokollTemplate.ts).',
+  true
+where not exists (
+  select 1 from public.dokumentvorlage where "Kategorie" = 'Erprobungsprotokoll'
+);
+
+insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
+select
+  'Rezeptanfrage an den Augenarzt',
+  'Rezeptanfrage Augenarzt',
+  'Hinweis: Der Text dieser Vorlage wird nicht verwendet. Das Formular ist im Code hinterlegt (my-admin/src/rezeptanfrageTemplate.ts).',
+  true
+where not exists (
+  select 1 from public.dokumentvorlage where "Kategorie" = 'Rezeptanfrage Augenarzt'
 );

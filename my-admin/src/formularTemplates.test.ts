@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildAntragPrintHtml } from "./antragTemplate";
+import { buildErprobungsprotokollPrintHtml } from "./erprobungsprotokollTemplate";
+import { buildRezeptanfragePrintHtml } from "./rezeptanfrageTemplate";
 import {
   buildAokBerechtigungsscheinPrintHtml,
   verteileWerte,
@@ -103,5 +105,31 @@ describe("Optometrische Verordnung", () => {
     expect(html).toContain("Max Beispiel");
     expect(html).toContain("63,5");
     expect(html).toContain("+2,00");
+  });
+});
+
+describe("Erprobungsprotokoll", () => {
+  it("füllt nur Versichertendaten, IK und Datum vor", () => {
+    const html = buildErprobungsprotokollPrintHtml({
+      entities,
+      betrieb: { IKNummer: "311600000" },
+    });
+    expect(html).toContain("Beispiel, Max");
+    expect(html).toContain("A123456789");
+    expect(html).toContain("IK 311600000");
+    expect(html).toContain("Hellfeldlupe");
+    expect(html).toContain("Zusammenfassende Beurteilung");
+  });
+});
+
+describe("Rezeptanfrage an den Augenarzt", () => {
+  it("füllt Patientendaten, Refraktion und PD vor", () => {
+    const html = buildRezeptanfragePrintHtml({ entities });
+    expect(html).toContain("Beispiel");
+    expect(html).toContain("A123456789");
+    expect(html).toContain("+1,25");
+    expect(html).toContain("63,5");
+    expect(html).toContain("Hornhautverkrümmung");
+    expect(html).not.toContain("Hornhautverkruemmung");
   });
 });
