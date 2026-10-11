@@ -6,7 +6,7 @@ import {
   ReferenceManyField,
   Pagination,
 } from "react-admin";
-import { BooleanField, NumberField, Show, TextField } from "react-admin";
+import { Show, TextField } from "react-admin";
 import {
   BooleanInput,
   DateInput,
@@ -38,6 +38,7 @@ import {
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { KundeInput } from "./KundeInput";
+import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
@@ -60,7 +61,6 @@ import {
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import {
   EditActionsBar,
-  Field,
   FieldRow,
   FormSection,
   RelatedSection,
@@ -68,7 +68,6 @@ import {
   ShowColumn,
   ShowColumns,
   ShowLayout,
-  ShowSection,
   DatenbankInfo,
 } from "./EntityLayout";
 import { BrilleHistoryDatagrid } from "./BrilleHistory";
@@ -348,174 +347,7 @@ export const BrilleShow = () => (
     <ShowLayout>
       <ShowColumns>
         <ShowColumn>
-          <ShowSection title="Beratung">
-            <Field label="Kunde">
-              <ReferenceField source="kunde_id" reference="kunde" link="show" />
-            </Field>
-            <Field label="Bedient von">
-              <MitarbeiterField source="Berater" label="Bedient von" />
-            </Field>
-            <Field label="Refraktion durch (Mitarbeiter / Arzt)">
-              <MitarbeiterField
-                source="Refraktion"
-                label="Refraktion durch (Mitarbeiter / Arzt)"
-              />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Auftragsdaten">
-            <Field label="Status">
-              <FunctionField
-                render={(record) => <BrilleStatusChip record={record} />}
-              />
-            </Field>
-            <Field>
-              <TextField source="BrillenArt" />
-            </Field>
-            <Field>
-              <DateField source="Datum" />
-            </Field>
-            <Field>
-              <TextField source="Werkstatt" />
-            </Field>
-            <Field>
-              <DateField source="Abholung" />
-            </Field>
-            <Field>
-              <TextField source="Notizen" />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Komponenten">
-            <Field>
-              <ReferenceField
-                source="GlasLinks"
-                reference="glass"
-                link="show"
-              />
-            </Field>
-            <Field>
-              <ReferenceField
-                source="GlasRechts"
-                reference="glass"
-                link="show"
-              />
-            </Field>
-            <Field>
-              <ReferenceField
-                source="Fassung"
-                reference="fassung"
-                link="show"
-              />
-            </Field>
-            <Field>
-              <ReferenceField
-                source="Glastyp"
-                reference="glastyp"
-                link="show"
-              />
-            </Field>
-          </ShowSection>
-          <RelatedSection title="Zusatzleistungen">
-            <ReferenceManyField
-              reference="brille_hat_zusatzleistungen"
-              target="BrillenID"
-              label={false}
-            >
-              <Datagrid bulkActionButtons={false}>
-                <ReferenceField
-                  source="ZusatzleistungID"
-                  reference="zusatzleistung"
-                  link="show"
-                  label="Bezeichnung"
-                >
-                  <TextField source="Bezeichnung" />
-                </ReferenceField>
-                <ReferenceField
-                  source="ZusatzleistungID"
-                  reference="zusatzleistung"
-                  link={false}
-                  label="Kategorie"
-                >
-                  <TextField source="Kategorie" />
-                </ReferenceField>
-                <ReferenceField
-                  source="ZusatzleistungID"
-                  reference="zusatzleistung"
-                  link={false}
-                  label="Preis"
-                >
-                  <CurrencyField source="Betrag" />
-                </ReferenceField>
-              </Datagrid>
-            </ReferenceManyField>
-          </RelatedSection>
-          <ShowSection title="Rabatt">
-            <Field>
-              <TextField source="RabattBezeichnung" />
-            </Field>
-            <Field>
-              <FunctionField
-                source="RabattProzent"
-                render={(record) =>
-                  record?.RabattProzent != null
-                    ? `-${record.RabattProzent} %`
-                    : ""
-                }
-              />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Preis & Zahlung">
-            <Field label="Weitere Leistungen / Nachlass">
-              <CurrencyField source="WeitereLeistungen" />
-            </Field>
-            <Field>
-              <CurrencyField source="Summe" />
-            </Field>
-            <Field>
-              <NumberField source="Anzahlung" />
-            </Field>
-            <Field label="KK-Anteil">
-              <NumberField source="KKAnteil" />
-            </Field>
-            <Field label="Offener Restbetrag">
-              <FunctionField
-                render={(record) =>
-                  formatCurrency(
-                    (Number(record?.Summe) || 0) -
-                      (Number(record?.Anzahlung) || 0) -
-                      (Number(record?.KKAnteil) || 0),
-                  )
-                }
-              />
-            </Field>
-            <Field label="Rechnungsnr.">
-              <TextField source="Rechnungsnummer" />
-            </Field>
-            <Field>
-              <TextField source="Zahlungsstatus" />
-            </Field>
-            <Field label="Mahnstufe">
-              <NumberField source="Mahnstufe" />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Verordnung">
-            <Field>
-              <TextField source="VerordnenderArzt" />
-            </Field>
-            <Field>
-              <DateField source="Verordnungsdatum" />
-            </Field>
-            <Field>
-              <TextField source="Diagnose" />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Kassenzulassung (§ 33 SGB V)">
-            <Field label="Erstverordnung (Muster 8) vorhanden">
-              <BooleanField source="ErstverordnungMuster8Vorhanden" />
-            </Field>
-            <Field label="Ausstellungsdatum Muster 8">
-              <DateField source="ErstverordnungMuster8Datum" />
-            </Field>
-          </ShowSection>
+          <BrilleKarteikarte />
           <DatenbankInfo />
         </ShowColumn>
         <ShowColumn>
@@ -535,6 +367,18 @@ export const BrilleShow = () => (
     </ShowLayout>
   </Show>
 );
+
+// Werte der gewählten Gläser im Formular, wie auf der Karteikarte
+const WerteVorschau = () => {
+  const rechtsId = useWatch({ name: "GlasRechts" });
+  const linksId = useWatch({ name: "GlasLinks" });
+  if (!rechtsId && !linksId) return null;
+  return (
+    <Box sx={{ mb: 1 }}>
+      <WerteTabelle rechtsId={rechtsId} linksId={linksId} />
+    </Box>
+  );
+};
 
 export const BrilleEdit = () => (
   <Edit
@@ -573,13 +417,14 @@ export const BrilleEdit = () => (
       </FormSection>
       <FormSection title="Komponenten">
         <FieldRow>
-          <ReferenceInput source="GlasLinks" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
           <ReferenceInput source="GlasRechts" reference="glass">
             <SelectInput />
           </ReferenceInput>
+          <ReferenceInput source="GlasLinks" reference="glass">
+            <SelectInput />
+          </ReferenceInput>
         </FieldRow>
+        <WerteVorschau />
         <FieldRow>
           <ReferenceInput source="Fassung" reference="fassung">
             <SelectInput />
@@ -715,13 +560,14 @@ export const BrilleCreate = () => {
         </FormSection>
         <FormSection title="Komponenten">
           <FieldRow>
-            <ReferenceInput source="GlasLinks" reference="glass">
-              <SelectInput />
-            </ReferenceInput>
             <ReferenceInput source="GlasRechts" reference="glass">
               <SelectInput />
             </ReferenceInput>
+            <ReferenceInput source="GlasLinks" reference="glass">
+              <SelectInput />
+            </ReferenceInput>
           </FieldRow>
+          <WerteVorschau />
           <FieldRow>
             <ReferenceInput source="Fassung" reference="fassung">
               <SelectInput />
