@@ -27,19 +27,14 @@ import {
   SingleFieldList,
   ChipField,
 } from "react-admin";
-import {
-  AutocompleteInput,
-  useDataProvider,
-  useGetList,
-  useGetMany,
-  useGetOne,
-  useNotify,
-} from "react-admin";
+import { useGetMany, useGetOne } from "react-admin";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { KundeInput } from "./KundeInput";
 import { OptionenMenu } from "./PrismaMenues";
 import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
+import { brillenartOptionen } from "./brillenarten";
+import { rabattDaten, rabattOptionen } from "./rabatte";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
@@ -72,15 +67,35 @@ import {
 import { BrilleHistoryDatagrid } from "./BrilleHistory";
 import { BrilleStatusChip, brilleRowSx } from "./orderStatus";
 
-// Rabatt-Codes aus Issue #22: wirken auf die Summe aus Glas rechts + Glas
-// links + Fassung, nicht auf Zusatzleistungen. "Sonderrabatt" hat keinen
-// festen Prozentsatz und wird individuell im Feld "RabattProzent" gepflegt.
-const RABATT_CODES = [
-  { id: "VIP-Rabatt", name: "VIP-Rabatt (-15 %)" },
-  { id: "ZNEU-Neukunden-Rabatt", name: "ZNEU-Neukunden-Rabatt (-10 %)" },
-  { id: "zw-Zweitbrillen-Rabatt", name: "zw-Zweitbrillen-Rabatt (-35 %)" },
-  { id: "Sonderrabatt", name: "Sonderrabatt (individuell)" },
-];
+// Rabatt-Auswahl (rabatte.ts): Neukunden-/Zweitbrillenrabatt setzen den
+// Prozentsatz, beim Sonderrabatt wird er von Hand eingetragen.
+const RabattInputs = () => {
+  const record = useRecordContext();
+  const { setValue } = useFormContext();
+  return (
+    <FieldRow>
+      <SelectInput
+        source="RabattBezeichnung"
+        label="Rabatt"
+        choices={rabattOptionen(record?.RabattBezeichnung)}
+        emptyText="–"
+        helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
+        onChange={(e) => {
+          const daten = rabattDaten(e?.target?.value || null);
+          if ("RabattProzent" in daten)
+            setValue("RabattProzent", daten.RabattProzent, {
+              shouldDirty: true,
+            });
+        }}
+      />
+      <NumberInput
+        source="RabattProzent"
+        label="Rabatt in %"
+        helperText="Neukunden 10 / Zweitbrille 15 / Sonderrabatt individuell"
+      />
+    </FieldRow>
+  );
+};
 
 const zahlungsstatusChoices = [
   { id: "offen", name: "Offen" },
@@ -190,41 +205,15 @@ const SummeUndRestbetragVorschau = () => {
   );
 };
 
-// `brille.BrillenArt` stays a plain text column so existing free-text values
-// keep working; this input offers the maintained `brillenart` list as
-// choices while still allowing users to create a new, not-yet-listed value.
+// Brillenart als feste Auswahl (brillenarten.ts); ein abweichender Altwert
+// des Auftrags bleibt wählbar.
 const BrillenArtInput = () => {
-  const dataProvider = useDataProvider();
-  const notify = useNotify();
-  const { data: brillenartChoices } = useGetList("brillenart", {
-    pagination: { page: 1, perPage: 200 },
-    sort: { field: "Bezeichnung", order: "ASC" },
-  });
-
-  const handleCreateBrillenart = async (value?: string) => {
-    if (!value) return undefined;
-    try {
-      const { data } = await dataProvider.create("brillenart", {
-        data: { Bezeichnung: value },
-      });
-      return { Bezeichnung: data.Bezeichnung };
-    } catch {
-      notify("Brillenart konnte nicht angelegt werden", { type: "error" });
-      return undefined;
-    }
-  };
-
+  const record = useRecordContext();
   return (
-    <AutocompleteInput
+    <SelectInput
       source="BrillenArt"
-      choices={brillenartChoices ?? []}
-      optionText="Bezeichnung"
-      optionValue="Bezeichnung"
-      onCreate={handleCreateBrillenart}
-      createLabel="Neue Brillenart anlegen"
-      createItemLabel={(filter: string) =>
-        `„${filter}“ als neue Brillenart anlegen`
-      }
+      choices={brillenartOptionen(record?.BrillenArt)}
+      emptyText="–"
     />
   );
 };
@@ -363,14 +352,23 @@ export const BrilleShow = () => (
   </Show>
 );
 
-// Werte der gewählten Gläser im Formular, wie auf der Karteikarte
+// Werte der gewählten Gläser im Formular, wie auf der Karteikarte. Bei einem
+// gespeicherten Auftrag lassen sich die Werte direkt eintippen (wird sofort
+// gespeichert); ein dabei neu angelegtes Glas wird ins Formular übernommen.
 const WerteVorschau = () => {
+  const record = useRecordContext();
+  const { setValue } = useFormContext();
   const rechtsId = useWatch({ name: "GlasRechts" });
   const linksId = useWatch({ name: "GlasLinks" });
-  if (!rechtsId && !linksId) return null;
+  if (!record?.id && !rechtsId && !linksId) return null;
   return (
     <Box sx={{ mb: 1 }}>
-      <WerteTabelle rechtsId={rechtsId} linksId={linksId} />
+      <WerteTabelle
+        rechtsId={rechtsId}
+        linksId={linksId}
+        brille={record?.id != null ? (record as { id: number }) : undefined}
+        beiNeuemGlas={(verweis, id) => setValue(verweis, id)}
+      />
     </Box>
   );
 };
@@ -472,24 +470,13 @@ export const BrilleEdit = () => (
         </ReferenceManyField>
       </FormSection>
       <FormSection title="Rabatt">
-        <FieldRow>
-          <SelectInput
-            source="RabattBezeichnung"
-            choices={RABATT_CODES}
-            helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
-          />
-          <NumberInput
-            source="RabattProzent"
-            label="Rabatt in %"
-            helperText="VIP 15 / ZNEU 10 / zw 35 / Sonderrabatt individuell"
-          />
-        </FieldRow>
+        <RabattInputs />
       </FormSection>
       <FormSection title="Preis & Zahlung">
         <NumberInput
           source="WeitereLeistungen"
           label="Weitere Leistungen / Nachlass (€)"
-          helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus den Notizen."
+          helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus Prisma."
         />
         <SummeUndRestbetragVorschau />
         <FieldRow>
@@ -591,24 +578,13 @@ export const BrilleCreate = () => {
           </ReferenceArrayInput>
         </FormSection>
         <FormSection title="Rabatt">
-          <FieldRow>
-            <SelectInput
-              source="RabattBezeichnung"
-              choices={RABATT_CODES}
-              helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
-            />
-            <NumberInput
-              source="RabattProzent"
-              label="Rabatt in %"
-              helperText="VIP 15 / ZNEU 10 / zw 35 / Sonderrabatt individuell"
-            />
-          </FieldRow>
+          <RabattInputs />
         </FormSection>
         <FormSection title="Preis & Zahlung">
           <NumberInput
             source="WeitereLeistungen"
             label="Weitere Leistungen / Nachlass (€)"
-            helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus den Notizen."
+            helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus Prisma."
           />
           <SummeUndRestbetragVorschau />
           <FieldRow>

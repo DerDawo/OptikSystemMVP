@@ -5,6 +5,7 @@ import { MyAppBar } from "./MyAppBar";
 import { ReactNode, useEffect } from "react";
 import { uebernehmeBetriebsdaten } from "./rechnungTemplate";
 import { GlobaleTastenkuerzel } from "./tastenkuerzel";
+import { NeueVersion } from "./NeueVersion";
 
 // Lädt die Betriebsdaten (Tabelle `betrieb`, Zeile 1) für Belege, Formulare
 // und SMS-Platzhalter (#132). Nach dem Speichern auf der Seite
@@ -21,6 +22,7 @@ export const MyLayout = ({ children }: { children: ReactNode }) => (
   <Layout menu={MyMenu} appBar={MyAppBar} appBarAlwaysOn>
     <BetriebsdatenLaden />
     <GlobaleTastenkuerzel />
+    <NeueVersion />
     {children}
   </Layout>
 );
