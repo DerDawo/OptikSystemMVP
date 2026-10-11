@@ -13,6 +13,8 @@ import { KAESTCHEN_STYLES, kaestchen } from "./formularVorschlaege";
 export type ErprobungsprotokollDaten = {
   entities: DocumentMergeEntities;
   betrieb?: { IKNummer?: string | null } | null;
+  // frei formulierte bzw. per KI vorgeschlagene Begründung (Ziffer 6)
+  begruendung?: string;
 };
 
 const e = escapeHtml;
@@ -36,6 +38,7 @@ const linien = (anzahl: number) => '<div class="linie"></div>'.repeat(anzahl);
 export const buildErprobungsprotokollBodyHtml = ({
   entities,
   betrieb,
+  begruendung,
 }: ErprobungsprotokollDaten): string => {
   const k: Record<string, unknown> = entities.kunde ?? {};
   const name = [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", ");
@@ -107,7 +110,7 @@ export const buildErprobungsprotokollBodyHtml = ({
     <div>${kaestchen()}Die/der Versicherte ist in der Lage, die elektronische Sehhilfe zielführend einzusetzen (§ 16 Abs. 2 HilfsM-RL)</div>
     <div>${kaestchen()}Die Versorgung dient dem Ausgleich der Behinderung bei Grundbedürfnissen des täglichen Lebens (Lesen) i. S. d. § 33 SGB V</div>
   </div>
-  <div class="ergebnis"><span class="fett">Weitere Begründung:</span>${linien(3)}</div>
+  <div class="ergebnis"><span class="fett">Weitere Begründung:</span>${begruendung?.trim() ? `<div class="freitext">${e(begruendung.trim())}</div>` : linien(3)}</div>
 
   <h2>7. Abgegebenes Hilfsmittel</h2>
   <table class="raster hilfsmittel">
@@ -156,6 +159,7 @@ const STYLES = `
   .hilfsmittel th { width: 32%; }
   .hilfsmittel td { background: #fdf3d6; }
   .ergebnis { margin-top: 2mm; break-inside: avoid; }
+  .freitext { white-space: pre-wrap; margin-top: 1mm; }
   .linie { border-bottom: 0.25mm solid #999; height: 6mm; }
   .pruefliste div { margin-bottom: 1.6mm; padding-left: 6mm; text-indent: -6mm; }
   .kaestchen { display: inline-block; width: 3.2mm; height: 3.2mm; border: 0.25mm solid #333; margin: 0 2.8mm 0 0; vertical-align: -0.4mm; }

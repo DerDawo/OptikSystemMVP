@@ -229,6 +229,7 @@ siehe unten.
 | `send-whatsapp` (WhatsApp Cloud API) | `WHATSAPP_PHONE_NUMBER_ID` | ja |
 | `send-whatsapp` (WhatsApp Cloud API) | `WHATSAPP_API_VERSION` | nein (Default `v21.0`) |
 | alle drei, optional (siehe unten) | `DEV_ALLOWED_RECIPIENTS` | nein |
+| `begruendung-vorschlagen` (Claude API, siehe unten) | `ANTHROPIC_API_KEY` | ja |
 
 Namen und Pflicht-Status sind direkt aus den `Deno.env.get(...)`-Aufrufen
 im jeweiligen `supabase/functions/*/index.ts` abgelesen - bei Änderungen an
@@ -313,6 +314,36 @@ supabase secrets set --project-ref psxrxggwqlltfhfskeoa \
 ```
 
 Auf dem Prod-Projekt (`cktdtojgrxskihihmnjm`) **nicht setzen**.
+
+## KI-Vorschläge für Begründungen (`begruendung-vorschlagen`)
+
+Im Formulare-Dialog der Brillenkartei gibt es bei den Anträgen (Zuschuss,
+Sozialamt) und beim Erprobungsprotokoll ein Feld "Begründung" mit dem Knopf
+"Mit KI vorschlagen". Er ruft die Edge Function
+`supabase/functions/begruendung-vorschlagen` auf, die mit Claude
+(`claude-opus-5-5`) einen Textvorschlag formuliert. Der Text landet im Feld
+und wird vor dem Druck geprüft und angepasst.
+
+**Datenschutz:** Übertragen werden nur pseudonymisierte Angaben - Alter in
+Jahren, Brillenart, Messwerte, Diagnose und Beruf (`kiBegruendung.ts`,
+Test in `kiBegruendung.test.ts`). Namen, Adressen, Geburtsdaten, Versicherten-
+und Kundennummern verlassen das System nicht; die Function übernimmt zusätzlich
+nur die erlaubten Felder. Diagnose und Messwerte sind dennoch Gesundheitsdaten:
+vor dem Einsatz den Auftragsverarbeitungsvertrag (Data Processing Addendum) mit
+Anthropic abschließen und die Datenschutzerklärung ergänzen.
+
+**Einrichtung je Projekt** (Edge Functions werden nicht per CI deployt):
+
+```bash
+supabase secrets set --project-ref psxrxggwqlltfhfskeoa ANTHROPIC_API_KEY=...
+supabase functions deploy begruendung-vorschlagen --project-ref psxrxggwqlltfhfskeoa
+```
+
+(für Prod mit `cktdtojgrxskihihmnjm`). Ohne Secret antwortet die Function mit
+"KI-Vorschläge sind nicht eingerichtet." - die Formulare funktionieren
+weiter, nur ohne Vorschlag. Aufrufen können sie nur angemeldete Nutzer
+(JWT-Prüfung der Edge Functions). Kosten: ein Vorschlag liegt bei wenigen
+Cent.
 
 ## CI / automatisierte Umgebungen
 

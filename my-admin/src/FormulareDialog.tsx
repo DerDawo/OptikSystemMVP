@@ -22,8 +22,11 @@ import {
   ListItemButton,
   ListItemText,
   Typography,
+  TextField,
+  CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ReceiptIcon from "@mui/icons-material/Receipt";
@@ -73,6 +76,7 @@ import {
   buildAokBerechtigungsscheinPrintHtml,
 } from "./aokBerechtigungsscheinTemplate";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
+import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
   buildErprobungsprotokollPreviewHtml,
   buildErprobungsprotokollPrintHtml,
@@ -114,6 +118,7 @@ type LayoutDaten = {
   entities: DocumentMergeEntities;
   betrieb?: RaRecord;
   rechnungsnummer: string;
+  begruendung?: string;
 };
 
 type Layout = {
@@ -411,13 +416,38 @@ const FormulareDialog = ({
   // Berechtigungsschein #90, Werkstattauftrag, Anträge, ...) statt des
   // generischen {{platzhalter}}-Fließtexts; der Vorlagentext dieser
   // Datensätze wird nicht gerendert.
+  // Begründung (Anträge, Erprobungsprotokoll): frei eintippen oder per KI
+  // vorschlagen lassen; gilt nur für die gerade gewählte Vorlage
+  const kiFormular = selectedVorlage
+    ? KI_FORMULARE[selectedVorlage.Kategorie]
+    : undefined;
+  const [begruendung, setBegruendung] = useState("");
+  const [kiLaeuft, setKiLaeuft] = useState(false);
+  useEffect(() => {
+    setBegruendung("");
+  }, [selectedVorlage?.id]);
+  const kiVorschlagHolen = async () => {
+    if (!kiFormular) return;
+    setKiLaeuft(true);
+    try {
+      setBegruendung(await begruendungVorschlagen(kiFormular, mergeEntities));
+    } catch (error) {
+      notify(error instanceof Error ? error.message : String(error), {
+        type: "warning",
+      });
+    } finally {
+      setKiLaeuft(false);
+    }
+  };
+
   const layoutDaten: LayoutDaten = useMemo(
     () => ({
       entities: mergeEntities,
       betrieb,
       rechnungsnummer: brille.Rechnungsnummer ?? "",
+      begruendung,
     }),
-    [mergeEntities, betrieb, brille.Rechnungsnummer],
+    [mergeEntities, betrieb, brille.Rechnungsnummer, begruendung],
   );
   const layoutDef = selectedVorlage
     ? LAYOUTS[selectedVorlage.Kategorie]
@@ -436,6 +466,26 @@ const FormulareDialog = ({
     ? PDF_VORLAGEN[selectedVorlage.Kategorie]
     : undefined;
   const vorschauRef = useRef<HTMLIFrameElement>(null);
+  // Angeklickte Kästchen überstehen das Neuladen der Vorschau (z. B. beim
+  // Tippen der Begründung); null = noch nichts geändert, Vorschläge gelten
+  const kaestchenStand = useRef<boolean[] | null>(null);
+  useEffect(() => {
+    kaestchenStand.current = null;
+  }, [selectedVorlage?.id]);
+  const vorschauGeladen = () => {
+    const doc = vorschauRef.current?.contentDocument;
+    if (!doc) return;
+    const boxen = [
+      ...doc.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    ];
+    const stand = kaestchenStand.current;
+    if (stand && stand.length === boxen.length) {
+      boxen.forEach((box, i) => (box.checked = stand[i]));
+    }
+    doc.addEventListener("change", () => {
+      kaestchenStand.current = boxen.map((box) => box.checked);
+    });
+  };
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFehler, setPdfFehler] = useState<string | null>(null);
   useEffect(() => {
@@ -633,6 +683,46 @@ const FormulareDialog = ({
               )
             ) : layout ? (
               <>
+                {kiFormular && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <TextField
+                      label="Begründung (erscheint im Formular)"
+                      value={begruendung}
+                      onChange={(event) => setBegruendung(event.target.value)}
+                      multiline
+                      minRows={3}
+                      fullWidth
+                    />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        mt: 0.5,
+                      }}
+                    >
+                      <Button
+                        size="small"
+                        startIcon={
+                          kiLaeuft ? (
+                            <CircularProgress size={14} />
+                          ) : (
+                            <AutoAwesomeIcon />
+                          )
+                        }
+                        onClick={kiVorschlagHolen}
+                        disabled={kiLaeuft}
+                      >
+                        Mit KI vorschlagen
+                      </Button>
+                      <Typography variant="caption" color="text.secondary">
+                        Übertragen werden nur Alter, Brillenart, Messwerte,
+                        Diagnose und Beruf – keine Namen, Adressen, Geburtsdaten
+                        oder Versichertennummern. Text vor dem Druck prüfen.
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
                 {layoutDef?.ausVorschau && (
                   <Typography
                     variant="caption"
@@ -648,6 +738,7 @@ const FormulareDialog = ({
                 <Box
                   component="iframe"
                   ref={vorschauRef}
+                  onLoad={vorschauGeladen}
                   title={layout.title}
                   srcDoc={layout.preview}
                   sx={{

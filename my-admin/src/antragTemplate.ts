@@ -28,7 +28,14 @@ export type AntragArt = "zuschuss" | "sozialamt";
 
 export type AntragDaten = {
   entities: DocumentMergeEntities;
+  // frei formulierte bzw. per KI vorgeschlagene Begründung
+  begruendung?: string;
 };
+
+const begruendungHtml = (begruendung?: string) =>
+  begruendung?.trim()
+    ? `<p class="freitext">${escapeHtml(begruendung.trim())}</p>`
+    : "";
 
 const linie = (breite = "60mm") =>
   `<span class="linie" style="width: ${breite}"></span>`;
@@ -65,7 +72,10 @@ const unterschrift = (name: string) => `
     <div>${escapeHtml(name || "(Unterschrift)")}</div>
   </div>`;
 
-const antragZuschussHtml = (entities: DocumentMergeEntities) => {
+const antragZuschussHtml = (
+  entities: DocumentMergeEntities,
+  begruendung?: string,
+) => {
   const k = kundenDaten(entities);
   const summen = buildWerkstattauftragSummen(entities);
   const heute = dayjs().format("DD.MM.YYYY");
@@ -94,6 +104,7 @@ const antragZuschussHtml = (entities: DocumentMergeEntities) => {
     <div>${kaestchen(brillenartKategorie(entities.brille?.BrillenArt) === "Officebrille")} Bildschirmarbeit (Bildschirmarbeitsplatzbrille)</div>
     <div>${kaestchen()} Sonstiges: ${linie("100mm")}</div>
   </div>
+  ${begruendungHtml(begruendung)}
   <p>Die Kosten betragen laut beiliegendem Kostenvoranschlag ${escapeHtml(formatEuro(summen.gesamt))} €.</p>
   <p>Dem Schreiben füge ich folgende Unterlagen bei:</p>
   <ul>
@@ -106,7 +117,10 @@ const antragZuschussHtml = (entities: DocumentMergeEntities) => {
 </div>`;
 };
 
-const antragSozialamtHtml = (entities: DocumentMergeEntities) => {
+const antragSozialamtHtml = (
+  entities: DocumentMergeEntities,
+  begruendung?: string,
+) => {
   const k = kundenDaten(entities);
   const summen = buildWerkstattauftragSummen(entities);
   const heute = dayjs().format("DD.MM.YYYY");
@@ -136,6 +150,7 @@ const antragSozialamtHtml = (entities: DocumentMergeEntities) => {
     <li>Die bisherigen Sehhilfen sind nicht mehr ausreichend.</li>
     <li>Als ${k.taetigkeit ? escapeHtml(k.taetigkeit) : linie("45mm")} benötige ich eine Sehhilfe für meine beruflichen Anforderungen.</li>
   </ul>
+  ${begruendungHtml(begruendung)}
   <p class="zwischentitel">Unterlagen:</p>
   <ol>
     <li>Ärztlicher Befund (siehe Anhang)</li>
@@ -150,8 +165,8 @@ const antragSozialamtHtml = (entities: DocumentMergeEntities) => {
 
 export const buildAntragBodyHtml = (art: AntragArt, daten: AntragDaten) =>
   (art === "sozialamt"
-    ? antragSozialamtHtml(daten.entities)
-    : antragZuschussHtml(daten.entities)) +
+    ? antragSozialamtHtml(daten.entities, daten.begruendung)
+    : antragZuschussHtml(daten.entities, daten.begruendung)) +
   buildKostenvoranschlagBodyHtml({ entities: daten.entities });
 
 const ANTRAG_STYLES = `
@@ -180,6 +195,7 @@ const ANTRAG_STYLES = `
   ul, ol { margin: 0 0 3.5mm; padding-left: 6mm; }
   ul.striche { list-style: none; padding-left: 0; }
   ul.striche li::before { content: "– "; }
+  .freitext { white-space: pre-wrap; }
   .ort-datum { margin-top: 6mm !important; }
   .unterschrift-block { margin-top: 14mm; width: 70mm; }
   .unterschrift-linie { border-top: 1px solid #111; margin-bottom: 1mm; }
