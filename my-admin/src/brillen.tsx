@@ -65,8 +65,6 @@ import {
   FormSection,
   RelatedSection,
   ShowActionsBar,
-  ShowColumn,
-  ShowColumns,
   ShowLayout,
   DatenbankInfo,
 } from "./EntityLayout";
@@ -345,25 +343,19 @@ const BrilleShowActions = () => (
 export const BrilleShow = () => (
   <Show actions={<BrilleShowActions />}>
     <ShowLayout>
-      <ShowColumns>
-        <ShowColumn>
-          <BrilleKarteikarte />
-          <DatenbankInfo />
-        </ShowColumn>
-        <ShowColumn>
-          <RelatedSection title="Weitere Aufträge dieses Kunden">
-            <ReferenceManyField
-              reference="brille"
-              target="kunde_id"
-              source="kunde_id"
-              label={false}
-              sort={{ field: "Datum", order: "DESC" }}
-            >
-              <BrilleHistoryDatagrid />
-            </ReferenceManyField>
-          </RelatedSection>
-        </ShowColumn>
-      </ShowColumns>
+      <BrilleKarteikarte />
+      <RelatedSection title="Weitere Aufträge dieses Kunden">
+        <ReferenceManyField
+          reference="brille"
+          target="kunde_id"
+          source="kunde_id"
+          label={false}
+          sort={{ field: "Datum", order: "DESC" }}
+        >
+          <BrilleHistoryDatagrid />
+        </ReferenceManyField>
+      </RelatedSection>
+      <DatenbankInfo />
     </ShowLayout>
   </Show>
 );
