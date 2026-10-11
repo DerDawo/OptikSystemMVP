@@ -181,9 +181,7 @@ describe("absenderAusBetrieb (#132)", () => {
     expect(absender.strasseKurz).toBe("Hauptstraße 1");
     expect(absender.telefon).toBe(STANDARD_ABSENDER.telefon);
     expect(absender.mwstSatz).toBe(7);
-    expect(absender.zahlungszielTage).toBe(
-      STANDARD_ABSENDER.zahlungszielTage,
-    );
+    expect(absender.zahlungszielTage).toBe(STANDARD_ABSENDER.zahlungszielTage);
     expect(absenderAusBetrieb(null)).toEqual(STANDARD_ABSENDER);
   });
 });

@@ -42,6 +42,7 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
+import { AnamnesebogenButton } from "./FormulareDialog";
 import { useTastenkuerzel } from "./tastenkuerzel";
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -77,6 +78,14 @@ import {
   ShowSection,
   DatenbankInfo,
 } from "./EntityLayout";
+import {
+  AnredeInput,
+  GeschlechtAusAnrede,
+  GeschlechtInput,
+  HinweiseChips,
+  HinweiseInput,
+  KundeVerwaltung,
+} from "./KundeFelder";
 import { KundenAuftraege } from "./KundenAuftraege";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
@@ -446,6 +455,7 @@ const MessageButton = () => {
 const KundeShowActions = () => (
   <ShowActionsBar>
     <MessageButton />
+    <AnamnesebogenButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
@@ -572,6 +582,17 @@ export const KundeShow = () => {
                 <TextField source="Tätigkeit" />
               </Field>
             </ShowSection>
+            <ShowSection title="Notizen">
+              <Field label="Hinweise">
+                <HinweiseChips />
+              </Field>
+              <Field label="Notizen">
+                <TextField
+                  source="Notizen"
+                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
+                />
+              </Field>
+            </ShowSection>
             <ShowSection title="Merkmale">
               <Field label="Beruf (Merkmal 1)">
                 <TextField source="Merkmal1" />
@@ -585,8 +606,10 @@ export const KundeShow = () => {
               <Field label="Merkmal 4">
                 <TextField source="Merkmal4" />
               </Field>
-              <Field label="Werbeaktion / Kundenquelle">
-                <TextField source="Kundenquelle" />
+            </ShowSection>
+            <ShowSection title="Marketing">
+              <Field label="Werbeeinwilligung">
+                <BooleanField source="Werbeeinwilligung" />
               </Field>
             </ShowSection>
             <ShowSection title="Adresse">
@@ -640,14 +663,6 @@ export const KundeShow = () => {
                 <DateField source="VersichertenkarteGueltigBis" />
               </Field>
             </ShowSection>
-            <ShowSection title="Notizen">
-              <Field label="Notizen">
-                <TextField
-                  source="Notizen"
-                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
-                />
-              </Field>
-            </ShowSection>
             <DatenbankInfo />
           </ShowColumn>
           <ShowColumn>
@@ -662,27 +677,22 @@ export const KundeShow = () => {
 export const KundeEdit = () => (
   <Edit title="Kunde bearbeiten" actions={<EditActionsBar />}>
     <SimpleForm>
-      <FormSection title="Datenbankfelder">
-        <FieldRow>
-          <TextInput source="id" InputProps={{ disabled: true }} />
-          <DateInput source="created_at" InputProps={{ disabled: true }} />
-        </FieldRow>
-        <FieldRow>
-          <TextInput source="KundenNummer" />
-          <DateInput source="Aufnahmedatum" />
-        </FieldRow>
-      </FormSection>
+      <GeschlechtAusAnrede />
       <FormSection title="Stammdaten">
         <FieldRow>
-          <TextInput source="Anrede" />
+          <AnredeInput />
           <TextInput source="Nachname" />
           <TextInput source="Vorname" />
         </FieldRow>
         <FieldRow>
-          <TextInput source="Geschlecht" />
+          <GeschlechtInput />
           <DateInput source="Geburtsdatum" />
           <TextInput source="Tätigkeit" />
         </FieldRow>
+      </FormSection>
+      <FormSection title="Notizen">
+        <HinweiseInput />
+        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
       </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
@@ -693,7 +703,9 @@ export const KundeEdit = () => (
           <TextInput source="Merkmal3" label="Merkmal 3" />
           <TextInput source="Merkmal4" label="Merkmal 4" />
         </FieldRow>
-        <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+      </FormSection>
+      <FormSection title="Marketing">
+        <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
       </FormSection>
       <FormSection title="Adresse">
         <FieldRow>
@@ -729,9 +741,7 @@ export const KundeEdit = () => (
           <DateInput source="VersichertenkarteGueltigBis" />
         </FieldRow>
       </FormSection>
-      <FormSection title="Notizen">
-        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
-      </FormSection>
+      <KundeVerwaltung />
     </SimpleForm>
   </Edit>
 );
@@ -747,6 +757,7 @@ export const KundeCreate = () => {
     Vorname: "",
     Geburtsdatum: "",
     KundenNummer: "",
+    Aufnahmedatum: new Date().toISOString().slice(0, 10),
     ...locationState,
   };
 
@@ -756,31 +767,22 @@ export const KundeCreate = () => {
       transform={(data) => ({ ...data, created_at: new Date().toISOString() })}
     >
       <SimpleForm defaultValues={defaultValues}>
-        <FormSection title="Datenbankfelder">
-          <FieldRow>
-            <TextInput source="id" InputProps={{ disabled: true }} />
-            <DateInput
-              source="created_at"
-              InputProps={{ disabled: true }}
-              label="Erstellt am"
-            />
-          </FieldRow>
-          <FieldRow>
-            <TextInput source="KundenNummer" />
-            <DateInput source="Aufnahmedatum" />
-          </FieldRow>
-        </FormSection>
+        <GeschlechtAusAnrede />
         <FormSection title="Stammdaten">
           <FieldRow>
-            <TextInput source="Anrede" />
+            <AnredeInput />
             <TextInput source="Nachname" />
             <TextInput source="Vorname" />
           </FieldRow>
           <FieldRow>
-            <TextInput source="Geschlecht" />
+            <GeschlechtInput />
             <DateInput source="Geburtsdatum" />
             <TextInput source="Tätigkeit" />
           </FieldRow>
+        </FormSection>
+        <FormSection title="Notizen">
+          <HinweiseInput />
+          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
         </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>
@@ -791,7 +793,9 @@ export const KundeCreate = () => {
             <TextInput source="Merkmal3" label="Merkmal 3" />
             <TextInput source="Merkmal4" label="Merkmal 4" />
           </FieldRow>
-          <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+        </FormSection>
+        <FormSection title="Marketing">
+          <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
         </FormSection>
         <FormSection title="Adresse">
           <FieldRow>
@@ -839,9 +843,7 @@ export const KundeCreate = () => {
             <DateInput source="VersichertenkarteGueltigBis" />
           </FieldRow>
         </FormSection>
-        <FormSection title="Notizen">
-          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
-        </FormSection>
+        <KundeVerwaltung />
       </SimpleForm>
     </Create>
   );

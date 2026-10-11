@@ -19,9 +19,11 @@ import {
 } from "./werkstattauftragTemplate";
 import {
   alterVorherigeBrille,
+  anzahlGlaeser,
   brillenartKategorie,
   sehstaerkeVeraendert,
 } from "./formularVorschlaege";
+import { verteileWerte } from "./aokBerechtigungsscheinTemplate";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
@@ -227,6 +229,58 @@ const bapFelder = (entities: DocumentMergeEntities) => {
   };
 };
 
+// Berechtigungsschein GKV: Original des ZVA (AOK-Vertrag Sehhilfen,
+// Anlage 4) mit nachträglich gesetzten Feldern
+// (scripts/berechtigungsschein-gkv-felder.mjs). Vorausgefüllt wie bisher
+// beim nachgebauten AOK-Schein: Versichertendaten, IK, Datum,
+// Rechnungsnummer, Werte F/N je Auge, bei Sehstärkenänderung das Kreuz und
+// die Glasanzahl, als Rechnungsbetrag der Kassenanteil. Unfall,
+// Abrechnungspositionen und Unterschriften bleiben frei.
+const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  const brille: Record<string, unknown> = entities.brille ?? {};
+  const veraendert = sehstaerkeVeraendert(entities) === true;
+  const rechts = verteileWerte(brille.BrillenArt, entities.glasRechts);
+  const links = verteileWerte(brille.BrillenArt, entities.glasLinks);
+  const werte = (
+    zeile: string,
+    w: ReturnType<typeof verteileWerte>["ferne"],
+  ) => ({
+    [`${zeile}_sph`]: formatWert(w.Sph, "dioptrie"),
+    [`${zeile}_cyl`]: formatWert(w.Cyl, "dioptrie"),
+    [`${zeile}_achse`]: formatWert(w.A, "achse"),
+    [`${zeile}_prisma`]: formatWert(w.Pr, "zwei"),
+    [`${zeile}_basis`]: formatWert(w.B, "frei"),
+    [`${zeile}_hsa`]: formatWert(w.HSA, "frei"),
+  });
+  const kassenanteil = Number(brille.KKAnteil) || 0;
+  return {
+    krankenkasse: text(k.Krankenkasse),
+    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    geburtsdatum: formatDatum(k.Geburtsdatum),
+    anschrift: adresse(k),
+    kassennr: text(k.KrankenkassenNummer),
+    versichertennr: text(k.VersichertenNummer),
+    status: text(k.Versichertenstatus),
+    ik: RECHNUNG_ABSENDER.ik,
+    vk_gueltig: formatDatum(k.VersichertenkarteGueltigBis),
+    datum: dayjs().format("DD.MM.YYYY"),
+    rechnungsnummer: text(brille.Rechnungsnummer),
+    ...(veraendert
+      ? {
+          cb_veraenderung: true,
+          cb_augenglasbestimmung: true,
+          anzahl_glaeser: anzahlGlaeser(entities),
+        }
+      : {}),
+    ...werte("FR", rechts.ferne),
+    ...werte("FL", links.ferne),
+    ...werte("NR", rechts.naehe),
+    ...werte("NL", links.naehe),
+    rechnungsbetrag: kassenanteil > 0 ? formatWert(kassenanteil, "zwei") : "",
+  };
+};
+
 // Kategorie in `dokumentvorlage` -> PDF-Vorlage
 export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
   Beobachtungsbogen: {
@@ -238,6 +292,11 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "antrag-bap.pdf",
     titel: "Antrag Bildschirmarbeitsplatzbrille",
     felder: bapFelder,
+  },
+  "Berechtigungsschein GKV": {
+    datei: "berechtigungsschein-gkv.pdf",
+    titel: "Berechtigungsschein (GKV)",
+    felder: berechtigungsscheinGkvFelder,
   },
 };
 

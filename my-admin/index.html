@@ -6,10 +6,13 @@
             name="viewport"
             content="minimum-scale=1, initial-scale=1, width=device-width, shrink-to-fit=no"
         />
-        <meta name="theme-color" content="#000000" />
+        <meta name="theme-color" content="#0A66D6" />
         <link rel="manifest" href="./manifest.json" />
-        <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-        <link rel="shortcut icon" href="./favicon.ico" />
+        <link rel="icon" type="image/png" sizes="32x32" href="./favicon-32.png" />
+        <link rel="icon" href="./favicon.ico" sizes="any" />
+        <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+        <meta name="apple-mobile-web-app-title" content="UNICORN" />
+        <meta name="application-name" content="UNICORN" />
         <title>UNICORN</title>
         <style>
             .loader-container {
@@ -22,9 +25,26 @@
                 bottom: 0;
                 left: 0;
                 right: 0;
-                background-color: #fafafa;
+                background-color: #f3f5f8;
             }
 
+            .loader-logo {
+                width: 96px;
+                height: 96px;
+            }
+            .loader-name {
+                margin-top: 14px;
+                font-family: Roboto, Arial, sans-serif;
+                font-size: 22px;
+                font-weight: 700;
+                letter-spacing: 0.06em;
+                color: #1f2937;
+            }
+            .loader-unter {
+                font-family: Roboto, Arial, sans-serif;
+                font-size: 13px;
+                color: #6b7280;
+            }
             /* CSS Spinner from https://projects.lukehaas.me/css-loaders/ */
 
             .loader,
@@ -34,10 +54,10 @@
             }
 
             .loader {
-                color: #283593;
-                font-size: 11px;
+                color: #0a66d6;
+                font-size: 4px;
                 text-indent: -99999em;
-                margin: 55px auto;
+                margin: 28px auto 0;
                 position: relative;
                 width: 10em;
                 height: 10em;
@@ -56,7 +76,7 @@
             .loader:before {
                 width: 5.2em;
                 height: 10.2em;
-                background: #fafafa;
+                background: #f3f5f8;
                 border-radius: 10.2em 0 0 10.2em;
                 top: -0.1em;
                 left: -0.1em;
@@ -69,7 +89,7 @@
             .loader:after {
                 width: 5.2em;
                 height: 10.2em;
-                background: #fafafa;
+                background: #f3f5f8;
                 border-radius: 0 10.2em 10.2em 0;
                 top: -0.1em;
                 left: 5.1em;
@@ -112,6 +132,9 @@
         <noscript> Bitte aktivieren Sie JavaScript, um das Programm zu nutzen. </noscript>
         <div id="root">
             <div class="loader-container">
+                <img class="loader-logo" src="./icon-192.png" alt="" />
+                <div class="loader-name">UNICORN</div>
+                <div class="loader-unter">Optik Ulm Systems</div>
                 <div class="loader">Wird geladen …</div>
             </div>
         </div>
