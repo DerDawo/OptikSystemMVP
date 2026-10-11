@@ -84,7 +84,7 @@ const zahlungsstatusChoices = [
 // Live-Vorschau der "Summe" (Issue #52): spiegelt im Formular dieselbe Formel,
 // die serverseitig per Trigger berechnet wird -
 //   (GlasLinks.Betrag + GlasRechts.Betrag + Fassung.Betrag) * (1 - Rabatt%)
-//   + Summe(Zusatzleistung.Betrag)
+//   + Summe(Zusatzleistung.Betrag) + WeitereLeistungen (#131)
 // - damit Nutzer den Betrag schon vor dem Speichern sehen. Der eigentliche
 // Wert bleibt serverseitig maßgeblich (Trigger überschreibt ihn beim
 // Speichern ohnehin), die Vorschau schreibt ihn zusätzlich ins Formular, damit
@@ -109,6 +109,7 @@ const SummeUndRestbetragVorschau = () => {
     rabattProzent,
     anzahlung,
     kkAnteil,
+    weitereLeistungen,
   ] = useWatch({
     name: [
       "GlasLinks",
@@ -117,6 +118,7 @@ const SummeUndRestbetragVorschau = () => {
       "RabattProzent",
       "Anzahlung",
       "KKAnteil",
+      "WeitereLeistungen",
     ],
   });
   const zusatzleistungIds: number[] = (
@@ -149,7 +151,8 @@ const SummeUndRestbetragVorschau = () => {
   const summe =
     Math.round(
       ((glasLinksBetrag + glasRechtsBetrag + fassungBetrag) * rabattFaktor +
-        zusatzleistungenSumme) *
+        zusatzleistungenSumme +
+        (Number(weitereLeistungen) || 0)) *
         100,
     ) / 100;
   const restbetrag =
@@ -166,7 +169,7 @@ const SummeUndRestbetragVorschau = () => {
       <MuiTextField
         label="Summe (berechnet)"
         value={formatCurrency(summe)}
-        helperText="Automatisch berechnet aus Glas links + Glas rechts + Fassung (abzüglich Rabatt) plus Zusatzleistungen."
+        helperText="Automatisch berechnet aus Glas links + Glas rechts + Fassung (abzüglich Rabatt) plus Zusatzleistungen und weitere Leistungen."
         slotProps={{ input: { readOnly: true } }}
         fullWidth
       />
@@ -449,6 +452,9 @@ export const BrilleShow = () => (
             </Field>
           </ShowSection>
           <ShowSection title="Preis & Zahlung">
+            <Field label="Weitere Leistungen / Nachlass">
+              <CurrencyField source="WeitereLeistungen" />
+            </Field>
             <Field>
               <CurrencyField source="Summe" />
             </Field>
@@ -622,6 +628,11 @@ export const BrilleEdit = () => (
         </FieldRow>
       </FormSection>
       <FormSection title="Preis & Zahlung">
+        <NumberInput
+          source="WeitereLeistungen"
+          label="Weitere Leistungen / Nachlass (€)"
+          helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus den Notizen."
+        />
         <SummeUndRestbetragVorschau />
         <FieldRow>
           <NumberInput source="Anzahlung" />
@@ -725,6 +736,11 @@ export const BrilleCreate = () => (
         </FieldRow>
       </FormSection>
       <FormSection title="Preis & Zahlung">
+        <NumberInput
+          source="WeitereLeistungen"
+          label="Weitere Leistungen / Nachlass (€)"
+          helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus den Notizen."
+        />
         <SummeUndRestbetragVorschau />
         <FieldRow>
           <NumberInput source="Anzahlung" />

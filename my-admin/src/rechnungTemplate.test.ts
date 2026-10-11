@@ -78,6 +78,27 @@ describe("buildRechnungPositionen", () => {
     expect(rabatt.betrag).toBeCloseTo(-31.98, 2);
   });
 
+  it("zeigt weitere Leistungen bzw. Nachlass als eigene Position (#131)", () => {
+    const mit = buildRechnungPositionen({
+      ...ENTITIES,
+      brille: { ...ENTITIES.brille, WeitereLeistungen: 42.5 },
+    });
+    expect(mit.at(-1)).toEqual({
+      label: "Weitere Leistungen (siehe Auftrag)",
+      betrag: 42.5,
+    });
+    const nachlass = buildRechnungPositionen({
+      ...ENTITIES,
+      brille: { ...ENTITIES.brille, WeitereLeistungen: -10 },
+    });
+    expect(nachlass.at(-1)).toEqual({
+      label: "Nachlass (siehe Auftrag)",
+      betrag: -10,
+    });
+    const ohne = buildRechnungPositionen(ENTITIES);
+    expect(ohne.some((p) => p.label.includes("siehe Auftrag"))).toBe(false);
+  });
+
   it("schreibt Sphäre immer mit Vorzeichen, Achse nur mit Zylinder", () => {
     expect(formatGlaswerte({ Sph: -1, Cyl: 0, A: 90 })).toBe("sph: - 1,00");
   });
