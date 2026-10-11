@@ -28,11 +28,11 @@ import { Theme } from "@mui/material/styles";
 import ChevronLeftIcon from "@mui/icons-material/ChevronLeft";
 import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CheckIcon from "@mui/icons-material/Check";
-import CheckBoxIcon from "@mui/icons-material/CheckBox";
-import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CloseIcon from "@mui/icons-material/Close";
+import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { formatCurrency } from "./CurrencyField";
-import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import { MITARBEITER, mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import { Auswahl, Eingabe, Haken, useKarteiSpeichern } from "./KarteiEingabe";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -81,6 +81,18 @@ const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
   { feld: "iod", titel: "iod" },
 ];
 const WERTE_LINKS = WERTE.slice(0, 8);
+
+const ZAHLUNGSSTATUS = [
+  { id: "offen", name: "offen" },
+  { id: "bezahlt", name: "bezahlt" },
+];
+// Rabatt-Codes wie im Bearbeiten-Formular (brillen.tsx)
+const RABATT_CODES = [
+  "VIP-Rabatt",
+  "ZNEU-Neukunden-Rabatt",
+  "zw-Zweitbrillen-Rabatt",
+  "Sonderrabatt",
+];
 const WERTE_RECHTS = WERTE.slice(8);
 
 const wertText = (glas: Datensatz | undefined, feld: string, vz?: boolean) => {
@@ -108,6 +120,11 @@ const feldFarbe = (theme: Theme) =>
   theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#e8eef6";
 const summenFarbe = (theme: Theme) =>
   theme.palette.mode === "dark" ? "rgba(255,255,255,0.14)" : "#e2e3e5";
+
+// Rahmen um das Feld, in dem gerade getippt wird
+const aktivesFeld = (theme: Theme) => ({
+  boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
+});
 
 type Platz = { z: number; s: string; h?: number };
 
@@ -171,6 +188,7 @@ const Feld = ({
       overflow: "hidden",
       textOverflow: "ellipsis",
       wordBreak: mehrzeilig ? "break-word" : "normal",
+      "&:focus-within": aktivesFeld(theme),
     })}
   >
     {children}
@@ -218,6 +236,7 @@ const Wert = ({
       fontSize: "0.95rem",
       whiteSpace: "nowrap",
       overflow: "hidden",
+      "&:focus-within": aktivesFeld(theme),
     })}
   >
     {children}
@@ -291,26 +310,50 @@ const AuftragPosition = ({ brille, z, s }: Platz & { brille: Datensatz }) => {
 };
 
 // Werte-Tabelle R/L aus den Glas-Datensätzen eines Auftrags, mit Liefern
-// und Betrag je Glas. Wird im Bearbeiten-Formular verwendet.
+// und Betrag je Glas. Wird im Bearbeiten-Formular verwendet; mit `brille`
+// (gespeicherter Auftrag) lassen sich die Werte direkt eintippen.
 export const WerteTabelle = ({
   rechtsId,
   linksId,
+  brille,
+  beiNeuemGlas,
 }: {
   rechtsId: unknown;
   linksId: unknown;
+  brille?: Datensatz;
+  // ein Glas wurde angelegt oder kopiert (Formularfeld nachziehen)
+  beiNeuemGlas?: (verweis: string, id: number) => void;
 }) => {
   const glasIds = [rechtsId, linksId].filter(
     (id) => id !== null && id !== undefined && id !== "",
   );
-  const { data: glaeser } = useGetMany<Datensatz>(
+  const { data: glaeser, refetch } = useGetMany<Datensatz>(
     "glass",
     { ids: glasIds },
     { enabled: glasIds.length > 0 },
   );
+  const { komponente } = useKarteiSpeichern(
+    brille
+      ? { ...brille, GlasRechts: rechtsId, GlasLinks: linksId }
+      : undefined,
+    refetch,
+    beiNeuemGlas,
+  );
+  const bearbeitbar = brille?.id != null;
   const glasNach = (id: unknown) => glaeser?.find((g) => g.id === id);
-  const augen: { seite: string; glas?: Datensatz }[] = [
-    { seite: "R", glas: glasNach(rechtsId) },
-    { seite: "L", glas: glasNach(linksId) },
+  const augen = [
+    {
+      seite: "R",
+      verweis: "GlasRechts",
+      Seite: "Rechts",
+      glas: glasNach(rechtsId),
+    },
+    {
+      seite: "L",
+      verweis: "GlasLinks",
+      Seite: "Links",
+      glas: glasNach(linksId),
+    },
   ];
   return (
     <Box sx={{ overflowX: "auto" }}>
@@ -319,6 +362,7 @@ export const WerteTabelle = ({
         sx={{
           "& td, & th": { px: 0.75, py: 0.5, whiteSpace: "nowrap" },
           "& th": { color: "text.secondary", fontWeight: 400 },
+          "& td:focus-within": (theme) => aktivesFeld(theme),
         }}
       >
         <TableHead>
@@ -334,30 +378,69 @@ export const WerteTabelle = ({
           </TableRow>
         </TableHead>
         <TableBody>
-          {augen.map(({ seite, glas }) => (
-            <TableRow key={seite}>
-              <TableCell sx={{ fontWeight: 600 }}>
-                {glas ? (
-                  <Link to={`/glass/${glas.id}/show`} underline="hover">
-                    {seite}
-                  </Link>
-                ) : (
-                  seite
-                )}
-              </TableCell>
-              {WERTE.map((w) => (
-                <TableCell key={w.feld} align="right">
-                  {wertText(glas, w.feld, w.vorzeichen)}
+          {augen.map(({ seite, verweis, Seite, glas }) => {
+            const speichere = komponente("glass", verweis, glas, { Seite });
+            return (
+              <TableRow key={seite}>
+                <TableCell sx={{ fontWeight: 600 }}>
+                  {glas ? (
+                    <Link to={`/glass/${glas.id}/show`} underline="hover">
+                      {seite}
+                    </Link>
+                  ) : (
+                    seite
+                  )}
                 </TableCell>
-              ))}
-              <TableCell align="center">
-                {glas?.Liefern ? <CheckIcon fontSize="small" /> : ""}
-              </TableCell>
-              <TableCell align="right">
-                {formatCurrency(glas?.Betrag)}
-              </TableCell>
-            </TableRow>
-          ))}
+                {WERTE.map((w) => (
+                  <TableCell key={w.feld} align="right" sx={{ minWidth: 48 }}>
+                    {bearbeitbar ? (
+                      <Box sx={{ display: "flex", minHeight: 24 }}>
+                        <Eingabe
+                          typ="zahl"
+                          rechts
+                          name={`${w.titel} ${seite}`}
+                          wert={glas?.[w.feld]}
+                          anzeige={wertText(glas, w.feld, w.vorzeichen)}
+                          speichere={speichere(w.feld)}
+                        />
+                      </Box>
+                    ) : (
+                      wertText(glas, w.feld, w.vorzeichen)
+                    )}
+                  </TableCell>
+                ))}
+                <TableCell align="center">
+                  {bearbeitbar ? (
+                    <Haken
+                      an={Boolean(glas?.Liefern)}
+                      name={`Liefern ${seite}`}
+                      speichere={speichere("Liefern")}
+                    />
+                  ) : glas?.Liefern ? (
+                    <CheckIcon fontSize="small" />
+                  ) : (
+                    ""
+                  )}
+                </TableCell>
+                <TableCell align="right" sx={{ minWidth: 80 }}>
+                  {bearbeitbar ? (
+                    <Box sx={{ display: "flex", minHeight: 24 }}>
+                      <Eingabe
+                        typ="zahl"
+                        rechts
+                        name={`Betrag ${seite}`}
+                        wert={glas?.Betrag}
+                        anzeige={formatCurrency(glas?.Betrag)}
+                        speichere={speichere("Betrag")}
+                      />
+                    </Box>
+                  ) : (
+                    formatCurrency(glas?.Betrag)
+                  )}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </Box>
@@ -524,7 +607,32 @@ export const BrilleKarteikarte = () => {
     { enabled: leistungIds.length > 0 },
   );
 
+  const refresh = useRefresh();
+  const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
+  const { data: brillenarten } = useGetList<Datensatz>("brillenart", {
+    pagination: { page: 1, perPage: 200 },
+    sort: { field: "Bezeichnung", order: "ASC" },
+  });
+
   if (!brille) return null;
+
+  const glasFeld = komponente("glastyp", "Glastyp", glastyp);
+  const fassungFeld = komponente("fassung", "Fassung", fassung);
+  const textFeld = (
+    feld: string,
+    name: string,
+    speichere: ReturnType<typeof auftrag>,
+    wert: unknown,
+    weiteres: Partial<Parameters<typeof Eingabe>[0]> = {},
+  ) => (
+    <Eingabe
+      name={name}
+      wert={wert}
+      speichere={speichere}
+      key={feld}
+      {...weiteres}
+    />
+  );
 
   const glasNach = (id: unknown) => glaeser?.find((g) => g.id === id);
   const augen = [
@@ -643,13 +751,26 @@ export const BrilleKarteikarte = () => {
               Brillenart
             </Beschriftung>
             <Feld z={1} s={LINKS}>
-              {text(brille.BrillenArt)}
+              {textFeld(
+                "BrillenArt",
+                "Brillenart",
+                auftrag("BrillenArt"),
+                brille.BrillenArt,
+                {
+                  vorschlaege: (brillenarten ?? []).map((b) =>
+                    text(b.Bezeichnung),
+                  ),
+                },
+              )}
             </Feld>
             <Beschriftung z={1} s="5 / 6">
               Datum
             </Beschriftung>
             <Feld z={1} s="6 / 7">
-              {datum(brille.Datum)}
+              {textFeld("Datum", "Datum", auftrag("Datum"), brille.Datum, {
+                typ: "datum",
+                anzeige: datum(brille.Datum),
+              })}
             </Feld>
             <Box
               sx={{
@@ -669,26 +790,62 @@ export const BrilleKarteikarte = () => {
               Berater
             </Beschriftung>
             <Feld z={2} s={LINKS}>
-              {mitarbeiterAnzeige(brille.Berater)}
+              {textFeld(
+                "Berater",
+                "Berater",
+                auftrag("Berater"),
+                brille.Berater,
+                {
+                  anzeige: mitarbeiterAnzeige(brille.Berater),
+                  vorschlaege: MITARBEITER,
+                },
+              )}
             </Feld>
             <Beschriftung z={2} s="5 / 6">
               Werkstatt
             </Beschriftung>
             <Feld z={2} s={RECHTS}>
-              {mitarbeiterAnzeige(brille.Werkstatt)}
+              {textFeld(
+                "Werkstatt",
+                "Werkstatt",
+                auftrag("Werkstatt"),
+                brille.Werkstatt,
+                {
+                  anzeige: mitarbeiterAnzeige(brille.Werkstatt),
+                  vorschlaege: MITARBEITER,
+                },
+              )}
             </Feld>
 
             <Beschriftung z={3} s="1 / 2">
               Refraktion
             </Beschriftung>
             <Feld z={3} s={LINKS}>
-              {mitarbeiterAnzeige(brille.Refraktion)}
+              {textFeld(
+                "Refraktion",
+                "Refraktion",
+                auftrag("Refraktion"),
+                brille.Refraktion,
+                {
+                  anzeige: mitarbeiterAnzeige(brille.Refraktion),
+                  vorschlaege: MITARBEITER,
+                },
+              )}
             </Feld>
             <Beschriftung z={3} s="5 / 6">
               Abholung
             </Beschriftung>
             <Feld z={3} s="6 / 7">
-              {datum(brille.Abholung)}
+              {textFeld(
+                "Abholung",
+                "Abholung",
+                auftrag("Abholung"),
+                brille.Abholung,
+                {
+                  typ: "datum",
+                  anzeige: datum(brille.Abholung),
+                },
+              )}
             </Feld>
             <Beschriftung z={3} s="7 / 8" rechts>
               Rechnungsnr.
@@ -716,6 +873,24 @@ export const BrilleKarteikarte = () => {
             </Box>
             {augen.map(({ seite, glas }, i) => {
               const z = 5 + i;
+              const speichere = komponente(
+                "glass",
+                i === 0 ? "GlasRechts" : "GlasLinks",
+                glas,
+                { Seite: i === 0 ? "Rechts" : "Links" },
+              );
+              const wertFeld = (w: (typeof WERTE)[number]) => (
+                <Wert key={w.feld} rechts>
+                  <Eingabe
+                    typ="zahl"
+                    rechts
+                    name={`${w.titel} ${seite}`}
+                    wert={glas?.[w.feld]}
+                    anzeige={wertText(glas, w.feld, w.vorzeichen)}
+                    speichere={speichere(w.feld)}
+                  />
+                </Wert>
+              );
               const marke = glas ? (
                 <Link
                   to={`/glass/${glas.id}/show`}
@@ -739,11 +914,7 @@ export const BrilleKarteikarte = () => {
                   s={LINKS}
                   spalten="repeat(8, 1fr)"
                 >
-                  {WERTE_LINKS.map((w) => (
-                    <Wert key={w.feld} rechts>
-                      {wertText(glas, w.feld, w.vorzeichen)}
-                    </Wert>
-                  ))}
+                  {WERTE_LINKS.map(wertFeld)}
                 </Zellen>,
                 <Beschriftung key={`${seite}-r`} z={z} s="5 / 6">
                   {seite}
@@ -754,11 +925,7 @@ export const BrilleKarteikarte = () => {
                   s="6 / 8"
                   spalten="repeat(3, 1fr) 0.8fr"
                 >
-                  {WERTE_RECHTS.map((w) => (
-                    <Wert key={w.feld} rechts>
-                      {wertText(glas, w.feld, w.vorzeichen)}
-                    </Wert>
-                  ))}
+                  {WERTE_RECHTS.map(wertFeld)}
                   <Box
                     sx={{
                       display: "flex",
@@ -766,18 +933,22 @@ export const BrilleKarteikarte = () => {
                       justifyContent: "center",
                     }}
                   >
-                    {glas?.Liefern ? (
-                      <CheckBoxIcon fontSize="small" />
-                    ) : (
-                      <CheckBoxOutlineBlankIcon
-                        fontSize="small"
-                        sx={{ color: "text.disabled" }}
-                      />
-                    )}
+                    <Haken
+                      an={Boolean(glas?.Liefern)}
+                      name={`Liefern ${seite}`}
+                      speichere={speichere("Liefern")}
+                    />
                   </Box>
                 </Zellen>,
                 <Feld key={`${seite}-b`} z={z} s="8 / 9" rechts>
-                  {betragText(glas?.Betrag)}
+                  <Eingabe
+                    typ="zahl"
+                    rechts
+                    name={`Betrag ${seite}`}
+                    wert={glas?.Betrag}
+                    anzeige={betragText(glas?.Betrag)}
+                    speichere={speichere("Betrag")}
+                  />
                 </Feld>,
               ];
             })}
@@ -810,31 +981,56 @@ export const BrilleKarteikarte = () => {
               Glastyp
             </Beschriftung>
             <Feld z={8} s={LINKS}>
-              {text(glastyp?.Bezeichnung)}
+              {textFeld(
+                "glastyp.Bezeichnung",
+                "Glastyp",
+                glasFeld("Bezeichnung"),
+                glastyp?.Bezeichnung,
+              )}
             </Feld>
             <Beschriftung z={8} s="5 / 6">
               Größe
             </Beschriftung>
             <Feld z={8} s="6 / 7">
-              {text(glastyp?.GlasGroesse)}
+              {textFeld(
+                "glastyp.GlasGroesse",
+                "Größe",
+                glasFeld("GlasGroesse"),
+                glastyp?.GlasGroesse,
+              )}
             </Feld>
             <Beschriftung z={9} s="1 / 2">
               Hersteller
             </Beschriftung>
             <Feld z={9} s={LINKS}>
-              {text(glastyp?.Hersteller)}
+              {textFeld(
+                "glastyp.Hersteller",
+                "Hersteller",
+                glasFeld("Hersteller"),
+                glastyp?.Hersteller,
+              )}
             </Feld>
             <Beschriftung z={9} s="5 / 6">
               Sonstiges
             </Beschriftung>
             <Feld z={9} s={RECHTS}>
-              {text(glastyp?.Sonstiges)}
+              {textFeld(
+                "glastyp.Sonstiges",
+                "Sonstiges",
+                glasFeld("Sonstiges"),
+                glastyp?.Sonstiges,
+              )}
             </Feld>
             <Beschriftung z={10} s="1 / 2">
               Vergütung
             </Beschriftung>
             <Feld z={10} s={LINKS}>
-              {text(glastyp?.Verguetung)}
+              {textFeld(
+                "glastyp.Verguetung",
+                "Vergütung",
+                glasFeld("Verguetung"),
+                glastyp?.Verguetung,
+              )}
             </Feld>
             <Beschriftung z={10} s="5 / 6">
               Sonstiges
@@ -844,13 +1040,23 @@ export const BrilleKarteikarte = () => {
               Farbe
             </Beschriftung>
             <Feld z={11} s={LINKS}>
-              {text(glastyp?.Farbe)}
+              {textFeld(
+                "glastyp.Farbe",
+                "Farbe",
+                glasFeld("Farbe"),
+                glastyp?.Farbe,
+              )}
             </Feld>
             <Beschriftung z={11} s="5 / 6">
               Status
             </Beschriftung>
             <Feld z={11} s={RECHTS}>
-              {text(glastyp?.Bestellstatus)}
+              {textFeld(
+                "glastyp.Bestellstatus",
+                "Status",
+                glasFeld("Bestellstatus"),
+                glastyp?.Bestellstatus,
+              )}
             </Feld>
 
             <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 24 }} />
@@ -870,37 +1076,82 @@ export const BrilleKarteikarte = () => {
               <Spaltentitel>Betrag</Spaltentitel>
             </Box>
             <Feld z={14} s="2 / 3">
-              {text(fassung?.Lagernummer)}
+              {textFeld(
+                "fassung.Lagernummer",
+                "Lagernummer",
+                fassungFeld("Lagernummer"),
+                fassung?.Lagernummer,
+              )}
             </Feld>
             <Feld z={14} s="3 / 4">
-              {fassung ? (
+              {textFeld(
+                "fassung.Bezeichnung",
+                "Fassung",
+                fassungFeld("Bezeichnung"),
+                fassung?.Bezeichnung,
+              )}
+              {fassung && (
                 <Link
                   to={`/fassung/${fassung.id}/show`}
-                  underline="hover"
-                  color="inherit"
+                  aria-label="Fassung öffnen"
+                  sx={{ display: "flex", ml: 0.5, color: "text.secondary" }}
                 >
-                  {text(fassung.Bezeichnung) || `Fassung Nr. ${fassung.id}`}
+                  <OpenInNewIcon sx={{ fontSize: 16 }} />
                 </Link>
-              ) : null}
+              )}
             </Feld>
             <Zellen z={14} s="6 / 8" spalten="100fr 165fr">
-              <Wert links>{text(fassung?.Farbe)}</Wert>
-              <Wert links>{text(fassung?.Groesse)}</Wert>
+              <Wert links>
+                {textFeld(
+                  "fassung.Farbe",
+                  "Farbe Fassung",
+                  fassungFeld("Farbe"),
+                  fassung?.Farbe,
+                )}
+              </Wert>
+              <Wert links>
+                {textFeld(
+                  "fassung.Groesse",
+                  "Größe Fassung",
+                  fassungFeld("Groesse"),
+                  fassung?.Groesse,
+                )}
+              </Wert>
             </Zellen>
             <Feld z={14} s="8 / 9" rechts>
-              {betragText(fassung?.Betrag)}
+              {textFeld(
+                "fassung.Betrag",
+                "Betrag Fassung",
+                fassungFeld("Betrag"),
+                fassung?.Betrag,
+                {
+                  typ: "zahl",
+                  rechts: true,
+                  anzeige: betragText(fassung?.Betrag),
+                },
+              )}
             </Feld>
             <Beschriftung z={15} s="2 / 3" rechts>
               Linie
             </Beschriftung>
             <Feld z={15} s="3 / 4">
-              {text(fassung?.Linie)}
+              {textFeld(
+                "fassung.Linie",
+                "Linie",
+                fassungFeld("Linie"),
+                fassung?.Linie,
+              )}
             </Feld>
             <Beschriftung z={15} s="5 / 6">
               Hersteller
             </Beschriftung>
             <Feld z={15} s={RECHTS}>
-              {text(fassung?.Hersteller)}
+              {textFeld(
+                "fassung.Hersteller",
+                "Hersteller Fassung",
+                fassungFeld("Hersteller"),
+                fassung?.Hersteller,
+              )}
             </Feld>
 
             {/* Zusatzleistungen */}
@@ -938,11 +1189,34 @@ export const BrilleKarteikarte = () => {
             <Beschriftung z={zRabatt} s="1 / 2">
               Rabatt
             </Beschriftung>
-            <Feld z={zRabatt} s={BREIT}>
-              {rabattProzent
-                ? `${text(brille.RabattBezeichnung) || "Rabatt"} ${dezimal.format(rabattProzent)} %`
-                : text(brille.RabattBezeichnung)}
-            </Feld>
+            <Zellen z={zRabatt} s={BREIT} spalten="1fr 110px">
+              <Wert links>
+                {textFeld(
+                  "RabattBezeichnung",
+                  "Rabatt",
+                  auftrag("RabattBezeichnung"),
+                  brille.RabattBezeichnung,
+                  {
+                    vorschlaege: RABATT_CODES,
+                  },
+                )}
+              </Wert>
+              <Wert rechts>
+                {textFeld(
+                  "RabattProzent",
+                  "Rabatt in %",
+                  auftrag("RabattProzent"),
+                  brille.RabattProzent,
+                  {
+                    typ: "zahl",
+                    rechts: true,
+                    anzeige: rabattProzent
+                      ? `${dezimal.format(rabattProzent)} %`
+                      : "",
+                  },
+                )}
+              </Wert>
+            </Zellen>
             <Feld z={zRabatt} s="8 / 9" rechts>
               {rabattBetrag === null ? "" : betrag.format(rabattBetrag)}
             </Feld>
@@ -961,7 +1235,15 @@ export const BrilleKarteikarte = () => {
               Notizen
             </Beschriftung>
             <Feld z={zNotizen} s={BREIT} h={2} mehrzeilig>
-              {text(brille.Notizen)}
+              {textFeld(
+                "Notizen",
+                "Notizen",
+                auftrag("Notizen"),
+                brille.Notizen,
+                {
+                  mehrzeilig: true,
+                },
+              )}
             </Feld>
             <Beschriftung z={zNotizen} s="7 / 8">
               <Box component="span" sx={{ pl: 2 }}>
@@ -969,7 +1251,17 @@ export const BrilleKarteikarte = () => {
               </Box>
             </Beschriftung>
             <Feld z={zNotizen} s="8 / 9" rechts>
-              {betragText(kkAnteil)}
+              {textFeld(
+                "KKAnteil",
+                "KK-Anteil",
+                auftrag("KKAnteil"),
+                brille.KKAnteil,
+                {
+                  typ: "zahl",
+                  rechts: true,
+                  anzeige: betragText(kkAnteil),
+                },
+              )}
             </Feld>
             <Beschriftung z={zNotizen + 1} s="7 / 8">
               <Box component="span" sx={{ pl: 2 }}>
@@ -984,7 +1276,12 @@ export const BrilleKarteikarte = () => {
               Zahlungen
             </Beschriftung>
             <Feld z={zZahlungen} s={LINKS}>
-              {text(brille.Zahlungsstatus)}
+              <Auswahl
+                name="Zahlungsstatus"
+                wert={brille.Zahlungsstatus}
+                optionen={ZAHLUNGSSTATUS}
+                speichere={auftrag("Zahlungsstatus")}
+              />
             </Feld>
             <Beschriftung z={zZahlungen} s="5 / 6">
               Datum
@@ -996,7 +1293,17 @@ export const BrilleKarteikarte = () => {
               </Box>
             </Beschriftung>
             <Feld z={zZahlungen} s="8 / 9" rechts>
-              {betragText(anzahlung)}
+              {textFeld(
+                "Anzahlung",
+                "Anzahlung",
+                auftrag("Anzahlung"),
+                brille.Anzahlung,
+                {
+                  typ: "zahl",
+                  rechts: true,
+                  anzeige: betragText(anzahlung),
+                },
+              )}
             </Feld>
             <Beschriftung z={zRest} s="7 / 8">
               <Box component="span" sx={{ pl: 2 }}>
@@ -1015,13 +1322,27 @@ export const BrilleKarteikarte = () => {
               Arzt
             </Beschriftung>
             <Feld z={zArzt} s={LINKS}>
-              {text(brille.VerordnenderArzt)}
+              {textFeld(
+                "VerordnenderArzt",
+                "Arzt",
+                auftrag("VerordnenderArzt"),
+                brille.VerordnenderArzt,
+              )}
             </Feld>
             <Beschriftung z={zArzt} s="5 / 6">
               Verordnung
             </Beschriftung>
             <Feld z={zArzt} s="6 / 7">
-              {datum(brille.Verordnungsdatum)}
+              {textFeld(
+                "Verordnungsdatum",
+                "Verordnung",
+                auftrag("Verordnungsdatum"),
+                brille.Verordnungsdatum,
+                {
+                  typ: "datum",
+                  anzeige: datum(brille.Verordnungsdatum),
+                },
+              )}
             </Feld>
             <Beschriftung z={zArzt} s="7 / 8" rechts>
               Muster 8
@@ -1035,7 +1356,12 @@ export const BrilleKarteikarte = () => {
               Diagnose
             </Beschriftung>
             <Feld z={zArzt + 1} s={BREIT}>
-              {text(brille.Diagnose)}
+              {textFeld(
+                "Diagnose",
+                "Diagnose",
+                auftrag("Diagnose"),
+                brille.Diagnose,
+              )}
             </Feld>
           </Box>
         </Box>

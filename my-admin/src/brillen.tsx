@@ -363,14 +363,23 @@ export const BrilleShow = () => (
   </Show>
 );
 
-// Werte der gewählten Gläser im Formular, wie auf der Karteikarte
+// Werte der gewählten Gläser im Formular, wie auf der Karteikarte. Bei einem
+// gespeicherten Auftrag lassen sich die Werte direkt eintippen (wird sofort
+// gespeichert); ein dabei neu angelegtes Glas wird ins Formular übernommen.
 const WerteVorschau = () => {
+  const record = useRecordContext();
+  const { setValue } = useFormContext();
   const rechtsId = useWatch({ name: "GlasRechts" });
   const linksId = useWatch({ name: "GlasLinks" });
-  if (!rechtsId && !linksId) return null;
+  if (!record?.id && !rechtsId && !linksId) return null;
   return (
     <Box sx={{ mb: 1 }}>
-      <WerteTabelle rechtsId={rechtsId} linksId={linksId} />
+      <WerteTabelle
+        rechtsId={rechtsId}
+        linksId={linksId}
+        brille={record?.id != null ? (record as { id: number }) : undefined}
+        beiNeuemGlas={(verweis, id) => setValue(verweis, id)}
+      />
     </Box>
   );
 };
