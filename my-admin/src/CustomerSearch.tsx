@@ -15,7 +15,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { Dayjs } from "dayjs";
 import { KundenDataTable } from "./kunden";
-import { namensSuchmuster } from "./suchmuster";
+import { andereAngabenFilter, namensSuchmuster } from "./suchmuster";
 
 const buildFilter = (filters: Record<string, string>) => {
   const result: Record<string, unknown> = {};
@@ -43,6 +43,7 @@ type SearchFields = {
   vorname: string;
   geburtsdatum: Dayjs | null;
   kundennummer: string;
+  andere?: string;
 };
 
 const CustomerSearch = () => {
@@ -52,12 +53,13 @@ const CustomerSearch = () => {
   const [vorname, setVorname] = useState("");
   const [geburtsdatum, setGeburtsdatum] = useState<Dayjs | null>(null);
   const [kundennummer, setKundennummer] = useState("");
+  const [andere, setAndere] = useState("");
 
   const [submittedFilter, setSubmittedFilter] = useState<
     Record<string, unknown>
   >({});
   const [hasSearched, setHasSearched] = useState(false);
-  const [hasSearchResults, setHasSearchResults] = useState(false);
+  const [, setHasSearchResults] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
 
   const dataProvider = useDataProvider();
@@ -79,14 +81,17 @@ const CustomerSearch = () => {
 
   // Liefert, ob es Treffer gab (für den Fallback der globalen Suche).
   const runSearch = async (fields: SearchFields): Promise<boolean> => {
-    const filter = buildFilter({
-      Nachname: fields.nachname,
-      Vorname: fields.vorname,
-      Geburtsdatum: fields.geburtsdatum
-        ? fields.geburtsdatum.format("YYYY-MM-DD")
-        : "",
-      KundenNummer: fields.kundennummer,
-    });
+    const filter = {
+      ...buildFilter({
+        Nachname: fields.nachname,
+        Vorname: fields.vorname,
+        Geburtsdatum: fields.geburtsdatum
+          ? fields.geburtsdatum.format("YYYY-MM-DD")
+          : "",
+        KundenNummer: fields.kundennummer,
+      }),
+      ...andereAngabenFilter(fields.andere ?? ""),
+    };
 
     setIsSearching(true);
     setSubmittedFilter(filter);
@@ -112,7 +117,7 @@ const CustomerSearch = () => {
   };
 
   const handleSearch = () =>
-    runSearch({ nachname, vorname, geburtsdatum, kundennummer });
+    runSearch({ nachname, vorname, geburtsdatum, kundennummer, andere });
 
   // Suchbegriff aus der globalen Suche in der Toolbar (MyAppBar.tsx), per
   // Router-State übergeben: Zahl = Kundennummer, sonst Namenssuche. Bei
@@ -147,6 +152,7 @@ const CustomerSearch = () => {
         setVorname(fields.vorname);
         setGeburtsdatum(null);
         setKundennummer(fields.kundennummer);
+        setAndere("");
         if (await runSearch(fields)) return;
       }
     })();
@@ -173,6 +179,7 @@ const CustomerSearch = () => {
     setVorname("");
     setGeburtsdatum(null);
     setKundennummer("");
+    setAndere("");
     setSubmittedFilter({});
     setHasSearched(false);
     setHasSearchResults(false);
@@ -193,83 +200,95 @@ const CustomerSearch = () => {
       </Box>
 
       <Box
-        sx={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr",
-          gap: isMobile ? ".25em" : "1em",
-          alignItems: "baseline",
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleSearch();
         }}
+        sx={{ display: "flex", flexDirection: "column", gap: "1em" }}
       >
-        <FormControl>
-          <TextField
-            label="Nachname"
-            value={nachname}
-            onChange={(e) => setNachname(e.target.value)}
-          />
-        </FormControl>
-
-        <FormControl>
-          <TextField
-            label="Vorname"
-            value={vorname}
-            onChange={(e) => setVorname(e.target.value)}
-          />
-        </FormControl>
-
-        <FormControl>
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <DatePicker
-              label="Geburtsdatum"
-              value={geburtsdatum}
-              onChange={(value) => setGeburtsdatum(value)}
-              format="YYYY-MM-DD"
-              slotProps={{
-                textField: {
-                  variant: "filled",
-                  fullWidth: true,
-                },
-              }}
-              sx={{
-                ".MuiPickersInputBase-root": {
-                  height: "48px",
-                },
-              }}
-            />
-          </LocalizationProvider>
-        </FormControl>
-
-        <FormControl>
-          <TextField
-            label="Kundennummer"
-            value={kundennummer}
-            onChange={(e) => setKundennummer(e.target.value)}
-          />
-        </FormControl>
-      </Box>
-
-      <Box
-        sx={{
-          display: "flex",
-          flexDirection: isMobile ? "column" : "row",
-          gap: "1em",
-          justifyContent: isMobile ? "stretch" : "flex-end",
-        }}
-      >
-        <Button variant="outlined" onClick={handleReset}>
-          Zurücksetzen
-        </Button>
-
-        <Button
-          variant="contained"
-          onClick={handleCreate}
-          disabled={!hasSearched || hasSearchResults || isSearching}
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr 1fr 1fr",
+            gap: isMobile ? ".25em" : "1em",
+            alignItems: "baseline",
+          }}
         >
-          neuen Kunden anlegen
-        </Button>
+          <FormControl>
+            <TextField
+              label="Nachname"
+              value={nachname}
+              onChange={(e) => setNachname(e.target.value)}
+            />
+          </FormControl>
 
-        <Button variant="contained" onClick={handleSearch}>
-          Suchen
-        </Button>
+          <FormControl>
+            <TextField
+              label="Vorname"
+              value={vorname}
+              onChange={(e) => setVorname(e.target.value)}
+            />
+          </FormControl>
+
+          <FormControl>
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+              <DatePicker
+                label="Geburtsdatum"
+                value={geburtsdatum}
+                onChange={(value) => setGeburtsdatum(value)}
+                format="DD.MM.YYYY"
+                slotProps={{
+                  textField: {
+                    variant: "filled",
+                    fullWidth: true,
+                  },
+                }}
+                sx={{
+                  ".MuiPickersInputBase-root": {
+                    height: "48px",
+                  },
+                }}
+              />
+            </LocalizationProvider>
+          </FormControl>
+
+          <FormControl>
+            <TextField
+              label="Kundennummer"
+              value={kundennummer}
+              onChange={(e) => setKundennummer(e.target.value)}
+            />
+          </FormControl>
+        </Box>
+
+        <TextField
+          label="Suche in anderen Angaben"
+          helperText="Straße, Ort, Telefon, Handy, E-Mail, Krankenkasse, Merkmale, Notizen"
+          value={andere}
+          onChange={(e) => setAndere(e.target.value)}
+        />
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            gap: "1em",
+            justifyContent: isMobile ? "stretch" : "flex-end",
+          }}
+        >
+          <Button variant="outlined" onClick={handleReset}>
+            Zurücksetzen
+          </Button>
+
+          <Button variant="outlined" onClick={handleCreate}>
+            Kunden neu anlegen
+          </Button>
+
+          <Button variant="contained" type="submit" disabled={isSearching}>
+            Suche starten
+          </Button>
+        </Box>
       </Box>
 
       <Divider />

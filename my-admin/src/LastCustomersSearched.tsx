@@ -1,41 +1,27 @@
 import { Box } from "@mui/material";
-import { Title, useDataProvider, ListBase } from "react-admin";
-import { useEffect } from "react";
+import { Title, ListBase, Pagination } from "react-admin";
 import { KundenDataTable } from "./kunden";
 
-const LastCustomersSearched = () => {
-  const dataProvider = useDataProvider();
-
-  useEffect(() => {
-    dataProvider
-      .getList("kunde", {
-        pagination: { page: 1, perPage: 10 },
-        filter: {},
-      })
-      .then(({ data }) => {
-        console.log("Daten von getList", data);
-      })
-      .catch((error) => {
-        console.error("Fehler getList", error);
-      });
-  }, [dataProvider]);
-
-  return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: "1em" }}>
-      <Title title="Zuletzt gesuchte Kunden" />
-      <Box sx={{ minHeight: 300 }}>
-        <ListBase
-          key={`kunde`}
-          resource={"kunde"}
-          disableSyncWithLocation
-          storeKey={false}
-          sort={{ field: "last_viewed_at", order: "DESC" }}
-        >
-          <KundenDataTable bulkActionButtons={false} />
-        </ListBase>
-      </Box>
+// Zuletzt geöffnete Kunden (Kundenansicht setzt last_viewed_at). Nie
+// geöffnete Kunden werden ausgeblendet; bei absteigender Sortierung stünden
+// sie in PostgreSQL sonst ganz oben.
+const LastCustomersSearched = () => (
+  <Box sx={{ display: "flex", flexDirection: "column", gap: "1em" }}>
+    <Title title="Letzte Kunden" />
+    <Box sx={{ minHeight: 300 }}>
+      <ListBase
+        resource="kunde"
+        disableSyncWithLocation
+        storeKey={false}
+        filter={{ "last_viewed_at@not.is": "null" }}
+        sort={{ field: "last_viewed_at", order: "DESC" }}
+        perPage={25}
+      >
+        <KundenDataTable bulkActionButtons={false} />
+        <Pagination rowsPerPageOptions={[25, 50]} />
+      </ListBase>
     </Box>
-  );
-};
+  </Box>
+);
 
 export default LastCustomersSearched;
