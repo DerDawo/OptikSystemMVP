@@ -230,6 +230,7 @@ siehe unten.
 | `send-whatsapp` (WhatsApp Cloud API) | `WHATSAPP_API_VERSION` | nein (Default `v21.0`) |
 | alle drei, optional (siehe unten) | `DEV_ALLOWED_RECIPIENTS` | nein |
 | `begruendung-vorschlagen` (Claude API, siehe unten) | `ANTHROPIC_API_KEY` | ja |
+| `google-kalender` (Termin-Abgleich, siehe unten) | `GOOGLE_KALENDER_ICS_URL` | ja |
 
 Namen und Pflicht-Status sind direkt aus den `Deno.env.get(...)`-Aufrufen
 im jeweiligen `supabase/functions/*/index.ts` abgelesen - bei Änderungen an
@@ -433,3 +434,44 @@ Die hier beschriebene Trennung der Supabase-Projekte hat ein Gegenstück auf
 Git-Ebene (Branch `dev` als Standard-PR-Ziel, `main` geschützt als
 Produktiv-Branch, Promotion-Workflow `dev` → `main`): siehe
 [`CONTRIBUTING.md`](../CONTRIBUTING.md) im Repository-Root (#97).
+
+## Google-Kalender-Abgleich (Edge Function `google-kalender`)
+
+Übernimmt die Termine eines Google-Kalenders in `termin` (Terminliste,
+Terminkalender, Dashboard): Zeitraum 30 Tage zurück bis 12 Monate voraus,
+Kunde über Vor-/Nachname im Titel (sonst "Kunde offen"), in Google
+gelöschte/abgesagte Termine werden entfernt, Serientermine (RRULE) werden
+nicht übernommen. Stand des letzten Abgleichs in `kalender_abgleich`.
+
+1. **iCal-Adresse holen** (wer den Google-Kalender besitzt): Google Kalender
+   im Browser → Zahnrad → Einstellungen → links den Kalender wählen →
+   "Kalender integrieren" → **"Privatadresse im iCal-Format"** kopieren.
+   Die Adresse ist geheim (wer sie kennt, sieht alle Termine): nicht in
+   Chat, Issues, Commits oder Dateien einfügen.
+2. **Secret setzen** (Supabase-Dashboard, Prod-Projekt
+   `cktdtojgrxskihihmnjm`): Edge Functions → Secrets → Add new secret →
+   Name `GOOGLE_KALENDER_ICS_URL`, Wert = die kopierte Adresse → Save.
+3. **Function bereitstellen**: `supabase functions deploy google-kalender
+   --project-ref cktdtojgrxskihihmnjm --no-verify-jwt`. Ohne JWT-Prüfung,
+   damit pg_cron sie aufrufen kann; sie gibt nur Zählwerte zurück und
+   überspringt Aufrufe innerhalb von 60 Sekunden nach dem letzten Abgleich.
+4. **Zeitplan (alle 15 Minuten)** im SQL-Editor des Prod-Projekts:
+
+   ```sql
+   create extension if not exists pg_cron;
+   create extension if not exists pg_net;
+   select cron.schedule(
+     'google-kalender-abgleich',
+     '*/15 * * * *',
+     $$ select net.http_post(
+          url := 'https://cktdtojgrxskihihmnjm.supabase.co/functions/v1/google-kalender',
+          headers := '{"Content-Type": "application/json"}'::jsonb,
+          body := '{}'::jsonb
+        ) $$
+   );
+   ```
+
+   Abschalten: `select cron.unschedule('google-kalender-abgleich');`
+
+In der App startet "Mit Google abgleichen" (Terminliste, Terminkalender)
+einen Abgleich sofort.

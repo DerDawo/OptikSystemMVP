@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useDataProvider, Title } from "react-admin";
 import { useNavigate } from "react-router-dom";
+import { GoogleAbgleichButton } from "./GoogleAbgleich";
 import {
   Box,
   Button,
@@ -19,6 +20,7 @@ type TerminRecord = {
   Ende: string;
   Terminart?: string | null;
   Notiz?: string | null;
+  Titel?: string | null;
 };
 
 type KundeRecord = {
@@ -95,9 +97,19 @@ const AppointmentBlock = ({
         sx={{ fontWeight: "bold", color: "inherit" }}
         noWrap
       >
-        {start.format("HH:mm")} {kundeName(kunde)}
+        {start.format("HH:mm")}{" "}
+        {kunde ? kundeName(kunde) : termin.Titel || "Kunde offen"}
       </Typography>
-      {termin.Terminart ? (
+      {kunde && termin.Titel ? (
+        <Typography
+          variant="caption"
+          component="div"
+          sx={{ color: "inherit" }}
+          noWrap
+        >
+          {termin.Titel}
+        </Typography>
+      ) : termin.Terminart ? (
         <Typography
           variant="caption"
           component="div"
@@ -152,6 +164,7 @@ export const TerminKalender = () => {
   const navigate = useNavigate();
   const [view, setView] = useState<CalendarView>("Woche");
   const [anchorDate, setAnchorDate] = useState<Dayjs>(dayjs());
+  const [neuLaden, setNeuLaden] = useState(0);
   const [termine, setTermine] = useState<TerminRecord[]>([]);
   const [kundenById, setKundenById] = useState<Map<string, KundeRecord>>(
     new Map(),
@@ -227,7 +240,7 @@ export const TerminKalender = () => {
     return () => {
       isActive = false;
     };
-  }, [dataProvider, rangeStart, rangeEnd]);
+  }, [dataProvider, rangeStart, rangeEnd, neuLaden]);
 
   const goToPrevious = () =>
     setAnchorDate((current) =>
@@ -274,6 +287,7 @@ export const TerminKalender = () => {
               <ToggleButton value="Tag">Tag</ToggleButton>
               <ToggleButton value="Woche">Woche</ToggleButton>
             </ToggleButtonGroup>
+            <GoogleAbgleichButton onFertig={() => setNeuLaden((n) => n + 1)} />
             <Button
               variant="contained"
               onClick={() => navigate("/termin/create")}
