@@ -1,14 +1,13 @@
 import {
   DataTable,
   DataTableProps,
-  Datagrid,
   List,
-  ReferenceManyField,
   useDataProvider,
   useShowController,
   ListActions,
   useRecordContext,
   Title,
+  RaRecord,
 } from "react-admin";
 import {
   BooleanField,
@@ -39,9 +38,11 @@ import {
   Stack,
   TextField as MuiTextField,
   Theme,
+  Tooltip,
   Typography,
   useMediaQuery,
 } from "@mui/material";
+import { useTastenkuerzel } from "./tastenkuerzel";
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -53,7 +54,6 @@ import SendIcon from "@mui/icons-material/Send";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EventIcon from "@mui/icons-material/Event";
 import { supabase } from "./utils";
 import {
   type NachrichtTermin,
@@ -70,14 +70,14 @@ import {
   Field,
   FieldRow,
   FormSection,
-  RelatedSection,
   ShowActionsBar,
   ShowColumn,
   ShowColumns,
   ShowLayout,
   ShowSection,
+  DatenbankInfo,
 } from "./EntityLayout";
-import { BrilleHistoryDatagrid } from "./BrilleHistory";
+import { KundenAuftraege } from "./KundenAuftraege";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -401,86 +401,51 @@ const kundenFilterMobile = [
     label="Kundennummer"
   />,
 ];
+const nachrichtRouteState = (record: RaRecord): KundeMessageRouteState => ({
+  kunde: {
+    id: record.id,
+    Anrede: record.Anrede,
+    Vorname: record.Vorname,
+    Nachname: record.Nachname,
+    Email: record.Email,
+    Handy: record.Handy,
+    TelefonnummerPrivat: record.TelefonnummerPrivat,
+    TelefonnummerGeschaeftlich: record.TelefonnummerGeschaeftlich,
+  },
+});
+
 const MessageButton = () => {
   const record = useRecordContext();
   const navigate = useNavigate();
-
-  if (!record) {
-    return null;
-  }
-
-  const routeState: KundeMessageRouteState = {
-    kunde: {
-      id: record.id,
-      Anrede: record.Anrede,
-      Vorname: record.Vorname,
-      Nachname: record.Nachname,
-      Email: record.Email,
-      Handy: record.Handy,
-      TelefonnummerPrivat: record.TelefonnummerPrivat,
-      TelefonnummerGeschaeftlich: record.TelefonnummerGeschaeftlich,
-    },
+  const oeffneNachricht = () => {
+    if (!record) return;
+    navigate(`/kunde/${record.id}/message`, {
+      state: nachrichtRouteState(record),
+    });
   };
-
-  return (
-    <Button
-      variant="contained"
-      startIcon={<SendIcon />}
-      onClick={() =>
-        navigate(`/kunde/${record.id}/message`, { state: routeState })
-      }
-    >
-      Nachricht senden
-    </Button>
-  );
-};
-
-const TerminButton = () => {
-  const record = useRecordContext();
-  const navigate = useNavigate();
+  useTastenkuerzel({ m: oeffneNachricht });
 
   if (!record) {
     return null;
   }
 
   return (
-    <Button
-      startIcon={<EventIcon />}
-      onClick={() =>
-        navigate("/termin/create", { state: { kunde_id: record.id } })
-      }
-    >
-      Termin anlegen
-    </Button>
-  );
-};
-
-const NewKontaktlinseButton = () => {
-  const record = useRecordContext();
-  const navigate = useNavigate();
-
-  if (!record) {
-    return null;
-  }
-
-  return (
-    <Button
-      variant="outlined"
-      onClick={() =>
-        navigate("/kontaktlinse/create", { state: { kunde_id: record.id } })
-      }
-    >
-      Kontaktlinsen
-    </Button>
+    <Tooltip title="Alt + M">
+      <Button
+        variant="contained"
+        startIcon={<SendIcon />}
+        onClick={oeffneNachricht}
+      >
+        Nachricht senden
+      </Button>
+    </Tooltip>
   );
 };
 
 // Central, always-reachable actions for the Kunde detail page (message, print, edit, back).
 const KundeShowActions = () => (
   <ShowActionsBar>
-    <NewKontaktlinseButton />
     <MessageButton />
-    <TerminButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
@@ -581,21 +546,13 @@ export const KundeShow = () => {
       <ShowLayout>
         <ShowColumns>
           <ShowColumn>
-            <ShowSection title="Datenbankfelder">
-              <Field>
-                <TextField source="id" />
-              </Field>
-              <Field>
-                <DateField source="created_at" />
-              </Field>
+            <ShowSection title="Stammdaten">
               <Field>
                 <TextField source="KundenNummer" />
               </Field>
               <Field>
                 <DateField source="Aufnahmedatum" />
               </Field>
-            </ShowSection>
-            <ShowSection title="Stammdaten">
               <Field>
                 <TextField source="Anrede" />
               </Field>
@@ -699,56 +656,10 @@ export const KundeShow = () => {
                 />
               </Field>
             </ShowSection>
+            <DatenbankInfo />
           </ShowColumn>
           <ShowColumn>
-            <RelatedSection title="Aufträge / Verlauf">
-              <ReferenceManyField
-                reference="brille"
-                target="kunde_id"
-                label={false}
-                sort={{ field: "Datum", order: "DESC" }}
-              >
-                <BrilleHistoryDatagrid />
-              </ReferenceManyField>
-            </RelatedSection>
-            <RelatedSection title="Termine des Kunden">
-              <ReferenceManyField
-                reference="termin"
-                target="kunde_id"
-                label={false}
-                sort={{ field: "Start", order: "DESC" }}
-              >
-                <Datagrid>
-                  <TextField source="id" />
-                  <DateField source="Start" showTime />
-                  <DateField source="Ende" showTime />
-                  <TextField source="Terminart" />
-                  <TextField source="Notiz" />
-                </Datagrid>
-              </ReferenceManyField>
-            </RelatedSection>
-            <RelatedSection title="Kontaktlinsen des Kunden">
-              <ReferenceManyField
-                reference="kontaktlinse"
-                target="kunde_id"
-                label={false}
-                sort={{ field: "Datum", order: "DESC" }}
-              >
-                <Datagrid rowClick="show" bulkActionButtons={false}>
-                  <DateField source="Datum" label="Datum" />
-                  <TextField source="LinsentypLinks" label="Linsentyp Links" />
-                  <TextField
-                    source="LinsentypRechts"
-                    label="Linsentyp Rechts"
-                  />
-                  <DateField source="Abholung" label="Abholung" />
-                  <DateField
-                    source="Nachkontrolltermin"
-                    label="Nachkontrolle"
-                  />
-                </Datagrid>
-              </ReferenceManyField>
-            </RelatedSection>
+            <KundenAuftraege />
           </ShowColumn>
         </ShowColumns>
       </ShowLayout>
@@ -963,6 +874,15 @@ export const KundeCreate = () => {
       </SimpleForm>
     </Create>
   );
+};
+
+// "123 Zeichen · 1 SMS" – lange SMS werden in Teilen zu 153 Zeichen
+// verschickt, Sonderzeichen/Emojis verkürzen die Teile (ungefähre Angabe).
+const smsLaengeText = (text: string) => {
+  const laenge = [...text].length;
+  if (laenge === 0) return " ";
+  const teile = laenge <= 160 ? 1 : Math.ceil(laenge / 153);
+  return `${laenge} Zeichen · ${teile} SMS`;
 };
 
 export const KundeMessage = () => {
@@ -1183,6 +1103,15 @@ export const KundeMessage = () => {
         naechsterTermin,
       )
     : "";
+  // Text der gewählten Vorlage, vor dem Senden änderbar (wie das
+  // SMS-Fenster in Prisma). Wechsel der Vorlage setzt ihn neu.
+  const [nachrichtText, setNachrichtText] = useState("");
+  const [nachrichtBetreff, setNachrichtBetreff] = useState("");
+  useEffect(() => {
+    setNachrichtText(renderedMessageContent);
+    setNachrichtBetreff(renderedMessageTitle);
+  }, [renderedMessageContent, renderedMessageTitle]);
+
   const recipientName =
     [messageCustomer.anrede, messageCustomer.vorname, messageCustomer.nachname]
       .filter(Boolean)
@@ -1210,8 +1139,8 @@ export const KundeMessage = () => {
     setSendFormError(null);
     setExternalLinks([]);
 
-    if (!selectedMessage) {
-      setSendFormError("Bitte wähle eine Nachricht aus.");
+    if (!nachrichtText.trim()) {
+      setSendFormError("Bitte wähle eine Vorlage oder schreibe einen Text.");
       return;
     }
 
@@ -1230,8 +1159,8 @@ export const KundeMessage = () => {
       channel,
       url: buildExternalMessageUrl(channel, {
         to: deliveryTargets[channel],
-        message: renderedMessageContent,
-        subject: renderedMessageTitle,
+        message: nachrichtText,
+        subject: nachrichtBetreff,
       }),
     }));
 
@@ -1618,39 +1547,27 @@ export const KundeMessage = () => {
               Telefonnummer: {messageCustomer.phoneNumber || "nicht vorhanden"}
             </Typography>
           </Stack>
-          <Box
-            sx={{
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 1,
-              padding: "1em",
-              backgroundColor: "action.hover",
-              minHeight: "8rem",
-              minWidth: 0,
-              maxHeight: { md: "18rem" },
-              overflowY: { md: "auto" },
-            }}
-          >
-            {selectedMessage ? (
-              <>
-                <Typography
-                  variant="h6"
-                  sx={{ mb: 1, overflowWrap: "break-word" }}
-                >
-                  {renderedMessageTitle}
-                </Typography>
-                <Typography
-                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
-                >
-                  {renderedMessageContent}
-                </Typography>
-              </>
-            ) : (
-              <Typography sx={{ color: "text.secondary" }}>
-                Wähle eine Nachricht aus, um den Inhalt zu sehen.
-              </Typography>
-            )}
-          </Box>
+          <Stack spacing={1.5}>
+            {selectedChannels.email ? (
+              <MuiTextField
+                label="Betreff (E-Mail)"
+                value={nachrichtBetreff}
+                onChange={(e) => setNachrichtBetreff(e.target.value)}
+                fullWidth
+              />
+            ) : null}
+            <MuiTextField
+              label="Text"
+              placeholder="Vorlage links auswählen oder Text schreiben"
+              value={nachrichtText}
+              onChange={(e) => setNachrichtText(e.target.value)}
+              multiline
+              minRows={6}
+              maxRows={16}
+              fullWidth
+              helperText={smsLaengeText(nachrichtText)}
+            />
+          </Stack>
         </Card>
       </Box>
 

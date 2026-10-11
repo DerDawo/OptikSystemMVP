@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { namensSuchmuster } from "./suchmuster";
+import { parseFilters } from "@raphiniert/ra-data-postgrest/lib/urlBuilder";
+import { andereAngabenFilter, namensSuchmuster } from "./suchmuster";
 
 const trifft = (eingabe: string, name: string) =>
   new RegExp(namensSuchmuster(eingabe), "i").test(name);
@@ -23,5 +24,25 @@ describe("namensSuchmuster", () => {
   it("entschärft Sonderzeichen", () => {
     expect(namensSuchmuster("a.b")).toBe("a\\.b");
     expect(trifft("a.b", "axb")).toBe(false);
+  });
+});
+
+describe("andereAngabenFilter", () => {
+  it("sucht einen Begriff in Adresse, Telefon, Merkmalen usw.", () => {
+    const { filter } = parseFilters(
+      { filter: andereAngabenFilter("Schlüssel(berg), 22") },
+      "eq",
+    );
+    expect(filter).toEqual({
+      or: expect.stringMatching(/^\(.*\)$/),
+    });
+    const teile = String(filter.or).slice(1, -1).split(",");
+    expect(teile).toHaveLength(14);
+    expect(teile).toContain('Straße.imatch."schl(ü|ue)(ß|ss)el.*berg.*22"');
+    expect(teile).toContain('Merkmal4.imatch."schl(ü|ue)(ß|ss)el.*berg.*22"');
+  });
+
+  it("liefert ohne Eingabe keinen Filter", () => {
+    expect(andereAngabenFilter(" , ( ) ")).toEqual({});
   });
 });

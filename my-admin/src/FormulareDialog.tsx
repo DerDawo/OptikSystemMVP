@@ -506,7 +506,10 @@ const FormulareDialog = ({
       })
       .catch((error) => {
         console.error("PDF-Vorlage konnte nicht erstellt werden", error);
-        if (!abgebrochen) setPdfFehler("Das PDF konnte nicht erstellt werden.");
+        if (!abgebrochen) {
+          const grund = error instanceof Error ? error.message : String(error);
+          setPdfFehler(`Das PDF konnte nicht erstellt werden: ${grund}`);
+        }
       });
     return () => {
       abgebrochen = true;

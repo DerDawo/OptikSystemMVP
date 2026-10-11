@@ -17,6 +17,7 @@ import {
   buildRechnungPositionen,
   escapeHtml,
 } from "./rechnungTemplate";
+import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 export const text = (value: unknown): string =>
   value === null || value === undefined ? "" : String(value).trim();
@@ -230,8 +231,8 @@ export const buildWerkstattauftragBodyHtml = ({
   const kundeninfo: [string, string][] = [
     ["Geburtsdatum", formatDatum(kunde.Geburtsdatum)],
     ["Krankenkasse", text(kunde.KrankenversicherungsTyp)],
-    ["Bearbeiter", text(brille.Berater)],
-    ["Refraktion", text(brille.Refraktion)],
+    ["Bearbeiter", text(mitarbeiterAnzeige(brille.Berater))],
+    ["Refraktion", text(mitarbeiterAnzeige(brille.Refraktion))],
     ["Werkstatt", text(brille.Werkstatt)],
   ];
 

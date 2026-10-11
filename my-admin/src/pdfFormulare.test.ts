@@ -4,6 +4,7 @@ import { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } from "pdf-lib";
 import {
   PDF_VORLAGEN,
   fuellePdfVorlage,
+  fuerPdfSchrift,
   passeAnFeldlaenge,
 } from "./pdfFormulare";
 
@@ -129,5 +130,15 @@ describe("Zuordnung der Felder", () => {
     const felder = PDF_VORLAGEN.Beobachtungsbogen.felder(entities);
     expect(felder["CYL OD ALT"]).toBe("-0,50");
     expect(felder["AXE OS ALT"]).toBe("170");
+  });
+});
+
+describe("fuerPdfSchrift", () => {
+  it("ersetzt Zeichen, die die PDF-Standardschrift nicht kennt", () => {
+    expect(fuerPdfSchrift("\u22121,25")).toBe("-1,25");
+    expect(fuerPdfSchrift("Visus \u2265 0,5")).toBe("Visus >= 0,5");
+    expect(fuerPdfSchrift("Zeile1\nZeile2")).toBe("Zeile1 Zeile2");
+    expect(fuerPdfSchrift("Weiß – 12,00 € „ok“")).toBe("Weiß – 12,00 € „ok“");
+    expect(fuerPdfSchrift("a\u{1F600}b")).toBe("ab");
   });
 });

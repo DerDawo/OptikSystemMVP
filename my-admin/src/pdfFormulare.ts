@@ -22,6 +22,7 @@ import {
   brillenartKategorie,
   sehstaerkeVeraendert,
 } from "./formularVorschlaege";
+import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
 export type PdfFeldwerte = Record<string, string | boolean>;
@@ -73,7 +74,7 @@ const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
     Adresse: adresse(k),
     Telefon: telefon(k),
     Geburtstag: formatDatum(k.Geburtsdatum),
-    Mitarbeiter: text(brille.Berater),
+    Mitarbeiter: text(mitarbeiterAnzeige(brille.Berater)),
     Datum: dayjs().format("DD.MM.YYYY"),
     ...werte(entities.glasRechts, "OD"),
     ...werte(entities.glasLinks, "OS"),
@@ -134,7 +135,7 @@ const bapFelder = (entities: DocumentMergeEntities) => {
   // Kunden-Nr. (Protokoll-Nr. und Uhrzeit bleiben frei)
   const kopf = (start: number) => ({
     [`hd_${start + 1}`]: messdatum,
-    [`hd_${start + 3}`]: text(brille.Berater),
+    [`hd_${start + 3}`]: text(mitarbeiterAnzeige(brille.Berater)),
     [`hd_${start + 4}`]: text(k.KundenNummer),
   });
 
@@ -251,6 +252,34 @@ export const passeAnFeldlaenge = (wert: string, max?: number) => {
     : wert.slice(0, max);
 };
 
+// Die Standardschrift der PDF-Formulare (WinAnsi) kennt z. B. das
+// typografische Minus, Pfeile oder Vergleichszeichen nicht; pdf-lib bricht
+// sonst das Speichern des ganzen PDFs ab. Solche Zeichen werden ersetzt.
+const WINANSI_ERSATZ: Record<string, string> = {
+  "\u2212": "-",
+  "\u2010": "-",
+  "\u2011": "-",
+  "\u2192": "->",
+  "\u2190": "<-",
+  "\u2265": ">=",
+  "\u2264": "<=",
+  "\u00a0": " ",
+};
+const WINANSI_EXTRA = "€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ";
+
+export const fuerPdfSchrift = (wert: string): string =>
+  [...wert]
+    .map((zeichen) => {
+      if (WINANSI_ERSATZ[zeichen] !== undefined) return WINANSI_ERSATZ[zeichen];
+      const code = zeichen.charCodeAt(0);
+      if (zeichen === "\n" || zeichen === "\r" || zeichen === "\t") return " ";
+      if ((code >= 32 && code <= 126) || (code >= 160 && code <= 255)) {
+        return zeichen;
+      }
+      return WINANSI_EXTRA.includes(zeichen) ? zeichen : "";
+    })
+    .join("");
+
 // Lädt die Vorlage, setzt die Werte und gibt das weiterhin ausfüllbare PDF
 // zurück. pdf-lib wird erst hier geladen, damit es nicht im Haupt-Bundle liegt.
 export const fuellePdfVorlage = async (
@@ -271,7 +300,9 @@ export const fuellePdfVorlage = async (
         continue;
       }
       if (feld instanceof PDFTextField) {
-        feld.setText(passeAnFeldlaenge(wert, feld.getMaxLength()));
+        feld.setText(
+          passeAnFeldlaenge(fuerPdfSchrift(wert), feld.getMaxLength()),
+        );
         // feste Größe statt "automatisch" (füllt sonst die ganze Feldhöhe);
         // Felder ohne eigene Schriftangabe bekommen eine
         try {
@@ -281,7 +312,7 @@ export const fuellePdfVorlage = async (
         }
       } else if (feld instanceof PDFDropdown) {
         // Werte außerhalb der Liste schaltet pdf-lib als freie Eingabe frei
-        feld.select(wert);
+        feld.select(fuerPdfSchrift(wert));
       }
     } catch (error) {
       console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
@@ -297,5 +328,14 @@ export const ladePdfVorlage = async (vorlage: PdfVorlage) => {
   if (!antwort.ok) {
     throw new Error(`Vorlage ${vorlage.datei} nicht gefunden`);
   }
-  return antwort.arrayBuffer();
+  const bytes = await antwort.arrayBuffer();
+  // Browser-Erweiterungen (z. B. PDF-Viewer) fangen PDF-Abrufe teils ab und
+  // liefern stattdessen eine HTML-Seite.
+  const kopf = new TextDecoder().decode(new Uint8Array(bytes.slice(0, 5)));
+  if (kopf !== "%PDF-") {
+    throw new Error(
+      `Die Vorlage ${vorlage.datei} kam nicht als PDF an. Bitte PDF-Erweiterungen im Browser (z. B. Adobe Acrobat) für diese Seite deaktivieren.`,
+    );
+  }
+  return bytes;
 };

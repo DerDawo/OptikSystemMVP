@@ -6,7 +6,7 @@ import {
   ReferenceManyField,
   Pagination,
 } from "react-admin";
-import { BooleanField, NumberField, Show, TextField } from "react-admin";
+import { Show, TextField } from "react-admin";
 import {
   BooleanInput,
   DateInput,
@@ -36,11 +36,19 @@ import {
   useNotify,
 } from "react-admin";
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { KundeInput } from "./KundeInput";
+import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import PrintIcon from "@mui/icons-material/Print";
 import { Box, Button, TextField as MuiTextField } from "@mui/material";
+import {
+  MitarbeiterField,
+  MitarbeiterInput,
+  RefraktionInput,
+} from "./mitarbeiter";
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
@@ -53,7 +61,6 @@ import {
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import {
   EditActionsBar,
-  Field,
   FieldRow,
   FormSection,
   RelatedSection,
@@ -61,7 +68,7 @@ import {
   ShowColumn,
   ShowColumns,
   ShowLayout,
-  ShowSection,
+  DatenbankInfo,
 } from "./EntityLayout";
 import { BrilleHistoryDatagrid } from "./BrilleHistory";
 import { BrilleStatusChip, brilleRowSx } from "./orderStatus";
@@ -250,8 +257,12 @@ export const BrilleList = () => (
           />
         </ReferenceField>
       </DataTable.Col>
-      <DataTable.Col source="Berater" />
-      <DataTable.Col source="Refraktion" />
+      <DataTable.Col source="Berater" label="Bedient von">
+        <MitarbeiterField source="Berater" label="Bedient von" />
+      </DataTable.Col>
+      <DataTable.Col source="Refraktion" label="Refraktion durch">
+        <MitarbeiterField source="Refraktion" label="Refraktion durch" />
+      </DataTable.Col>
       <DataTable.Col source="Datum">
         <DateField source="Datum" />
       </DataTable.Col>
@@ -336,174 +347,8 @@ export const BrilleShow = () => (
     <ShowLayout>
       <ShowColumns>
         <ShowColumn>
-          <ShowSection title="Datenbankfelder">
-            <Field>
-              <TextField source="id" />
-            </Field>
-            <Field>
-              <DateField source="created_at" />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Auftragsdaten">
-            <Field label="Status">
-              <FunctionField
-                render={(record) => <BrilleStatusChip record={record} />}
-              />
-            </Field>
-            <Field>
-              <TextField source="BrillenArt" />
-            </Field>
-            <Field>
-              <TextField source="Berater" />
-            </Field>
-            <Field>
-              <TextField source="Refraktion" />
-            </Field>
-            <Field>
-              <DateField source="Datum" />
-            </Field>
-            <Field>
-              <TextField source="Werkstatt" />
-            </Field>
-            <Field>
-              <DateField source="Abholung" />
-            </Field>
-            <Field>
-              <TextField source="Notizen" />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Komponenten">
-            <Field>
-              <ReferenceField
-                source="GlasLinks"
-                reference="glass"
-                link="show"
-              />
-            </Field>
-            <Field>
-              <ReferenceField
-                source="GlasRechts"
-                reference="glass"
-                link="show"
-              />
-            </Field>
-            <Field>
-              <ReferenceField
-                source="Fassung"
-                reference="fassung"
-                link="show"
-              />
-            </Field>
-            <Field>
-              <ReferenceField
-                source="Glastyp"
-                reference="glastyp"
-                link="show"
-              />
-            </Field>
-          </ShowSection>
-          <RelatedSection title="Zusatzleistungen">
-            <ReferenceManyField
-              reference="brille_hat_zusatzleistungen"
-              target="BrillenID"
-              label={false}
-            >
-              <Datagrid bulkActionButtons={false}>
-                <ReferenceField
-                  source="ZusatzleistungID"
-                  reference="zusatzleistung"
-                  link="show"
-                  label="Bezeichnung"
-                >
-                  <TextField source="Bezeichnung" />
-                </ReferenceField>
-                <ReferenceField
-                  source="ZusatzleistungID"
-                  reference="zusatzleistung"
-                  link={false}
-                  label="Kategorie"
-                >
-                  <TextField source="Kategorie" />
-                </ReferenceField>
-                <ReferenceField
-                  source="ZusatzleistungID"
-                  reference="zusatzleistung"
-                  link={false}
-                  label="Preis"
-                >
-                  <CurrencyField source="Betrag" />
-                </ReferenceField>
-              </Datagrid>
-            </ReferenceManyField>
-          </RelatedSection>
-          <ShowSection title="Rabatt">
-            <Field>
-              <TextField source="RabattBezeichnung" />
-            </Field>
-            <Field>
-              <FunctionField
-                source="RabattProzent"
-                render={(record) =>
-                  record?.RabattProzent != null
-                    ? `-${record.RabattProzent} %`
-                    : ""
-                }
-              />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Preis & Zahlung">
-            <Field label="Weitere Leistungen / Nachlass">
-              <CurrencyField source="WeitereLeistungen" />
-            </Field>
-            <Field>
-              <CurrencyField source="Summe" />
-            </Field>
-            <Field>
-              <NumberField source="Anzahlung" />
-            </Field>
-            <Field label="KK-Anteil">
-              <NumberField source="KKAnteil" />
-            </Field>
-            <Field label="Offener Restbetrag">
-              <FunctionField
-                render={(record) =>
-                  formatCurrency(
-                    (Number(record?.Summe) || 0) -
-                      (Number(record?.Anzahlung) || 0) -
-                      (Number(record?.KKAnteil) || 0),
-                  )
-                }
-              />
-            </Field>
-            <Field label="Rechnungsnr.">
-              <TextField source="Rechnungsnummer" />
-            </Field>
-            <Field>
-              <TextField source="Zahlungsstatus" />
-            </Field>
-            <Field label="Mahnstufe">
-              <NumberField source="Mahnstufe" />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Verordnung">
-            <Field>
-              <TextField source="VerordnenderArzt" />
-            </Field>
-            <Field>
-              <DateField source="Verordnungsdatum" />
-            </Field>
-            <Field>
-              <TextField source="Diagnose" />
-            </Field>
-          </ShowSection>
-          <ShowSection title="Kassenzulassung (§ 33 SGB V)">
-            <Field label="Erstverordnung (Muster 8) vorhanden">
-              <BooleanField source="ErstverordnungMuster8Vorhanden" />
-            </Field>
-            <Field label="Ausstellungsdatum Muster 8">
-              <DateField source="ErstverordnungMuster8Datum" />
-            </Field>
-          </ShowSection>
+          <BrilleKarteikarte />
+          <DatenbankInfo />
         </ShowColumn>
         <ShowColumn>
           <RelatedSection title="Weitere Aufträge dieses Kunden">
@@ -523,6 +368,18 @@ export const BrilleShow = () => (
   </Show>
 );
 
+// Werte der gewählten Gläser im Formular, wie auf der Karteikarte
+const WerteVorschau = () => {
+  const rechtsId = useWatch({ name: "GlasRechts" });
+  const linksId = useWatch({ name: "GlasLinks" });
+  if (!rechtsId && !linksId) return null;
+  return (
+    <Box sx={{ mb: 1 }}>
+      <WerteTabelle rechtsId={rechtsId} linksId={linksId} />
+    </Box>
+  );
+};
+
 export const BrilleEdit = () => (
   <Edit
     actions={
@@ -537,20 +394,22 @@ export const BrilleEdit = () => (
     }
   >
     <SimpleForm>
-      <FormSection title="Datenbankfelder">
+      <FormSection title="Beratung">
+        <KundeInput />
         <FieldRow>
-          <TextInput source="id" />
-          <DateInput source="created_at" />
+          <MitarbeiterInput source="Berater" label="Bedient von" />
+          <RefraktionInput
+            source="Refraktion"
+            label="Refraktion durch (Mitarbeiter / Arzt)"
+          />
         </FieldRow>
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
           <BrillenArtInput />
-          <TextInput source="Berater" />
-          <TextInput source="Refraktion" />
+          <DateInput source="Datum" />
         </FieldRow>
         <FieldRow>
-          <DateInput source="Datum" />
           <TextInput source="Werkstatt" />
           <DateInput source="Abholung" />
         </FieldRow>
@@ -558,13 +417,14 @@ export const BrilleEdit = () => (
       </FormSection>
       <FormSection title="Komponenten">
         <FieldRow>
-          <ReferenceInput source="GlasLinks" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
           <ReferenceInput source="GlasRechts" reference="glass">
             <SelectInput />
           </ReferenceInput>
+          <ReferenceInput source="GlasLinks" reference="glass">
+            <SelectInput />
+          </ReferenceInput>
         </FieldRow>
+        <WerteVorschau />
         <FieldRow>
           <ReferenceInput source="Fassung" reference="fassung">
             <SelectInput />
@@ -665,114 +525,123 @@ export const BrilleEdit = () => (
           />
         </FieldRow>
       </FormSection>
+      <DatenbankInfo />
     </SimpleForm>
   </Edit>
 );
 
-export const BrilleCreate = () => (
-  <Create>
-    <SimpleForm>
-      <FormSection title="Datenbankfelder">
-        <FieldRow>
-          <TextInput source="id" />
-          <DateInput source="created_at" />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Auftragsdaten">
-        <FieldRow>
-          <BrillenArtInput />
-          <TextInput source="Berater" />
-          <TextInput source="Refraktion" />
-        </FieldRow>
-        <FieldRow>
-          <DateInput source="Datum" />
-          <TextInput source="Werkstatt" />
-          <DateInput source="Abholung" />
-        </FieldRow>
-        <TextInput source="Notizen" multiline fullWidth />
-      </FormSection>
-      <FormSection title="Komponenten">
-        <FieldRow>
-          <ReferenceInput source="GlasLinks" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
-          <ReferenceInput source="GlasRechts" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
-        </FieldRow>
-        <FieldRow>
-          <ReferenceInput source="Fassung" reference="fassung">
-            <SelectInput />
-          </ReferenceInput>
-          <ReferenceInput source="Glastyp" reference="glastyp">
-            <SelectInput />
-          </ReferenceInput>
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Zusatzleistungen">
-        <ReferenceArrayInput
-          source="ZusatzleistungIDs"
-          reference="zusatzleistung"
-        >
-          <AutocompleteArrayInput
-            optionText="Bezeichnung"
-            label="Zusatzleistungen"
-            fullWidth
-          />
-        </ReferenceArrayInput>
-      </FormSection>
-      <FormSection title="Rabatt">
-        <FieldRow>
-          <SelectInput
-            source="RabattBezeichnung"
-            choices={RABATT_CODES}
-            helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
-          />
+export const BrilleCreate = () => {
+  const location = useLocation();
+  const defaultValues =
+    (location.state as Record<string, unknown> | undefined) ?? {};
+  return (
+    <Create>
+      <SimpleForm defaultValues={defaultValues}>
+        <FormSection title="Beratung">
+          <KundeInput />
+          <FieldRow>
+            <MitarbeiterInput source="Berater" label="Bedient von" />
+            <RefraktionInput
+              source="Refraktion"
+              label="Refraktion durch (Mitarbeiter / Arzt)"
+            />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Auftragsdaten">
+          <FieldRow>
+            <BrillenArtInput />
+            <DateInput source="Datum" />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Werkstatt" />
+            <DateInput source="Abholung" />
+          </FieldRow>
+          <TextInput source="Notizen" multiline fullWidth />
+        </FormSection>
+        <FormSection title="Komponenten">
+          <FieldRow>
+            <ReferenceInput source="GlasRechts" reference="glass">
+              <SelectInput />
+            </ReferenceInput>
+            <ReferenceInput source="GlasLinks" reference="glass">
+              <SelectInput />
+            </ReferenceInput>
+          </FieldRow>
+          <WerteVorschau />
+          <FieldRow>
+            <ReferenceInput source="Fassung" reference="fassung">
+              <SelectInput />
+            </ReferenceInput>
+            <ReferenceInput source="Glastyp" reference="glastyp">
+              <SelectInput />
+            </ReferenceInput>
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Zusatzleistungen">
+          <ReferenceArrayInput
+            source="ZusatzleistungIDs"
+            reference="zusatzleistung"
+          >
+            <AutocompleteArrayInput
+              optionText="Bezeichnung"
+              label="Zusatzleistungen"
+              fullWidth
+            />
+          </ReferenceArrayInput>
+        </FormSection>
+        <FormSection title="Rabatt">
+          <FieldRow>
+            <SelectInput
+              source="RabattBezeichnung"
+              choices={RABATT_CODES}
+              helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
+            />
+            <NumberInput
+              source="RabattProzent"
+              label="Rabatt in %"
+              helperText="VIP 15 / ZNEU 10 / zw 35 / Sonderrabatt individuell"
+            />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Preis & Zahlung">
           <NumberInput
-            source="RabattProzent"
-            label="Rabatt in %"
-            helperText="VIP 15 / ZNEU 10 / zw 35 / Sonderrabatt individuell"
+            source="WeitereLeistungen"
+            label="Weitere Leistungen / Nachlass (€)"
+            helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus den Notizen."
           />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Preis & Zahlung">
-        <NumberInput
-          source="WeitereLeistungen"
-          label="Weitere Leistungen / Nachlass (€)"
-          helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus den Notizen."
-        />
-        <SummeUndRestbetragVorschau />
-        <FieldRow>
-          <NumberInput source="Anzahlung" />
-          <NumberInput source="KKAnteil" label="KK-Anteil" />
-        </FieldRow>
-        <FieldRow>
-          <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
-          <SelectInput
-            source="Zahlungsstatus"
-            choices={zahlungsstatusChoices}
-          />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Verordnung">
-        <FieldRow>
-          <TextInput source="VerordnenderArzt" />
-          <DateInput source="Verordnungsdatum" />
-        </FieldRow>
-        <TextInput source="Diagnose" fullWidth />
-      </FormSection>
-      <FormSection title="Kassenzulassung (§ 33 SGB V)">
-        <FieldRow>
-          <BooleanInput
-            source="ErstverordnungMuster8Vorhanden"
-            label="Erstverordnung (Muster 8) liegt im System vor"
-          />
-          <DateInput
-            source="ErstverordnungMuster8Datum"
-            label="Ausstellungsdatum Muster 8"
-          />
-        </FieldRow>
-      </FormSection>
-    </SimpleForm>
-  </Create>
-);
+          <SummeUndRestbetragVorschau />
+          <FieldRow>
+            <NumberInput source="Anzahlung" />
+            <NumberInput source="KKAnteil" label="KK-Anteil" />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
+            <SelectInput
+              source="Zahlungsstatus"
+              choices={zahlungsstatusChoices}
+            />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Verordnung">
+          <FieldRow>
+            <TextInput source="VerordnenderArzt" />
+            <DateInput source="Verordnungsdatum" />
+          </FieldRow>
+          <TextInput source="Diagnose" fullWidth />
+        </FormSection>
+        <FormSection title="Kassenzulassung (§ 33 SGB V)">
+          <FieldRow>
+            <BooleanInput
+              source="ErstverordnungMuster8Vorhanden"
+              label="Erstverordnung (Muster 8) liegt im System vor"
+            />
+            <DateInput
+              source="ErstverordnungMuster8Datum"
+              label="Ausstellungsdatum Muster 8"
+            />
+          </FieldRow>
+        </FormSection>
+      </SimpleForm>
+    </Create>
+  );
+};

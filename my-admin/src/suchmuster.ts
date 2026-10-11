@@ -20,3 +20,38 @@ export const namensSuchmuster = (eingabe: string): string => {
   // mehrere Wörter in dieser Reihenfolge, beliebiger Abstand
   return muster.replace(/\s+/g, ".*");
 };
+
+// Felder für "Suche in anderen Angaben" (Adresse, Telefon, Merkmale, ...)
+const ANDERE_ANGABEN = [
+  "Straße",
+  "Stadt",
+  "Postleitzahl",
+  "TelefonnummerPrivat",
+  "TelefonnummerGeschaeftlich",
+  "Handy",
+  "Email",
+  "Krankenkasse",
+  "VersichertenNummer",
+  "Merkmal1",
+  "Merkmal2",
+  "Merkmal3",
+  "Merkmal4",
+  "Notizen",
+];
+
+// Ein Begriff in irgendeinem dieser Felder (PostgREST "or", imatch mit
+// Umlaut-Varianten wie bei Namen). Zeichen, die die or-Syntax oder den Regex
+// stören, werden entfernt; der Wert steht in Anführungszeichen.
+export const andereAngabenFilter = (eingabe: string) => {
+  const begriff = eingabe
+    .replace(/[,()"\\*.+?^${}[\]|:]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!begriff) return {};
+  const muster = `"${namensSuchmuster(begriff)}"`;
+  return {
+    "@or": Object.fromEntries(
+      ANDERE_ANGABEN.map((feld) => [`${feld}@imatch`, muster]),
+    ),
+  };
+};
