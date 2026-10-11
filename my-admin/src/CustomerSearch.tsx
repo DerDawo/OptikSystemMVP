@@ -15,6 +15,7 @@ import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { Dayjs } from "dayjs";
 import { KundenDataTable } from "./kunden";
+import { namensSuchmuster } from "./suchmuster";
 
 const buildFilter = (filters: Record<string, string>) => {
   const result: Record<string, unknown> = {};
@@ -26,6 +27,9 @@ const buildFilter = (filters: Record<string, string>) => {
     // For date fields, use exact match (avoid ilike on timestamp columns)
     if (key === "Geburtsdatum" || key.toLowerCase().includes("datum")) {
       result[key] = trimmed;
+    } else if (key === "Nachname" || key === "Vorname") {
+      // "müller" findet auch "Mueller" (ü/ue, ö/oe, ä/ae, ß/ss)
+      result[`${key}@imatch`] = namensSuchmuster(trimmed);
     } else {
       result[`${key}@ilike`] = `*${trimmed}*`;
     }
