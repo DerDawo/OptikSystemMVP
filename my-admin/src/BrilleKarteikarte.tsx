@@ -1,17 +1,22 @@
-import { ReactNode, useMemo } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Link,
+  useDataProvider,
   useGetList,
   useGetMany,
   useGetOne,
+  useNotify,
   useRecordContext,
+  useRefresh,
 } from "react-admin";
 import {
   Box,
   Button,
   Card,
   IconButton,
+  MenuItem,
+  Select,
   Table,
   TableBody,
   TableCell,
@@ -25,6 +30,7 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CheckIcon from "@mui/icons-material/Check";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
+import CloseIcon from "@mui/icons-material/Close";
 import { formatCurrency } from "./CurrencyField";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
@@ -358,6 +364,120 @@ export const WerteTabelle = ({
   );
 };
 
+// Ausklappliste "Zusatzleistung hinzufügen" in der Karteikarte: bucht die
+// gewählte Leistung direkt auf den Auftrag (brille_hat_zusatzleistungen);
+// die Summe rechnet ein Datenbank-Trigger neu.
+const ZusatzleistungAuswahl = ({
+  z,
+  s,
+  brilleId,
+  vorhanden,
+}: Platz & { brilleId: number; vorhanden: unknown[] }) => {
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [speichert, setSpeichert] = useState(false);
+  const { data: katalog } = useGetList<Datensatz>("zusatzleistung", {
+    filter: { Aktiv: true },
+    sort: { field: "Reihenfolge", order: "ASC" },
+    pagination: { page: 1, perPage: 100 },
+  });
+  const angebot = (katalog ?? []).filter((l) => !vorhanden.includes(l.id));
+
+  const hinzufuegen = async (id: number) => {
+    setSpeichert(true);
+    try {
+      await dataProvider.create("brille_hat_zusatzleistungen", {
+        data: { BrillenID: brilleId, ZusatzleistungID: id },
+      });
+      refresh();
+    } catch {
+      notify("Zusatzleistung konnte nicht gespeichert werden.", {
+        type: "error",
+      });
+    } finally {
+      setSpeichert(false);
+    }
+  };
+
+  return (
+    <Box
+      sx={(theme) => ({
+        gridRow: z,
+        gridColumn: s,
+        bgcolor: feldFarbe(theme),
+        minHeight: 28,
+        minWidth: 0,
+        display: "flex",
+        alignItems: "center",
+      })}
+    >
+      <Select
+        variant="standard"
+        disableUnderline
+        displayEmpty
+        fullWidth
+        value=""
+        disabled={speichert || angebot.length === 0}
+        onChange={(e) => hinzufuegen(Number(e.target.value))}
+        renderValue={() => (
+          <Box
+            component="span"
+            sx={{ color: "text.secondary", fontStyle: "italic" }}
+          >
+            {speichert ? "Wird gespeichert …" : "Zusatzleistung hinzufügen …"}
+          </Box>
+        )}
+        sx={{
+          px: "6px",
+          fontSize: "0.95rem",
+          "& .MuiSelect-select": { py: 0 },
+        }}
+        inputProps={{ "aria-label": "Zusatzleistung hinzufügen" }}
+      >
+        {angebot.map((l) => (
+          <MenuItem key={l.id} value={l.id} sx={{ gap: 3 }}>
+            <Box component="span" sx={{ flex: 1 }}>
+              {text(l.Bezeichnung)}
+            </Box>
+            <Box component="span" sx={{ color: "text.secondary" }}>
+              {betragText(l.Betrag)} €
+            </Box>
+          </MenuItem>
+        ))}
+      </Select>
+    </Box>
+  );
+};
+
+const ZusatzleistungEntfernen = ({ zuordnung }: { zuordnung: Datensatz }) => {
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  return (
+    <IconButton
+      size="small"
+      aria-label="Zusatzleistung entfernen"
+      sx={{ p: 0.25, ml: 0.5, opacity: 0.6, "&:hover": { opacity: 1 } }}
+      onClick={async () => {
+        try {
+          await dataProvider.delete("brille_hat_zusatzleistungen", {
+            id: zuordnung.id,
+            previousData: zuordnung,
+          });
+          refresh();
+        } catch {
+          notify("Zusatzleistung konnte nicht entfernt werden.", {
+            type: "error",
+          });
+        }
+      }}
+    >
+      <CloseIcon sx={{ fontSize: 16 }} />
+    </IconButton>
+  );
+};
+
 export const BrilleKarteikarte = () => {
   const brille = useRecordContext<Datensatz>();
   const navigate = useNavigate();
@@ -415,10 +535,19 @@ export const BrilleKarteikarte = () => {
   // Zusatzleistungen plus "Weitere Leistungen" (Freitext aus Prisma),
   // mindestens drei Zeilen wie in Prisma
   const weitere = zahl(brille.WeitereLeistungen);
-  const posten: { bezeichnung: string; betrag: unknown }[] = [
+  const posten: {
+    bezeichnung: string;
+    betrag: unknown;
+    zuordnung?: Datensatz;
+    auswahl?: boolean;
+  }[] = [
     ...(zuordnungen ?? []).map((z) => {
       const l = leistungen?.find((x) => x.id === z.ZusatzleistungID);
-      return { bezeichnung: text(l?.Bezeichnung), betrag: l?.Betrag };
+      return {
+        bezeichnung: text(l?.Bezeichnung),
+        betrag: l?.Betrag,
+        zuordnung: z,
+      };
     }),
     ...(weitere
       ? [
@@ -432,6 +561,8 @@ export const BrilleKarteikarte = () => {
         ]
       : []),
   ];
+  // eine Zeile mit der Auswahl zum Hinzufügen, wie die leeren Zeilen in Prisma
+  posten.push({ bezeichnung: "", betrag: null, auswahl: true });
   while (posten.length < 3) posten.push({ bezeichnung: "", betrag: null });
 
   const rabattProzent = zahl(brille.RabattProzent);
@@ -781,9 +912,24 @@ export const BrilleKarteikarte = () => {
             </Box>
             {posten.map((p, i) => [
               <Feld key={`zl-n-${i}`} z={zZusatz + i} s="2 / 3" />,
-              <Feld key={`zl-b-${i}`} z={zZusatz + i} s="3 / 7">
-                {p.bezeichnung}
-              </Feld>,
+              p.auswahl ? (
+                <ZusatzleistungAuswahl
+                  key={`zl-b-${i}`}
+                  z={zZusatz + i}
+                  s="3 / 7"
+                  brilleId={brille.id}
+                  vorhanden={leistungIds}
+                />
+              ) : (
+                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="3 / 7">
+                  <Box component="span" sx={{ flex: 1, minWidth: 0 }}>
+                    {p.bezeichnung}
+                  </Box>
+                  {p.zuordnung && (
+                    <ZusatzleistungEntfernen zuordnung={p.zuordnung} />
+                  )}
+                </Feld>
+              ),
               <Feld key={`zl-e-${i}`} z={zZusatz + i} s="8 / 9" rechts>
                 {betragText(p.betrag)}
               </Feld>,
