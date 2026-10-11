@@ -74,7 +74,7 @@ const Brand = () => {
           <Typography
             sx={{ fontSize: 12, color: (theme) => tokensFor(theme).text3 }}
           >
-            Augenoptik
+            Optik Ulm Systems
           </Typography>
         </Box>
       )}
