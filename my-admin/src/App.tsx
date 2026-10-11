@@ -4,6 +4,7 @@ import { lightTheme, darkTheme } from "./theme";
 import { dataProvider } from "./dataProvider";
 import { MyLayout } from "./MyLayout";
 import { authProvider } from "./authProvider";
+import { i18nProvider } from "./i18nProvider";
 import { LoginPage } from "ra-supabase";
 import {
   KundenList,
@@ -92,6 +93,7 @@ export const App = () => {
       dashboard={Dashboard}
       dataProvider={dataProvider}
       authProvider={authProvider}
+      i18nProvider={i18nProvider}
       loginPage={LoginPage}
       theme={lightTheme}
       darkTheme={darkTheme}
