@@ -609,9 +609,6 @@ export const KundeShow = () => {
               <Field>
                 <TextField source="Email" />
               </Field>
-              <Field label="Bevorzugter Kontaktweg">
-                <BooleanField source="BevorzugterKontaktweg" />
-              </Field>
             </ShowSection>
             <ShowSection title="Versicherung">
               <Field>
@@ -707,10 +704,6 @@ export const KundeEdit = () => (
           <TextInput source="Handy" />
           <TextInput source="Email" />
         </FieldRow>
-        <BooleanInput
-          source="BevorzugterKontaktweg"
-          label="Bevorzugter Kontaktweg"
-        />
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
@@ -803,10 +796,6 @@ export const KundeCreate = () => {
             <TextInput source="Handy" />
             <TextInput source="Email" />
           </FieldRow>
-          <BooleanInput
-            source="BevorzugterKontaktweg"
-            label="Bevorzugter Kontaktweg"
-          />
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
