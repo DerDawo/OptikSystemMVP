@@ -298,6 +298,14 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     titel: "Berechtigungsschein (GKV)",
     felder: berechtigungsscheinGkvFelder,
   },
+  // Ältere Vorlagen der Kategorie "Berechtigungsschein" (z. B.
+  // "Berechtigungsschein", "Berechtigungsschein Kassenbrille") füllen
+  // ebenfalls das Original aus - der frühere Nachbau ist abgelöst.
+  Berechtigungsschein: {
+    datei: "berechtigungsschein-gkv.pdf",
+    titel: "Berechtigungsschein (GKV)",
+    felder: berechtigungsscheinGkvFelder,
+  },
 };
 
 // Felder mit begrenzter Länge (z. B. "Mitarbeiter" im Beobachtungsbogen)
