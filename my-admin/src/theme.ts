@@ -409,6 +409,24 @@ const buildTheme = (mode: Mode): RaThemeOptions => {
         },
       },
 
+      // Login: gleicher Hintergrund wie die App statt react-admins Dunkelblau
+      RaLogin: {
+        styleOverrides: {
+          root: {
+            background: appBackground(t),
+            "& .RaLogin-card": {
+              borderRadius: 20,
+              border: `1px solid ${t.line}`,
+              boxShadow: t.shadowFloat,
+            },
+            "& .RaLogin-avatar .MuiAvatar-root": {
+              backgroundColor: t.primary,
+              color: t.primaryContrast,
+            },
+          },
+        },
+      },
+
       MuiCssBaseline: {
         styleOverrides: (theme) => ({
           html: {
