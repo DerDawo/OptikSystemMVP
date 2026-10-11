@@ -559,20 +559,31 @@ export const KundeShow = () => {
         <ShowColumns>
           <ShowColumn>
             <ShowSection title="Stammdaten">
+              {/* Kundennummer, Aufnahmedatum und Anrede in einer Reihe */}
+              <Box
+                sx={{
+                  gridColumn: "1 / -1",
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+                  gap: "0.25em 2em",
+                  "& > *": { minWidth: 0 },
+                }}
+              >
+                <Field>
+                  <TextField source="KundenNummer" />
+                </Field>
+                <Field>
+                  <DateField source="Aufnahmedatum" />
+                </Field>
+                <Field>
+                  <TextField source="Anrede" />
+                </Field>
+              </Box>
               <Field>
-                <TextField source="KundenNummer" />
-              </Field>
-              <Field>
-                <DateField source="Aufnahmedatum" />
-              </Field>
-              <Field>
-                <TextField source="Anrede" />
+                <TextField source="Vorname" />
               </Field>
               <Field>
                 <TextField source="Nachname" />
-              </Field>
-              <Field>
-                <TextField source="Vorname" />
               </Field>
               <Field>
                 <TextField source="Geschlecht" />
@@ -684,8 +695,8 @@ export const KundeEdit = () => (
       <FormSection title="Stammdaten">
         <FieldRow>
           <AnredeInput />
-          <TextInput source="Nachname" />
           <TextInput source="Vorname" />
+          <TextInput source="Nachname" />
         </FieldRow>
         <FieldRow>
           <GeschlechtInput />
@@ -770,8 +781,8 @@ export const KundeCreate = () => {
         <FormSection title="Stammdaten">
           <FieldRow>
             <AnredeInput />
-            <TextInput source="Nachname" />
             <TextInput source="Vorname" />
+            <TextInput source="Nachname" />
           </FieldRow>
           <FieldRow>
             <GeschlechtInput />
