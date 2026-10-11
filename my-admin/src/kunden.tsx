@@ -9,14 +9,7 @@ import {
   Title,
   RaRecord,
 } from "react-admin";
-import {
-  BooleanField,
-  BooleanInput,
-  DateField,
-  Show,
-  TextField,
-  FunctionField,
-} from "react-admin";
+import { DateField, Show, TextField, FunctionField } from "react-admin";
 import { DateInput, Edit, SimpleForm, TextInput } from "react-admin";
 import { Create } from "react-admin";
 import {
@@ -89,6 +82,7 @@ import {
 import { KundenAuftraege } from "./KundenAuftraege";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { KontaktFeld } from "./KontaktFeld";
+import { DirektFeld } from "./DirektFeld";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -655,23 +649,8 @@ export const KundeShow = () => {
               </Field>
             </ShowSection>
             <ShowSection title="Merkmale">
-              <Field label="Beruf (Merkmal 1)">
-                <TextField source="Merkmal1" />
-              </Field>
-              <Field label="Besonderes (Merkmal 2)">
-                <TextField source="Merkmal2" />
-              </Field>
-              <Field label="Merkmal 3">
-                <TextField source="Merkmal3" />
-              </Field>
-              <Field label="Merkmal 4">
-                <TextField source="Merkmal4" />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Marketing">
-              <Field label="Werbeeinwilligung">
-                <BooleanField source="Werbeeinwilligung" />
-              </Field>
+              <DirektFeld source="Merkmal1" label="Beruf" />
+              <DirektFeld source="Merkmal2" label="Besonderes" />
             </ShowSection>
             <DatenbankInfo />
           </ShowColumn>
@@ -740,16 +719,9 @@ export const KundeEdit = () => (
       </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
-          <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
-          <TextInput source="Merkmal2" label="Besonderes (Merkmal 2)" />
+          <TextInput source="Merkmal1" label="Beruf" />
+          <TextInput source="Merkmal2" label="Besonderes" />
         </FieldRow>
-        <FieldRow>
-          <TextInput source="Merkmal3" label="Merkmal 3" />
-          <TextInput source="Merkmal4" label="Merkmal 4" />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Marketing">
-        <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
       </FormSection>
       <KundeVerwaltung />
     </SimpleForm>
@@ -838,16 +810,9 @@ export const KundeCreate = () => {
         </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>
-            <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
-            <TextInput source="Merkmal2" label="Besonderes (Merkmal 2)" />
+            <TextInput source="Merkmal1" label="Beruf" />
+            <TextInput source="Merkmal2" label="Besonderes" />
           </FieldRow>
-          <FieldRow>
-            <TextInput source="Merkmal3" label="Merkmal 3" />
-            <TextInput source="Merkmal4" label="Merkmal 4" />
-          </FieldRow>
-        </FormSection>
-        <FormSection title="Marketing">
-          <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
         </FormSection>
         <KundeVerwaltung />
       </SimpleForm>
