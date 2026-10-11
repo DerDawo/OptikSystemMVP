@@ -3,6 +3,8 @@ import {
   extractBrechungsindex,
   parseCombination,
   parseHead,
+  durchmesserText,
+  parseLensDurchmesser,
   parseLensPrice,
   parseLensType,
   parseOptions,
@@ -139,16 +141,22 @@ describe("parseLensType", () => {
         esdCode: "TST001",
         bezeichnung: "Testglas 1.50 Basic",
         brechungsindex: 1.5,
+        glasart: null,
+        material: null,
       },
       {
         esdCode: "TST002",
         bezeichnung: "Testglas 1.67 Premium",
         brechungsindex: 1.67,
+        glasart: null,
+        material: null,
       },
       {
         esdCode: "TST003",
         bezeichnung: "Testglas ohne Index",
         brechungsindex: null,
+        glasart: null,
+        material: null,
       },
     ]);
   });
@@ -291,5 +299,40 @@ describe("parseSf6Katalog", () => {
     expect(katalog.verfuegbareOptionen.get("TST001")).toEqual(
       new Set(["AR1", "C01"]),
     );
+  });
+});
+
+describe("Glasart, Material und Durchmesser", () => {
+  it("liest Glasart und Material aus dem LensType-Kennzahlenblock", () => {
+    // echte POL-Zeile: Gleitsicht (3), Kunststoff (2), Index 1500
+    const pol =
+      "3Z50PE3ZONE 1.50 NuPolar GG                                   3000000012150000000000000000000000000000000000000000000                   001000";
+    // Einstärken (0) aus Mineral (1)
+    const mineral =
+      line(["TST009", 6], ["Testglas 1.60 Mineral", 56]) + "0000000001160000";
+    expect(parseLensType([pol, mineral].join("\r\n"))).toEqual([
+      expect.objectContaining({ esdCode: "3Z50PE", glasart: 3, material: 2 }),
+      expect.objectContaining({ esdCode: "TST009", glasart: 0, material: 1 }),
+    ]);
+  });
+
+  it("wandelt das Durchmesserfeld um", () => {
+    expect(durchmesserText("65  ")).toBe("65");
+    expect(durchmesserText("6570")).toBe("65/70");
+    expect(durchmesserText("9999")).toBeNull();
+    expect(durchmesserText("    ")).toBeNull();
+  });
+
+  it("nimmt je Grundglas und Durchmesser die niedrigste UVP", () => {
+    const text = [
+      lensPrice32("TST001", "50", 7.4, 25),
+      lensPrice32("TST001", "55", 6.1, 18),
+      lensPrice32("TST001", "55", 6.1, 21),
+      lensPrice32("TST001", "6570", 9, 30),
+      lensPrice32("TST002", "9999", 12, 42),
+    ].join("\r\n");
+    const ergebnis = parseLensDurchmesser(text);
+    expect(ergebnis.get("TST001")).toEqual({ "50": 25, "55": 18, "65/70": 30 });
+    expect(ergebnis.has("TST002")).toBe(false);
   });
 });

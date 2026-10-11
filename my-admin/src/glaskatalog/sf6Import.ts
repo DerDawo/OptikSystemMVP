@@ -138,6 +138,9 @@ export async function importSf6Katalog(
     bezeichnung: produkt.bezeichnung,
     brechungsindex: produkt.brechungsindex,
     basispreis: katalog.basispreise.get(produkt.esdCode) ?? null,
+    glasart: produkt.glasart,
+    material: produkt.material,
+    durchmesser: katalog.durchmesser.get(produkt.esdCode) ?? null,
     aktiv: true,
     updated_at: now,
   }));
