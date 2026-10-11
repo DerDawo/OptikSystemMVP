@@ -284,12 +284,19 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
   const istRechnung = art === "rechnung";
   const heute = dayjs();
   const positionen = buildRechnungPositionen(entities);
+  const rund = (wert: number) => Math.round(wert * 100) / 100;
   const summe = Number(brille?.Summe) || 0;
-  const netto = Math.round((summe / (1 + a.mwstSatz / 100)) * 100) / 100;
-  const mwst = Math.round((summe - netto) * 100) / 100;
+  const kassenanteil = Number(brille?.KKAnteil) || 0;
+  const anzahlung = Number(brille?.Anzahlung) || 0;
+  // Mit Kassenanteil: Gesamtbetrag minus Anteil der Krankenkasse = Betrag
+  // des Kunden (Eigenanteil); MwSt-Hinweis bezieht sich auf diesen Betrag
+  const eigenanteil = rund(summe - kassenanteil);
+  const betrag = kassenanteil > 0 ? eigenanteil : summe;
+  const netto = rund(betrag / (1 + a.mwstSatz / 100));
+  const mwst = rund(betrag - netto);
+  const nochZuZahlen = rund(betrag - anzahlung);
   const brillenArt = brille?.BrillenArt ? String(brille.BrillenArt) : "Brille";
   const berater = mitarbeiterAnzeige(brille?.Berater);
-  const kassenanteil = Number(brille?.KKAnteil) || 0;
   const bezahlt = String(brille?.Zahlungsstatus ?? "") === "bezahlt";
 
   const datenbox: [string, string][] = istRechnung
@@ -317,18 +324,18 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
 
   const hinweise = istRechnung
     ? [
+        anzahlung > 0 && !bezahlt
+          ? `Bereits angezahlt: ${e(formatEuro(anzahlung))}, noch zu zahlen: ${e(formatEuro(nochZuZahlen))}.`
+          : "",
         berater ? `Es bediente Sie ${e(berater)}.` : "",
         "Rechnungsdatum ist Liefer-/Leistungsdatum",
         bezahlt
           ? ""
-          : `Bitte überweisen Sie den Rechnungsbetrag bis zum ${e(
+          : `Bitte überweisen Sie ${anzahlung > 0 ? "den noch offenen Betrag" : "den Rechnungsbetrag"} bis zum ${e(
               heute.add(a.zahlungszielTage, "day").format("DD.MM.YYYY"),
             )} auf unser unten genanntes Konto.`,
       ]
     : [
-        kassenanteil > 0
-          ? `Abzüglich Kassenanteil ${e(formatEuro(kassenanteil))} beträgt Ihr Eigenanteil ${e(formatEuro(Math.round((summe - kassenanteil) * 100) / 100))}.`
-          : "",
         berater ? `Es berät Sie ${e(berater)}.` : "",
         `Dieser Kostenvoranschlag ist unverbindlich und gültig bis ${e(
           heute.add(a.kostenvoranschlagGueltigTage, "day").format("DD.MM.YYYY"),
@@ -351,7 +358,23 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
   <div class="inhalt">
     <p class="zweck">für eine neue ${e(brillenArt)}&nbsp; lt. optometr. Verordnung</p>
     ${positionenHtml}
-    <div class="summenbalken"><span>${istRechnung ? "Rechnungsbetrag" : "Gesamtbetrag"}</span><span>${e(formatEuro(summe))}</span></div>
+    ${
+      kassenanteil > 0
+        ? `<div class="position abzug">
+      <div class="zeile"><span>Gesamtbetrag</span><span>${e(formatEuro(summe))}</span></div>
+      <div class="zeile"><span>abzüglich Anteil Krankenkasse</span><span>${e(formatEuro(-kassenanteil))}</span></div>
+    </div>`
+        : ""
+    }
+    <div class="summenbalken"><span>${
+      istRechnung
+        ? kassenanteil > 0
+          ? "Rechnungsbetrag (Ihr Eigenanteil)"
+          : "Rechnungsbetrag"
+        : kassenanteil > 0
+          ? "Ihr Eigenanteil"
+          : "Gesamtbetrag"
+    }</span><span>${e(formatEuro(betrag))}</span></div>
     <p class="mwst">Im obigen Betrag sind ${a.mwstSatz}% Mwst = ${e(formatEuro(mwst))} enthalten. (Nettopreis: ${e(zahl2.format(netto))} €)</p>
     <div class="hinweise">${hinweise
       .filter(Boolean)
@@ -386,6 +409,7 @@ export const BELEG_STYLES = `
   .beleg .position .zeile { display: flex; justify-content: space-between; }
   .beleg .position .werte { margin-top: 1mm; }
   .beleg .position .detail { font-size: 8.5pt; margin-top: 0.8mm; }
+  .beleg .position.abzug { margin-bottom: 1mm; padding-top: 1mm; border-top: 0.25mm solid #999; }
   .beleg .summenbalken { display: flex; justify-content: space-between; background: #e6e6e6; border: 0.25mm solid #333; height: 5.4mm; line-height: 5.2mm; padding: 0 0.4mm; margin-top: 1mm; }
   .beleg .mwst { font-size: 8.5pt; margin: 6mm 0 0; }
   .beleg .hinweise { font-size: 8.5pt; margin-top: 6mm; line-height: 1.5; }

@@ -154,6 +154,47 @@ describe("buildRechnungBodyHtml", () => {
   });
 });
 
+describe("Rechnung mit Kassenanteil", () => {
+  it("zieht den Kassenanteil ab, MwSt bezieht sich auf den Eigenanteil", () => {
+    const html = buildRechnungBodyHtml({
+      entities: {
+        ...ENTITIES,
+        brille: { ...ENTITIES.brille, Summe: 232.3, KKAnteil: 38.63 },
+      },
+      rechnungsnummer: "114880",
+    });
+    expect(html).toContain("Gesamtbetrag");
+    expect(html).toContain("232,30 EUR");
+    expect(html).toContain("abzüglich Anteil Krankenkasse");
+    expect(html).toContain("-38,63 EUR");
+    expect(html).toContain("Rechnungsbetrag (Ihr Eigenanteil)");
+    expect(html).toContain("193,67 EUR");
+    // 193,67 brutto: Netto 162,75, MwSt 30,92
+    expect(html).toContain("30,92 EUR");
+    expect(html).toContain("(Nettopreis: 162,75 €)");
+  });
+
+  it("nennt eine Anzahlung und den noch offenen Betrag", () => {
+    const html = buildRechnungBodyHtml({
+      entities: {
+        ...ENTITIES,
+        brille: {
+          ...ENTITIES.brille,
+          Summe: 232.3,
+          KKAnteil: 38.63,
+          Anzahlung: 50,
+          Zahlungsstatus: "teilweise offen",
+        },
+      },
+      rechnungsnummer: "114880",
+    });
+    expect(html).toContain(
+      "Bereits angezahlt: 50,00 EUR, noch zu zahlen: 143,67 EUR.",
+    );
+    expect(html).toContain("Bitte überweisen Sie den noch offenen Betrag");
+  });
+});
+
 describe("buildKostenvoranschlagBodyHtml", () => {
   it("nutzt das Rechnungsdesign mit eigenem Titel und Gültigkeit", () => {
     const html = buildKostenvoranschlagBodyHtml({
@@ -162,7 +203,9 @@ describe("buildKostenvoranschlagBodyHtml", () => {
     expect(html).toContain("KOSTENVORANSCHLAG");
     expect(html).toContain("Gesamtbetrag");
     expect(html).toContain("unverbindlich und gültig bis");
-    expect(html).toContain("beträgt Ihr Eigenanteil 229,30 EUR");
+    expect(html).toContain("abzüglich Anteil Krankenkasse");
+    expect(html).toContain("Ihr Eigenanteil");
+    expect(html).toContain("229,30 EUR");
     expect(html).not.toContain("Rech.-Nr.");
   });
 });
