@@ -1,5 +1,5 @@
 // Dashboard-Startseite (#85): fasst den aktuellen Geschäftsstand (offene
-// Aufträge, Umsatz, offene Forderungen, Termine, ...) in Widget-Karten
+// Aufträge, Termine, neue Kunden, ...) in Widget-Karten
 // zusammen. Wird über die `dashboard`-Prop von <Admin> in App.tsx als
 // Startseite eingehängt.
 //
@@ -32,17 +32,10 @@ import {
 import { alpha, type Theme } from "@mui/material/styles";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import dayjs from "dayjs";
-import { CurrencyField, formatCurrency } from "./CurrencyField";
+import { CurrencyField } from "./CurrencyField";
 import { BrilleStatusChip, getBrilleOrderStatus } from "./orderStatus";
 import { tokensFor } from "./designTokens";
-import {
-  AlertIcon,
-  CalendarIcon,
-  CheckIcon,
-  EuroIcon,
-  GlassesIcon,
-  UserPlusIcon,
-} from "./icons";
+import { CalendarIcon, CheckIcon, GlassesIcon, UserPlusIcon } from "./icons";
 
 type BrilleRow = {
   id: number | string;
@@ -78,8 +71,6 @@ type ZusatzleistungRow = { id: number | string; Bezeichnung?: string | null };
 
 interface DashboardStats {
   offeneAuftraege: { inBearbeitung: number; bereit: number };
-  umsatzMonat: number;
-  offeneForderungen: { summe: number; anzahl: number };
   termine: {
     heute: (TerminRow & { kundeName: string })[];
     anzahlHeute: number;
@@ -407,8 +398,6 @@ export const Dashboard = () => {
       const [
         brilleRecentRes,
         kontaktlinseRecentRes,
-        umsatzRes,
-        forderungenRes,
         termineRes,
         neueKundenRes,
         mahnstufenRes,
@@ -423,20 +412,6 @@ export const Dashboard = () => {
           pagination: { page: 1, perPage: 300 },
           sort: { field: "Datum", order: "DESC" },
           filter: { "Datum@gte": sixMonthsAgo },
-        }),
-        dataProvider.getList("brille", {
-          pagination: { page: 1, perPage: 1000 },
-          sort: { field: "id", order: "ASC" },
-          filter: { "Datum@gte": startOfMonth, "Datum@lt": startOfNextMonth },
-        }),
-        dataProvider.getList("brille", {
-          pagination: { page: 1, perPage: 500 },
-          sort: { field: "Abholung", order: "ASC" },
-          filter: {
-            Zahlungsstatus: "offen",
-            "Rechnungsnummer@not": "is.null",
-            "Restbetrag@gt": 0,
-          },
         }),
         dataProvider.getList("termin", {
           pagination: { page: 1, perPage: 200 },
@@ -476,20 +451,6 @@ export const Dashboard = () => {
         if (status.key === "offen") inBearbeitung += 1;
         else if (status.key === "bereit") bereit += 1;
       });
-
-      const umsatzMonat = (umsatzRes.data as BrilleRow[]).reduce(
-        (sum, row) => sum + (Number(row.Summe) || 0),
-        0,
-      );
-
-      const forderungenRows = forderungenRes.data as BrilleRow[];
-      const offeneForderungen = {
-        summe: forderungenRows.reduce(
-          (sum, row) => sum + (Number(row.Restbetrag) || 0),
-          0,
-        ),
-        anzahl: forderungenRows.length,
-      };
 
       const termineRows = termineRes.data as TerminRow[];
       const termineHeuteRows = termineRows.filter((t) =>
@@ -570,8 +531,6 @@ export const Dashboard = () => {
 
       setStats({
         offeneAuftraege: { inBearbeitung, bereit },
-        umsatzMonat,
-        offeneForderungen,
         termine: {
           heute: termineHeuteRows.map((t) => ({
             ...t,
@@ -672,12 +631,11 @@ export const Dashboard = () => {
           <Box
             sx={{
               display: "grid",
-              // 6 Kacheln: 1, 2, 3 oder 6 pro Zeile, damit keine allein umbricht
+              // 4 Kacheln: 1, 2 oder 4 pro Zeile, damit keine allein umbricht
               gridTemplateColumns: {
                 xs: "1fr",
                 sm: "repeat(2, minmax(0, 1fr))",
-                md: "repeat(3, minmax(0, 1fr))",
-                xl: "repeat(6, minmax(0, 1fr))",
+                lg: "repeat(4, minmax(0, 1fr))",
               },
               gap: 1.75,
             }}
@@ -704,21 +662,6 @@ export const Dashboard = () => {
               hint="Brillen und Kontaktlinsen"
               icon={<CheckIcon />}
               tone="success"
-            />
-            <KpiTile
-              label="Umsatz diesen Monat"
-              value={formatCurrency(stats.umsatzMonat) || "0,00 €"}
-              icon={<EuroIcon />}
-              tone="info"
-              onClick={() => navigate("/rechnungen")}
-            />
-            <KpiTile
-              label="Offene Forderungen"
-              value={formatCurrency(stats.offeneForderungen.summe) || "0,00 €"}
-              hint={`${stats.offeneForderungen.anzahl} offene Auftrag(e)`}
-              icon={<AlertIcon />}
-              tone={stats.offeneForderungen.anzahl > 0 ? "error" : "success"}
-              onClick={() => navigate("/mahnungen")}
             />
             <KpiTile
               label="Neue Kunden"
