@@ -1,5 +1,6 @@
-// Prisma-Altaufträge (#131) haben ihre Freitext-Leistungen nur in den
-// Notizen, im Format des Imports (supabase/scripts/prisma_import):
+// Prisma-Altaufträge (#131) haben ihre Freitext-Leistungen als Text im
+// Format des Imports (supabase/scripts/prisma_import), seit der Bereinigung
+// der Notizen in brille."PrismaAngaben":
 //
 //   Leistungen:
 //   - Glaseinschliff: 29,50 €
@@ -29,6 +30,15 @@ export const leistungenAusNotizen = (notizen: unknown): NotizLeistung[] => {
   }
   return ergebnis;
 };
+
+// Text mit den Prisma-Leistungen eines Auftrags: seit der Bereinigung der
+// Notizen in brille."PrismaAngaben", bei älteren Ständen noch in den Notizen
+export const leistungsText = (
+  brille: { PrismaAngaben?: unknown; Notizen?: unknown } | undefined,
+) =>
+  [brille?.PrismaAngaben, brille?.Notizen]
+    .filter((t) => t != null && String(t).trim() !== "")
+    .join("\n");
 
 const rund = (wert: number) => Math.round(wert * 100) / 100;
 

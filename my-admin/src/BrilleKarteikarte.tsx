@@ -34,7 +34,12 @@ import { formatCurrency } from "./CurrencyField";
 import { MITARBEITER, mitarbeiterAnzeige } from "./mitarbeiterNamen";
 import { Auswahl, Eingabe, Haken, useKarteiSpeichern } from "./KarteiEingabe";
 import { brillenartOptionen } from "./brillenarten";
-import { weitereLeistungenPositionen } from "./leistungenAusNotizen";
+import {
+  leistungsText,
+  weitereLeistungenPositionen,
+} from "./leistungenAusNotizen";
+import { rabattDaten, rabattOptionen } from "./rabatte";
+import { KassenanteilRechner } from "./KassenanteilRechner";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -87,13 +92,6 @@ const WERTE_LINKS = WERTE.slice(0, 8);
 const ZAHLUNGSSTATUS = [
   { id: "offen", name: "offen" },
   { id: "bezahlt", name: "bezahlt" },
-];
-// Rabatt-Codes wie im Bearbeiten-Formular (brillen.tsx)
-const RABATT_CODES = [
-  "VIP-Rabatt",
-  "ZNEU-Neukunden-Rabatt",
-  "zw-Zweitbrillen-Rabatt",
-  "Sonderrabatt",
 ];
 const WERTE_RECHTS = WERTE.slice(8);
 
@@ -657,8 +655,8 @@ export const BrilleKarteikarte = () => {
     }),
     ...weitereLeistungenPositionen(
       weitere ?? 0,
-      brille.Notizen,
-      "(siehe Notizen)",
+      leistungsText(brille),
+      "(aus Prisma)",
     ).map((l) => ({ bezeichnung: l.bezeichnung, betrag: l.betrag })),
   ];
   // eine Zeile mit der Auswahl zum Hinzufügen, wie die leeren Zeilen in Prisma
@@ -1178,15 +1176,14 @@ export const BrilleKarteikarte = () => {
             </Beschriftung>
             <Zellen z={zRabatt} s={BREIT} spalten="1fr 110px">
               <Wert links>
-                {textFeld(
-                  "RabattBezeichnung",
-                  "Rabatt",
-                  auftrag("RabattBezeichnung"),
-                  brille.RabattBezeichnung,
-                  {
-                    vorschlaege: RABATT_CODES,
-                  },
-                )}
+                <Auswahl
+                  name="Rabatt"
+                  wert={brille.RabattBezeichnung}
+                  optionen={rabattOptionen(brille.RabattBezeichnung)}
+                  speichere={auftrag("RabattBezeichnung", (neu) =>
+                    rabattDaten(neu == null ? null : String(neu)),
+                  )}
+                />
               </Wert>
               <Wert rechts>
                 {textFeld(
@@ -1233,8 +1230,18 @@ export const BrilleKarteikarte = () => {
               )}
             </Feld>
             <Beschriftung z={zNotizen} s="7 / 8">
-              <Box component="span" sx={{ pl: 2 }}>
+              <Box
+                component="span"
+                sx={{ pl: 2, display: "inline-flex", alignItems: "center" }}
+              >
                 KK-Anteil
+                <KassenanteilRechner
+                  augen={[
+                    { seite: "R", glas: augen[0].glas },
+                    { seite: "L", glas: augen[1].glas },
+                  ]}
+                  speichere={auftrag("KKAnteil")}
+                />
               </Box>
             </Beschriftung>
             <Feld z={zNotizen} s="8 / 9" rechts>
@@ -1350,6 +1357,30 @@ export const BrilleKarteikarte = () => {
                 brille.Diagnose,
               )}
             </Feld>
+
+            {/* Übernommene Prisma-Angaben (Leistungen, Kasse, Merkmale,
+                Rechnungsdatum) klein am Ende statt in den Notizen */}
+            {text(brille.PrismaAngaben) && (
+              <Box
+                sx={{
+                  gridRow: zArzt + 2,
+                  gridColumn: "1 / -1",
+                  mt: 2,
+                  fontSize: "0.72rem",
+                  color: "text.secondary",
+                  whiteSpace: "normal",
+                }}
+              >
+                <Box component="span" sx={{ fontStyle: "italic" }}>
+                  Angaben aus Prisma:{" "}
+                </Box>
+                {text(brille.PrismaAngaben)
+                  .split(/\r?\n/)
+                  .map((z) => z.trim().replace(/^-\s*/, ""))
+                  .filter((z) => z && z !== "Leistungen:")
+                  .join(" · ")}
+              </Box>
+            )}
           </Box>
         </Box>
       </Box>
