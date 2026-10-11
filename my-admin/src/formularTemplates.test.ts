@@ -32,7 +32,7 @@ const entities = {
   brille: {
     id: 7,
     BrillenArt: "Gleitsichtbrille",
-    Rechnungsnummer: "R-2026-0042",
+    Rechnungsnummer: "114878",
     Summe: 480,
     KKAnteil: 0,
   },
@@ -88,7 +88,7 @@ describe("Berechtigungsschein (AOK, Anlage 4)", () => {
     });
     expect(html).toContain("Beispiel, Max");
     expect(html).toContain("101234567");
-    expect(html).toContain("R-2026-0042");
+    expect(html).toContain("114878");
     expect(html).toContain("123456789");
     expect(html).toContain("+3,25");
   });
