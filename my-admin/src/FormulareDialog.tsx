@@ -7,7 +7,7 @@
 // hierauf aufsetzen, indem sie lediglich weitere `dokumentvorlage`-Datensätze
 // mit Kategorie "Rechnung"/"Mahnung" anlegen - an dieser Dialog-/Render-Logik
 // muss dafür nichts geändert werden.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Alert,
@@ -22,8 +22,11 @@ import {
   ListItemButton,
   ListItemText,
   Typography,
+  TextField,
+  CircularProgress,
 } from "@mui/material";
 import CloseIcon from "@mui/icons-material/Close";
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ReceiptIcon from "@mui/icons-material/Receipt";
@@ -73,6 +76,7 @@ import {
   buildAokBerechtigungsscheinPrintHtml,
 } from "./aokBerechtigungsscheinTemplate";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
+import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
   buildErprobungsprotokollPreviewHtml,
   buildErprobungsprotokollPrintHtml,
@@ -114,16 +118,29 @@ type LayoutDaten = {
   entities: DocumentMergeEntities;
   betrieb?: RaRecord;
   rechnungsnummer: string;
+  begruendung?: string;
 };
 
 type Layout = {
   title: string;
   preview: (daten: LayoutDaten) => string;
   print: (daten: LayoutDaten) => string;
+  // Formulare mit anklickbaren Kästchen: gedruckt wird der Stand der
+  // Vorschau (vorgeschlagene Kreuze lassen sich dort noch ändern)
+  ausVorschau?: boolean;
+};
+
+// Vorschau samt angeklickter Kästchen als eigenständiges HTML
+const vorschauAlsHtml = (doc: Document) => {
+  doc
+    .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+    .forEach((box) => box.toggleAttribute("checked", box.checked));
+  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 };
 
 const antragLayout = (art: AntragArt): Layout => ({
   title: "Antrag-Vorschau",
+  ausVorschau: true,
   preview: (d) => buildAntragPreviewHtml(art, d),
   print: (d) => buildAntragPrintHtml(art, d),
 });
@@ -146,6 +163,7 @@ const LAYOUTS: Record<string, Layout> = {
     print: buildBerechtigungsscheinPrintHtml,
   },
   [BERECHTIGUNGSSCHEIN_AOK_KATEGORIE]: {
+    ausVorschau: true,
     title: "Berechtigungsschein-Vorschau",
     preview: buildAokBerechtigungsscheinPreviewHtml,
     print: buildAokBerechtigungsscheinPrintHtml,
@@ -158,21 +176,25 @@ const LAYOUTS: Record<string, Layout> = {
   "Antrag Zuschuss": antragLayout("zuschuss"),
   "Antrag Sozialamt": antragLayout("sozialamt"),
   [VERORDNUNG_KATEGORIE]: {
+    ausVorschau: true,
     title: "Verordnung-Vorschau",
     preview: buildVerordnungKurzPreviewHtml,
     print: buildVerordnungKurzPrintHtml,
   },
   [VERORDNUNG_GKV_KATEGORIE]: {
+    ausVorschau: true,
     title: "Verordnung-Vorschau",
     preview: buildOptometrischeVerordnungPreviewHtml,
     print: buildOptometrischeVerordnungPrintHtml,
   },
   Erprobungsprotokoll: {
+    ausVorschau: true,
     title: "Erprobungsprotokoll-Vorschau",
     preview: buildErprobungsprotokollPreviewHtml,
     print: buildErprobungsprotokollPrintHtml,
   },
   "Rezeptanfrage Augenarzt": {
+    ausVorschau: true,
     title: "Rezeptanfrage-Vorschau",
     preview: buildRezeptanfragePreviewHtml,
     print: buildRezeptanfragePrintHtml,
@@ -326,6 +348,34 @@ const FormulareDialog = ({
   );
   const { data: betrieb } = useGetOne("betrieb", { id: 1 });
 
+  // Vorherige Brille desselben Kunden (bisherige Werte, Veränderung der
+  // Sehstärke): der jüngste Auftrag vor diesem
+  const { data: vorherigeBrillen } = useGetList(
+    "brille",
+    {
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: brille.Datum ? "Datum" : "id", order: "DESC" },
+      filter: {
+        kunde_id: brille.kunde_id,
+        ...(brille.Datum
+          ? { "Datum@lt": brille.Datum }
+          : { "id@lt": brille.id }),
+      },
+    },
+    { enabled: Boolean(brille.kunde_id) },
+  );
+  const vorherigeBrille = vorherigeBrillen?.[0];
+  const { data: vorherigesGlasRechts } = useGetOne(
+    "glass",
+    { id: vorherigeBrille?.GlasRechts },
+    { enabled: Boolean(vorherigeBrille?.GlasRechts) },
+  );
+  const { data: vorherigesGlasLinks } = useGetOne(
+    "glass",
+    { id: vorherigeBrille?.GlasLinks },
+    { enabled: Boolean(vorherigeBrille?.GlasLinks) },
+  );
+
   const mergeEntities: DocumentMergeEntities = useMemo(
     () => ({
       kunde,
@@ -335,8 +385,22 @@ const FormulareDialog = ({
       fassung,
       glastyp,
       zusatzleistungen,
+      vorherigeBrille,
+      vorherigesGlasRechts,
+      vorherigesGlasLinks,
     }),
-    [kunde, brille, glasLinks, glasRechts, fassung, glastyp, zusatzleistungen],
+    [
+      kunde,
+      brille,
+      glasLinks,
+      glasRechts,
+      fassung,
+      glastyp,
+      zusatzleistungen,
+      vorherigeBrille,
+      vorherigesGlasRechts,
+      vorherigesGlasLinks,
+    ],
   );
 
   const mergeValues = useMemo(
@@ -352,13 +416,38 @@ const FormulareDialog = ({
   // Berechtigungsschein #90, Werkstattauftrag, Anträge, ...) statt des
   // generischen {{platzhalter}}-Fließtexts; der Vorlagentext dieser
   // Datensätze wird nicht gerendert.
+  // Begründung (Anträge, Erprobungsprotokoll): frei eintippen oder per KI
+  // vorschlagen lassen; gilt nur für die gerade gewählte Vorlage
+  const kiFormular = selectedVorlage
+    ? KI_FORMULARE[selectedVorlage.Kategorie]
+    : undefined;
+  const [begruendung, setBegruendung] = useState("");
+  const [kiLaeuft, setKiLaeuft] = useState(false);
+  useEffect(() => {
+    setBegruendung("");
+  }, [selectedVorlage?.id]);
+  const kiVorschlagHolen = async () => {
+    if (!kiFormular) return;
+    setKiLaeuft(true);
+    try {
+      setBegruendung(await begruendungVorschlagen(kiFormular, mergeEntities));
+    } catch (error) {
+      notify(error instanceof Error ? error.message : String(error), {
+        type: "warning",
+      });
+    } finally {
+      setKiLaeuft(false);
+    }
+  };
+
   const layoutDaten: LayoutDaten = useMemo(
     () => ({
       entities: mergeEntities,
       betrieb,
       rechnungsnummer: brille.Rechnungsnummer ?? "",
+      begruendung,
     }),
-    [mergeEntities, betrieb, brille.Rechnungsnummer],
+    [mergeEntities, betrieb, brille.Rechnungsnummer, begruendung],
   );
   const layoutDef = selectedVorlage
     ? LAYOUTS[selectedVorlage.Kategorie]
@@ -376,6 +465,27 @@ const FormulareDialog = ({
   const pdfVorlage = selectedVorlage
     ? PDF_VORLAGEN[selectedVorlage.Kategorie]
     : undefined;
+  const vorschauRef = useRef<HTMLIFrameElement>(null);
+  // Angeklickte Kästchen überstehen das Neuladen der Vorschau (z. B. beim
+  // Tippen der Begründung); null = noch nichts geändert, Vorschläge gelten
+  const kaestchenStand = useRef<boolean[] | null>(null);
+  useEffect(() => {
+    kaestchenStand.current = null;
+  }, [selectedVorlage?.id]);
+  const vorschauGeladen = () => {
+    const doc = vorschauRef.current?.contentDocument;
+    if (!doc) return;
+    const boxen = [
+      ...doc.querySelectorAll<HTMLInputElement>('input[type="checkbox"]'),
+    ];
+    const stand = kaestchenStand.current;
+    if (stand && stand.length === boxen.length) {
+      boxen.forEach((box, i) => (box.checked = stand[i]));
+    }
+    doc.addEventListener("change", () => {
+      kaestchenStand.current = boxen.map((box) => box.checked);
+    });
+  };
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFehler, setPdfFehler] = useState<string | null>(null);
   useEffect(() => {
@@ -441,8 +551,11 @@ const FormulareDialog = ({
       );
       return;
     }
+    const vorschau = vorschauRef.current?.contentDocument;
     const html =
-      layout?.print ?? buildPrintHtml(selectedVorlage.Name, renderedText);
+      layoutDef?.ausVorschau && vorschau
+        ? vorschauAlsHtml(vorschau)
+        : (layout?.print ?? buildPrintHtml(selectedVorlage.Name, renderedText));
     const opened = openDocumentWindow(html, autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
@@ -569,18 +682,74 @@ const FormulareDialog = ({
                 </Typography>
               )
             ) : layout ? (
-              <Box
-                component="iframe"
-                title={layout.title}
-                srcDoc={layout.preview}
-                sx={{
-                  width: "100%",
-                  height: 480,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                }}
-              />
+              <>
+                {kiFormular && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <TextField
+                      label="Begründung (erscheint im Formular)"
+                      value={begruendung}
+                      onChange={(event) => setBegruendung(event.target.value)}
+                      multiline
+                      minRows={3}
+                      fullWidth
+                    />
+                    <Box
+                      sx={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 1.5,
+                        mt: 0.5,
+                      }}
+                    >
+                      <Button
+                        size="small"
+                        startIcon={
+                          kiLaeuft ? (
+                            <CircularProgress size={14} />
+                          ) : (
+                            <AutoAwesomeIcon />
+                          )
+                        }
+                        onClick={kiVorschlagHolen}
+                        disabled={kiLaeuft}
+                      >
+                        Mit KI vorschlagen
+                      </Button>
+                      <Typography variant="caption" color="text.secondary">
+                        Übertragen werden nur Alter, Brillenart, Messwerte,
+                        Diagnose und Beruf – keine Namen, Adressen, Geburtsdaten
+                        oder Versichertennummern. Text vor dem Druck prüfen.
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
+                {layoutDef?.ausVorschau && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    component="p"
+                    sx={{ mb: 0.5 }}
+                  >
+                    Kreuze sind Vorschläge aus den gespeicherten Daten –
+                    Kästchen in der Vorschau anklicken, um sie vor dem Druck zu
+                    ändern.
+                  </Typography>
+                )}
+                <Box
+                  component="iframe"
+                  ref={vorschauRef}
+                  onLoad={vorschauGeladen}
+                  title={layout.title}
+                  srcDoc={layout.preview}
+                  sx={{
+                    width: "100%",
+                    height: 480,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                  }}
+                />
+              </>
             ) : (
               <Box
                 sx={{

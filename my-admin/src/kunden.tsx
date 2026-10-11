@@ -642,6 +642,15 @@ export const KundeShow = () => {
               <Field>
                 <TextField source="KrankenversicherungsTyp" />
               </Field>
+              <Field>
+                <TextField source="Krankenkasse" />
+              </Field>
+              <Field>
+                <TextField source="Versichertenstatus" />
+              </Field>
+              <Field>
+                <DateField source="VersichertenkarteGueltigBis" />
+              </Field>
             </ShowSection>
             <ShowSection title="Marketing">
               <Field label="Werbeeinwilligung">
@@ -786,6 +795,11 @@ export const KundeEdit = () => (
           <TextInput source="VersichertenNummer" />
           <TextInput source="KrankenversicherungsTyp" />
         </FieldRow>
+        <FieldRow>
+          <TextInput source="Krankenkasse" />
+          <TextInput source="Versichertenstatus" />
+          <DateInput source="VersichertenkarteGueltigBis" />
+        </FieldRow>
       </FormSection>
       <FormSection title="Marketing">
         <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
@@ -899,6 +913,11 @@ export const KundeCreate = () => {
               source="KrankenversicherungsTyp"
               label="Krankenversicherungs Typ"
             />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Krankenkasse" />
+            <TextInput source="Versichertenstatus" />
+            <DateInput source="VersichertenkarteGueltigBis" />
           </FieldRow>
         </FormSection>
         <FormSection title="Marketing">
