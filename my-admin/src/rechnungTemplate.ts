@@ -161,6 +161,20 @@ export const buildRechnungPositionen = (
     });
   });
 
+  // Leistungen/Nachlässe ohne Katalogbezug (#131), z. B. die Freitext-
+  // Leistungen der Prisma-Altaufträge. Zählen wie Zusatzleistungen ohne Rabatt
+  // zur Summe, damit Positionen und Rechnungsbetrag zusammenpassen.
+  const weitereLeistungen = Number(entities.brille?.WeitereLeistungen) || 0;
+  if (weitereLeistungen !== 0) {
+    positionen.push({
+      label:
+        weitereLeistungen > 0
+          ? "Weitere Leistungen (siehe Auftrag)"
+          : "Nachlass (siehe Auftrag)",
+      betrag: weitereLeistungen,
+    });
+  }
+
   const rabattProzent = Number(entities.brille?.RabattProzent) || 0;
   if (rabattProzent > 0) {
     const rabattBasis = glasRechtsBetrag + glasLinksBetrag + fassungBetrag;
