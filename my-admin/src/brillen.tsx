@@ -38,6 +38,7 @@ import {
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { KundeInput } from "./KundeInput";
+import { OptionenMenu } from "./PrismaMenues";
 import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -329,14 +330,16 @@ export const BrilleList = () => (
 const BrilleShowActions = () => (
   <ShowActionsBar>
     <RechnungErstellenButton />
-    <MahnungErstellenButton />
-    <BerechtigungsscheinErstellenButton />
-    <WerkstattauftragButton />
     <FormulareButton />
-    <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
-      Drucken
-    </Button>
-    <KarteikarteKopierenButton />
+    <OptionenMenu>
+      <KarteikarteKopierenButton />
+      <BerechtigungsscheinErstellenButton />
+      <WerkstattauftragButton />
+      <MahnungErstellenButton />
+      <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
+        Drucken
+      </Button>
+    </OptionenMenu>
   </ShowActionsBar>
 );
 
