@@ -578,6 +578,14 @@ export const KundeShow = () => {
                 <TextField source="Tätigkeit" />
               </Field>
             </ShowSection>
+            <ShowSection title="Notizen">
+              <Field label="Notizen">
+                <TextField
+                  source="Notizen"
+                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
+                />
+              </Field>
+            </ShowSection>
             <ShowSection title="Merkmale">
               <Field label="Beruf (Merkmal 1)">
                 <TextField source="Merkmal1" />
@@ -591,8 +599,10 @@ export const KundeShow = () => {
               <Field label="Merkmal 4">
                 <TextField source="Merkmal4" />
               </Field>
-              <Field label="Werbeaktion / Kundenquelle">
-                <TextField source="Kundenquelle" />
+            </ShowSection>
+            <ShowSection title="Marketing">
+              <Field label="Werbeeinwilligung">
+                <BooleanField source="Werbeeinwilligung" />
               </Field>
             </ShowSection>
             <ShowSection title="Adresse">
@@ -646,14 +656,6 @@ export const KundeShow = () => {
                 <DateField source="VersichertenkarteGueltigBis" />
               </Field>
             </ShowSection>
-            <ShowSection title="Notizen">
-              <Field label="Notizen">
-                <TextField
-                  source="Notizen"
-                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
-                />
-              </Field>
-            </ShowSection>
             <DatenbankInfo />
           </ShowColumn>
           <ShowColumn>
@@ -681,6 +683,9 @@ export const KundeEdit = () => (
           <TextInput source="Tätigkeit" />
         </FieldRow>
       </FormSection>
+      <FormSection title="Notizen">
+        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+      </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
           <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
@@ -690,7 +695,9 @@ export const KundeEdit = () => (
           <TextInput source="Merkmal3" label="Merkmal 3" />
           <TextInput source="Merkmal4" label="Merkmal 4" />
         </FieldRow>
-        <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+      </FormSection>
+      <FormSection title="Marketing">
+        <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
       </FormSection>
       <FormSection title="Adresse">
         <FieldRow>
@@ -725,9 +732,6 @@ export const KundeEdit = () => (
           <TextInput source="Versichertenstatus" />
           <DateInput source="VersichertenkarteGueltigBis" />
         </FieldRow>
-      </FormSection>
-      <FormSection title="Notizen">
-        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
       </FormSection>
       <KundeVerwaltung />
     </SimpleForm>
@@ -768,6 +772,9 @@ export const KundeCreate = () => {
             <TextInput source="Tätigkeit" />
           </FieldRow>
         </FormSection>
+        <FormSection title="Notizen">
+          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+        </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>
             <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
@@ -777,7 +784,9 @@ export const KundeCreate = () => {
             <TextInput source="Merkmal3" label="Merkmal 3" />
             <TextInput source="Merkmal4" label="Merkmal 4" />
           </FieldRow>
-          <TextInput source="Kundenquelle" label="Werbeaktion / Kundenquelle" />
+        </FormSection>
+        <FormSection title="Marketing">
+          <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
         </FormSection>
         <FormSection title="Adresse">
           <FieldRow>
@@ -824,9 +833,6 @@ export const KundeCreate = () => {
             <TextInput source="Versichertenstatus" />
             <DateInput source="VersichertenkarteGueltigBis" />
           </FieldRow>
-        </FormSection>
-        <FormSection title="Notizen">
-          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
         </FormSection>
         <KundeVerwaltung />
       </SimpleForm>
