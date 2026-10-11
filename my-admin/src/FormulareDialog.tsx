@@ -70,6 +70,7 @@ import {
   buildAokBerechtigungsscheinPreviewHtml,
   buildAokBerechtigungsscheinPrintHtml,
 } from "./aokBerechtigungsscheinTemplate";
+import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
 import {
   buildOptometrischeVerordnungPreviewHtml,
   buildOptometrischeVerordnungPrintHtml,
@@ -377,6 +378,40 @@ const FormulareDialog = ({
                   }
                 : null;
 
+  // Ausfüllbare PDF-Vorlagen (Beobachtungsbogen, Antrag BAP): das PDF wird im
+  // Browser vorausgefüllt und als Objekt-URL angezeigt bzw. geöffnet
+  const pdfVorlage = selectedVorlage
+    ? PDF_VORLAGEN[selectedVorlage.Kategorie]
+    : undefined;
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfFehler, setPdfFehler] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pdfVorlage) {
+      return;
+    }
+    let abgebrochen = false;
+    let url: string | null = null;
+    ladePdfVorlage(pdfVorlage)
+      .then((bytes) => fuellePdfVorlage(pdfVorlage, bytes, mergeEntities))
+      .then((pdf) => {
+        if (abgebrochen) return;
+        url = URL.createObjectURL(
+          new Blob([pdf as BlobPart], { type: "application/pdf" }),
+        );
+        setPdfUrl(url);
+        setPdfFehler(null);
+      })
+      .catch((error) => {
+        console.error("PDF-Vorlage konnte nicht erstellt werden", error);
+        if (!abgebrochen) setPdfFehler("Das PDF konnte nicht erstellt werden.");
+      });
+    return () => {
+      abgebrochen = true;
+      if (url) URL.revokeObjectURL(url);
+      setPdfUrl(null);
+    };
+  }, [pdfVorlage, mergeEntities]);
+
   const groupedVorlagen = useMemo(() => {
     const map = new Map<string, Dokumentvorlage[]>();
     (vorlagen ?? [])
@@ -398,6 +433,19 @@ const FormulareDialog = ({
     blockedMessage: string,
   ) => {
     if (!selectedVorlage) {
+      return;
+    }
+    if (pdfVorlage) {
+      // Druck und Speichern übernimmt der PDF-Viewer des Browsers
+      const opened = pdfUrl ? window.open(pdfUrl, "_blank") : null;
+      notify(
+        !pdfUrl
+          ? "Das PDF wird noch erstellt – bitte gleich noch einmal versuchen."
+          : opened
+            ? "PDF geöffnet – Drucken oder Speichern im PDF-Viewer."
+            : blockedMessage,
+        { type: opened ? "success" : "warning" },
+      );
       return;
     }
     const html =
@@ -494,7 +542,7 @@ const FormulareDialog = ({
                   {selectedVorlage.Kategorie}
                 </Typography>
               </Box>
-              {!layout && (
+              {!layout && !pdfVorlage && (
                 <Button
                   size="small"
                   startIcon={<EditNoteIcon />}
@@ -506,7 +554,28 @@ const FormulareDialog = ({
                 </Button>
               )}
             </Box>
-            {layout ? (
+            {pdfVorlage ? (
+              pdfUrl ? (
+                <Box
+                  component="iframe"
+                  title={pdfVorlage.titel}
+                  src={pdfUrl}
+                  sx={{
+                    width: "100%",
+                    height: 480,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                  }}
+                />
+              ) : pdfFehler ? (
+                <Alert severity="error">{pdfFehler}</Alert>
+              ) : (
+                <Typography color="text.secondary">
+                  PDF wird erstellt…
+                </Typography>
+              )
+            ) : layout ? (
               <Box
                 component="iframe"
                 title={layout.title}

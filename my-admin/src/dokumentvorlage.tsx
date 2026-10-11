@@ -43,6 +43,8 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Berechtigungsschein AOK", name: "Berechtigungsschein AOK" },
   { id: "Optometrische Verordnung", name: "Optometrische Verordnung" },
   { id: "Optometrische Verordnung GKV", name: "Optometrische Verordnung GKV" },
+  { id: "Beobachtungsbogen", name: "Beobachtungsbogen" },
+  { id: "Antrag BAP", name: "Antrag BAP" },
 ];
 
 const PLATZHALTER_HINWEIS =

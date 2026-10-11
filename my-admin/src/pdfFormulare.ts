@@ -1,0 +1,234 @@
+// Ausfüllbare PDF-Vorlagen (public/formulare/*.pdf): Beobachtungsbogen und
+// Antrag auf eine Bildschirmarbeitsplatzbrille. Anders als die HTML-Layouts
+// sind das die Original-Formulare mit Formularfeldern. Das Programm füllt die
+// bekannten Felder mit Kunden- und Auftragsdaten vor und öffnet das PDF; alle
+// Felder bleiben im PDF-Viewer ausfüllbar. Die PDFs sind leer (ohne Werte,
+// Stempel oder Unterschrift) und wurden aus den bisherigen Vorlagen erzeugt.
+import type {
+  DocumentMergeEntities,
+  MergeSource,
+} from "./documentTemplateEngine";
+import { RECHNUNG_ABSENDER } from "./rechnungTemplate";
+import dayjs from "dayjs";
+import {
+  buildWerkstattauftragSummen,
+  formatDatum,
+  formatEuro,
+  formatWert,
+  text,
+} from "./werkstattauftragTemplate";
+
+export type PdfVorlage = {
+  datei: string;
+  titel: string;
+  felder: (entities: DocumentMergeEntities) => Record<string, string>;
+};
+
+// Auswahllisten im Beobachtungsbogen schreiben positive Werte ohne "+"
+const ohnePlus = (wert: string) => wert.replace(/^\+/, "");
+
+const kunde = (entities: DocumentMergeEntities): Record<string, unknown> =>
+  entities.kunde ?? {};
+
+const telefon = (k: Record<string, unknown>) =>
+  text(k.Handy) || text(k.TelefonnummerPrivat);
+
+const adresse = (k: Record<string, unknown>) =>
+  [
+    [k.Straße, k.Hausnummer].map(text).filter(Boolean).join(" "),
+    [k.Postleitzahl, k.Stadt].map(text).filter(Boolean).join(" "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+const prismaBasis = (glas: MergeSource) =>
+  [formatWert(glas?.Pr, "zwei"), formatWert(glas?.B, "frei")]
+    .filter(Boolean)
+    .join(" / ");
+
+const betrag = (value: number) => (value ? formatEuro(value) : "");
+
+const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  const brille: Record<string, unknown> = entities.brille ?? {};
+  const werte = (glas: MergeSource, auge: "OD" | "OS") => ({
+    [`SPH ${auge}`]: ohnePlus(formatWert(glas?.Sph, "dioptrie")),
+    [`CYL ${auge}`]: ohnePlus(formatWert(glas?.Cyl, "dioptrie")),
+    [`AXE ${auge}`]: formatWert(glas?.A, "achse"),
+    [`ADD ${auge}`]: formatWert(glas?.Add, "zwei"),
+    [`VCC ${auge}`]: formatWert(glas?.Vis, "zwei"),
+  });
+  return {
+    Name: text(k.Nachname),
+    Vorname: text(k.Vorname),
+    Adresse: adresse(k),
+    Telefon: telefon(k),
+    Geburtstag: formatDatum(k.Geburtsdatum),
+    Mitarbeiter: text(brille.Berater),
+    Datum: dayjs().format("DD.MM.YYYY"),
+    ...werte(entities.glasRechts, "OD"),
+    ...werte(entities.glasLinks, "OS"),
+  };
+};
+
+// Feldnamen des BAP-Formulars sind durchnummeriert (f_4, rx_31, pr_110 ...);
+// die Zuordnung stammt aus der Lage der Felder unter den Beschriftungen.
+const bapFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  const brille: Record<string, unknown> = entities.brille ?? {};
+  const glastyp: Record<string, unknown> = entities.glastyp ?? {};
+  const fassung: Record<string, unknown> = entities.fassung ?? {};
+  const { glasRechts: r, glasLinks: l } = entities;
+  const summen = buildWerkstattauftragSummen(entities);
+  const zusatzleistungen = (entities.zusatzleistungen ?? []).filter(Boolean);
+  const messdatum = formatDatum(brille.Datum) || dayjs().format("DD.MM.YYYY");
+  const a = RECHNUNG_ABSENDER;
+
+  // Abschnitt 6 (Seite 2): Sphäre, Zylinder, Achse, Addition, Prisma/Basis, PD
+  const bescheinigung = (glas: MergeSource, start: number) => {
+    const werte = [
+      formatWert(glas?.Sph, "dioptrie"),
+      formatWert(glas?.Cyl, "dioptrie"),
+      formatWert(glas?.A, "achse"),
+      formatWert(glas?.Add, "dioptrie"),
+      prismaBasis(glas),
+      formatWert(glas?.PD, "frei"),
+    ];
+    return Object.fromEntries(werte.map((w, i) => [`rx_${start + i}`, w]));
+  };
+  // B b) Messung (Seite 3): Sph, Cyl, Achse, Prisma, Basis, Visus cc, Add, PD
+  const messung = (glas: MergeSource, start: number) => {
+    const werte = [
+      formatWert(glas?.Sph, "dioptrie"),
+      formatWert(glas?.Cyl, "dioptrie"),
+      formatWert(glas?.A, "achse"),
+      formatWert(glas?.Pr, "zwei"),
+      formatWert(glas?.B, "frei"),
+      formatWert(glas?.Vis, "visus"),
+      formatWert(glas?.Add, "dioptrie"),
+      formatWert(glas?.PD, "frei"),
+    ];
+    return Object.fromEntries(werte.map((w, i) => [`pr_${start + i}`, w]));
+  };
+  // Werte der anzufertigenden Brille (Seite 5): Sph, Cyl, Achse, HSA, MA,
+  // DEG, Add, NZ-Add - MA, DEG und NZ-Add kennt das Programm nicht
+  const neueBrille = (glas: MergeSource, start: number) => ({
+    [`pr_${start}`]: formatWert(glas?.Sph, "dioptrie"),
+    [`pr_${start + 1}`]: formatWert(glas?.Cyl, "dioptrie"),
+    [`pr_${start + 2}`]: formatWert(glas?.A, "achse"),
+    [`pr_${start + 3}`]: formatWert(glas?.HSA, "frei"),
+    [`pr_${start + 6}`]: formatWert(glas?.Add, "dioptrie"),
+  });
+  // Kopfzeile der Protokollseiten 3-5: Untersuchungsdatum, Untersucher/in,
+  // Kunden-Nr. (Protokoll-Nr. und Uhrzeit bleiben frei)
+  const kopf = (start: number) => ({
+    [`hd_${start + 1}`]: messdatum,
+    [`hd_${start + 3}`]: text(brille.Berater),
+    [`hd_${start + 4}`]: text(k.KundenNummer),
+  });
+
+  return {
+    f_4: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    f_5: formatDatum(k.Geburtsdatum),
+    f_8: text(k.Tätigkeit),
+    f_9: [telefon(k), text(k.Email)].filter(Boolean).join(" / "),
+    f_29: `${a.firma}, ${a.strasseLang}, ${a.plz} ${a.ort}`,
+    f_30: messdatum,
+    ...bescheinigung(r, 31),
+    ...bescheinigung(l, 37),
+    f_48: [fassung.Hersteller, fassung.Bezeichnung]
+      .map(text)
+      .filter(Boolean)
+      .join(" "),
+    f_49: betrag(Number(fassung.Betrag) || 0),
+    f_50: [glastyp.Bezeichnung, glastyp.Verguetung]
+      .map(text)
+      .filter(Boolean)
+      .join(", "),
+    f_51: betrag((Number(r?.Betrag) || 0) + (Number(l?.Betrag) || 0)),
+    f_52: zusatzleistungen.map((z) => text(z?.Bezeichnung)).join(", "),
+    f_53: betrag(
+      zusatzleistungen.reduce((sum, z) => sum + (Number(z?.Betrag) || 0), 0),
+    ),
+    f_54: betrag(summen.gesamt),
+    ...kopf(61),
+    ...kopf(129),
+    ...kopf(207),
+    f_66: text(k.Nachname),
+    f_67: text(k.Vorname),
+    f_68: formatDatum(k.Geburtsdatum),
+    ...messung(r, 110),
+    ...messung(l, 118),
+    ...neueBrille(r, 225),
+    ...neueBrille(l, 233),
+  };
+};
+
+// Kategorie in `dokumentvorlage` -> PDF-Vorlage
+export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
+  Beobachtungsbogen: {
+    datei: "beobachtungsbogen.pdf",
+    titel: "Beobachtungsbogen",
+    felder: beobachtungsbogenFelder,
+  },
+  "Antrag BAP": {
+    datei: "antrag-bap.pdf",
+    titel: "Antrag Bildschirmarbeitsplatzbrille",
+    felder: bapFelder,
+  },
+};
+
+// Felder mit begrenzter Länge (z. B. "Mitarbeiter" im Beobachtungsbogen)
+// bekommen bei Namen die Initialen ("Robert Ulm" -> "RU"), sonst gekürzt.
+export const passeAnFeldlaenge = (wert: string, max?: number) => {
+  if (!max || wert.length <= max) return wert;
+  const teile = wert.trim().split(/\s+/);
+  const initialen = teile.map((teil) => teil.charAt(0).toUpperCase()).join("");
+  return teile.length > 1 && initialen.length <= max
+    ? initialen
+    : wert.slice(0, max);
+};
+
+// Lädt die Vorlage, setzt die Werte und gibt das weiterhin ausfüllbare PDF
+// zurück. pdf-lib wird erst hier geladen, damit es nicht im Haupt-Bundle liegt.
+export const fuellePdfVorlage = async (
+  vorlage: PdfVorlage,
+  pdfBytes: ArrayBuffer | Uint8Array,
+  entities: DocumentMergeEntities,
+): Promise<Uint8Array> => {
+  const { PDFDocument, PDFDropdown, PDFTextField } = await import("pdf-lib");
+  const pdf = await PDFDocument.load(pdfBytes);
+  const form = pdf.getForm();
+  for (const [name, wert] of Object.entries(vorlage.felder(entities))) {
+    if (!wert) continue;
+    const feld = form.getFieldMaybe(name);
+    try {
+      if (feld instanceof PDFTextField) {
+        feld.setText(passeAnFeldlaenge(wert, feld.getMaxLength()));
+        // feste Größe statt "automatisch" (füllt sonst die ganze Feldhöhe);
+        // Felder ohne eigene Schriftangabe bekommen eine
+        try {
+          feld.setFontSize(10);
+        } catch {
+          feld.acroField.setDefaultAppearance("/Helv 10 Tf 0 g");
+        }
+      } else if (feld instanceof PDFDropdown) {
+        // Werte außerhalb der Liste schaltet pdf-lib als freie Eingabe frei
+        feld.select(wert);
+      }
+    } catch (error) {
+      console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
+    }
+  }
+  return pdf.save();
+};
+
+export const ladePdfVorlage = async (vorlage: PdfVorlage) => {
+  const antwort = await fetch(
+    `${import.meta.env.BASE_URL}formulare/${vorlage.datei}`,
+  );
+  if (!antwort.ok) {
+    throw new Error(`Vorlage ${vorlage.datei} nicht gefunden`);
+  }
+  return antwort.arrayBuffer();
+};

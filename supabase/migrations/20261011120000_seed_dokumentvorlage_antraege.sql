@@ -10,6 +10,9 @@
 --   - "Optometrische Verordnung" (kurz, halbe A4-Seite) und
 --     "Optometrische Verordnung GKV" des Sehzentrums Gera,
 --     my-admin/src/optometrischeVerordnungTemplate.ts
+--   - "Beobachtungsbogen" und "Antrag BAP" (Bildschirmarbeitsplatzbrille):
+--     ausfüllbare PDF-Vorlagen (my-admin/public/formulare/*.pdf), die
+--     my-admin/src/pdfFormulare.ts vorausfüllt
 -- Alle haben ein code-basiertes Layout; der Vorlagentext wird wie bei
 -- Rechnung und Berechtigungsschein nicht gerendert, der Datensatz macht die
 -- Vorlage im Dialog auswählbar.
@@ -30,7 +33,9 @@ alter table public.dokumentvorlage
     'Antrag Sozialamt',
     'Berechtigungsschein AOK',
     'Optometrische Verordnung',
-    'Optometrische Verordnung GKV'
+    'Optometrische Verordnung GKV',
+    'Beobachtungsbogen',
+    'Antrag BAP'
   ));
 
 insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
@@ -81,4 +86,24 @@ select
   true
 where not exists (
   select 1 from public.dokumentvorlage where "Kategorie" = 'Optometrische Verordnung GKV'
+);
+
+insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
+select
+  'Beobachtungsbogen',
+  'Beobachtungsbogen',
+  'Hinweis: Der Text dieser Vorlage wird nicht verwendet. Das ausfüllbare PDF liegt unter my-admin/public/formulare/ und wird von my-admin/src/pdfFormulare.ts vorausgefüllt.',
+  true
+where not exists (
+  select 1 from public.dokumentvorlage where "Kategorie" = 'Beobachtungsbogen'
+);
+
+insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
+select
+  'Antrag Bildschirmarbeitsplatzbrille',
+  'Antrag BAP',
+  'Hinweis: Der Text dieser Vorlage wird nicht verwendet. Das ausfüllbare PDF liegt unter my-admin/public/formulare/ und wird von my-admin/src/pdfFormulare.ts vorausgefüllt.',
+  true
+where not exists (
+  select 1 from public.dokumentvorlage where "Kategorie" = 'Antrag BAP'
 );

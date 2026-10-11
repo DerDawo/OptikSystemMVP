@@ -24,6 +24,7 @@
     "@mui/x-date-pickers": "^8.27.2",
     "dayjs": "^1.11.20",
     "jszip": "^3.10.1",
+    "pdf-lib": "^1.17.1",
     "ra-i18n-polyglot": "^5.13.0",
     "ra-supabase": "^3.5.2",
     "react": "^19.0.0",
