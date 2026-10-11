@@ -87,6 +87,8 @@ import {
   KundeVerwaltung,
 } from "./KundeFelder";
 import { KundenAuftraege } from "./KundenAuftraege";
+import { zurueckNachSpeichern } from "./seitenVerlauf";
+import { KontaktFeld } from "./KontaktFeld";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -598,16 +600,16 @@ export const KundeShow = () => {
             </ShowSection>
             <ShowSection title="Kontakt">
               <Field>
-                <TextField source="TelefonnummerPrivat" />
+                <KontaktFeld source="TelefonnummerPrivat" />
               </Field>
               <Field>
-                <TextField source="TelefonnummerGeschaeftlich" />
+                <KontaktFeld source="TelefonnummerGeschaeftlich" />
               </Field>
               <Field>
-                <TextField source="Handy" />
+                <KontaktFeld source="Handy" />
               </Field>
               <Field>
-                <TextField source="Email" />
+                <KontaktFeld source="Email" />
               </Field>
             </ShowSection>
             <ShowSection title="Versicherung">
@@ -672,7 +674,11 @@ export const KundeShow = () => {
 };
 
 export const KundeEdit = () => (
-  <Edit title="Kunde bearbeiten" actions={<EditActionsBar />}>
+  <Edit
+    title="Kunde bearbeiten"
+    actions={<EditActionsBar />}
+    redirect={zurueckNachSpeichern}
+  >
     <SimpleForm>
       <GeschlechtAusAnrede />
       <FormSection title="Stammdaten">

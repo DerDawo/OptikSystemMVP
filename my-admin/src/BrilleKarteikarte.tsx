@@ -1,5 +1,5 @@
 import { ReactNode, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Link,
   useDataProvider,
@@ -22,6 +22,7 @@ import {
   TableCell,
   TableHead,
   TableRow,
+  Tooltip,
   Typography,
 } from "@mui/material";
 import { Theme } from "@mui/material/styles";
@@ -30,6 +31,7 @@ import ChevronRightIcon from "@mui/icons-material/ChevronRight";
 import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+import EditIcon from "@mui/icons-material/Edit";
 import { formatCurrency } from "./CurrencyField";
 import {
   MITARBEITER,
@@ -777,6 +779,23 @@ export const BrilleKarteikarte = () => {
               {kundeName || `Kunde Nr. ${kunde.id}`}
             </Link>
           ) : null}
+          {kunde && (
+            <Tooltip title="Kundendaten bearbeiten">
+              <IconButton
+                component={RouterLink}
+                to={`/kunde/${kunde.id}`}
+                size="small"
+                aria-label="Kundendaten bearbeiten"
+                sx={{
+                  ml: 0.5,
+                  verticalAlign: "middle",
+                  color: "text.secondary",
+                }}
+              >
+                <EditIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          )}
         </Typography>
 
         <Box sx={{ overflowX: "auto", minWidth: 0 }}>

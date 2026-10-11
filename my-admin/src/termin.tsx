@@ -27,6 +27,7 @@ import {
   ShowLayout,
   ShowSection,
 } from "./EntityLayout";
+import { zurueckNachSpeichern } from "./seitenVerlauf";
 
 const kundeOptionText = (record: RaRecord) =>
   `${record.Anrede ?? ""} ${record.Vorname ?? ""} ${record.Nachname ?? ""}`.trim();
@@ -113,7 +114,7 @@ export const TerminShow = () => (
 );
 
 export const TerminEdit = () => (
-  <Edit title="Termin bearbeiten">
+  <Edit title="Termin bearbeiten" redirect={zurueckNachSpeichern}>
     <SimpleForm>
       <FormSection title="Datenbankfelder">
         <FieldRow>
