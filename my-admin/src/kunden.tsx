@@ -550,8 +550,8 @@ export const KundeShow = () => {
   return (
     <Show title="Kunde anzeigen" actions={<KundeShowActions />}>
       <ShowLayout>
-        <ShowColumns>
-          <ShowColumn>
+        <ShowColumns spalten="minmax(0, 1fr) minmax(0, 1.8fr)">
+          <ShowColumn kompakt>
             <ShowSection title="Stammdaten">
               {/* Kundennummer, Aufnahmedatum und Anrede in einer Reihe */}
               <Box
