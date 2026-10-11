@@ -427,6 +427,26 @@ const buildTheme = (mode: Mode): RaThemeOptions => {
         },
       },
 
+      // Passwort vergessen / neues Passwort (ra-supabase): wie die Login-Seite
+      RaAuthLayout: {
+        styleOverrides: {
+          root: {
+            background: appBackground(t),
+            "& .RaAuthLayout-card": {
+              maxWidth: 440,
+              marginInline: 16,
+              borderRadius: 20,
+              border: `1px solid ${t.line}`,
+              boxShadow: t.shadowFloat,
+            },
+            "& .RaAuthLayout-icon": {
+              backgroundColor: t.primary,
+              color: t.primaryContrast,
+            },
+          },
+        },
+      },
+
       MuiCssBaseline: {
         styleOverrides: (theme) => ({
           html: {

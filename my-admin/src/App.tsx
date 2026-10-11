@@ -5,7 +5,7 @@ import { dataProvider } from "./dataProvider";
 import { MyLayout } from "./MyLayout";
 import { authProvider } from "./authProvider";
 import { i18nProvider } from "./i18nProvider";
-import { LoginPage } from "ra-supabase";
+import { ForgotPasswordPage, LoginPage, SetPasswordPage } from "ra-supabase";
 import {
   KundenList,
   KundeShow,
@@ -205,6 +205,14 @@ export const App = () => {
         create={DokumentvorlageCreate}
       />
       <Resource name="betrieb" edit={BetriebEdit} />
+      {/* Passwort vergessen / neues Passwort setzen, ohne Layout wie die Login-Seite */}
+      <CustomRoutes noLayout>
+        <Route
+          path={ForgotPasswordPage.path}
+          element={<ForgotPasswordPage />}
+        />
+        <Route path={SetPasswordPage.path} element={<SetPasswordPage />} />
+      </CustomRoutes>
       <CustomRoutes>
         <Route path="/search" element={<Search />} />
         <Route path="/rechnungen" element={<RechnungenList />} />
