@@ -33,6 +33,7 @@ import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import { formatCurrency } from "./CurrencyField";
 import { MITARBEITER, mitarbeiterAnzeige } from "./mitarbeiterNamen";
 import { Auswahl, Eingabe, Haken, useKarteiSpeichern } from "./KarteiEingabe";
+import { brillenartOptionen } from "./brillenarten";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -609,10 +610,6 @@ export const BrilleKarteikarte = () => {
 
   const refresh = useRefresh();
   const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
-  const { data: brillenarten } = useGetList<Datensatz>("brillenart", {
-    pagination: { page: 1, perPage: 200 },
-    sort: { field: "Bezeichnung", order: "ASC" },
-  });
 
   if (!brille) return null;
 
@@ -751,17 +748,12 @@ export const BrilleKarteikarte = () => {
               Brillenart
             </Beschriftung>
             <Feld z={1} s={LINKS}>
-              {textFeld(
-                "BrillenArt",
-                "Brillenart",
-                auftrag("BrillenArt"),
-                brille.BrillenArt,
-                {
-                  vorschlaege: (brillenarten ?? []).map((b) =>
-                    text(b.Bezeichnung),
-                  ),
-                },
-              )}
+              <Auswahl
+                name="Brillenart"
+                wert={brille.BrillenArt}
+                optionen={brillenartOptionen(brille.BrillenArt)}
+                speichere={auftrag("BrillenArt")}
+              />
             </Feld>
             <Beschriftung z={1} s="5 / 6">
               Datum

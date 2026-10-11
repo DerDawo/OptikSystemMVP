@@ -27,19 +27,13 @@ import {
   SingleFieldList,
   ChipField,
 } from "react-admin";
-import {
-  AutocompleteInput,
-  useDataProvider,
-  useGetList,
-  useGetMany,
-  useGetOne,
-  useNotify,
-} from "react-admin";
+import { useGetMany, useGetOne } from "react-admin";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { KundeInput } from "./KundeInput";
 import { OptionenMenu } from "./PrismaMenues";
 import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
+import { brillenartOptionen } from "./brillenarten";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
@@ -190,41 +184,15 @@ const SummeUndRestbetragVorschau = () => {
   );
 };
 
-// `brille.BrillenArt` stays a plain text column so existing free-text values
-// keep working; this input offers the maintained `brillenart` list as
-// choices while still allowing users to create a new, not-yet-listed value.
+// Brillenart als feste Auswahl (brillenarten.ts); ein abweichender Altwert
+// des Auftrags bleibt wählbar.
 const BrillenArtInput = () => {
-  const dataProvider = useDataProvider();
-  const notify = useNotify();
-  const { data: brillenartChoices } = useGetList("brillenart", {
-    pagination: { page: 1, perPage: 200 },
-    sort: { field: "Bezeichnung", order: "ASC" },
-  });
-
-  const handleCreateBrillenart = async (value?: string) => {
-    if (!value) return undefined;
-    try {
-      const { data } = await dataProvider.create("brillenart", {
-        data: { Bezeichnung: value },
-      });
-      return { Bezeichnung: data.Bezeichnung };
-    } catch {
-      notify("Brillenart konnte nicht angelegt werden", { type: "error" });
-      return undefined;
-    }
-  };
-
+  const record = useRecordContext();
   return (
-    <AutocompleteInput
+    <SelectInput
       source="BrillenArt"
-      choices={brillenartChoices ?? []}
-      optionText="Bezeichnung"
-      optionValue="Bezeichnung"
-      onCreate={handleCreateBrillenart}
-      createLabel="Neue Brillenart anlegen"
-      createItemLabel={(filter: string) =>
-        `„${filter}“ als neue Brillenart anlegen`
-      }
+      choices={brillenartOptionen(record?.BrillenArt)}
+      emptyText="–"
     />
   );
 };
