@@ -16,7 +16,9 @@ import {
   FunctionField,
 } from "react-admin";
 import type { RaRecord } from "react-admin";
+import { CreateButton, TopToolbar } from "react-admin";
 import { useLocation } from "react-router-dom";
+import { GoogleAbgleichButton } from "./GoogleAbgleich";
 import { KundeInput } from "./KundeInput";
 import {
   Field,
@@ -30,7 +32,12 @@ const kundeOptionText = (record: RaRecord) =>
   `${record.Anrede ?? ""} ${record.Vorname ?? ""} ${record.Nachname ?? ""}`.trim();
 
 const KundeName = () => (
-  <ReferenceField source="kunde_id" reference="kunde" link="show">
+  <ReferenceField
+    source="kunde_id"
+    reference="kunde"
+    link="show"
+    emptyText="Kunde offen"
+  >
     <FunctionField
       render={(record) => {
         if (!record) return "";
@@ -40,10 +47,21 @@ const KundeName = () => (
   </ReferenceField>
 );
 
+const TerminListActions = () => (
+  <TopToolbar sx={{ alignItems: "center" }}>
+    <GoogleAbgleichButton />
+    <CreateButton />
+  </TopToolbar>
+);
+
 export const TerminList = () => (
-  <List title="Termine" sort={{ field: "Start", order: "DESC" }}>
+  <List
+    title="Termine"
+    sort={{ field: "Start", order: "DESC" }}
+    actions={<TerminListActions />}
+  >
     <DataTable>
-      <DataTable.Col source="id" />
+      <DataTable.Col source="Titel" />
       <DataTable.Col label="Kunde">
         <KundeName />
       </DataTable.Col>
@@ -71,6 +89,9 @@ export const TerminShow = () => (
         </Field>
       </ShowSection>
       <ShowSection title="Termin">
+        <Field>
+          <TextField source="Titel" />
+        </Field>
         <Field label="Kunde">
           <KundeName />
         </Field>
@@ -101,6 +122,7 @@ export const TerminEdit = () => (
         </FieldRow>
       </FormSection>
       <FormSection title="Termin">
+        <TextInput source="Titel" fullWidth />
         <KundeInput />
         <FieldRow>
           <DateTimeInput source="Start" />
@@ -128,6 +150,7 @@ export const TerminCreate = () => {
     <Create title="Neuen Termin anlegen">
       <SimpleForm defaultValues={defaultValues}>
         <FormSection title="Termin">
+          <TextInput source="Titel" fullWidth />
           <KundeInput />
           <FieldRow>
             <DateTimeInput source="Start" />
