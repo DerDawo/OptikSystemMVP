@@ -9,14 +9,7 @@ import {
   Title,
   RaRecord,
 } from "react-admin";
-import {
-  BooleanField,
-  BooleanInput,
-  DateField,
-  Show,
-  TextField,
-  FunctionField,
-} from "react-admin";
+import { DateField, Show, TextField, FunctionField } from "react-admin";
 import { DateInput, Edit, SimpleForm, TextInput } from "react-admin";
 import { Create } from "react-admin";
 import {
@@ -87,6 +80,9 @@ import {
   KundeVerwaltung,
 } from "./KundeFelder";
 import { KundenAuftraege } from "./KundenAuftraege";
+import { zurueckNachSpeichern } from "./seitenVerlauf";
+import { KontaktFeld } from "./KontaktFeld";
+import { DirektFeld } from "./DirektFeld";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -554,23 +550,34 @@ export const KundeShow = () => {
   return (
     <Show title="Kunde anzeigen" actions={<KundeShowActions />}>
       <ShowLayout>
-        <ShowColumns>
-          <ShowColumn>
+        <ShowColumns spalten="minmax(0, 1fr) minmax(0, 1.8fr)">
+          <ShowColumn kompakt>
             <ShowSection title="Stammdaten">
+              {/* Kundennummer, Aufnahmedatum und Anrede in einer Reihe */}
+              <Box
+                sx={{
+                  gridColumn: "1 / -1",
+                  display: "grid",
+                  gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+                  gap: "0.25em 2em",
+                  "& > *": { minWidth: 0 },
+                }}
+              >
+                <Field>
+                  <TextField source="KundenNummer" />
+                </Field>
+                <Field>
+                  <DateField source="Aufnahmedatum" />
+                </Field>
+                <Field>
+                  <TextField source="Anrede" />
+                </Field>
+              </Box>
               <Field>
-                <TextField source="KundenNummer" />
-              </Field>
-              <Field>
-                <DateField source="Aufnahmedatum" />
-              </Field>
-              <Field>
-                <TextField source="Anrede" />
+                <TextField source="Vorname" />
               </Field>
               <Field>
                 <TextField source="Nachname" />
-              </Field>
-              <Field>
-                <TextField source="Vorname" />
               </Field>
               <Field>
                 <TextField source="Geschlecht" />
@@ -598,16 +605,16 @@ export const KundeShow = () => {
             </ShowSection>
             <ShowSection title="Kontakt">
               <Field>
-                <TextField source="TelefonnummerPrivat" />
+                <KontaktFeld source="TelefonnummerPrivat" />
               </Field>
               <Field>
-                <TextField source="TelefonnummerGeschaeftlich" />
+                <KontaktFeld source="TelefonnummerGeschaeftlich" />
               </Field>
               <Field>
-                <TextField source="Handy" />
+                <KontaktFeld source="Handy" />
               </Field>
               <Field>
-                <TextField source="Email" />
+                <KontaktFeld source="Email" />
               </Field>
             </ShowSection>
             <ShowSection title="Versicherung">
@@ -642,23 +649,8 @@ export const KundeShow = () => {
               </Field>
             </ShowSection>
             <ShowSection title="Merkmale">
-              <Field label="Beruf (Merkmal 1)">
-                <TextField source="Merkmal1" />
-              </Field>
-              <Field label="Besonderes (Merkmal 2)">
-                <TextField source="Merkmal2" />
-              </Field>
-              <Field label="Merkmal 3">
-                <TextField source="Merkmal3" />
-              </Field>
-              <Field label="Merkmal 4">
-                <TextField source="Merkmal4" />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Marketing">
-              <Field label="Werbeeinwilligung">
-                <BooleanField source="Werbeeinwilligung" />
-              </Field>
+              <DirektFeld source="Merkmal1" label="Beruf" />
+              <DirektFeld source="Merkmal2" label="Besonderes" />
             </ShowSection>
             <DatenbankInfo />
           </ShowColumn>
@@ -672,14 +664,18 @@ export const KundeShow = () => {
 };
 
 export const KundeEdit = () => (
-  <Edit title="Kunde bearbeiten" actions={<EditActionsBar />}>
+  <Edit
+    title="Kunde bearbeiten"
+    actions={<EditActionsBar />}
+    redirect={zurueckNachSpeichern}
+  >
     <SimpleForm>
       <GeschlechtAusAnrede />
       <FormSection title="Stammdaten">
         <FieldRow>
           <AnredeInput />
-          <TextInput source="Nachname" />
           <TextInput source="Vorname" />
+          <TextInput source="Nachname" />
         </FieldRow>
         <FieldRow>
           <GeschlechtInput />
@@ -723,16 +719,9 @@ export const KundeEdit = () => (
       </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
-          <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
-          <TextInput source="Merkmal2" label="Besonderes (Merkmal 2)" />
+          <TextInput source="Merkmal1" label="Beruf" />
+          <TextInput source="Merkmal2" label="Besonderes" />
         </FieldRow>
-        <FieldRow>
-          <TextInput source="Merkmal3" label="Merkmal 3" />
-          <TextInput source="Merkmal4" label="Merkmal 4" />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Marketing">
-        <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
       </FormSection>
       <KundeVerwaltung />
     </SimpleForm>
@@ -764,8 +753,8 @@ export const KundeCreate = () => {
         <FormSection title="Stammdaten">
           <FieldRow>
             <AnredeInput />
-            <TextInput source="Nachname" />
             <TextInput source="Vorname" />
+            <TextInput source="Nachname" />
           </FieldRow>
           <FieldRow>
             <GeschlechtInput />
@@ -821,16 +810,9 @@ export const KundeCreate = () => {
         </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>
-            <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
-            <TextInput source="Merkmal2" label="Besonderes (Merkmal 2)" />
+            <TextInput source="Merkmal1" label="Beruf" />
+            <TextInput source="Merkmal2" label="Besonderes" />
           </FieldRow>
-          <FieldRow>
-            <TextInput source="Merkmal3" label="Merkmal 3" />
-            <TextInput source="Merkmal4" label="Merkmal 4" />
-          </FieldRow>
-        </FormSection>
-        <FormSection title="Marketing">
-          <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
         </FormSection>
         <KundeVerwaltung />
       </SimpleForm>
