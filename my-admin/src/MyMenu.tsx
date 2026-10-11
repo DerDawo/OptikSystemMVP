@@ -25,6 +25,7 @@ import {
   DocumentIcon,
   FrameIcon,
   GlassesIcon,
+  UnicornIcon,
   ImportIcon,
   LayersIcon,
   LensIcon,
@@ -63,12 +64,12 @@ const Brand = () => {
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25)",
         }}
       >
-        <GlassesIcon sx={{ fontSize: 20 }} />
+        <UnicornIcon sx={{ fontSize: 22 }} />
       </Box>
       {open && (
         <Box sx={{ minWidth: 0 }}>
           <Typography sx={{ fontWeight: 700, fontSize: 15, lineHeight: 1.2 }}>
-            Optik-System
+            UNICORN
           </Typography>
           <Typography
             sx={{ fontSize: 12, color: (theme) => tokensFor(theme).text3 }}

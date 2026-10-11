@@ -1,7 +1,12 @@
 {
-    "short_name": "Optik-System",
-    "name": "Optik-System",
+    "short_name": "UNICORN",
+    "name": "UNICORN",
     "icons": [
+        {
+            "src": "favicon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml"
+        },
         {
             "src": "favicon.ico",
             "sizes": "64x64 32x32 24x24 16x16",
