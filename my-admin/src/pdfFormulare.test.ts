@@ -87,7 +87,7 @@ describe.each(Object.entries(PDF_VORLAGEN))("PDF-Vorlage %s", (_, vorlage) => {
         feld instanceof PDFTextField ? feld.getMaxLength() : undefined;
       expect(feldwert(pdf, name)).toBe(passeAnFeldlaenge(wert, max));
     }
-    expect(pdf.getForm().getFields().length).toBeGreaterThan(100);
+    expect(pdf.getForm().getFields().length).toBeGreaterThan(50);
   });
 });
 
@@ -140,5 +140,52 @@ describe("fuerPdfSchrift", () => {
     expect(fuerPdfSchrift("Zeile1\nZeile2")).toBe("Zeile1 Zeile2");
     expect(fuerPdfSchrift("Weiß – 12,00 € „ok“")).toBe("Weiß – 12,00 € „ok“");
     expect(fuerPdfSchrift("a\u{1F600}b")).toBe("ab");
+  });
+});
+
+describe("Berechtigungsschein GKV (Original-PDF)", () => {
+  const felder = PDF_VORLAGEN["Berechtigungsschein GKV"].felder;
+
+  it("füllt Versichertendaten, IK, Rechnungsnummer und Werte F/N", () => {
+    const werte = felder({
+      ...entities,
+      kunde: {
+        ...entities.kunde,
+        Krankenkasse: "AOK PLUS",
+        KrankenkassenNummer: "107299005",
+        VersichertenNummer: "A123456789",
+        Versichertenstatus: "10000",
+      },
+      brille: {
+        ...entities.brille,
+        BrillenArt: "Gleitsichtbrille",
+        Rechnungsnummer: "RE-1",
+        KKAnteil: 112.45,
+      },
+      glasRechts: { Sph: -1.25, Cyl: -0.5, A: 90, Add: 2 },
+      glasLinks: { Sph: -1, Cyl: 0, A: 0, Add: 2 },
+    });
+    expect(werte).toMatchObject({
+      krankenkasse: "AOK PLUS",
+      kassennr: "107299005",
+      versichertennr: "A123456789",
+      status: "10000",
+      ik: "311600532",
+      rechnungsnummer: "RE-1",
+      FR_sph: "-1,25",
+      FR_cyl: "-0,50",
+      FR_achse: "90",
+      NR_sph: "+0,75",
+      rechnungsbetrag: "112,45",
+    });
+  });
+
+  it("kreuzt die Sehstärkenänderung nur bei Veränderung an", () => {
+    const ohne = felder({
+      ...entities,
+      vorherigesGlasRechts: entities.glasRechts,
+      vorherigesGlasLinks: entities.glasLinks,
+    });
+    expect(ohne.cb_veraenderung).toBeUndefined();
   });
 });

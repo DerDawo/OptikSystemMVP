@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildAntragPrintHtml } from "./antragTemplate";
+import {
+  buildAnamnesePrintHtml,
+  versichertenStatusText,
+} from "./anamneseTemplate";
 import { buildErprobungsprotokollPrintHtml } from "./erprobungsprotokollTemplate";
 import { buildRezeptanfragePrintHtml } from "./rezeptanfrageTemplate";
 import {
@@ -205,5 +209,60 @@ describe("Neue Angaben zu Kasse und Verordnung", () => {
     expect(html).toContain("Muster 8A vom 01.09.2026");
     expect(html).toContain("Dr. med. Seher");
     expect(html).toContain("H35.3 Makuladegeneration");
+  });
+});
+
+describe("Anamnesebogen", () => {
+  const html = buildAnamnesePrintHtml({
+    entities: {
+      kunde: {
+        Vorname: "Anja",
+        Nachname: "Muster",
+        Geburtsdatum: "1980-02-08",
+        Straße: "Werdauer Str.",
+        Hausnummer: "38",
+        Postleitzahl: "07551",
+        Stadt: "Gera",
+        Email: "anja@example.org",
+        Handy: "0170 1234567",
+        Krankenkasse: "AOK PLUS",
+        VersichertenNummer: "A123456789",
+        Versichertenstatus: "30000",
+        KrankenversicherungsTyp: "Gesetzlich Krankenversichert",
+        Geschlecht: "weiblich",
+      },
+    },
+  });
+
+  it("füllt persönliche Daten und Krankenversicherung vor", () => {
+    for (const wert of [
+      "Anja",
+      "Muster",
+      "08.02.1980",
+      "Werdauer Str.",
+      "07551",
+      "Gera",
+      "Deutschland",
+      "anja@example.org",
+      "0170 1234567",
+      "AOK PLUS",
+      "A123456789",
+      "Familienversichert (30000)",
+    ])
+      expect(html).toContain(wert);
+  });
+
+  it("kreuzt nur Versicherungsstatus und Geschlecht an", () => {
+    const angekreuzt =
+      html.match(/<input type="checkbox" class="kaestchen" checked \/>/g) ?? [];
+    expect(angekreuzt).toHaveLength(2);
+    expect(html).toMatch(/checked \/>Gesetzlich versichert/);
+    expect(html).toMatch(/checked \/>Weiblich/);
+  });
+
+  it("übersetzt den Versichertenstatus", () => {
+    expect(versichertenStatusText("10000")).toBe("Mitglied (10000)");
+    expect(versichertenStatusText("50001")).toBe("Rentner (50001)");
+    expect(versichertenStatusText("")).toBe("");
   });
 });
