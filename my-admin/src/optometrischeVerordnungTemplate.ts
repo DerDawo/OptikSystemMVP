@@ -21,12 +21,13 @@ export type OptometrischeVerordnungDaten = {
   entities: DocumentMergeEntities;
 };
 
-const AUSSTELLER = {
+// Erst beim Erzeugen lesen, die Betriebsdaten kommen zur Laufzeit (#132).
+const aussteller = () => ({
   name: RECHNUNG_ABSENDER.marke,
   strasse: RECHNUNG_ABSENDER.strasseKurz.replace(/\.(\d)/, ". $1"),
   ort: `${RECHNUNG_ABSENDER.plz} ${RECHNUNG_ABSENDER.ort}`,
   inhaber: RECHNUNG_ABSENDER.inhaber,
-};
+});
 
 const KASSEN = ["AOK", "LKK", "BKK", "IKK", "vDAK", "AEV", "Knappschaft"];
 
@@ -117,10 +118,10 @@ export const buildOptometrischeVerordnungBodyHtml = ({
   </table>
 
   <div class="aussteller">
-    <div>${escapeHtml(AUSSTELLER.name)}</div>
-    <div>${escapeHtml(AUSSTELLER.strasse)}</div>
-    <div>${escapeHtml(AUSSTELLER.ort)}</div>
-    <div class="abstand">Inhaber: ${escapeHtml(AUSSTELLER.inhaber)}</div>
+    <div>${escapeHtml(aussteller().name)}</div>
+    <div>${escapeHtml(aussteller().strasse)}</div>
+    <div>${escapeHtml(aussteller().ort)}</div>
+    <div class="abstand">Inhaber: ${escapeHtml(aussteller().inhaber)}</div>
     <div>Augenoptikermeister</div>
   </div>
   <div class="stempel"><div class="linie"></div>Firmenstempel / Unterschrift</div>
@@ -240,8 +241,8 @@ export const buildVerordnungKurzBodyHtml = ({
 <div class="blatt-kurz">
   <div class="kopf-kurz">
     <div class="titel-kurz">Optometrische Verordnung</div>
-    <div>${escapeHtml(`${AUSSTELLER.name} · Inhaber: ${AUSSTELLER.inhaber} · Augenoptikermeister`)}</div>
-    <div>${escapeHtml(`${AUSSTELLER.strasse} · ${AUSSTELLER.ort}`)}</div>
+    <div>${escapeHtml(`${aussteller().name} · Inhaber: ${aussteller().inhaber} · Augenoptikermeister`)}</div>
+    <div>${escapeHtml(`${aussteller().strasse} · ${aussteller().ort}`)}</div>
   </div>
   <div class="zeile fett">Verordnungs-Nr.: ${dayjs().year()}-${ausfuellen("", "10.6mm")}</div>
   <div class="zeile zwei">

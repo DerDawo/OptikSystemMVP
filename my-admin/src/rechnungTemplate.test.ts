@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  absenderAusBetrieb,
   buildKostenvoranschlagBodyHtml,
   buildRechnungBodyHtml,
   buildRechnungPositionen,
   formatGlaswerte,
   RECHNUNG_ABSENDER,
+  STANDARD_ABSENDER,
 } from "./rechnungTemplate";
 import type { DocumentMergeEntities } from "./documentTemplateEngine";
 
@@ -141,5 +143,26 @@ describe("buildKostenvoranschlagBodyHtml", () => {
     expect(html).toContain("unverbindlich und gültig bis");
     expect(html).toContain("beträgt Ihr Eigenanteil 229,30 EUR");
     expect(html).not.toContain("Rech.-Nr.");
+  });
+});
+
+describe("absenderAusBetrieb (#132)", () => {
+  it("übernimmt gepflegte Felder, sonst die Standardwerte", () => {
+    const absender = absenderAusBetrieb({
+      Firmenname: "Optik Muster",
+      Strasse: "Hauptstraße 1",
+      Telefon: "  ",
+      MwStSatz: "7",
+      ZahlungszielTage: null,
+    });
+    expect(absender.firma).toBe("Optik Muster");
+    expect(absender.strasseLang).toBe("Hauptstraße 1");
+    expect(absender.strasseKurz).toBe("Hauptstraße 1");
+    expect(absender.telefon).toBe(STANDARD_ABSENDER.telefon);
+    expect(absender.mwstSatz).toBe(7);
+    expect(absender.zahlungszielTage).toBe(
+      STANDARD_ABSENDER.zahlungszielTage,
+    );
+    expect(absenderAusBetrieb(null)).toEqual(STANDARD_ABSENDER);
   });
 });
