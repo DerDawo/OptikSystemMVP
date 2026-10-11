@@ -13,6 +13,7 @@ import type { DocumentMergeEntities } from "./documentTemplateEngine";
 import dayjs from "dayjs";
 import logoSehzentrum from "./assets/logo-sehzentrum.jpg?inline";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import { weitereLeistungenPositionen } from "./leistungenAusNotizen";
 
 // Firmen-/Bankstammdaten: es gibt (noch) keine eigene Stammdaten-Tabelle mit
 // Adresse und Bank (siehe Kommentar in der Rechnungs-Seed-Migration), daher
@@ -222,18 +223,15 @@ export const buildRechnungPositionen = (
   });
 
   // Leistungen/Nachlässe ohne Katalogbezug (#131), z. B. die Freitext-
-  // Leistungen der Prisma-Altaufträge. Zählen wie Zusatzleistungen ohne Rabatt
-  // zur Summe, damit Positionen und Rechnungsbetrag zusammenpassen.
-  const weitereLeistungen = Number(entities.brille?.WeitereLeistungen) || 0;
-  if (weitereLeistungen !== 0) {
-    positionen.push({
-      label:
-        weitereLeistungen > 0
-          ? "Weitere Leistungen (siehe Auftrag)"
-          : "Nachlass (siehe Auftrag)",
-      betrag: weitereLeistungen,
-    });
-  }
+  // Leistungen der Prisma-Altaufträge: einzeln mit Bezeichnung aus den
+  // Notizen, ein Rest als "Weitere Leistungen". Zählen wie Zusatzleistungen
+  // ohne Rabatt zur Summe, damit Positionen und Rechnungsbetrag zusammenpassen.
+  weitereLeistungenPositionen(
+    Number(entities.brille?.WeitereLeistungen) || 0,
+    entities.brille?.Notizen,
+  ).forEach((leistung) => {
+    positionen.push({ label: leistung.bezeichnung, betrag: leistung.betrag });
+  });
 
   const rabattProzent = Number(entities.brille?.RabattProzent) || 0;
   if (rabattProzent > 0) {
