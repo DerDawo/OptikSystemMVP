@@ -36,7 +36,7 @@ import {
 // Auftrag).
 
 // Vom dataProvider ergänzte bzw. rein technische Felder
-const AUSGEBLENDET = new Set(["ZusatzleistungIDs"]);
+const AUSGEBLENDET = new Set(["ZusatzleistungIDs", "KassenPositionen"]);
 
 const praefix = (feld: Feld) =>
   TABELLEN.find((t) => t.id === feld.tabelle)?.praefix ?? feld.tabelle;

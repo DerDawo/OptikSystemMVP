@@ -13,7 +13,6 @@ import {
 } from "@mui/material";
 import CalculateIcon from "@mui/icons-material/Calculate";
 import { MWST, ZUSAETZE, berechneKassenanteil, mitMwst } from "./kassenanteil";
-import type { Speichern } from "./KarteiEingabe";
 
 type Glas = Record<string, unknown> | undefined;
 
@@ -29,14 +28,18 @@ const hatWerte = (glas: Glas) =>
 // nach dem vdek-ZVA-Vertrag (kassenanteil.ts). Die Positionen aus den Werten
 // sind vorausgewählt, Zuschläge wie Kantenfilter oder Brillenglasbestimmung
 // werden angehakt; "Übernehmen" trägt den Betrag inkl. MwSt. als KK-Anteil
-// ein (die Zuzahlung ergibt sich daraus).
+// ein (die Zuzahlung ergibt sich daraus) und merkt sich die gewählten
+// Positionen für den Berechtigungsschein.
 export const KassenanteilRechner = ({
   augen,
   speichere,
   augenaerztlicheVerordnung,
 }: {
   augen: { seite: "R" | "L"; glas: Glas }[];
-  speichere: Speichern;
+  speichere: (
+    brutto: number,
+    positionen: GespeichertePosition[],
+  ) => Promise<unknown>;
   // Brillenglasbestimmung ist dann nicht abrechenbar
   augenaerztlicheVerordnung: boolean;
 }) => {
@@ -56,6 +59,12 @@ export const KassenanteilRechner = ({
       key: `p${i}`,
       text: `${p.seite} · ${p.nummer} ${p.bezeichnung}`,
       netto: p.netto,
+      position: {
+        nummer: p.nummer,
+        bezeichnung: p.bezeichnung,
+        faktor: 1,
+        netto: p.netto,
+      },
       an: !abgewaehlt.has(`p${i}`),
       umschalten: () => setAbgewaehlt((alt) => schalte(alt, `p${i}`)),
     })),
@@ -69,6 +78,12 @@ export const KassenanteilRechner = ({
             : ""
         }`,
         netto: Math.round(z.netto * anzahl * 100) / 100,
+        position: {
+          nummer: z.nummer,
+          bezeichnung: z.bezeichnung,
+          faktor: anzahl,
+          netto: z.netto,
+        },
         an: zusaetze.has(z.id),
         umschalten: () => setZusaetze((alt) => schalte(alt, z.id)),
         gruppe: z.gruppe as string,
@@ -88,7 +103,10 @@ export const KassenanteilRechner = ({
   const uebernehmen = async () => {
     setSpeichert(true);
     try {
-      await speichere(brutto);
+      await speichere(
+        brutto,
+        zeilen.filter((z) => z.an).map((z) => z.position),
+      );
       setAnker(null);
     } catch {
       notify("KK-Anteil konnte nicht gespeichert werden.", { type: "error" });
