@@ -527,6 +527,17 @@ export const KundenList = () => {
   );
 };
 
+// Zwischenüberschrift innerhalb einer Kachel (Stammdaten | Adresse | Kontakt)
+const Unterteilung = ({ titel }: { titel: string }) => (
+  <Box sx={{ gridColumn: "1 / -1", mt: 1 }}>
+    <Divider textAlign="left">
+      <Typography variant="caption" color="text.secondary">
+        {titel}
+      </Typography>
+    </Divider>
+  </Box>
+);
+
 export const KundeShow = () => {
   const showObject = useShowController();
   const dataProvider = useDataProvider();
@@ -588,8 +599,7 @@ export const KundeShow = () => {
               <Field>
                 <TextField source="Tätigkeit" />
               </Field>
-            </ShowSection>
-            <ShowSection title="Adresse">
+              <Unterteilung titel="Adresse" />
               <Field>
                 <TextField source="Straße" />
               </Field>
@@ -602,8 +612,7 @@ export const KundeShow = () => {
               <Field>
                 <TextField source="Stadt" />
               </Field>
-            </ShowSection>
-            <ShowSection title="Kontakt">
+              <Unterteilung titel="Kontakt" />
               <Field>
                 <KontaktFeld source="TelefonnummerPrivat" />
               </Field>
