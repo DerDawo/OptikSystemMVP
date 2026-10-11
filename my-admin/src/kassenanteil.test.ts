@@ -60,6 +60,10 @@ describe("berechneKassenanteil", () => {
       "R 25.21.11.0001",
       "R 25.21.12.0001",
     ]);
+    expect(nummern([{ seite: "R", glas: { Sph: 0, Pr: 8 } }])).toEqual([
+      "R 25.21.01.0900",
+      "R 25.21.12.2900",
+    ]);
     expect(nummern([{ seite: "R", glas: { Sph: 0, Cyl: 7, Pr: 4 } }])).toEqual([
       "R 25.21.01.1900",
       "R 25.21.11.1001",

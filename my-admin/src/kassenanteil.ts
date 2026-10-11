@@ -10,6 +10,8 @@
 // - Zylinder über +4,0 dpt: Position für cyl ≤ +4,0 dpt plus Zuschlag.
 // - Positionen mit Kostenvoranschlag (KV, genehmigungspflichtig) werden nicht
 //   berechnet, sondern als Hinweis ausgegeben.
+// - Brillenglasbestimmung (25.99.99.0001) ist bei augenärztlicher
+//   Verordnung nicht abrechenbar (Anlage 1, § 3 Abs. 5 des Vertrags).
 // - Zuschläge, die sich nicht aus den Werten ergeben (Kantenfilter, Folien,
 //   Brillenglasbestimmung), stehen in ZUSAETZE und werden im Dialog
 //   angehakt.
@@ -184,6 +186,20 @@ const PRISMA_ZUSCHLAG: Stufe[] = [
     einschliesslich: true,
     netto: 35.0,
   },
+  {
+    nummer: "25.21.12.2900",
+    bezeichnung: "Zuschlag Prisma > 6 ≤ 15 cm/m (Sonderanfertigung)",
+    bis: 15,
+    einschliesslich: true,
+    netto: 46.9,
+  },
+  {
+    nummer: "25.21.12.3900",
+    bezeichnung: "Zuschlag Prisma > 15 cm/m",
+    bis: Infinity,
+    einschliesslich: true,
+    netto: null,
+  },
 ];
 
 const zahl = (wert: unknown) => {
@@ -211,6 +227,22 @@ export const ZUSAETZE: Zusatz[] = [
     bezeichnung: "Brillenglasbestimmung (binokular)",
     netto: 13.44,
     jeAuge: false,
+    gruppe: "Zuschläge",
+  },
+  {
+    id: "lichtschutz",
+    nummer: "25.21.15.0001",
+    bezeichnung: "Zuschlag Lichtschutzgläser",
+    netto: 9.9,
+    jeAuge: true,
+    gruppe: "Zuschläge",
+  },
+  {
+    id: "uvKantenfilter400",
+    nummer: "25.21.15.1001",
+    bezeichnung: "Zuschlag UV-Kantenfilter 400 nm",
+    netto: 46.0,
+    jeAuge: true,
     gruppe: "Zuschläge",
   },
   {
@@ -377,14 +409,7 @@ export const berechneKassenanteil = (
     );
     if (cyl > 4 + EPS) uebernimm(seite, stufeFuer(ZYLINDER_ZUSCHLAG, cyl));
     const prisma = Math.abs(zahl(glas?.Pr) ?? 0);
-    if (prisma > 0) {
-      const stufe = stufeFuer(PRISMA_ZUSCHLAG, prisma);
-      if (stufe) uebernimm(seite, stufe);
-      else
-        hinweise.push(
-          `${seite}: Prisma über 6 cm/m – Zuschlag nicht in der Tabelle, nicht berechnet`,
-        );
-    }
+    if (prisma > 0) uebernimm(seite, stufeFuer(PRISMA_ZUSCHLAG, prisma));
   }
 
   const netto = rund(positionen.reduce((s, p) => s + p.netto, 0));

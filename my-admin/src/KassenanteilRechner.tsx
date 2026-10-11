@@ -33,14 +33,19 @@ const hatWerte = (glas: Glas) =>
 export const KassenanteilRechner = ({
   augen,
   speichere,
+  augenaerztlicheVerordnung,
 }: {
   augen: { seite: "R" | "L"; glas: Glas }[];
   speichere: Speichern;
+  // Brillenglasbestimmung ist dann nicht abrechenbar
+  augenaerztlicheVerordnung: boolean;
 }) => {
   const notify = useNotify();
   const [anker, setAnker] = useState<HTMLElement | null>(null);
   const [abgewaehlt, setAbgewaehlt] = useState<Set<string>>(new Set());
-  const [zusaetze, setZusaetze] = useState<Set<string>>(new Set());
+  const [zusaetze, setZusaetze] = useState<Set<string>>(
+    () => new Set(augenaerztlicheVerordnung ? [] : ["glasbestimmung"]),
+  );
   const [speichert, setSpeichert] = useState(false);
 
   const ergebnis = useMemo(() => berechneKassenanteil(augen), [augen]);
@@ -58,7 +63,11 @@ export const KassenanteilRechner = ({
       const anzahl = z.jeAuge ? anzahlAugen : 1;
       return {
         key: z.id,
-        text: `${z.nummer} ${z.bezeichnung}${anzahl > 1 ? ` × ${anzahl}` : ""}`,
+        text: `${z.nummer} ${z.bezeichnung}${anzahl > 1 ? ` × ${anzahl}` : ""}${
+          z.id === "glasbestimmung" && augenaerztlicheVerordnung
+            ? " – nicht bei augenärztlicher Verordnung"
+            : ""
+        }`,
         netto: Math.round(z.netto * anzahl * 100) / 100,
         an: zusaetze.has(z.id),
         umschalten: () => setZusaetze((alt) => schalte(alt, z.id)),

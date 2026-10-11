@@ -1241,6 +1241,9 @@ export const BrilleKarteikarte = () => {
                     { seite: "L", glas: augen[1].glas },
                   ]}
                   speichere={auftrag("KKAnteil")}
+                  augenaerztlicheVerordnung={Boolean(
+                    text(brille.VerordnenderArzt) || brille.Verordnungsdatum,
+                  )}
                 />
               </Box>
             </Beschriftung>
