@@ -33,6 +33,7 @@ import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CloseIcon from "@mui/icons-material/Close";
 import { formatCurrency } from "./CurrencyField";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import { weitereLeistungenPositionen } from "./leistungenAusNotizen";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -549,17 +550,11 @@ export const BrilleKarteikarte = () => {
         zuordnung: z,
       };
     }),
-    ...(weitere
-      ? [
-          {
-            bezeichnung:
-              weitere < 0
-                ? "Nachlass (siehe Notizen)"
-                : "Weitere Leistungen (siehe Notizen)",
-            betrag: weitere,
-          },
-        ]
-      : []),
+    ...weitereLeistungenPositionen(
+      weitere ?? 0,
+      brille.Notizen,
+      "(siehe Notizen)",
+    ).map((l) => ({ bezeichnung: l.bezeichnung, betrag: l.betrag })),
   ];
   // eine Zeile mit der Auswahl zum Hinzufügen, wie die leeren Zeilen in Prisma
   posten.push({ bezeichnung: "", betrag: null, auswahl: true });
