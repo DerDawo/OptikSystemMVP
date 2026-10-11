@@ -10,6 +10,8 @@ import {
   Create,
   NumberInput,
   SelectInput,
+  BooleanField,
+  BooleanInput,
 } from "react-admin";
 import { CurrencyField } from "./CurrencyField";
 import {
@@ -29,11 +31,11 @@ export const ZUSATZLEISTUNG_KATEGORIEN = [
 ];
 
 export const ZusatzleistungList = () => (
-  <List title="Zusatzleistungen">
+  <List title="Zusatzleistungen" sort={{ field: "Reihenfolge", order: "ASC" }}>
     <DataTable>
-      <DataTable.Col source="id" />
-      <DataTable.Col source="created_at">
-        <DateField source="created_at" />
+      <DataTable.NumberCol source="Reihenfolge" label="Nr." />
+      <DataTable.Col source="Aktiv" label="In Auswahl">
+        <BooleanField source="Aktiv" />
       </DataTable.Col>
       <DataTable.Col source="Kategorie" />
       <DataTable.Col source="Bezeichnung" />
@@ -65,6 +67,12 @@ export const ZusatzleistungShow = () => (
         <Field>
           <CurrencyField source="Betrag" />
         </Field>
+        <Field label="In Auswahl">
+          <BooleanField source="Aktiv" />
+        </Field>
+        <Field label="Reihenfolge">
+          <TextField source="Reihenfolge" />
+        </Field>
       </ShowSection>
     </ShowLayout>
   </Show>
@@ -80,6 +88,14 @@ export const ZusatzleistungEdit = () => (
           <TextInput source="Bezeichnung" />
           <NumberInput source="Betrag" />
         </FieldRow>
+        <FieldRow>
+          <BooleanInput
+            source="Aktiv"
+            label="In der Auswahl anbieten"
+            defaultValue={true}
+          />
+          <NumberInput source="Reihenfolge" label="Reihenfolge (Nr.)" />
+        </FieldRow>
       </FormSection>
     </SimpleForm>
   </Edit>
@@ -93,6 +109,14 @@ export const ZusatzleistungCreate = () => (
           <SelectInput source="Kategorie" choices={ZUSATZLEISTUNG_KATEGORIEN} />
           <TextInput source="Bezeichnung" />
           <NumberInput source="Betrag" />
+        </FieldRow>
+        <FieldRow>
+          <BooleanInput
+            source="Aktiv"
+            label="In der Auswahl anbieten"
+            defaultValue={true}
+          />
+          <NumberInput source="Reihenfolge" label="Reihenfolge (Nr.)" />
         </FieldRow>
       </FormSection>
     </SimpleForm>

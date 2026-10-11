@@ -436,6 +436,9 @@ export const BrilleEdit = () => (
         <ReferenceArrayInput
           source="ZusatzleistungIDs"
           reference="zusatzleistung"
+          filter={{ Aktiv: true }}
+          sort={{ field: "Reihenfolge", order: "ASC" }}
+          perPage={100}
         >
           <AutocompleteArrayInput
             optionText="Bezeichnung"
@@ -576,6 +579,9 @@ export const BrilleCreate = () => {
           <ReferenceArrayInput
             source="ZusatzleistungIDs"
             reference="zusatzleistung"
+            filter={{ Aktiv: true }}
+            sort={{ field: "Reihenfolge", order: "ASC" }}
+            perPage={100}
           >
             <AutocompleteArrayInput
               optionText="Bezeichnung"
