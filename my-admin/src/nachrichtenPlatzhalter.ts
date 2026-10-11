@@ -64,8 +64,14 @@ export const renderMessageTemplate = (
   termin?: NachrichtTermin,
 ) => {
   const mergeValues = createMessageMergeValues(customer, termin);
-  const replaceToken = (_match: string, token: string) =>
-    mergeValues[token.trim().toLowerCase()] ?? "";
+  // Unbekannte Ausdrücke (normaler Text in Klammern, Tippfehler) bleiben
+  // stehen, statt still aus der Nachricht zu verschwinden (#133).
+  const replaceToken = (match: string, token: string) => {
+    const key = token.trim().toLowerCase();
+    return Object.prototype.hasOwnProperty.call(mergeValues, key)
+      ? mergeValues[key]
+      : match;
+  };
 
   return (
     template

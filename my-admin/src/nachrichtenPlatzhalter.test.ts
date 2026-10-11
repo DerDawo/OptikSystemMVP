@@ -30,6 +30,15 @@ describe("renderMessageTemplate", () => {
     ).toBe("am (Datum) um (Uhrzeit)");
   });
 
+  it("lässt unbekannte Ausdrücke in Klammern stehen (#133)", () => {
+    expect(
+      renderMessageTemplate(
+        "Hallo {Vorname}, bitte [Ihre alte Brille] mitbringen. {Vornam}",
+        kunde,
+      ),
+    ).toBe("Hallo Erika, bitte [Ihre alte Brille] mitbringen. {Vornam}");
+  });
+
   it("hinterlässt bei fehlender Anrede keine doppelten Leerzeichen", () => {
     expect(
       renderMessageTemplate("Guten Tag {Anrede} {Nachname},", {
