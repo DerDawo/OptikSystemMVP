@@ -81,6 +81,10 @@ import {
   buildErprobungsprotokollPrintHtml,
 } from "./erprobungsprotokollTemplate";
 import {
+  buildAnamnesePreviewHtml,
+  buildAnamnesePrintHtml,
+} from "./anamneseTemplate";
+import {
   buildRezeptanfragePreviewHtml,
   buildRezeptanfragePrintHtml,
 } from "./rezeptanfrageTemplate";
@@ -96,9 +100,12 @@ import {
 // Seed-Migration 20260831020100_seed_dokumentvorlage_rechnung.sql).
 const RECHNUNG_KATEGORIE = "Rechnung";
 
-// Kategorie für den Berechtigungsschein (#90, Seed-Migration
-// 20260831150200_seed_dokumentvorlage_berechtigungsschein.sql).
-const BERECHTIGUNGSSCHEIN_KATEGORIE = "Berechtigungsschein";
+// Kategorie, die "Berechtigungsschein erstellen" öffnet: das Original des
+// ZVA (AOK-Vertrag Sehhilfen, Anlage 4) als ausfüllbares PDF (pdfFormulare.ts)
+const BERECHTIGUNGSSCHEIN_KATEGORIE = "Berechtigungsschein GKV";
+
+// Anamnesebogen (anamneseTemplate.ts), auch direkt von der Kundenseite
+const ANAMNESE_KATEGORIE = "Anamnesebogen";
 
 // Kategorie des Werkstattauftrags (Seed-Migration
 // 20260831010100_seed_dokumentvorlage.sql, Vorlage "Werkstattkarte"); das
@@ -203,6 +210,12 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Erprobungsprotokoll-Vorschau",
     preview: buildErprobungsprotokollPreviewHtml,
     print: buildErprobungsprotokollPrintHtml,
+  },
+  [ANAMNESE_KATEGORIE]: {
+    ausVorschau: true,
+    title: "Anamnesebogen-Vorschau",
+    preview: buildAnamnesePreviewHtml,
+    print: buildAnamnesePrintHtml,
   },
   "Rezeptanfrage Augenarzt": {
     ausVorschau: true,
@@ -378,7 +391,8 @@ const FormulareDialog = ({
           : { "id@lt": brille.id }),
       },
     },
-    { enabled: Boolean(brille.kunde_id) },
+    // ohne Auftrag (Anamnesebogen von der Kundenseite) gibt es keinen Vorgänger
+    { enabled: Boolean(brille.kunde_id) && brille.id != null },
   );
   const vorherigeBrille = vorherigeBrillen?.[0];
   const { data: vorherigesGlasRechts } = useGetOne(
@@ -1184,6 +1198,32 @@ export const WerkstattauftragButton = () => {
         <FormulareDialog
           brille={record}
           initialKategorie={WERKSTATTKARTE_KATEGORIE}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// "Anamnesebogen" auf der Kundenseite: öffnet den Formulare-Dialog ohne
+// Auftrag, nur mit den Kundendaten.
+export const AnamnesebogenButton = () => {
+  const record = useRecordContext();
+  const [open, setOpen] = useState(false);
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <>
+      <Button startIcon={<DescriptionIcon />} onClick={() => setOpen(true)}>
+        Anamnesebogen
+      </Button>
+      {open && (
+        <FormulareDialog
+          brille={{ id: undefined as unknown as number, kunde_id: record.id }}
+          initialKategorie={ANAMNESE_KATEGORIE}
           onClose={() => setOpen(false)}
         />
       )}

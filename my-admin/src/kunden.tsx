@@ -42,6 +42,7 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
+import { AnamnesebogenButton } from "./FormulareDialog";
 import { useTastenkuerzel } from "./tastenkuerzel";
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -446,6 +447,7 @@ const MessageButton = () => {
 const KundeShowActions = () => (
   <ShowActionsBar>
     <MessageButton />
+    <AnamnesebogenButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>

@@ -48,6 +48,8 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Kostenvoranschlag", name: "Kostenvoranschlag" },
   { id: "Erprobungsprotokoll", name: "Erprobungsprotokoll" },
   { id: "Rezeptanfrage Augenarzt", name: "Rezeptanfrage Augenarzt" },
+  { id: "Anamnesebogen", name: "Anamnesebogen" },
+  { id: "Berechtigungsschein GKV", name: "Berechtigungsschein GKV" },
 ];
 
 const PLATZHALTER_HINWEIS =
