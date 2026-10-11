@@ -49,18 +49,47 @@ export const sendMessage = async (
   return { channel, success: true };
 };
 
+// Erste Telefonnummer in einem Freitextfeld, z. B. "Sohn: 0365/12 34 56"
+// oder "0170 1234567, 0365 123456" (aus Prisma übernommene Felder).
+const PHONE_PATTERN = /(?:\+|00)?\d[\d\s/().-]{4,}\d/;
+
+export const extractPhoneNumber = (value: string): string =>
+  value.match(PHONE_PATTERN)?.[0] ?? value;
+
 export const normalizePhoneNumberForSms = (phoneNumber: string): string => {
-  const trimmed = phoneNumber.trim().replace(/[\s()-]/g, "");
+  let digits = extractPhoneNumber(phoneNumber.trim()).replace(/[^\d+]/g, "");
 
-  if (trimmed.startsWith("+")) {
-    return trimmed;
+  if (digits.startsWith("00")) {
+    digits = `+${digits.slice(2)}`;
   }
 
-  if (trimmed.startsWith("0")) {
-    return `+49${trimmed.slice(1)}`;
+  if (digits.startsWith("+")) {
+    return digits;
   }
 
-  return trimmed;
+  if (digits.startsWith("0")) {
+    return `+49${digits.slice(1)}`;
+  }
+
+  return digits;
+};
+
+/** Deutsche Mobilnummer (015x, 016x, 017x)? */
+export const isMobilePhoneNumber = (phoneNumber: string): boolean =>
+  /^\+491[5-7]/.test(normalizePhoneNumberForSms(phoneNumber));
+
+/**
+ * Nummer für SMS und WhatsApp: die erste Handynummer unter den Kandidaten
+ * (Reihenfolge = Priorität), sonst die erste vorhandene Nummer. An
+ * Festnetznummern lässt sich in der Regel keine WhatsApp schicken.
+ */
+export const choosePhoneNumberForMessaging = (
+  candidates: (string | null | undefined)[],
+): string => {
+  const vorhanden = candidates
+    .map((value) => (value ?? "").trim())
+    .filter(Boolean);
+  return vorhanden.find(isMobilePhoneNumber) ?? vorhanden[0] ?? "";
 };
 
 export const normalizePhoneNumberForWhatsapp = (phoneNumber: string): string =>
