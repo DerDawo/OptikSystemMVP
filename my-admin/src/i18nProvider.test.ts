@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import englishMessages from "ra-language-english";
 import { raSupabaseEnglishMessages } from "ra-supabase-language-english";
@@ -45,6 +46,30 @@ describe("i18nProvider (deutsche Oberflächentexte)", () => {
         _: "Invalid login credentials",
       }),
     ).toBe("E-Mail oder Passwort ist falsch");
+  });
+
+  it("hat für jede Ressource aus App.tsx einen deutschen Namen", () => {
+    const app = readFileSync(new URL("./App.tsx", import.meta.url), "utf8");
+    const registered = [...app.matchAll(/<Resource\s+name="([^"]+)"/g)].map(
+      (m) => m[1],
+    );
+    expect(registered.length).toBeGreaterThan(0);
+    const missing = registered.filter(
+      (name) => !(`resources.${name}.name` in german),
+    );
+    expect(missing).toEqual([]);
+  });
+
+  it("setzt die Ressourcennamen in Meldungen ein", () => {
+    const kunden = i18nProvider.translate("resources.kunde.name", {
+      smart_count: 0,
+    });
+    expect(
+      i18nProvider.translate("ra.navigation.no_results", { name: kunden }),
+    ).toBe("Keine Kunden gefunden");
+    expect(
+      i18nProvider.translate("resources.glass.name", { smart_count: 1 }),
+    ).toBe("Glas");
   });
 
   it("wählt Singular und Plural über smart_count", () => {

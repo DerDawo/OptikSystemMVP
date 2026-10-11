@@ -68,8 +68,8 @@ export const germanMessages: TranslationMessages = {
       loading: "Wird geladen",
       not_found: "Nicht gefunden",
       show: "%{name} %{recordRepresentation}",
-      empty: "Noch keine Einträge in %{name}.",
-      invite: "Möchten Sie einen anlegen?",
+      empty: "Noch keine %{name} vorhanden.",
+      invite: "Möchten Sie einen Eintrag anlegen?",
       access_denied: "Zugriff verweigert",
       authentication_error: "Anmeldefehler",
     },
@@ -107,12 +107,11 @@ export const germanMessages: TranslationMessages = {
       auth_error: "Beim Prüfen der Anmeldung ist ein Fehler aufgetreten.",
       bulk_delete_content:
         "Möchten Sie diesen Eintrag (%{name}) wirklich löschen? |||| Möchten Sie diese %{smart_count} Einträge wirklich löschen?",
-      bulk_delete_title:
-        "%{name} löschen |||| %{smart_count} Einträge (%{name}) löschen",
+      bulk_delete_title: "%{name} löschen |||| %{smart_count} %{name} löschen",
       bulk_update_content:
         "Möchten Sie %{name} %{recordRepresentation} wirklich aktualisieren? |||| Möchten Sie diese %{smart_count} Einträge wirklich aktualisieren?",
       bulk_update_title:
-        "%{name} %{recordRepresentation} aktualisieren |||| %{smart_count} Einträge (%{name}) aktualisieren",
+        "%{name} %{recordRepresentation} aktualisieren |||| %{smart_count} %{name} aktualisieren",
       clear_array_input: "Möchten Sie die gesamte Liste wirklich leeren?",
       delete_content: "Möchten Sie diesen Eintrag (%{name}) wirklich löschen?",
       delete_title: "%{name} %{recordRepresentation} löschen",
@@ -136,8 +135,8 @@ export const germanMessages: TranslationMessages = {
     },
     navigation: {
       clear_filters: "Filter zurücksetzen",
-      no_filtered_results: "Keine Treffer in %{name} für die aktuellen Filter.",
-      no_results: "Keine Einträge in %{name} gefunden",
+      no_filtered_results: "Keine %{name} für die aktuellen Filter gefunden.",
+      no_results: "Keine %{name} gefunden",
       no_more_results:
         "Seite %{page} gibt es nicht. Versuchen Sie die vorherige Seite.",
       page_out_of_boundaries: "Seite %{page} gibt es nicht",
@@ -238,6 +237,33 @@ export const germanMessages: TranslationMessages = {
         tertiaryText: "Dritttext",
       },
     },
+  },
+  // Namen der Datensätze (Singular |||| Plural), wie in der Sidebar. Ohne
+  // Eintrag hängt react-admin ein englisches "s" an ("Kundes").
+  resources: {
+    kunde: { name: "Kunde |||| Kunden" },
+    brille: { name: "Brille |||| Brillen" },
+    kontaktlinse: { name: "Kontaktlinse |||| Kontaktlinsen" },
+    brillenart: { name: "Brillenart |||| Brillenarten" },
+    glass: { name: "Glas |||| Gläser" },
+    glastyp: { name: "Glastyp |||| Glastypen" },
+    glashersteller: { name: "Glashersteller |||| Glashersteller" },
+    glaskatalog: { name: "Grundglas |||| Grundgläser" },
+    glaskatalog_option: {
+      name: "Glaskatalog-Option |||| Glaskatalog-Optionen",
+    },
+    glaskatalog_hat_option: {
+      name: "Optionszuordnung |||| Optionszuordnungen",
+    },
+    fassung: { name: "Fassung |||| Fassungen" },
+    brille_hat_zusatzleistungen: {
+      name: "Brillen-Zusatzleistung |||| Brillen-Zusatzleistungen",
+    },
+    kunde_leistet_zauzahlung_fuer_brille: { name: "Zahlung |||| Zahlungen" },
+    zusatzleistung: { name: "Zusatzleistung |||| Zusatzleistungen" },
+    termin: { name: "Termin |||| Termine" },
+    dokumentvorlage: { name: "Dokumentvorlage |||| Dokumentvorlagen" },
+    betrieb: { name: "Betrieb |||| Betriebe" },
   },
   "ra-supabase": {
     auth: {
