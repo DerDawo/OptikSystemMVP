@@ -9,6 +9,7 @@ import {
   ToggleThemeButton,
 } from "react-admin";
 import { useNavigate } from "react-router-dom";
+import { GeheZuMenu } from "./PrismaMenues";
 import {
   Box,
   Button,
@@ -172,6 +173,7 @@ const NewMenu = () => {
 
 const AppBarActions = () => (
   <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+    <GeheZuMenu />
     <NewMenu />
     <LoadingIndicator />
     <ToggleThemeButton />
