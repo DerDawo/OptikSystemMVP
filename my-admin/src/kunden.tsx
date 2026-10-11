@@ -56,6 +56,10 @@ import DeleteIcon from "@mui/icons-material/Delete";
 import EventIcon from "@mui/icons-material/Event";
 import { supabase } from "./utils";
 import {
+  type NachrichtTermin,
+  renderMessageTemplate,
+} from "./nachrichtenPlatzhalter";
+import {
   buildExternalMessageUrl,
   MessageChannel,
   openExternalMessage,
@@ -333,44 +337,6 @@ const normalizeKundeMessageCustomer = (
     phoneNumberPrivate,
     phoneNumberBusiness,
   };
-};
-
-const createMessageMergeValues = (
-  customer: KundeMessageCustomer,
-): Record<string, string> => ({
-  anrede: customer.anrede,
-  vorname: customer.vorname,
-  firstname: customer.vorname,
-  nachname: customer.nachname,
-  lastname: customer.nachname,
-  name: customer.fullName,
-  fullname: customer.fullName,
-  email: customer.email,
-  telefon: customer.phoneNumber,
-  telefonnummer: customer.phoneNumber,
-  phone: customer.phoneNumber,
-  phonenumber: customer.phoneNumber,
-  sms: customer.phoneNumber,
-  whatsapp: customer.phoneNumber,
-  kundeid: customer.id,
-  kundenid: customer.id,
-});
-
-const renderMessageTemplate = (
-  template: string,
-  customer: KundeMessageCustomer,
-) => {
-  const mergeValues = createMessageMergeValues(customer);
-  const replaceToken = (_match: string, token: string) =>
-    mergeValues[token.trim().toLowerCase()] ?? "";
-
-  return template
-    .replace(/\{\{\s*([^{}[\]]+?)\s*\}\}/g, replaceToken)
-    .replace(/\[\[\s*([^{}[\]]+?)\s*\]\]/g, replaceToken)
-    .replace(/\{\s*([^{}[\]]+?)\s*\}/g, replaceToken)
-    .replace(/\[\s*([^{}[\]]+?)\s*\]/g, replaceToken)
-    .replace(/\{\s*([^{}[\]]+?)\s*\]/g, replaceToken)
-    .replace(/\[\s*([^{}[\]]+?)\s*\}/g, replaceToken);
 };
 
 const kundenFilterDesktop = [
@@ -1130,12 +1096,45 @@ export const KundeMessage = () => {
     };
   }, [recordId, routeState]);
 
+  // Nächster Termin des Kunden für {Termindatum}/{Terminuhrzeit}
+  const [naechsterTermin, setNaechsterTermin] = useState<NachrichtTermin>(null);
+  useEffect(() => {
+    if (!recordId) return;
+    let aktiv = true;
+    supabase
+      .from("termin")
+      .select("Start")
+      .eq("kunde_id", recordId)
+      .gte("Start", new Date().toISOString())
+      .order("Start", { ascending: true })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (!aktiv) return;
+        if (error) {
+          console.error("Fehler beim Laden des nächsten Termins", error);
+          return;
+        }
+        setNaechsterTermin(data?.[0] ?? null);
+      });
+    return () => {
+      aktiv = false;
+    };
+  }, [recordId]);
+
   const messageCustomer = customer ?? fallbackCustomer;
   const renderedMessageTitle = selectedMessage
-    ? renderMessageTemplate(getMessageTitle(selectedMessage), messageCustomer)
+    ? renderMessageTemplate(
+        getMessageTitle(selectedMessage),
+        messageCustomer,
+        naechsterTermin,
+      )
     : "";
   const renderedMessageContent = selectedMessage
-    ? renderMessageTemplate(getMessageContent(selectedMessage), messageCustomer)
+    ? renderMessageTemplate(
+        getMessageContent(selectedMessage),
+        messageCustomer,
+        naechsterTermin,
+      )
     : "";
   const recipientName =
     [messageCustomer.anrede, messageCustomer.vorname, messageCustomer.nachname]
