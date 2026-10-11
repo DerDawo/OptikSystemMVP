@@ -11,10 +11,11 @@ import {
   useResourceContext,
 } from "react-admin";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { zurueckZiel } from "./seitenVerlauf";
 
-// "Zurück" wie im Browser: eine Seite zurück (z. B. vom Auftrag zum Kunden
-// oder zur Suche). Nur wenn das Programm direkt auf dieser Seite geöffnet
-// wurde (kein Verlauf), geht es zur Liste.
+// "Zurück": genau zum letzten Bild (z. B. vom Auftrag zum Kunden oder zur
+// Suche); bereits verlassene Formulare werden übersprungen (seitenVerlauf).
+// Ohne Verlauf (Seite direkt geöffnet) zur Liste.
 export const ZurueckButton = () => {
   const navigate = useNavigate();
   const resource = useResourceContext();
@@ -24,8 +25,8 @@ export const ZurueckButton = () => {
       size="small"
       startIcon={<ArrowBackIcon />}
       onClick={() => {
-        const verlauf = (window.history.state as { idx?: number } | null)?.idx;
-        if (typeof verlauf === "number" && verlauf > 0) navigate(-1);
+        const ziel = zurueckZiel();
+        if (ziel) navigate(ziel);
         else if (resource) navigate(createPath({ resource, type: "list" }));
         else navigate("/");
       }}
