@@ -13,11 +13,10 @@ import {
   NumberInput,
   SimpleForm,
   TextInput,
-  ReferenceInput,
-  SelectInput,
   FunctionField,
 } from "react-admin";
 import { useLocation } from "react-router-dom";
+import { KundeInput } from "./KundeInput";
 import { MitarbeiterField, MitarbeiterInput } from "./mitarbeiter";
 import { CurrencyField } from "./CurrencyField";
 import {
@@ -179,9 +178,7 @@ export const KontaktlinseEdit = () => (
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
-          <ReferenceInput source="kunde_id" reference="kunde">
-            <SelectInput optionText={KundeOptionText} />
-          </ReferenceInput>
+          <KundeInput />
         </FieldRow>
         <FieldRow>
           <DateInput source="Datum" />
@@ -254,9 +251,7 @@ export const KontaktlinseCreate = () => {
         </FormSection>
         <FormSection title="Auftragsdaten">
           <FieldRow>
-            <ReferenceInput source="kunde_id" reference="kunde">
-              <SelectInput optionText={KundeOptionText} />
-            </ReferenceInput>
+            <KundeInput />
           </FieldRow>
           <FieldRow>
             <DateInput source="Datum" />

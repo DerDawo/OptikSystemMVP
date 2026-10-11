@@ -1,9 +1,7 @@
 import {
   DataTable,
   DataTableProps,
-  Datagrid,
   List,
-  ReferenceManyField,
   useDataProvider,
   useShowController,
   ListActions,
@@ -53,7 +51,6 @@ import SendIcon from "@mui/icons-material/Send";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
-import EventIcon from "@mui/icons-material/Event";
 import { supabase } from "./utils";
 import {
   type NachrichtTermin,
@@ -70,14 +67,14 @@ import {
   Field,
   FieldRow,
   FormSection,
-  RelatedSection,
   ShowActionsBar,
   ShowColumn,
   ShowColumns,
   ShowLayout,
   ShowSection,
+  DatenbankInfo,
 } from "./EntityLayout";
-import { BrilleHistoryDatagrid } from "./BrilleHistory";
+import { KundenAuftraege } from "./KundenAuftraege";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -435,52 +432,10 @@ const MessageButton = () => {
   );
 };
 
-const TerminButton = () => {
-  const record = useRecordContext();
-  const navigate = useNavigate();
-
-  if (!record) {
-    return null;
-  }
-
-  return (
-    <Button
-      startIcon={<EventIcon />}
-      onClick={() =>
-        navigate("/termin/create", { state: { kunde_id: record.id } })
-      }
-    >
-      Termin anlegen
-    </Button>
-  );
-};
-
-const NewKontaktlinseButton = () => {
-  const record = useRecordContext();
-  const navigate = useNavigate();
-
-  if (!record) {
-    return null;
-  }
-
-  return (
-    <Button
-      variant="outlined"
-      onClick={() =>
-        navigate("/kontaktlinse/create", { state: { kunde_id: record.id } })
-      }
-    >
-      Kontaktlinsen
-    </Button>
-  );
-};
-
 // Central, always-reachable actions for the Kunde detail page (message, print, edit, back).
 const KundeShowActions = () => (
   <ShowActionsBar>
-    <NewKontaktlinseButton />
     <MessageButton />
-    <TerminButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
@@ -581,21 +536,13 @@ export const KundeShow = () => {
       <ShowLayout>
         <ShowColumns>
           <ShowColumn>
-            <ShowSection title="Datenbankfelder">
-              <Field>
-                <TextField source="id" />
-              </Field>
-              <Field>
-                <DateField source="created_at" />
-              </Field>
+            <ShowSection title="Stammdaten">
               <Field>
                 <TextField source="KundenNummer" />
               </Field>
               <Field>
                 <DateField source="Aufnahmedatum" />
               </Field>
-            </ShowSection>
-            <ShowSection title="Stammdaten">
               <Field>
                 <TextField source="Anrede" />
               </Field>
@@ -699,56 +646,10 @@ export const KundeShow = () => {
                 />
               </Field>
             </ShowSection>
+            <DatenbankInfo />
           </ShowColumn>
           <ShowColumn>
-            <RelatedSection title="Aufträge / Verlauf">
-              <ReferenceManyField
-                reference="brille"
-                target="kunde_id"
-                label={false}
-                sort={{ field: "Datum", order: "DESC" }}
-              >
-                <BrilleHistoryDatagrid />
-              </ReferenceManyField>
-            </RelatedSection>
-            <RelatedSection title="Termine des Kunden">
-              <ReferenceManyField
-                reference="termin"
-                target="kunde_id"
-                label={false}
-                sort={{ field: "Start", order: "DESC" }}
-              >
-                <Datagrid>
-                  <TextField source="id" />
-                  <DateField source="Start" showTime />
-                  <DateField source="Ende" showTime />
-                  <TextField source="Terminart" />
-                  <TextField source="Notiz" />
-                </Datagrid>
-              </ReferenceManyField>
-            </RelatedSection>
-            <RelatedSection title="Kontaktlinsen des Kunden">
-              <ReferenceManyField
-                reference="kontaktlinse"
-                target="kunde_id"
-                label={false}
-                sort={{ field: "Datum", order: "DESC" }}
-              >
-                <Datagrid rowClick="show" bulkActionButtons={false}>
-                  <DateField source="Datum" label="Datum" />
-                  <TextField source="LinsentypLinks" label="Linsentyp Links" />
-                  <TextField
-                    source="LinsentypRechts"
-                    label="Linsentyp Rechts"
-                  />
-                  <DateField source="Abholung" label="Abholung" />
-                  <DateField
-                    source="Nachkontrolltermin"
-                    label="Nachkontrolle"
-                  />
-                </Datagrid>
-              </ReferenceManyField>
-            </RelatedSection>
+            <KundenAuftraege />
           </ShowColumn>
         </ShowColumns>
       </ShowLayout>
