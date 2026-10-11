@@ -89,6 +89,8 @@ const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
 ];
 const WERTE_LINKS = WERTE.slice(0, 8);
 
+const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
+
 const ZAHLUNGSSTATUS = [
   { id: "offen", name: "offen" },
   { id: "bezahlt", name: "bezahlt" },
@@ -775,31 +777,23 @@ export const BrilleKarteikarte = () => {
               Berater
             </Beschriftung>
             <Feld z={2} s={LINKS}>
-              {textFeld(
-                "Berater",
-                "Berater",
-                auftrag("Berater"),
-                brille.Berater,
-                {
-                  anzeige: mitarbeiterAnzeige(brille.Berater),
-                  vorschlaege: MITARBEITER,
-                },
-              )}
+              <Auswahl
+                name="Berater"
+                wert={mitarbeiterAnzeige(brille.Berater) || null}
+                optionen={MITARBEITER_AUSWAHL}
+                speichere={auftrag("Berater")}
+              />
             </Feld>
             <Beschriftung z={2} s="5 / 6">
               Werkstatt
             </Beschriftung>
             <Feld z={2} s={RECHTS}>
-              {textFeld(
-                "Werkstatt",
-                "Werkstatt",
-                auftrag("Werkstatt"),
-                brille.Werkstatt,
-                {
-                  anzeige: mitarbeiterAnzeige(brille.Werkstatt),
-                  vorschlaege: MITARBEITER,
-                },
-              )}
+              <Auswahl
+                name="Werkstatt"
+                wert={mitarbeiterAnzeige(brille.Werkstatt) || null}
+                optionen={MITARBEITER_AUSWAHL}
+                speichere={auftrag("Werkstatt")}
+              />
             </Feld>
 
             <Beschriftung z={3} s="1 / 2">

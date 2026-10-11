@@ -3,12 +3,18 @@ import {
   ReactNode,
   useCallback,
   useEffect,
-  useId,
   useRef,
   useState,
 } from "react";
 import { useDataProvider, useNotify } from "react-admin";
-import { Box, IconButton, InputBase, MenuItem, Select } from "@mui/material";
+import {
+  Autocomplete,
+  Box,
+  IconButton,
+  InputBase,
+  MenuItem,
+  Select,
+} from "@mui/material";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import {
@@ -64,7 +70,6 @@ export const Eingabe = ({
   rechts?: boolean;
 }) => {
   const notify = useNotify();
-  const listeId = useId();
   // null = Feld wird gerade nicht bearbeitet
   const [text, setText] = useState<string | null>(null);
   // eingegebener Text, bis der gespeicherte Wert neu geladen ist
@@ -73,27 +78,44 @@ export const Eingabe = ({
 
   useEffect(() => setVorlaeufig(null), [wert]);
 
+  // bei Vorschlägen: Liste zeigt alle Einträge, bis getippt wird
+  const [getippt, setGetippt] = useState(false);
+  // verhindert doppeltes Speichern (Auswahl aus der Liste + Verlassen)
+  const beendet = useRef(false);
+
   const beginne = () => {
-    if (text === null && !speichert) setText(eingabeText(wert, typ));
+    if (text !== null || speichert) return;
+    beendet.current = false;
+    setGetippt(false);
+    setText(eingabeText(wert, typ));
   };
 
-  const beende = async (uebernehmen: boolean, weiterBeiFehler = false) => {
-    if (text === null) return;
+  const beende = async (
+    uebernehmen: boolean,
+    weiterBeiFehler = false,
+    eingabe: string | null = text,
+  ) => {
+    if (text === null || eingabe === null || beendet.current) return;
     if (!uebernehmen) {
+      beendet.current = true;
       setText(null);
       return;
     }
     let neu: string | number | null;
     try {
-      neu = leseEingabe(text, typ);
+      neu = leseEingabe(eingabe, typ);
     } catch (fehler) {
       notify(meldung(fehler, name), { type: "warning" });
-      if (!weiterBeiFehler) setText(null);
+      if (!weiterBeiFehler) {
+        beendet.current = true;
+        setText(null);
+      }
       return;
     }
+    beendet.current = true;
     setText(null);
     if (gleicherWert(wert, neu, typ)) return;
-    setVorlaeufig(text);
+    setVorlaeufig(eingabe);
     setSpeichert(true);
     try {
       await speichere(neu);
@@ -127,6 +149,57 @@ export const Eingabe = ({
     py: mehrzeilig ? "4px" : 0,
   } as const;
 
+  if (text !== null && vorschlaege) {
+    return (
+      <Autocomplete
+        freeSolo
+        openOnFocus
+        disableClearable
+        options={vorschlaege}
+        inputValue={text}
+        onInputChange={(_, v, grund) => {
+          if (grund === "input") setGetippt(true);
+          if (grund !== "reset") setText(v);
+        }}
+        onChange={(_, v) => {
+          if (typeof v === "string") beende(true, false, v);
+        }}
+        filterOptions={(optionen) =>
+          getippt
+            ? optionen.filter((o) =>
+                o.toLowerCase().includes(text.trim().toLowerCase()),
+              )
+            : optionen
+        }
+        sx={{ ...flaeche, display: "flex", alignItems: "center" }}
+        renderInput={(params) => (
+          <InputBase
+            ref={params.InputProps.ref}
+            inputProps={{
+              ...params.inputProps,
+              "aria-label": name,
+              autoComplete: "off",
+            }}
+            autoFocus
+            onBlur={() => beende(true)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                beende(false);
+              }
+            }}
+            sx={{
+              flex: 1,
+              font: "inherit",
+              color: "inherit",
+              "& input": { p: 0, height: "auto" },
+            }}
+          />
+        )}
+      />
+    );
+  }
+
   if (text !== null) {
     return (
       <>
@@ -142,7 +215,6 @@ export const Eingabe = ({
           }}
           inputProps={{
             "aria-label": name,
-            list: vorschlaege ? listeId : undefined,
             autoComplete: "off",
             style: { textAlign: rechts ? "right" : "left" },
           }}
@@ -154,13 +226,6 @@ export const Eingabe = ({
             "& input, & textarea": { p: 0, height: "auto" },
           }}
         />
-        {vorschlaege && (
-          <datalist id={listeId}>
-            {vorschlaege.map((v) => (
-              <option key={v} value={v} />
-            ))}
-          </datalist>
-        )}
       </>
     );
   }
