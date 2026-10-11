@@ -73,6 +73,11 @@ export type DocumentMergeEntities = {
   // Über `brille.ZusatzleistungIDs` aufgelöste Zusatzleistungs-Datensätze,
   // fürs Rechnungspositionen-Layout (#56).
   zusatzleistungen?: MergeSource[];
+  // Vorherige Brille desselben Kunden mit ihren Gläsern (bisherige Werte,
+  // Veränderung der Sehstärke; siehe formularVorschlaege.ts)
+  vorherigeBrille?: MergeSource;
+  vorherigesGlasRechts?: MergeSource;
+  vorherigesGlasLinks?: MergeSource;
 };
 
 // Baut die flache Platzhalter-Map fuer alle bekannten Entitaeten plus ein paar

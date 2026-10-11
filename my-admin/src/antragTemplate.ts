@@ -17,6 +17,12 @@ import {
   formatEuro,
   text,
 } from "./werkstattauftragTemplate";
+import {
+  KAESTCHEN_STYLES,
+  brillenartKategorie,
+  kaestchen,
+  sehstaerkeVeraendert,
+} from "./formularVorschlaege";
 
 export type AntragArt = "zuschuss" | "sozialamt";
 
@@ -26,8 +32,6 @@ export type AntragDaten = {
 
 const linie = (breite = "60mm") =>
   `<span class="linie" style="width: ${breite}"></span>`;
-
-const kaestchen = `<span class="kaestchen"></span>`;
 
 // Leere Zeile mit kleiner Beschriftung darunter (Empfängeranschrift)
 const ausfuellzeile = (beschriftung: string) =>
@@ -85,10 +89,10 @@ const antragZuschussHtml = (entities: DocumentMergeEntities) => {
   <p>hiermit beantrage ich die Übernahme der Kosten bzw. einen Zuschuss für eine medizinisch notwendige Sehhilfe (Brille).</p>
   <p>Eine neue Sehhilfe ist erforderlich wegen</p>
   <div class="ankreuzen">
-    <div>${kaestchen} einer Veränderung meiner Sehstärke</div>
-    <div>${kaestchen} Verschleiß oder Beschädigung meiner bisherigen Sehhilfe</div>
-    <div>${kaestchen} Bildschirmarbeit (Bildschirmarbeitsplatzbrille)</div>
-    <div>${kaestchen} Sonstiges: ${linie("100mm")}</div>
+    <div>${kaestchen(sehstaerkeVeraendert(entities) === true)} einer Veränderung meiner Sehstärke</div>
+    <div>${kaestchen()} Verschleiß oder Beschädigung meiner bisherigen Sehhilfe</div>
+    <div>${kaestchen(brillenartKategorie(entities.brille?.BrillenArt) === "Officebrille")} Bildschirmarbeit (Bildschirmarbeitsplatzbrille)</div>
+    <div>${kaestchen()} Sonstiges: ${linie("100mm")}</div>
   </div>
   <p>Die Kosten betragen laut beiliegendem Kostenvoranschlag ${escapeHtml(formatEuro(summen.gesamt))} €.</p>
   <p>Dem Schreiben füge ich folgende Unterlagen bei:</p>
@@ -151,6 +155,7 @@ export const buildAntragBodyHtml = (art: AntragArt, daten: AntragDaten) =>
   buildKostenvoranschlagBodyHtml({ entities: daten.entities });
 
 const ANTRAG_STYLES = `
+  ${KAESTCHEN_STYLES}
   ${BELEG_STYLES}
   .beleg { page-break-before: always; break-before: page; }
   * { box-sizing: border-box; }
@@ -169,7 +174,7 @@ const ANTRAG_STYLES = `
   .betreff { font-weight: bold; margin-bottom: 6mm; }
   .zwischentitel { margin-bottom: 1mm !important; }
   .linie { display: inline-block; border-bottom: 1px solid #555; height: 1em; vertical-align: baseline; }
-  .kaestchen { display: inline-block; width: 3.2mm; height: 3.2mm; border: 1px solid #333; margin-right: 1.5mm; vertical-align: -0.3mm; }
+  .kaestchen { display: inline-block; width: 3.2mm; height: 3.2mm; border: 1px solid #333; margin: 0 1.5mm 0 0; vertical-align: -0.3mm; }
   .ankreuzen { margin: 0 0 3.5mm 4mm; }
   .ankreuzen div { margin-bottom: 1.2mm; }
   ul, ol { margin: 0 0 3.5mm; padding-left: 6mm; }
@@ -215,6 +220,8 @@ export const buildAntragPreviewHtml = (
   ${ANTRAG_STYLES}
   html { background: #eee; }
   .seite, .beleg { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
+  @page { size: A4; margin: 0; }
+  @media print { html { background: none; } .seite, .beleg { margin: 0; box-shadow: none; } }
 </style>
 </head>
 <body>

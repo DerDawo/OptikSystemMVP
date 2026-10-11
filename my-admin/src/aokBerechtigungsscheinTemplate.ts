@@ -12,6 +12,11 @@ import type {
 } from "./documentTemplateEngine";
 import { escapeHtml } from "./rechnungTemplate";
 import { formatDatum, formatWert, text } from "./werkstattauftragTemplate";
+import {
+  KAESTCHEN_STYLES,
+  anzahlGlaeser,
+  sehstaerkeVeraendert,
+} from "./formularVorschlaege";
 
 export type AokBerechtigungsscheinDaten = {
   entities: DocumentMergeEntities;
@@ -57,8 +62,9 @@ export const verteileWerte = (
 const wert = (value: string) =>
   value ? `<span class="wert">${escapeHtml(value)}</span>` : "";
 
-const box = (x: number, y: number) =>
-  `<span class="box" style="left:${x}mm;top:${y}mm"></span>`;
+// Anklickbar (Vorschau), angekreuzt = Vorschlag aus den gespeicherten Daten
+const box = (x: number, y: number, angekreuzt = false) =>
+  `<input type="checkbox" class="box" style="left:${x}mm;top:${y}mm"${angekreuzt ? " checked" : ""} />`;
 
 const at = (x: number, y: number, inhalt: string, klasse = "") =>
   `<div class="at ${klasse}" style="left:${x}mm;top:${y}mm">${inhalt}</div>`;
@@ -86,6 +92,8 @@ export const buildAokBerechtigungsscheinBodyHtml = ({
 }: AokBerechtigungsscheinDaten): string => {
   const kunde: Record<string, unknown> = entities.kunde ?? {};
   const brille: Record<string, unknown> = entities.brille ?? {};
+  // Sehstärke gegenüber der vorherigen Brille um >= 0,5 dpt verändert?
+  const veraendert = sehstaerkeVeraendert(entities) === true;
   const rechts = verteileWerte(brille.BrillenArt, entities.glasRechts);
   const links = verteileWerte(brille.BrillenArt, entities.glasLinks);
   const name = [text(kunde.Nachname), text(kunde.Vorname)]
@@ -128,12 +136,12 @@ export const buildAokBerechtigungsscheinBodyHtml = ({
 
   ${at(8.75, 69.6, "I. Erklärung des Augenoptikers:", "abschnitt")}
   ${at(8.75, 75.5, "Die Prüfung der Sehschärfe ergab")}
-  ${box(63.4, 76.1)}${at(68.6, 75.5, "eine Veränderung von mindestens 0,5 dpt")}
+  ${box(63.4, 76.1, veraendert)}${at(68.6, 75.5, "eine Veränderung von mindestens 0,5 dpt")}
   ${at(52, 81.9, "oder")}
   ${box(63.4, 82.5)}${at(68.6, 81.9, "eine Verbesserung von mindestens 0,2 LogMAR (2 Visus-Stufen)")}
 
-  ${box(8.75, 94.6)}${at(13.9, 94, "Aufgrund der Augenglasbestimmung ist/sind")}
-  ${linie(14, 29.6, 105.4)}${at(30.6, 101.5, "Glas/Gläser")}
+  ${box(8.75, 94.6, veraendert)}${at(13.9, 94, "Aufgrund der Augenglasbestimmung ist/sind")}
+  ${linie(14, 29.6, 105.4)}${veraendert ? at(19.5, 101.2, wert(anzahlGlaeser(entities))) : ""}${at(30.6, 101.5, "Glas/Gläser")}
   ${linie(54.6, 70.4, 105.4)}${at(71, 101.5, "Kontaktlinse(n)")}
   ${at(14, 106.4, "erforderlich")}
   ${box(106.1, 94.6)}${at(111.3, 94, "Folgeversorgung wegen Verschleiß/Verlust")}
@@ -197,6 +205,7 @@ export const buildAokBerechtigungsscheinBodyHtml = ({
 };
 
 const AOK_STYLES = `
+  ${KAESTCHEN_STYLES}
   * { box-sizing: border-box; }
   body { margin: 0; font-family: "Arial Narrow", Arial, Helvetica, sans-serif; color: #111; font-size: 9.5pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .seite { width: 210mm; height: 297mm; position: relative; overflow: hidden; background: #fff; }
@@ -206,7 +215,7 @@ const AOK_STYLES = `
   .fett, .abschnitt { font-weight: bold; }
   .abschnitt { font-size: 10.5pt; }
   .klein { font-size: 8.5pt; }
-  .box { position: absolute; width: 3.9mm; height: 3.9mm; border: 0.25mm solid #333; }
+  .box { position: absolute; width: 3.9mm; height: 3.9mm; border: 0.25mm solid #333; margin: 0; }
   .hline { position: absolute; border-top: 0.2mm solid #333; }
   .kassenfeld { position: absolute; left: 8.75mm; top: 4.8mm; width: 79.85mm; height: 46.8mm; border: 0.25mm solid #333; }
   .feld { position: absolute; border-right: 0.2mm solid #333; border-bottom: 0.2mm solid #333; }
@@ -252,6 +261,8 @@ export const buildAokBerechtigungsscheinPreviewHtml = (
   ${AOK_STYLES}
   html { background: #eee; }
   .seite { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
+  @page { size: A4; margin: 0; }
+  @media print { html { background: none; } .seite { margin: 0; box-shadow: none; } }
 </style>
 </head>
 <body>

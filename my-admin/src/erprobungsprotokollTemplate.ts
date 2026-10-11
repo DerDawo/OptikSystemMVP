@@ -8,6 +8,7 @@ import dayjs from "dayjs";
 import type { DocumentMergeEntities } from "./documentTemplateEngine";
 import { RECHNUNG_ABSENDER, escapeHtml } from "./rechnungTemplate";
 import { formatDatum, text } from "./werkstattauftragTemplate";
+import { KAESTCHEN_STYLES, kaestchen } from "./formularVorschlaege";
 
 export type ErprobungsprotokollDaten = {
   entities: DocumentMergeEntities;
@@ -98,11 +99,11 @@ export const buildErprobungsprotokollBodyHtml = ({
 
   <h2>6. Zusammenfassende Beurteilung</h2>
   <div class="pruefliste">
-    <div><span class="kaestchen"></span>Leistungsrechtliche Voraussetzung erfüllt: Visus besseres Auge ______ → Sehbeeinträchtigung Stufe ______ (§ 12 HilfsM-RL)</div>
-    <div><span class="kaestchen"></span>Vergrößerungsbedarf ______-fach augenärztlich dokumentiert und durch eigene Messung bestätigt (§ 16 Abs. 4 HilfsM-RL)</div>
-    <div><span class="kaestchen"></span>Optisch vergrößernde Sehhilfen wurden vorrangig erprobt (§ 16 Abs. 3 HilfsM-RL) und sind nicht zielführend (Ziff. 4)</div>
-    <div><span class="kaestchen"></span>Die/der Versicherte ist in der Lage, die elektronische Sehhilfe zielführend einzusetzen (§ 16 Abs. 2 HilfsM-RL)</div>
-    <div><span class="kaestchen"></span>Die Versorgung dient dem Ausgleich der Behinderung bei Grundbedürfnissen des täglichen Lebens (Lesen) i. S. d. § 33 SGB V</div>
+    <div>${kaestchen()}Leistungsrechtliche Voraussetzung erfüllt: Visus besseres Auge ______ → Sehbeeinträchtigung Stufe ______ (§ 12 HilfsM-RL)</div>
+    <div>${kaestchen()}Vergrößerungsbedarf ______-fach augenärztlich dokumentiert und durch eigene Messung bestätigt (§ 16 Abs. 4 HilfsM-RL)</div>
+    <div>${kaestchen()}Optisch vergrößernde Sehhilfen wurden vorrangig erprobt (§ 16 Abs. 3 HilfsM-RL) und sind nicht zielführend (Ziff. 4)</div>
+    <div>${kaestchen()}Die/der Versicherte ist in der Lage, die elektronische Sehhilfe zielführend einzusetzen (§ 16 Abs. 2 HilfsM-RL)</div>
+    <div>${kaestchen()}Die Versorgung dient dem Ausgleich der Behinderung bei Grundbedürfnissen des täglichen Lebens (Lesen) i. S. d. § 33 SGB V</div>
   </div>
   <div class="ergebnis"><span class="fett">Weitere Begründung:</span>${linien(3)}</div>
 
@@ -125,6 +126,7 @@ export const buildErprobungsprotokollBodyHtml = ({
 };
 
 const STYLES = `
+  ${KAESTCHEN_STYLES}
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 9pt; line-height: 1.3; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .protokoll { width: 210mm; padding: 14mm 17mm; background: #fff; }
@@ -154,7 +156,7 @@ const STYLES = `
   .ergebnis { margin-top: 2mm; break-inside: avoid; }
   .linie { border-bottom: 0.25mm solid #999; height: 6mm; }
   .pruefliste div { margin-bottom: 1.6mm; padding-left: 6mm; text-indent: -6mm; }
-  .kaestchen { display: inline-block; width: 3.2mm; height: 3.2mm; border: 0.25mm solid #333; margin-right: 2.8mm; vertical-align: -0.4mm; }
+  .kaestchen { display: inline-block; width: 3.2mm; height: 3.2mm; border: 0.25mm solid #333; margin: 0 2.8mm 0 0; vertical-align: -0.4mm; }
   .abschluss { margin-top: 8mm; break-inside: avoid; }
   .unterschriften { display: flex; justify-content: space-between; margin-top: 14mm; gap: 12mm; }
   .unterschriften > div { flex: 1; font-size: 8pt; }
@@ -189,6 +191,8 @@ export const buildErprobungsprotokollPreviewHtml = (
   ${STYLES}
   html { background: #eee; }
   .protokoll { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
+  @page { size: A4; margin: 14mm 17mm; }
+  @media print { html { background: none; } .protokoll { width: auto; padding: 0; margin: 0; box-shadow: none; } }
 </style>
 </head>
 <body>

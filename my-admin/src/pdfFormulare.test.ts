@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { PDFDocument, PDFDropdown, PDFTextField } from "pdf-lib";
+import { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } from "pdf-lib";
 import {
   PDF_VORLAGEN,
   fuellePdfVorlage,
@@ -35,6 +35,12 @@ const entities = {
   glastyp: { Bezeichnung: "Raumglas", Verguetung: "Superentspiegelung" },
   fassung: { Hersteller: "Lindberg", Bezeichnung: "Air", Betrag: 99 },
   zusatzleistungen: [{ Bezeichnung: "Glaseinschliff", Betrag: 50 }],
+  vorherigeBrille: {
+    BrillenArt: "Einstärkenbrille (Fern)",
+    Datum: "2021-03-01",
+  },
+  vorherigesGlasRechts: { Sph: 0, Cyl: -0.5, A: 85, Vis: 0.8, Add: 0.75 },
+  vorherigesGlasLinks: { Sph: -0.25, Cyl: -0.5, A: 170, Add: 0.75 },
 };
 
 const lade = (datei: string) =>
@@ -44,6 +50,7 @@ const feldwert = (pdf: PDFDocument, name: string) => {
   const feld = pdf.getForm().getField(name);
   if (feld instanceof PDFTextField) return feld.getText();
   if (feld instanceof PDFDropdown) return feld.getSelected()[0];
+  if (feld instanceof PDFCheckBox) return feld.isChecked();
   return undefined;
 };
 
@@ -69,10 +76,15 @@ describe.each(Object.entries(PDF_VORLAGEN))("PDF-Vorlage %s", (_, vorlage) => {
     );
     const pdf = await PDFDocument.load(bytes);
     for (const [name, wert] of Object.entries(vorlage.felder(entities))) {
+      if (wert === true) {
+        expect(feldwert(pdf, name)).toBe(true);
+        continue;
+      }
+      if (!wert) continue;
       const feld = pdf.getForm().getField(name);
       const max =
         feld instanceof PDFTextField ? feld.getMaxLength() : undefined;
-      if (wert) expect(feldwert(pdf, name)).toBe(passeAnFeldlaenge(wert, max));
+      expect(feldwert(pdf, name)).toBe(passeAnFeldlaenge(wert, max));
     }
     expect(pdf.getForm().getFields().length).toBeGreaterThan(100);
   });
@@ -102,5 +114,20 @@ describe("Zuordnung der Felder", () => {
     expect(felder.f_51).toBe("240,00");
     expect(felder.f_54).toBe("389,00");
     expect(felder.pr_225).toBe("+0,75");
+  });
+
+  it("Antrag BAP: vorhandene Brille, Alter und Presbyopie", () => {
+    const felder = PDF_VORLAGEN["Antrag BAP"].felder(entities);
+    expect(felder.pr_86).toBe("-0,50");
+    expect(felder.cb_77).toBe(true);
+    expect(felder.tb_103).toBe(true);
+    expect(Number(felder.tbf_104)).toBeGreaterThanOrEqual(5);
+    expect(felder.tb_105).toBe(true);
+  });
+
+  it("Beobachtungsbogen: bisherige Korrektur", () => {
+    const felder = PDF_VORLAGEN.Beobachtungsbogen.felder(entities);
+    expect(felder["CYL OD ALT"]).toBe("-0,50");
+    expect(felder["AXE OS ALT"]).toBe("170");
   });
 });

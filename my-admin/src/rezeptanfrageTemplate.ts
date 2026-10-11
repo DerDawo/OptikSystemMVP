@@ -10,6 +10,13 @@ import type {
 } from "./documentTemplateEngine";
 import { RECHNUNG_ABSENDER, escapeHtml } from "./rechnungTemplate";
 import { formatDatum, formatWert, text } from "./werkstattauftragTemplate";
+import {
+  KAESTCHEN_STYLES,
+  diagnoseVorschlaege,
+  ermitteltViaVorschlaege,
+  kaestchen,
+  versorgungVorschlaege,
+} from "./formularVorschlaege";
 
 export type RezeptanfrageDaten = { entities: DocumentMergeEntities };
 
@@ -19,8 +26,8 @@ const a = RECHNUNG_ABSENDER;
 const feld = (label: string, wert = "", breite = "1fr") =>
   `<div class="feld" style="flex:${breite}"><div class="label">${e(label)}</div><div class="wert">${e(wert)}</div></div>`;
 
-const box = (label: string) =>
-  `<span class="option"><span class="kaestchen"></span>${e(label)}</span>`;
+const box = (label: string, angekreuzt = false) =>
+  `<label class="option">${kaestchen(angekreuzt)}${e(label)}</label>`;
 
 const DIAGNOSEN = [
   "Myopie (Kurzsichtigkeit)",
@@ -77,6 +84,9 @@ export const buildRezeptanfrageBodyHtml = ({
   const brille: Record<string, unknown> = entities.brille ?? {};
   const { glasRechts: r, glasLinks: l } = entities;
   const heute = dayjs().format("DD.MM.YYYY");
+  const diagnosen = diagnoseVorschlaege(entities);
+  const versorgung = versorgungVorschlaege(entities);
+  const ermittelt = ermitteltViaVorschlaege(entities);
   const pdR = Number(r?.PD);
   const pdL = Number(l?.PD);
   const pdGesamt =
@@ -109,16 +119,16 @@ export const buildRezeptanfrageBodyHtml = ({
     ${werteZeile("L (OS)", l)}
   </table>
   <div class="reihe">${feld("PD rechts (mm)", formatWert(r?.PD, "frei"))}${feld("PD links (mm)", formatWert(l?.PD, "frei"))}${feld("Gesamte PD (mm)", pdGesamt)}${feld("Messdatum", formatDatum(brille.Datum))}</div>
-  <div class="zeile">Werte ermittelt via: ${box("Autorefraktometer")}${box("Subjektive Refraktion")}${box("Skiaskopie")}${box("Übernahme Vorrezept")}</div>
+  <div class="zeile">Werte ermittelt via: ${["Autorefraktometer", "Subjektive Refraktion", "Skiaskopie", "Übernahme Vorrezept"].map((v) => box(v, ermittelt.has(v))).join("")}</div>
 
   <h2>3 Krankheitsbilder / Diagnosen</h2>
-  <div class="raster zwei">${DIAGNOSEN.map((d) => `<div>${box(d)}</div>`).join("")}</div>
+  <div class="raster zwei">${DIAGNOSEN.map((d) => `<div>${box(d, diagnosen.has(d))}</div>`).join("")}</div>
   <div class="reihe">${feld("Weitere Diagnosen / ICD-10 Code", "", "3")}${feld("Befunddatum")}</div>
 
   <h2>4 Gewünschte Versorgung</h2>
-  <div class="raster vier">${VERSORGUNG.map((v) => `<div>${box(v)}</div>`).join("")}<div>${box("Sonstiges:")} ________</div></div>
+  <div class="raster vier">${VERSORGUNG.map((v) => `<div>${box(v, versorgung.has(v))}</div>`).join("")}<div>${box("Sonstiges:")} ________</div></div>
   <div class="zeile">Indikation Kantenfiltergläser (GKV § 33 SGB V / Low Vision) – ICD: ____________________</div>
-  <div class="zeile klein">Empfohlene Filterstufe / Tönung / Transmission (%), Filterwellenlänge (nm): ${["400", "420", "450", "480", "511", "527"].map(box).join("")}</div>
+  <div class="zeile klein">Empfohlene Filterstufe / Tönung / Transmission (%), Filterwellenlänge (nm): ${["400", "420", "450", "480", "511", "527"].map((nm) => box(nm)).join("")}</div>
   <div class="reihe">${feld("Besonderer Bedarf (z. B. Bildschirmarbeit, Führerschein, Sport, Beruf)")}</div>
 
   <h2>5 Anfrage an die augenärztliche Praxis</h2>
@@ -140,6 +150,7 @@ export const buildRezeptanfrageBodyHtml = ({
 };
 
 const STYLES = `
+  ${KAESTCHEN_STYLES}
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #222; font-size: 8.3pt; line-height: 1.25; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .anfrage { position: relative; width: 210mm; height: 297mm; padding: 11mm 15mm 9mm 17mm; overflow: hidden; background: #fff; }
@@ -195,6 +206,8 @@ export const buildRezeptanfragePreviewHtml = (
   ${STYLES}
   html { background: #eee; }
   .anfrage { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
+  @page { size: A4; margin: 0; }
+  @media print { html { background: none; } .anfrage { margin: 0; box-shadow: none; } }
 </style>
 </head>
 <body>

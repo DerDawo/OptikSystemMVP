@@ -9,6 +9,12 @@ import type {
 } from "./documentTemplateEngine";
 import { RECHNUNG_ABSENDER, escapeHtml } from "./rechnungTemplate";
 import { formatDatum, formatWert, text } from "./werkstattauftragTemplate";
+import {
+  KAESTCHEN_STYLES,
+  anzahlGlaeser,
+  kaestchen as kaestchenInput,
+  sehstaerkeVeraendert,
+} from "./formularVorschlaege";
 
 export type OptometrischeVerordnungDaten = {
   entities: DocumentMergeEntities;
@@ -23,8 +29,8 @@ const AUSSTELLER = {
 
 const KASSEN = ["AOK", "LKK", "BKK", "IKK", "vDAK", "AEV", "Knappschaft"];
 
-const kaestchen = (label: string) =>
-  `<span class="option"><span class="kaestchen"></span>${escapeHtml(label)}</span>`;
+const kaestchen = (label: string, angekreuzt = false) =>
+  `<label class="option">${kaestchenInput(angekreuzt)}${escapeHtml(label)}</label>`;
 
 const wert = (value: string) =>
   value ? `<span class="wert">${escapeHtml(value)}</span>` : "";
@@ -49,6 +55,7 @@ export const buildOptometrischeVerordnungBodyHtml = ({
   entities,
 }: OptometrischeVerordnungDaten): string => {
   const kunde: Record<string, unknown> = entities.kunde ?? {};
+  const veraendert = sehstaerkeVeraendert(entities);
   const name = [text(kunde.Nachname), text(kunde.Vorname)]
     .filter(Boolean)
     .join(", ");
@@ -75,11 +82,11 @@ export const buildOptometrischeVerordnungBodyHtml = ({
   <h2>I. Erklärung des Optometristen</h2>
   <p>Die Prüfung der Sehschärfe ergab:</p>
   <div class="optionen">
-    ${kaestchen("eine Veränderung von mindestens 0,5 dpt und/oder")}
+    ${kaestchen("eine Veränderung von mindestens 0,5 dpt und/oder", veraendert === true)}
     ${kaestchen("eine Verbesserung von mindestens 20 Prozentpunkten (Visus)")}
-    ${kaestchen("keine Veränderung")}
+    ${kaestchen("keine Veränderung", veraendert === false)}
   </div>
-  <p>Aufgrund der Augenbestimmung ist/sind <span class="luecke"></span> Glas/Gläser mit/ohne Brillenfassung(en) erforderlich.</p>
+  <p>Aufgrund der Augenbestimmung ist/sind <span class="luecke">${veraendert === true ? wert(anzahlGlaeser(entities)) : ""}</span> Glas/Gläser mit/ohne Brillenfassung(en) erforderlich.</p>
 
   <h2>Kontaktlinsen</h2>
   <p>Der Versicherte trägt <span class="luecke"></span> optometrisch / ärztlich verordnete Kontaktlinse(n).</p>
@@ -120,6 +127,7 @@ export const buildOptometrischeVerordnungBodyHtml = ({
 };
 
 const VERORDNUNG_STYLES = `
+  ${KAESTCHEN_STYLES}
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 10pt; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   .seite { width: 210mm; height: 297mm; padding: 10mm 15mm 12mm 12.5mm; position: relative; overflow: hidden; background: #fff; }
@@ -139,7 +147,7 @@ const VERORDNUNG_STYLES = `
   .optionen { margin: 0 0 2.5mm 4mm; }
   .optionen .option { display: block; }
   .optionen.zweispaltig { display: grid; grid-template-columns: 1fr 1fr; column-gap: 6mm; }
-  .luecke { display: inline-block; width: 14mm; border-bottom: 0.25mm solid #333; }
+  .luecke { display: inline-block; width: 14mm; border-bottom: 0.25mm solid #333; text-align: center; }
   .werte { width: 133mm; margin: 5mm 0 4mm 25.1mm; table-layout: fixed; }
   .werte td:first-child { width: 14mm; }
   .werte .kopf td { background: #ddd; }
@@ -179,6 +187,8 @@ export const buildOptometrischeVerordnungPreviewHtml = (
   ${VERORDNUNG_STYLES}
   html { background: #eee; }
   .seite { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
+  @page { size: A4; margin: 0; }
+  @media print { html { background: none; } .seite { margin: 0; box-shadow: none; } }
 </style>
 </head>
 <body>
@@ -299,6 +309,8 @@ export const buildVerordnungKurzPreviewHtml = (
   ${VERORDNUNG_KURZ_STYLES}
   html { background: #eee; }
   .seite-kurz { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
+  @page { size: A4; margin: 0; }
+  @media print { html { background: none; } .seite-kurz { margin: 0; box-shadow: none; } }
 </style>
 </head>
 <body>

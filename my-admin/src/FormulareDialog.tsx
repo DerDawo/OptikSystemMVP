@@ -7,7 +7,7 @@
 // hierauf aufsetzen, indem sie lediglich weitere `dokumentvorlage`-Datensätze
 // mit Kategorie "Rechnung"/"Mahnung" anlegen - an dieser Dialog-/Render-Logik
 // muss dafür nichts geändert werden.
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Alert,
@@ -120,10 +120,22 @@ type Layout = {
   title: string;
   preview: (daten: LayoutDaten) => string;
   print: (daten: LayoutDaten) => string;
+  // Formulare mit anklickbaren Kästchen: gedruckt wird der Stand der
+  // Vorschau (vorgeschlagene Kreuze lassen sich dort noch ändern)
+  ausVorschau?: boolean;
+};
+
+// Vorschau samt angeklickter Kästchen als eigenständiges HTML
+const vorschauAlsHtml = (doc: Document) => {
+  doc
+    .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
+    .forEach((box) => box.toggleAttribute("checked", box.checked));
+  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 };
 
 const antragLayout = (art: AntragArt): Layout => ({
   title: "Antrag-Vorschau",
+  ausVorschau: true,
   preview: (d) => buildAntragPreviewHtml(art, d),
   print: (d) => buildAntragPrintHtml(art, d),
 });
@@ -146,6 +158,7 @@ const LAYOUTS: Record<string, Layout> = {
     print: buildBerechtigungsscheinPrintHtml,
   },
   [BERECHTIGUNGSSCHEIN_AOK_KATEGORIE]: {
+    ausVorschau: true,
     title: "Berechtigungsschein-Vorschau",
     preview: buildAokBerechtigungsscheinPreviewHtml,
     print: buildAokBerechtigungsscheinPrintHtml,
@@ -158,21 +171,25 @@ const LAYOUTS: Record<string, Layout> = {
   "Antrag Zuschuss": antragLayout("zuschuss"),
   "Antrag Sozialamt": antragLayout("sozialamt"),
   [VERORDNUNG_KATEGORIE]: {
+    ausVorschau: true,
     title: "Verordnung-Vorschau",
     preview: buildVerordnungKurzPreviewHtml,
     print: buildVerordnungKurzPrintHtml,
   },
   [VERORDNUNG_GKV_KATEGORIE]: {
+    ausVorschau: true,
     title: "Verordnung-Vorschau",
     preview: buildOptometrischeVerordnungPreviewHtml,
     print: buildOptometrischeVerordnungPrintHtml,
   },
   Erprobungsprotokoll: {
+    ausVorschau: true,
     title: "Erprobungsprotokoll-Vorschau",
     preview: buildErprobungsprotokollPreviewHtml,
     print: buildErprobungsprotokollPrintHtml,
   },
   "Rezeptanfrage Augenarzt": {
+    ausVorschau: true,
     title: "Rezeptanfrage-Vorschau",
     preview: buildRezeptanfragePreviewHtml,
     print: buildRezeptanfragePrintHtml,
@@ -326,6 +343,34 @@ const FormulareDialog = ({
   );
   const { data: betrieb } = useGetOne("betrieb", { id: 1 });
 
+  // Vorherige Brille desselben Kunden (bisherige Werte, Veränderung der
+  // Sehstärke): der jüngste Auftrag vor diesem
+  const { data: vorherigeBrillen } = useGetList(
+    "brille",
+    {
+      pagination: { page: 1, perPage: 1 },
+      sort: { field: brille.Datum ? "Datum" : "id", order: "DESC" },
+      filter: {
+        kunde_id: brille.kunde_id,
+        ...(brille.Datum
+          ? { "Datum@lt": brille.Datum }
+          : { "id@lt": brille.id }),
+      },
+    },
+    { enabled: Boolean(brille.kunde_id) },
+  );
+  const vorherigeBrille = vorherigeBrillen?.[0];
+  const { data: vorherigesGlasRechts } = useGetOne(
+    "glass",
+    { id: vorherigeBrille?.GlasRechts },
+    { enabled: Boolean(vorherigeBrille?.GlasRechts) },
+  );
+  const { data: vorherigesGlasLinks } = useGetOne(
+    "glass",
+    { id: vorherigeBrille?.GlasLinks },
+    { enabled: Boolean(vorherigeBrille?.GlasLinks) },
+  );
+
   const mergeEntities: DocumentMergeEntities = useMemo(
     () => ({
       kunde,
@@ -335,8 +380,22 @@ const FormulareDialog = ({
       fassung,
       glastyp,
       zusatzleistungen,
+      vorherigeBrille,
+      vorherigesGlasRechts,
+      vorherigesGlasLinks,
     }),
-    [kunde, brille, glasLinks, glasRechts, fassung, glastyp, zusatzleistungen],
+    [
+      kunde,
+      brille,
+      glasLinks,
+      glasRechts,
+      fassung,
+      glastyp,
+      zusatzleistungen,
+      vorherigeBrille,
+      vorherigesGlasRechts,
+      vorherigesGlasLinks,
+    ],
   );
 
   const mergeValues = useMemo(
@@ -376,6 +435,7 @@ const FormulareDialog = ({
   const pdfVorlage = selectedVorlage
     ? PDF_VORLAGEN[selectedVorlage.Kategorie]
     : undefined;
+  const vorschauRef = useRef<HTMLIFrameElement>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [pdfFehler, setPdfFehler] = useState<string | null>(null);
   useEffect(() => {
@@ -441,8 +501,11 @@ const FormulareDialog = ({
       );
       return;
     }
+    const vorschau = vorschauRef.current?.contentDocument;
     const html =
-      layout?.print ?? buildPrintHtml(selectedVorlage.Name, renderedText);
+      layoutDef?.ausVorschau && vorschau
+        ? vorschauAlsHtml(vorschau)
+        : (layout?.print ?? buildPrintHtml(selectedVorlage.Name, renderedText));
     const opened = openDocumentWindow(html, autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
@@ -569,18 +632,33 @@ const FormulareDialog = ({
                 </Typography>
               )
             ) : layout ? (
-              <Box
-                component="iframe"
-                title={layout.title}
-                srcDoc={layout.preview}
-                sx={{
-                  width: "100%",
-                  height: 480,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                }}
-              />
+              <>
+                {layoutDef?.ausVorschau && (
+                  <Typography
+                    variant="caption"
+                    color="text.secondary"
+                    component="p"
+                    sx={{ mb: 0.5 }}
+                  >
+                    Kreuze sind Vorschläge aus den gespeicherten Daten –
+                    Kästchen in der Vorschau anklicken, um sie vor dem Druck zu
+                    ändern.
+                  </Typography>
+                )}
+                <Box
+                  component="iframe"
+                  ref={vorschauRef}
+                  title={layout.title}
+                  srcDoc={layout.preview}
+                  sx={{
+                    width: "100%",
+                    height: 480,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                  }}
+                />
+              </>
             ) : (
               <Box
                 sx={{
