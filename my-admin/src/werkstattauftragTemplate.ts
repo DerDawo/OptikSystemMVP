@@ -113,10 +113,12 @@ export type WerkstattauftragSummen = {
 export const buildWerkstattauftragSummen = (
   entities: DocumentMergeEntities,
 ): WerkstattauftragSummen => {
-  const positionen = buildRechnungPositionen(entities).map((position) => ({
-    label: POSITIONS_NAMEN[position.label] ?? position.label,
-    betrag: position.betrag,
-  }));
+  const positionen = buildRechnungPositionen(entities)
+    .filter((position) => position.betrag !== null)
+    .map((position) => ({
+      label: POSITIONS_NAMEN[position.label] ?? position.label,
+      betrag: position.betrag ?? 0,
+    }));
   const brille: Record<string, unknown> = entities.brille ?? {};
   const gesamt =
     asNumber(brille.Summe) ??

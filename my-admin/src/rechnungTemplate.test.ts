@@ -1,113 +1,145 @@
 import { describe, expect, it } from "vitest";
 import {
+  buildKostenvoranschlagBodyHtml,
   buildRechnungBodyHtml,
   buildRechnungPositionen,
+  formatGlaswerte,
   RECHNUNG_ABSENDER,
 } from "./rechnungTemplate";
 import type { DocumentMergeEntities } from "./documentTemplateEngine";
 
-// Nachgebildet aus der Referenzrechnung Nr. 114638 (Issue #88,
-// BR1Rechnung_AH_N.pdf), um das Layout gegen die dort abgedruckten Werte zu
-// verifizieren.
-const REFERENZ_ENTITIES: DocumentMergeEntities = {
+// Erfundene Daten im Aufbau der Referenzrechnung (Rechnung HF25.pdf):
+// Bifokalbrille, eigenes Gestell, zwei Gläser und Glaseinschliff.
+const ENTITIES: DocumentMergeEntities = {
   kunde: {
-    Anrede: "Frau",
-    Vorname: "Alexandra",
-    Nachname: "Heckner",
-    Straße: "Otto Rothestr.",
-    Hausnummer: "27",
-    Postleitzahl: "07549",
+    Anrede: "Herr",
+    Vorname: "Max",
+    Nachname: "Beispiel",
+    Straße: "Musterweg",
+    Hausnummer: "1",
+    Postleitzahl: "07545",
     Stadt: "Gera",
   },
   brille: {
-    Rechnungsnummer: "114638",
-    Summe: 511.5,
-    BrillenArt: "Fernbrille",
+    id: 42,
+    Rechnungsnummer: "114400",
+    Summe: 329.3,
+    BrillenArt: "Bifokalbrille",
     Berater: "Robert Ulm",
+    Zahlungsstatus: "bezahlt",
   },
-  glasRechts: { Sph: 1.5, Cyl: -0.25, A: 169, Betrag: 169 },
-  glasLinks: { Sph: 1.25, Cyl: -0.25, A: 23, Betrag: 169 },
-  glastyp: {
-    Bezeichnung: "ES HDC 1.6 Photo 60/65 Photo Extra Grau",
-    Verguetung: "HMC Blue",
-  },
-  fassung: { Lagernummer: "zl 32001 5 49 19", Betrag: 149 },
-  zusatzleistungen: [{ Bezeichnung: "Refraktion", Betrag: 24.5 }],
+  glasRechts: { Sph: 0.25, Cyl: -0.75, A: 173, Add: 1.5, Betrag: 159.9 },
+  glasLinks: { Sph: 0, Cyl: -0.75, A: 173, Add: 1.5, Betrag: 159.9 },
+  glastyp: { Bezeichnung: "RS28", Verguetung: "HSET", GlasGroesse: "65/70" },
+  zusatzleistungen: [{ Bezeichnung: "Glaseinschliff", Betrag: 26.9 }],
 };
 
 describe("buildRechnungPositionen", () => {
-  it("ordnet Fassung, Glas rechts, Glas links und Zusatzleistungen wie im Referenzdesign", () => {
-    const positionen = buildRechnungPositionen(REFERENZ_ENTITIES);
-
+  it("ordnet Fassung, Gläser und Zusatzleistungen wie in der Referenz", () => {
+    const positionen = buildRechnungPositionen(ENTITIES);
     expect(positionen.map((p) => p.label)).toEqual([
       "Fassung :",
       "Glas rechts :",
       "Glas links :",
-      "Refraktion",
+      "Glaseinschliff",
     ]);
-    expect(positionen.map((p) => p.betrag)).toEqual([149, 169, 169, 24.5]);
-    expect(positionen[0].detailZeilen).toEqual(["zl 32001 5 49 19"]);
-    expect(positionen[1].detailZeilen).toEqual([
-      "sph:+1.50 cyl:-0.25 A:169",
-      "ES HDC 1.6 Photo 60/65 Photo Extra Grau",
-      "HMC Blue",
-    ]);
-    expect(positionen[2].detailZeilen).toEqual([
-      "sph:+1.25 cyl:-0.25 A:23",
-      "ES HDC 1.6 Photo 60/65 Photo Extra Grau",
-      "HMC Blue",
-    ]);
+    expect(positionen.map((p) => p.betrag)).toEqual([null, 159.9, 159.9, 26.9]);
+    expect(positionen[0].details).toEqual(["eigenes Gestell"]);
+    expect(positionen[1].werte).toBe("sph: + 0,25 cyl - 0,75 A 173  ADD 1,50");
+    expect(positionen[1].details).toEqual(["RS28   HSET   DM 65/70"]);
+  });
+
+  it("zeigt bei vorhandener Fassung Bezeichnung und Lagernummer", () => {
+    const [fassung] = buildRechnungPositionen({
+      ...ENTITIES,
+      fassung: {
+        Hersteller: "Lindberg",
+        Bezeichnung: "Air",
+        Lagernummer: "F-1001",
+        Betrag: 149,
+      },
+    });
+    expect(fassung.betrag).toBe(149);
+    expect(fassung.details).toEqual(["Lindberg Air", "F-1001"]);
   });
 
   it("hängt einen Rabatt als letzte, negative Position an", () => {
     const positionen = buildRechnungPositionen({
-      ...REFERENZ_ENTITIES,
+      ...ENTITIES,
       brille: {
-        ...REFERENZ_ENTITIES.brille,
+        ...ENTITIES.brille,
         RabattProzent: 10,
         RabattBezeichnung: "Stammkundenrabatt",
       },
     });
-
     const rabatt = positionen[positionen.length - 1];
     expect(rabatt.label).toBe("Rabatt: Stammkundenrabatt (-10 %)");
-    // Rabattbasis: Fassung 149 + Glas rechts 169 + Glas links 169 = 487
-    expect(rabatt.betrag).toBeCloseTo(-48.7, 2);
+    // Rabattbasis: Glas rechts 159,90 + Glas links 159,90 = 319,80
+    expect(rabatt.betrag).toBeCloseTo(-31.98, 2);
+  });
+
+  it("schreibt Sphäre immer mit Vorzeichen, Achse nur mit Zylinder", () => {
+    expect(formatGlaswerte({ Sph: -1, Cyl: 0, A: 90 })).toBe("sph: - 1,00");
   });
 });
 
 describe("buildRechnungBodyHtml", () => {
   const html = buildRechnungBodyHtml({
-    entities: REFERENZ_ENTITIES,
-    rechnungsnummer: "114638",
+    entities: ENTITIES,
+    rechnungsnummer: "114400",
   });
 
-  it("zeigt Rechnungsnummer, Summe und den enthaltenen MwSt-Betrag wie im Referenz-PDF", () => {
-    expect(html).toContain("114638");
-    expect(html).toContain("511.50 EUR");
-    // 511,50 EUR brutto bei 19% MwSt enthält 81,67 EUR MwSt (siehe Referenz-PDF).
-    expect(html).toContain("81.67 EUR");
+  it("zeigt Rechnungsnummer, Summe und MwSt wie in der Referenz", () => {
+    expect(html).toContain("114400");
+    expect(html).toContain("329,30 EUR");
+    // 329,30 EUR brutto bei 19 % enthalten 52,58 EUR MwSt (Netto 276,72 €)
+    expect(html).toContain("52,58 EUR");
+    expect(html).toContain("(Nettopreis: 276,72 €)");
     expect(html).toContain(`${RECHNUNG_ABSENDER.mwstSatz}% Mwst`);
+    expect(html).toContain("RECHNUNG");
+    expect(html).toContain("Sehzentrum Gera - Werdauerstr.38 - 07551 Gera");
   });
 
   it("zeigt Anrede, Kundenname und Berater", () => {
-    expect(html).toContain("Frau");
-    expect(html).toContain("Alexandra Heckner");
+    expect(html).toContain("Herr");
+    expect(html).toContain("Max Beispiel");
     expect(html).toContain("Es bediente Sie Robert Ulm.");
+  });
+
+  it("bittet nur bei offener Rechnung um Überweisung", () => {
+    expect(html).not.toContain("Bitte überweisen");
+    const offen = buildRechnungBodyHtml({
+      entities: {
+        ...ENTITIES,
+        brille: { ...ENTITIES.brille, Zahlungsstatus: "offen" },
+      },
+      rechnungsnummer: "114400",
+    });
+    expect(offen).toContain("Bitte überweisen Sie den Rechnungsbetrag");
   });
 
   it("escaped Kundendaten, um HTML-Injection im Druckfenster zu verhindern", () => {
     const html2 = buildRechnungBodyHtml({
       entities: {
-        ...REFERENZ_ENTITIES,
-        kunde: {
-          ...REFERENZ_ENTITIES.kunde,
-          Nachname: "<script>alert(1)</script>",
-        },
+        ...ENTITIES,
+        kunde: { ...ENTITIES.kunde, Nachname: "<script>alert(1)</script>" },
       },
-      rechnungsnummer: "114638",
+      rechnungsnummer: "114400",
     });
     expect(html2).not.toContain("<script>alert(1)</script>");
     expect(html2).toContain("&lt;script&gt;");
+  });
+});
+
+describe("buildKostenvoranschlagBodyHtml", () => {
+  it("nutzt das Rechnungsdesign mit eigenem Titel und Gültigkeit", () => {
+    const html = buildKostenvoranschlagBodyHtml({
+      entities: { ...ENTITIES, brille: { ...ENTITIES.brille, KKAnteil: 100 } },
+    });
+    expect(html).toContain("KOSTENVORANSCHLAG");
+    expect(html).toContain("Gesamtbetrag");
+    expect(html).toContain("unverbindlich und gültig bis");
+    expect(html).toContain("beträgt Ihr Eigenanteil 229,30 EUR");
+    expect(html).not.toContain("Rech.-Nr.");
   });
 });

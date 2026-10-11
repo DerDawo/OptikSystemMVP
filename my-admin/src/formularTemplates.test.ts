@@ -42,7 +42,8 @@ describe("Antrag auf Kostenübernahme", () => {
     expect(html).toContain("A123456789");
     expect(html).toContain("Kostenvoranschlag");
     expect(html).toContain("480,00 €");
-    expect(html).toContain("Brillenglas R.");
+    expect(html).toContain("KOSTENVORANSCHLAG");
+    expect(html).toContain("Glas rechts :");
   });
 
   it("übernimmt beim Sozialamt-Antrag den Beruf in die Begründung", () => {

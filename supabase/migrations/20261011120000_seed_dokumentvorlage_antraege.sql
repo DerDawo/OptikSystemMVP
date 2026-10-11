@@ -13,6 +13,7 @@
 --   - "Beobachtungsbogen" und "Antrag BAP" (Bildschirmarbeitsplatzbrille):
 --     ausfüllbare PDF-Vorlagen (my-admin/public/formulare/*.pdf), die
 --     my-admin/src/pdfFormulare.ts vorausfüllt
+--   - "Kostenvoranschlag" im Rechnungsdesign (my-admin/src/rechnungTemplate.ts)
 -- Alle haben ein code-basiertes Layout; der Vorlagentext wird wie bei
 -- Rechnung und Berechtigungsschein nicht gerendert, der Datensatz macht die
 -- Vorlage im Dialog auswählbar.
@@ -35,7 +36,8 @@ alter table public.dokumentvorlage
     'Optometrische Verordnung',
     'Optometrische Verordnung GKV',
     'Beobachtungsbogen',
-    'Antrag BAP'
+    'Antrag BAP',
+    'Kostenvoranschlag'
   ));
 
 insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
@@ -106,4 +108,14 @@ select
   true
 where not exists (
   select 1 from public.dokumentvorlage where "Kategorie" = 'Antrag BAP'
+);
+
+insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
+select
+  'Kostenvoranschlag',
+  'Kostenvoranschlag',
+  'Hinweis: Der Text dieser Vorlage wird nicht verwendet. Der Kostenvoranschlag hat dasselbe Layout wie die Rechnung (my-admin/src/rechnungTemplate.ts).',
+  true
+where not exists (
+  select 1 from public.dokumentvorlage where "Kategorie" = 'Kostenvoranschlag'
 );

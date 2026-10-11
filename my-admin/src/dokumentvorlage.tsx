@@ -45,6 +45,7 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Optometrische Verordnung GKV", name: "Optometrische Verordnung GKV" },
   { id: "Beobachtungsbogen", name: "Beobachtungsbogen" },
   { id: "Antrag BAP", name: "Antrag BAP" },
+  { id: "Kostenvoranschlag", name: "Kostenvoranschlag" },
 ];
 
 const PLATZHALTER_HINWEIS =

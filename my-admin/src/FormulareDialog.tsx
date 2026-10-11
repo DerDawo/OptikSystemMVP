@@ -50,6 +50,8 @@ import {
   type DocumentMergeEntities,
 } from "./documentTemplateEngine";
 import {
+  buildKostenvoranschlagPreviewHtml,
+  buildKostenvoranschlagPrintHtml,
   buildRechnungPreviewHtml,
   buildRechnungPrintHtml,
 } from "./rechnungTemplate";
@@ -101,6 +103,8 @@ const ANTRAG_KATEGORIEN: Record<string, AntragArt> = {
 const BERECHTIGUNGSSCHEIN_AOK_KATEGORIE = "Berechtigungsschein AOK";
 const VERORDNUNG_KATEGORIE = "Optometrische Verordnung";
 const VERORDNUNG_GKV_KATEGORIE = "Optometrische Verordnung GKV";
+// Kostenvoranschlag im Rechnungsdesign (rechnungTemplate.ts)
+const KOSTENVORANSCHLAG_KATEGORIE = "Kostenvoranschlag";
 
 // Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
 // (#57, Seed-Migration 20260831030100_seed_dokumentvorlage_mahnung.sql). Es
@@ -322,61 +326,72 @@ const FormulareDialog = ({
   const isVerordnung = selectedVorlage?.Kategorie === VERORDNUNG_KATEGORIE;
   const isVerordnungGkv =
     selectedVorlage?.Kategorie === VERORDNUNG_GKV_KATEGORIE;
+  const isKostenvoranschlag =
+    selectedVorlage?.Kategorie === KOSTENVORANSCHLAG_KATEGORIE;
 
   // Kategorien mit eigenem, code-basiertem Layout statt des Vorlagentexts
-  const layout = isRechnung
+  const layout = isKostenvoranschlag
     ? {
-        title: "Rechnungsvorschau",
-        preview: rechnungPreviewHtml,
-        print: rechnungPrintHtml,
+        title: "Kostenvoranschlag-Vorschau",
+        preview: buildKostenvoranschlagPreviewHtml(werkstattauftragDaten),
+        print: buildKostenvoranschlagPrintHtml(werkstattauftragDaten),
       }
-    : isBerechtigungsschein
+    : isRechnung
       ? {
-          title: "Berechtigungsschein-Vorschau",
-          preview: berechtigungsscheinPreviewHtml,
-          print: berechtigungsscheinPrintHtml,
+          title: "Rechnungsvorschau",
+          preview: rechnungPreviewHtml,
+          print: rechnungPrintHtml,
         }
-      : isWerkstattauftrag
+      : isBerechtigungsschein
         ? {
-            title: "Werkstattauftrag-Vorschau",
-            preview: buildWerkstattauftragPreviewHtml(werkstattauftragDaten),
-            print: buildWerkstattauftragPrintHtml(werkstattauftragDaten),
+            title: "Berechtigungsschein-Vorschau",
+            preview: berechtigungsscheinPreviewHtml,
+            print: berechtigungsscheinPrintHtml,
           }
-        : antragArt
+        : isWerkstattauftrag
           ? {
-              title: "Antrag-Vorschau",
-              preview: buildAntragPreviewHtml(antragArt, werkstattauftragDaten),
-              print: buildAntragPrintHtml(antragArt, werkstattauftragDaten),
+              title: "Werkstattauftrag-Vorschau",
+              preview: buildWerkstattauftragPreviewHtml(werkstattauftragDaten),
+              print: buildWerkstattauftragPrintHtml(werkstattauftragDaten),
             }
-          : isAokBerechtigungsschein
+          : antragArt
             ? {
-                title: "Berechtigungsschein-Vorschau",
-                preview: buildAokBerechtigungsscheinPreviewHtml(
-                  berechtigungsscheinDaten,
+                title: "Antrag-Vorschau",
+                preview: buildAntragPreviewHtml(
+                  antragArt,
+                  werkstattauftragDaten,
                 ),
-                print: buildAokBerechtigungsscheinPrintHtml(
-                  berechtigungsscheinDaten,
-                ),
+                print: buildAntragPrintHtml(antragArt, werkstattauftragDaten),
               }
-            : isVerordnung
+            : isAokBerechtigungsschein
               ? {
-                  title: "Verordnung-Vorschau",
-                  preview: buildVerordnungKurzPreviewHtml(
-                    werkstattauftragDaten,
+                  title: "Berechtigungsschein-Vorschau",
+                  preview: buildAokBerechtigungsscheinPreviewHtml(
+                    berechtigungsscheinDaten,
                   ),
-                  print: buildVerordnungKurzPrintHtml(werkstattauftragDaten),
+                  print: buildAokBerechtigungsscheinPrintHtml(
+                    berechtigungsscheinDaten,
+                  ),
                 }
-              : isVerordnungGkv
+              : isVerordnung
                 ? {
                     title: "Verordnung-Vorschau",
-                    preview: buildOptometrischeVerordnungPreviewHtml(
+                    preview: buildVerordnungKurzPreviewHtml(
                       werkstattauftragDaten,
                     ),
-                    print: buildOptometrischeVerordnungPrintHtml(
-                      werkstattauftragDaten,
-                    ),
+                    print: buildVerordnungKurzPrintHtml(werkstattauftragDaten),
                   }
-                : null;
+                : isVerordnungGkv
+                  ? {
+                      title: "Verordnung-Vorschau",
+                      preview: buildOptometrischeVerordnungPreviewHtml(
+                        werkstattauftragDaten,
+                      ),
+                      print: buildOptometrischeVerordnungPrintHtml(
+                        werkstattauftragDaten,
+                      ),
+                    }
+                  : null;
 
   // Ausfüllbare PDF-Vorlagen (Beobachtungsbogen, Antrag BAP): das PDF wird im
   // Browser vorausgefüllt und als Objekt-URL angezeigt bzw. geöffnet

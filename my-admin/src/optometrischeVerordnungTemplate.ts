@@ -15,7 +15,7 @@ export type OptometrischeVerordnungDaten = {
 };
 
 const AUSSTELLER = {
-  name: "Sehzentrum Gera",
+  name: RECHNUNG_ABSENDER.marke,
   strasse: RECHNUNG_ABSENDER.strasseKurz.replace(/\.(\d)/, ". $1"),
   ort: `${RECHNUNG_ABSENDER.plz} ${RECHNUNG_ABSENDER.ort}`,
   inhaber: RECHNUNG_ABSENDER.inhaber,
