@@ -27,7 +27,14 @@ import sys
 import zipfile
 from pathlib import Path
 
-LENS_PRICE_SENTINEL_EUR = 1000
+# Preisfeld-Typen aus Head.dat ("pricefield-01".."pricefield-05"):
+# 10 = Einkaufspreis, 20 = UVP. Importiert wird die UVP (siehe sf6Format.ts).
+PREISTYP_UVP = "20"
+STANDARD_PREISFELDER = ("10", "20", "00", "00", "00")
+# Bekannte Zeilenbreiten von LensPrice/OptionsPrice -> Anzahl Preisfelder.
+PREISZEILEN_LAYOUTS = {32: 2, 53: 5, 69: 5}
+PREISFELD_START = 18
+PREISFELD_BREITE = 7
 
 REQUIRED_FILES = {
     "head.dat": "head",
@@ -89,31 +96,56 @@ def parse_code_name_lines(text):
     return rows
 
 
-def parse_lens_price(text):
-    basispreise = {}
+def parse_preisfeld_typen(text):
+    """Head.dat: Preisfeld-Typen in Feldreihenfolge; [] wenn nicht deklariert
+    oder pricefield-decimals nicht leer/0 ist (unbekannte Preis-Einheit)."""
+    values = {}
     for line in split_lines(text):
-        if len(line) < 31:
-            continue
-        esd_code, field = line[0:6].strip(), line[23:31]
-        if not esd_code or not field.isdigit():
+        m = re.match(r"^(\S+)\s*(.*)$", line)
+        if m:
+            values[m.group(1).lower()] = m.group(2).strip()
+    if values.get("pricefield-decimals", "") not in ("", "0"):
+        return []
+    typen = [values.get(f"pricefield-0{i}", "") for i in range(1, 6)]
+    return typen if any(typen) else []
+
+
+def parse_preiszeilen(text, schluessel_breite, preisfeld_typen):
+    """(Schlüssel, UVP in Euro) je Zeile. Layout per Zeilenbreite; bei
+    unbekannter/uneinheitlicher Breite oder ohne UVP-Feld: keine Preise."""
+    lines = split_lines(text)
+    breiten = {len(line) for line in lines}
+    if len(breiten) != 1:
+        return []
+    anzahl_felder = PREISZEILEN_LAYOUTS.get(breiten.pop())
+    if anzahl_felder is None or PREISTYP_UVP not in preisfeld_typen:
+        return []
+    feld_index = list(preisfeld_typen).index(PREISTYP_UVP)
+    if feld_index >= anzahl_felder:
+        return []
+    start = PREISFELD_START + feld_index * PREISFELD_BREITE
+    zeilen = []
+    for line in lines:
+        schluessel = line[0:schluessel_breite].strip()
+        field = line[start:start + PREISFELD_BREITE].strip()
+        if not schluessel or not field.isdigit():
             continue
         preis = int(field) / 100
-        if preis <= 0 or preis > LENS_PRICE_SENTINEL_EUR:
-            continue
+        if preis > 0:
+            zeilen.append((schluessel, preis))
+    return zeilen
+
+
+def parse_lens_price(text, preisfeld_typen=STANDARD_PREISFELDER):
+    basispreise = {}
+    for esd_code, preis in parse_preiszeilen(text, 6, preisfeld_typen):
         if esd_code not in basispreise or preis < basispreise[esd_code]:
             basispreise[esd_code] = preis
     return basispreise
 
 
-def parse_options_price(text):
-    preise = {}
-    for line in split_lines(text):
-        if len(line) < 30:
-            continue
-        code, field = line[0:12].strip(), line[25:30]
-        if code and field.isdigit():
-            preise[code] = int(field)
-    return preise
+def parse_options_price(text, preisfeld_typen=STANDARD_PREISFELDER):
+    return dict(parse_preiszeilen(text, 12, preisfeld_typen))
 
 
 def parse_options_color_groups(text):
@@ -148,12 +180,13 @@ def main():
     out.mkdir(parents=True, exist_ok=True)
 
     hersteller = parse_head(files["head"])
-    basispreise = parse_lens_price(files["lensPrice"])
+    preisfeld_typen = parse_preisfeld_typen(files["head"])
+    basispreise = parse_lens_price(files["lensPrice"], preisfeld_typen)
     # dict statt Liste: doppelte Codes würden ein einzelnes upsert-Statement
     # sprengen ("cannot affect row a second time"); letzter Eintrag gewinnt,
     # wie bei aufeinanderfolgenden Batches in sf6Import.ts.
     produkte = dict(parse_code_name_lines(files["lensType"]))
-    option_preise = parse_options_price(files["optionsPrice"])
+    option_preise = parse_options_price(files["optionsPrice"], preisfeld_typen)
     farb_gruppen = parse_options_color_groups(files["optionsColor"])
     optionen = dict(parse_code_name_lines(files["options"]))
     verfuegbar = parse_combination(files["combination"])
