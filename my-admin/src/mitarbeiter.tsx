@@ -6,11 +6,10 @@ import {
 } from "react-admin";
 import {
   MITARBEITER,
+  REFRAKTION,
   istAlteFassungsangabe,
   mitarbeiterAnzeige,
 } from "./mitarbeiterNamen";
-
-const VERORDNUNGEN = ["lt. ärztl. Verordnung", "lt. optometr. Verordnung"];
 
 const auswahl = (namen: string[], aktuell: unknown) => {
   const liste = [...namen];
@@ -36,22 +35,22 @@ export const MitarbeiterInput = ({ source, label }: FeldProps) => {
   );
 };
 
-// Wie MitarbeiterInput, zusätzlich Verordnungen und frei eintragbare
-// Ärzte/Praxen.
+// Auswahl der Refraktion (Mitarbeiter und Augenärzte, REFRAKTION); ein
+// noch nicht gelisteter Arzt kann eingetippt werden.
 export const RefraktionInput = ({ source, label }: FeldProps) => {
   const record = useRecordContext();
   return (
     <AutocompleteInput
       source={source}
       label={label}
-      choices={auswahl([...MITARBEITER, ...VERORDNUNGEN], record?.[source])}
+      choices={auswahl(REFRAKTION, record?.[source])}
       format={(wert) => (istAlteFassungsangabe(wert) ? "" : wert)}
       onCreate={(text) => {
         const name = (text ?? "").trim();
         return name ? { id: name, name } : undefined;
       }}
       createItemLabel="Arzt/Praxis „%{item}“ übernehmen"
-      helperText="Mitarbeiter wählen oder Arzt/Praxis eintippen"
+      helperText="Auswählen oder Arzt/Praxis eintippen"
     />
   );
 };

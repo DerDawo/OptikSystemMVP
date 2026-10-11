@@ -582,6 +582,54 @@ export const KundeShow = () => {
                 <TextField source="Tätigkeit" />
               </Field>
             </ShowSection>
+            <ShowSection title="Adresse">
+              <Field>
+                <TextField source="Straße" />
+              </Field>
+              <Field>
+                <TextField source="Hausnummer" />
+              </Field>
+              <Field>
+                <TextField source="Postleitzahl" />
+              </Field>
+              <Field>
+                <TextField source="Stadt" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Kontakt">
+              <Field>
+                <TextField source="TelefonnummerPrivat" />
+              </Field>
+              <Field>
+                <TextField source="TelefonnummerGeschaeftlich" />
+              </Field>
+              <Field>
+                <TextField source="Handy" />
+              </Field>
+              <Field>
+                <TextField source="Email" />
+              </Field>
+            </ShowSection>
+            <ShowSection title="Versicherung">
+              <Field>
+                <TextField source="KrankenkassenNummer" />
+              </Field>
+              <Field>
+                <TextField source="VersichertenNummer" />
+              </Field>
+              <Field>
+                <TextField source="KrankenversicherungsTyp" />
+              </Field>
+              <Field>
+                <TextField source="Krankenkasse" />
+              </Field>
+              <Field>
+                <TextField source="Versichertenstatus" />
+              </Field>
+              <Field>
+                <DateField source="VersichertenkarteGueltigBis" />
+              </Field>
+            </ShowSection>
             <ShowSection title="Notizen">
               <Field label="Hinweise">
                 <HinweiseChips />
@@ -612,57 +660,6 @@ export const KundeShow = () => {
                 <BooleanField source="Werbeeinwilligung" />
               </Field>
             </ShowSection>
-            <ShowSection title="Adresse">
-              <Field>
-                <TextField source="Straße" />
-              </Field>
-              <Field>
-                <TextField source="Hausnummer" />
-              </Field>
-              <Field>
-                <TextField source="Postleitzahl" />
-              </Field>
-              <Field>
-                <TextField source="Stadt" />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Kontakt">
-              <Field>
-                <TextField source="TelefonnummerPrivat" />
-              </Field>
-              <Field>
-                <TextField source="TelefonnummerGeschaeftlich" />
-              </Field>
-              <Field>
-                <TextField source="Handy" />
-              </Field>
-              <Field>
-                <TextField source="Email" />
-              </Field>
-              <Field label="Bevorzugter Kontaktweg">
-                <BooleanField source="BevorzugterKontaktweg" />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Versicherung">
-              <Field>
-                <TextField source="KrankenkassenNummer" />
-              </Field>
-              <Field>
-                <TextField source="VersichertenNummer" />
-              </Field>
-              <Field>
-                <TextField source="KrankenversicherungsTyp" />
-              </Field>
-              <Field>
-                <TextField source="Krankenkasse" />
-              </Field>
-              <Field>
-                <TextField source="Versichertenstatus" />
-              </Field>
-              <Field>
-                <DateField source="VersichertenkarteGueltigBis" />
-              </Field>
-            </ShowSection>
             <DatenbankInfo />
           </ShowColumn>
           <ShowColumn>
@@ -690,23 +687,6 @@ export const KundeEdit = () => (
           <TextInput source="Tätigkeit" />
         </FieldRow>
       </FormSection>
-      <FormSection title="Notizen">
-        <HinweiseInput />
-        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
-      </FormSection>
-      <FormSection title="Merkmale">
-        <FieldRow>
-          <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
-          <TextInput source="Merkmal2" label="Besonderes (Merkmal 2)" />
-        </FieldRow>
-        <FieldRow>
-          <TextInput source="Merkmal3" label="Merkmal 3" />
-          <TextInput source="Merkmal4" label="Merkmal 4" />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Marketing">
-        <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
-      </FormSection>
       <FormSection title="Adresse">
         <FieldRow>
           <TextInput source="Straße" />
@@ -724,10 +704,6 @@ export const KundeEdit = () => (
           <TextInput source="Handy" />
           <TextInput source="Email" />
         </FieldRow>
-        <BooleanInput
-          source="BevorzugterKontaktweg"
-          label="Bevorzugter Kontaktweg"
-        />
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
@@ -740,6 +716,23 @@ export const KundeEdit = () => (
           <TextInput source="Versichertenstatus" />
           <DateInput source="VersichertenkarteGueltigBis" />
         </FieldRow>
+      </FormSection>
+      <FormSection title="Notizen">
+        <HinweiseInput />
+        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+      </FormSection>
+      <FormSection title="Merkmale">
+        <FieldRow>
+          <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
+          <TextInput source="Merkmal2" label="Besonderes (Merkmal 2)" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Merkmal3" label="Merkmal 3" />
+          <TextInput source="Merkmal4" label="Merkmal 4" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Marketing">
+        <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
       </FormSection>
       <KundeVerwaltung />
     </SimpleForm>
@@ -780,23 +773,6 @@ export const KundeCreate = () => {
             <TextInput source="Tätigkeit" />
           </FieldRow>
         </FormSection>
-        <FormSection title="Notizen">
-          <HinweiseInput />
-          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
-        </FormSection>
-        <FormSection title="Merkmale">
-          <FieldRow>
-            <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
-            <TextInput source="Merkmal2" label="Besonderes (Merkmal 2)" />
-          </FieldRow>
-          <FieldRow>
-            <TextInput source="Merkmal3" label="Merkmal 3" />
-            <TextInput source="Merkmal4" label="Merkmal 4" />
-          </FieldRow>
-        </FormSection>
-        <FormSection title="Marketing">
-          <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
-        </FormSection>
         <FormSection title="Adresse">
           <FieldRow>
             <TextInput source="Straße" />
@@ -820,10 +796,6 @@ export const KundeCreate = () => {
             <TextInput source="Handy" />
             <TextInput source="Email" />
           </FieldRow>
-          <BooleanInput
-            source="BevorzugterKontaktweg"
-            label="Bevorzugter Kontaktweg"
-          />
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
@@ -842,6 +814,23 @@ export const KundeCreate = () => {
             <TextInput source="Versichertenstatus" />
             <DateInput source="VersichertenkarteGueltigBis" />
           </FieldRow>
+        </FormSection>
+        <FormSection title="Notizen">
+          <HinweiseInput />
+          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+        </FormSection>
+        <FormSection title="Merkmale">
+          <FieldRow>
+            <TextInput source="Merkmal1" label="Beruf (Merkmal 1)" />
+            <TextInput source="Merkmal2" label="Besonderes (Merkmal 2)" />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Merkmal3" label="Merkmal 3" />
+            <TextInput source="Merkmal4" label="Merkmal 4" />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Marketing">
+          <BooleanInput source="Werbeeinwilligung" label="Werbeeinwilligung" />
         </FormSection>
         <KundeVerwaltung />
       </SimpleForm>

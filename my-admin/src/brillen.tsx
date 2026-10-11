@@ -35,6 +35,7 @@ import { OptionenMenu } from "./PrismaMenues";
 import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { brillenartOptionen } from "./brillenarten";
 import { rabattDaten, rabattOptionen } from "./rabatte";
+import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
@@ -97,10 +98,7 @@ const RabattInputs = () => {
   );
 };
 
-const zahlungsstatusChoices = [
-  { id: "offen", name: "Offen" },
-  { id: "bezahlt", name: "Bezahlt" },
-];
+const zahlungsstatusChoices = ZAHLUNGSSTATUS;
 
 // Live-Vorschau der "Summe" (Issue #52): spiegelt im Formular dieselbe Formel,
 // die serverseitig per Trigger berechnet wird -

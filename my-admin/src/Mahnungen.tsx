@@ -1,6 +1,6 @@
 // Mahnungen-Übersicht (#57): listet alle Aufträge (`brille`), die bereits
 // fakturiert (Rechnungsnummer gesetzt), aber noch nicht bezahlt sind
-// (Zahlungsstatus = 'offen') und noch einen offenen Restbetrag haben. Analog
+// (Zahlungsstatus "offen" oder "teilweise offen") und noch einen offenen Restbetrag haben. Analog
 // zu Rechnungen.tsx bewusst keine eigene react-admin `Resource`, sondern eine
 // mit `ListBase` gefilterte Sicht auf die bestehende `brille`-Tabelle.
 // Verlinkt aus dem Menüpunkt "Mahnungen" (MyMenu.tsx) auf die Route
@@ -19,6 +19,7 @@ import {
 import { CurrencyField } from "./CurrencyField";
 import { MahnungErstellenButton } from "./FormulareDialog";
 import { brilleRowSx } from "./orderStatus";
+import { MAHNBARE_ZAHLUNGSSTATUS } from "./zahlungsstatus";
 
 export const MahnungenList = () => (
   <Box sx={{ display: "flex", flexDirection: "column", gap: "1em" }}>
@@ -28,7 +29,7 @@ export const MahnungenList = () => (
       disableSyncWithLocation
       storeKey={false}
       filter={{
-        Zahlungsstatus: "offen",
+        "Zahlungsstatus@in": `(${MAHNBARE_ZAHLUNGSSTATUS.map((s) => `"${s}"`).join(",")})`,
         "Rechnungsnummer@not": "is.null",
         "Restbetrag@gt": 0,
       }}
