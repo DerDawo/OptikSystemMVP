@@ -4,7 +4,11 @@ import { describe, expect, it, vi } from "vitest";
 // Laden abbricht (#98). Für die reinen Link-Funktionen wird er nicht gebraucht.
 vi.mock("./utils", () => ({ supabase: {} }));
 
-import { buildExternalMessageUrl } from "./messaging";
+import {
+  buildExternalMessageUrl,
+  choosePhoneNumberForMessaging,
+  normalizePhoneNumberForSms,
+} from "./messaging";
 
 describe("buildExternalMessageUrl", () => {
   it("baut einen mailto-Link mit Betreff und Text", () => {
@@ -41,5 +45,35 @@ describe("buildExternalMessageUrl", () => {
         message: "Hallo",
       }),
     ).toBe("https://wa.me/491701234567?text=Hallo");
+  });
+});
+
+describe("Telefonnummern für SMS/WhatsApp", () => {
+  it("bereitet Schrägstriche, 0049 und Freitext auf", () => {
+    expect(normalizePhoneNumberForSms("0365/123 45 67")).toBe(
+      "+493651234567",
+    );
+    expect(normalizePhoneNumberForSms("0049 170 1234567")).toBe(
+      "+491701234567",
+    );
+    expect(normalizePhoneNumberForSms("Sohn: 0170/1234567")).toBe(
+      "+491701234567",
+    );
+    expect(normalizePhoneNumberForSms("0170 1234567, 0365 123456")).toBe(
+      "+491701234567",
+    );
+  });
+
+  it("nimmt die erste Handynummer, sonst die erste vorhandene", () => {
+    expect(
+      choosePhoneNumberForMessaging(["", "0365 123456", "0171 7654321"]),
+    ).toBe("0171 7654321");
+    expect(
+      choosePhoneNumberForMessaging(["0160 111222", "0365 123456", ""]),
+    ).toBe("0160 111222");
+    expect(choosePhoneNumberForMessaging([null, "0365 123456", ""])).toBe(
+      "0365 123456",
+    );
+    expect(choosePhoneNumberForMessaging([null, undefined, ""])).toBe("");
   });
 });
