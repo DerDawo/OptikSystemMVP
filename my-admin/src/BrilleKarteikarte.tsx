@@ -36,13 +36,20 @@ import {
   REFRAKTION,
   mitarbeiterAnzeige,
 } from "./mitarbeiterNamen";
-import { Auswahl, Eingabe, Haken, useKarteiSpeichern } from "./KarteiEingabe";
+import {
+  Auswahl,
+  Eingabe,
+  Haken,
+  Speichern,
+  useKarteiSpeichern,
+} from "./KarteiEingabe";
 import { brillenartOptionen } from "./brillenarten";
 import {
   leistungsText,
   weitereLeistungenPositionen,
 } from "./leistungenAusNotizen";
 import { rabattDaten, rabattOptionen } from "./rabatte";
+import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 
 /*
@@ -96,16 +103,57 @@ const WERTE_LINKS = WERTE.slice(0, 8);
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
 const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
 
-const ZAHLUNGSSTATUS = [
-  { id: "offen", name: "offen" },
-  { id: "bezahlt", name: "bezahlt" },
-];
 const WERTE_RECHTS = WERTE.slice(8);
 
 const wertText = (glas: Datensatz | undefined, feld: string, vz?: boolean) => {
   const n = zahl(glas?.[feld]);
   if (n === null) return "";
   return vz ? dioptrie.format(n) : dezimal.format(n);
+};
+
+// Visus als Ausklappliste (Werte des Betriebs), alle anderen Werte zum
+// Eintippen
+const VIS_WERTE = [
+  0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5,
+];
+const VIS_OPTIONEN = VIS_WERTE.map((v) => ({
+  id: String(v),
+  name: betrag.format(v),
+}));
+
+const WertEingabe = ({
+  w,
+  seite,
+  glas,
+  speichere,
+}: {
+  w: (typeof WERTE)[number];
+  seite: string;
+  glas: Datensatz | undefined;
+  speichere: Speichern;
+}) => {
+  if (w.feld === "Vis") {
+    const vis = zahl(glas?.Vis);
+    return (
+      <Auswahl
+        rechts
+        name={`Vis ${seite}`}
+        wert={vis === null ? null : String(vis)}
+        optionen={VIS_OPTIONEN}
+        speichere={(neu) => speichere(neu == null ? null : Number(neu))}
+      />
+    );
+  }
+  return (
+    <Eingabe
+      typ="zahl"
+      rechts
+      name={`${w.titel} ${seite}`}
+      wert={glas?.[w.feld]}
+      anzeige={wertText(glas, w.feld, w.vorzeichen)}
+      speichere={speichere}
+    />
+  );
 };
 
 const betragText = (wert: unknown) => {
@@ -402,12 +450,10 @@ export const WerteTabelle = ({
                   <TableCell key={w.feld} align="right" sx={{ minWidth: 48 }}>
                     {bearbeitbar ? (
                       <Box sx={{ display: "flex", minHeight: 24 }}>
-                        <Eingabe
-                          typ="zahl"
-                          rechts
-                          name={`${w.titel} ${seite}`}
-                          wert={glas?.[w.feld]}
-                          anzeige={wertText(glas, w.feld, w.vorzeichen)}
+                        <WertEingabe
+                          w={w}
+                          seite={seite}
+                          glas={glas}
                           speichere={speichere(w.feld)}
                         />
                       </Box>
@@ -861,12 +907,10 @@ export const BrilleKarteikarte = () => {
               );
               const wertFeld = (w: (typeof WERTE)[number]) => (
                 <Wert key={w.feld} rechts>
-                  <Eingabe
-                    typ="zahl"
-                    rechts
-                    name={`${w.titel} ${seite}`}
-                    wert={glas?.[w.feld]}
-                    anzeige={wertText(glas, w.feld, w.vorzeichen)}
+                  <WertEingabe
+                    w={w}
+                    seite={seite}
+                    glas={glas}
                     speichere={speichere(w.feld)}
                   />
                 </Wert>

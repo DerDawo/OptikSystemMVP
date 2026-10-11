@@ -298,17 +298,20 @@ export const Haken = ({
   );
 };
 
-// Feste Auswahl (z. B. Zahlungsstatus offen/bezahlt)
+// Feste Auswahl (z. B. Zahlungsstatus offen/bezahlt). `rechts`: schmales
+// Wertefeld (z. B. Vis) - rechtsbündig, ohne Pfeil, leer statt "–".
 export const Auswahl = ({
   wert,
   optionen,
   speichere,
   name,
+  rechts,
 }: {
   wert: unknown;
   optionen: { id: string; name: string }[];
   speichere: Speichern;
   name: string;
+  rechts?: boolean;
 }) => {
   const notify = useNotify();
   const [vorlaeufig, setVorlaeufig] = useState<string | null>(null);
@@ -336,6 +339,10 @@ export const Auswahl = ({
         }
       }}
       inputProps={{ "aria-label": name }}
+      IconComponent={rechts ? () => null : undefined}
+      renderValue={
+        rechts ? (v) => liste.find((o) => o.id === v)?.name ?? "" : undefined
+      }
       sx={{
         mx: "-6px",
         px: "6px",
@@ -345,7 +352,9 @@ export const Auswahl = ({
           py: 0,
           display: "flex",
           alignItems: "center",
+          justifyContent: rechts ? "flex-end" : "flex-start",
           height: "100%",
+          ...(rechts ? { pr: "0 !important" } : {}),
         },
       }}
     >
