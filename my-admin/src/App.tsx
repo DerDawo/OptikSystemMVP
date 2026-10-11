@@ -1,10 +1,17 @@
 // in src/App.tsx
 import { Admin, CustomRoutes, Resource } from "react-admin";
-import { theme } from "./theme";
+import { lightTheme, darkTheme } from "./theme";
 import { dataProvider } from "./dataProvider";
 import { MyLayout } from "./MyLayout";
 import { authProvider } from "./authProvider";
-import { LoginPage } from "ra-supabase";
+import { i18nProvider } from "./i18nProvider";
+import {
+  byField,
+  fassungRepresentation,
+  glassRepresentation,
+  kundeRepresentation,
+} from "./recordRepresentations";
+import { ForgotPasswordPage, LoginPage, SetPasswordPage } from "ra-supabase";
 import {
   KundenList,
   KundeShow,
@@ -88,16 +95,21 @@ import Search from "./Search";
 export const App = () => {
   return (
     <Admin
+      title="Optik-System"
       layout={MyLayout}
       dashboard={Dashboard}
       dataProvider={dataProvider}
       authProvider={authProvider}
+      i18nProvider={i18nProvider}
       loginPage={LoginPage}
-      theme={theme}
+      theme={lightTheme}
+      darkTheme={darkTheme}
+      defaultTheme="light"
       requireAuth
     >
       <Resource
         name="kunde"
+        recordRepresentation={kundeRepresentation}
         list={KundenList}
         show={KundeShow}
         edit={KundeEdit}
@@ -121,6 +133,7 @@ export const App = () => {
       />
       <Resource
         name="brillenart"
+        recordRepresentation={byField("Bezeichnung")}
         list={BrillenartList}
         show={BrillenartShow}
         edit={BrillenartEdit}
@@ -128,6 +141,7 @@ export const App = () => {
       />
       <Resource
         name="glass"
+        recordRepresentation={glassRepresentation}
         list={GlassList}
         show={GlassShow}
         edit={GlassEdit}
@@ -136,6 +150,7 @@ export const App = () => {
       />
       <Resource
         name="glastyp"
+        recordRepresentation={byField("Bezeichnung")}
         list={GlastypList}
         show={GlastypShow}
         edit={GlastypEdit}
@@ -148,17 +163,20 @@ export const App = () => {
       />
       <Resource
         name="glaskatalog"
+        recordRepresentation={byField("bezeichnung")}
         list={GlaskatalogList}
         show={GlaskatalogShow}
       />
       <Resource
         name="glaskatalog_option"
+        recordRepresentation={byField("bezeichnung")}
         list={GlaskatalogOptionList}
         show={GlaskatalogOptionShow}
       />
       <Resource name="glaskatalog_hat_option" />
       <Resource
         name="fassung"
+        recordRepresentation={fassungRepresentation}
         list={FassungList}
         show={FassungShow}
         edit={FassungEdit}
@@ -180,6 +198,7 @@ export const App = () => {
       />
       <Resource
         name="zusatzleistung"
+        recordRepresentation={byField("Bezeichnung")}
         list={ZusatzleistungList}
         show={ZusatzleistungShow}
         edit={ZusatzleistungEdit}
@@ -201,6 +220,14 @@ export const App = () => {
         create={DokumentvorlageCreate}
       />
       <Resource name="betrieb" edit={BetriebEdit} />
+      {/* Passwort vergessen / neues Passwort setzen, ohne Layout wie die Login-Seite */}
+      <CustomRoutes noLayout>
+        <Route
+          path={ForgotPasswordPage.path}
+          element={<ForgotPasswordPage />}
+        />
+        <Route path={SetPasswordPage.path} element={<SetPasswordPage />} />
+      </CustomRoutes>
       <CustomRoutes>
         <Route path="/search" element={<Search />} />
         <Route path="/rechnungen" element={<RechnungenList />} />

@@ -174,6 +174,26 @@ Entwicklungs-Workflow abdeckt. Alle MCP-Tools (`apply_migration`,
 Parameter und können damit ebenso gegen das Prod-Projekt
 (`cktdtojgrxskihihmnjm`) genutzt werden, ohne `.mcp.json` anzupassen.
 
+## Passwort zurücksetzen: Redirect URLs freigeben
+
+„Passwort vergessen?“ auf der Login-Seite schickt eine Mail, deren Link auf
+`auth-callback.html` neben der gerade geöffneten App zeigt (z. B.
+`https://<app>/auth-callback.html`, siehe `my-admin/src/authProvider.tsx`).
+Die Seite reicht die Tokens an `#/set-password` weiter, wo das neue Passwort
+gesetzt wird. Supabase akzeptiert diese Adresse nur, wenn sie freigegeben ist -
+sonst leitet der Link auf die Site URL und das Zurücksetzen schlägt fehl.
+
+Einmalig je Projekt im Dashboard unter **Authentication → URL Configuration →
+Redirect URLs** eintragen (wird nicht über Migrationen gesteuert):
+
+| Projekt | Redirect URLs |
+|---|---|
+| Dev (`psxrxggwqlltfhfskeoa`) | `http://localhost:5173/auth-callback.html` (Vite-Standardport) und die Vercel-Previews, z. B. `https://*-<vercel-team>.vercel.app/**` |
+| Prod (`cktdtojgrxskihihmnjm`) | `https://<produktions-domain>/auth-callback.html` |
+
+Die Mail-Vorlage („Reset Password“) bleibt unverändert, der Rücksprung kommt
+aus dem `redirectTo` der Anfrage.
+
 ## Edge-Function-Secrets: getrennt für Dev und Prod
 
 > **Aktuell nicht nötig:** Die Oberfläche versendet Nachrichten derzeit nicht
@@ -326,7 +346,8 @@ Festgelegte Regeln:
   des Imports deaktiviert, weil die Leistungen als Freitext ohne
   Katalogbezug vorliegen. Eine spätere Bearbeitung in der App berechnet die
   Summe neu (ohne diese Freitext-Leistungen).
-- Glas-Auftragsstatus `abgeholt`, außer bei Aufträgen der letzten 60 Tage.
+- Glas-Auftragsstatus `abgeholt`; Aufträge der letzten 60 Tage `bestellt` bzw.
+  `zu bestellen` je nach Prisma-Bestellkennzeichen (`glbest` J/F).
 - Termine: In Prisma leer, es wird nichts übernommen.
 - SF6-Preise werden nur aus dem verifizierten Preislayout (POL, SF6 6.10,
   `LensPrice.dat` 69 / `OptionsPrice.dat` 53 Zeichen breit) übernommen.

@@ -1,22 +1,24 @@
-// Issue #88: eigenständige HTML/CSS-Vorlage für die Kategorie "Rechnung",
-// die das 1:1-Design der Referenzrechnung (BR1Rechnung_AH_N.pdf) nachbildet.
+// Rechnung (Kategorie "Rechnung") und Kostenvoranschlag (Kategorie
+// "Kostenvoranschlag") im Briefpapier des Sehzentrums Gera, nachgebildet nach
+// der Referenzrechnung "Rechnung HF25.pdf": Absenderzeile, Anschrift, Logo
+// oben rechts, Datenbox, grauer Titelbalken, Positionen mit Glaswerten,
+// Summenbalken, MwSt-Hinweis und dreispaltige Fußzeile.
 //
-// Anders als die generische Vorlagen-Engine (documentTemplateEngine.ts,
-// {{entität.feld}}-Platzhalter in einem <pre>-Textblock) braucht dieses
-// Design echte Tabellen, graue Balken und ein Logo - das lässt sich nicht
-// sinnvoll in einem frei editierbaren Fließtext abbilden. Der Vorlagentext
-// des "Rechnung"-Datensatzes in `dokumentvorlage` dient daher nur noch dazu,
-// dass "Rechnung erstellen" (FormulareDialog.tsx) einen aktiven Datensatz der
-// Kategorie "Rechnung" findet; das tatsächliche Layout kommt aus dieser Datei.
+// Anders als die generische Vorlagen-Engine (documentTemplateEngine.ts) braucht
+// das Design echte Tabellen, Balken und ein Logo. Der Vorlagentext der
+// Datensätze in `dokumentvorlage` wird daher nicht gerendert; das Layout kommt
+// aus dieser Datei. Betriebsstempel und Unterschrift sind bewusst nicht Teil
+// der Vorlage (das Repository ist öffentlich).
 import type { DocumentMergeEntities } from "./documentTemplateEngine";
 import dayjs from "dayjs";
+import logoSehzentrum from "./assets/logo-sehzentrum.jpg?inline";
 
-// Firmen-/Bankstammdaten: es gibt (noch) keine eigene Stammdaten-Tabelle
-// (siehe Kommentar in der Rechnungs-Seed-Migration) - für die Rechnung sind
-// diese Angaben aber Pflichtbestandteil des Designs, daher hier als
-// Konstanten hinterlegt.
+// Firmen-/Bankstammdaten: es gibt (noch) keine eigene Stammdaten-Tabelle mit
+// Adresse und Bank (siehe Kommentar in der Rechnungs-Seed-Migration), daher
+// hier als Konstanten hinterlegt.
 export const RECHNUNG_ABSENDER = {
   firma: "Augenoptik Ulm",
+  marke: "Sehzentrum Gera",
   inhaber: "Robert Ulm",
   strasseLang: "Werdauer Straße 38",
   strasseKurz: "Werdauerstr.38",
@@ -32,116 +34,129 @@ export const RECHNUNG_ABSENDER = {
   bic: "PBNKDEFF",
   mwstSatz: 19,
   zahlungszielTage: 14,
+  kostenvoranschlagGueltigTage: 28,
 };
 
 export const escapeHtml = (value: string): string =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 
-// Betrag wie im Referenz-Design ("169.00 EUR", Punkt statt Komma) - bewusst
-// abweichend vom sonst in der App üblichen "169,00 €" (siehe formatBetrag in
-// documentTemplateEngine.ts), da dieses Format Teil des 1:1 nachzubildenden
-// Rechnungslayouts ist.
-const formatEuro = (value: number): string => `${value.toFixed(2)} EUR`;
+const zahl2 = new Intl.NumberFormat("de-DE", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
-// Dioptrienwerte (Sph/Cyl) werden mit Vorzeichen angegeben.
-const formatDioptrie = (value: unknown): string | null => {
+// Beträge wie in der Referenz: "159,90 EUR"
+export const formatEuro = (value: number): string =>
+  `${zahl2.format(value)} EUR`;
+
+const asNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
   const n = Number(value);
-  if (!Number.isFinite(n) || value === null || value === undefined) {
-    return null;
-  }
-  return `${n > 0 ? "+" : ""}${n.toFixed(2)}`;
+  return Number.isFinite(n) ? n : null;
 };
 
-type RechnungPosition = {
-  label: string;
-  betrag: number;
-  detailZeilen?: string[];
-};
-
-const buildGlasDetailZeilen = (
+// Glaswerte wie in der Referenz: "sph: + 0,25 cyl 0,75 A 173  ADD 1,50"
+// (Sphäre immer mit Vorzeichen, Zylinder nur bei Minus, Achse ganzzahlig)
+export const formatGlaswerte = (
   glas: DocumentMergeEntities["glasLinks"],
-  glastyp: DocumentMergeEntities["glastyp"],
-): string[] => {
-  if (!glas) {
-    return [];
-  }
-  const sph = formatDioptrie(glas.Sph);
-  const cyl = formatDioptrie(glas.Cyl);
-  const achse = glas.A;
-  const werteTeile: string[] = [];
+): string => {
+  if (!glas) return "";
+  const teile: string[] = [];
+  const sph = asNumber(glas.Sph);
   if (sph !== null) {
-    werteTeile.push(`sph:${sph}`);
+    teile.push(`sph: ${sph < 0 ? "-" : "+"} ${zahl2.format(Math.abs(sph))}`);
   }
-  if (cyl !== null) {
-    werteTeile.push(`cyl:${cyl}`);
+  const cyl = asNumber(glas.Cyl);
+  if (cyl !== null && cyl !== 0) {
+    teile.push(`cyl ${cyl < 0 ? "- " : ""}${zahl2.format(Math.abs(cyl))}`);
   }
-  if (achse !== null && achse !== undefined && achse !== "") {
-    werteTeile.push(`A:${achse}`);
+  const achse = asNumber(glas.A);
+  if (achse !== null && cyl !== null && cyl !== 0) {
+    teile.push(`A ${Math.round(achse)}`);
   }
-  const zeilen = werteTeile.length > 0 ? [werteTeile.join(" ")] : [];
-  const bezeichnung = glastyp?.Bezeichnung ? String(glastyp.Bezeichnung) : "";
-  if (bezeichnung) {
-    zeilen.push(bezeichnung);
+  const add = asNumber(glas.Add);
+  if (add !== null && add > 0) {
+    teile.push(` ADD ${zahl2.format(add)}`);
   }
-  const verguetung = glastyp?.Verguetung ? String(glastyp.Verguetung) : "";
-  if (verguetung) {
-    zeilen.push(verguetung);
-  }
-  return zeilen;
+  return teile.join(" ");
 };
 
-// Rechnungspositionen in exakt der Reihenfolge des Referenz-Designs: Fassung,
-// Glas rechts, Glas links, danach die gebuchten Zusatzleistungen (z. B.
-// "Refraktion" - bereits als Katalogeintrag vorhanden, siehe
-// 20260830120100_seed_zusatzleistung_katalog.sql), zuletzt ein etwaiger
-// Rabatt (#22/#52, wirkt nur auf Glas + Fassung).
+export type RechnungPosition = {
+  label: string;
+  // null: Position ohne Preis (z. B. "eigenes Gestell")
+  betrag: number | null;
+  // Glaswerte in normaler Schriftgröße unter der Bezeichnung
+  werte?: string;
+  // kleine Zusatzzeilen (Glas-/Fassungsbezeichnung)
+  details?: string[];
+};
+
+const glasDetails = (glastyp: DocumentMergeEntities["glastyp"]): string[] => {
+  const teile = [
+    glastyp?.Bezeichnung,
+    glastyp?.Verguetung,
+    glastyp?.GlasGroesse ? `DM ${glastyp.GlasGroesse}` : "",
+  ]
+    .map((t) => (t ? String(t).trim() : ""))
+    .filter(Boolean);
+  return teile.length ? [teile.join("   ")] : [];
+};
+
+// Positionen in der Reihenfolge der Referenz: Fassung, Glas rechts, Glas
+// links, danach die gebuchten Zusatzleistungen (z. B. "Glaseinschliff"),
+// zuletzt ein etwaiger Rabatt (#22/#52, wirkt nur auf Glas + Fassung).
 export const buildRechnungPositionen = (
   entities: DocumentMergeEntities,
 ): RechnungPosition[] => {
   const positionen: RechnungPosition[] = [];
+  const { fassung, glasRechts, glasLinks, glastyp } = entities;
 
-  const fassungBetrag = Number(entities.fassung?.Betrag) || 0;
-  if (entities.fassung) {
-    const lagernummer = entities.fassung.Lagernummer
-      ? String(entities.fassung.Lagernummer)
-      : "";
+  const fassungBetrag = Number(fassung?.Betrag) || 0;
+  if (fassung) {
+    const bezeichnung = [fassung.Hersteller, fassung.Bezeichnung]
+      .map((t) => (t ? String(t).trim() : ""))
+      .filter(Boolean)
+      .join(" ");
+    const lagernummer = fassung.Lagernummer ? String(fassung.Lagernummer) : "";
     positionen.push({
       label: "Fassung :",
       betrag: fassungBetrag,
-      detailZeilen: lagernummer ? [lagernummer] : [],
+      details: [bezeichnung, lagernummer].filter(Boolean),
+    });
+  } else if (entities.brille) {
+    positionen.push({
+      label: "Fassung :",
+      betrag: null,
+      details: ["eigenes Gestell"],
     });
   }
 
-  const glasRechtsBetrag = Number(entities.glasRechts?.Betrag) || 0;
-  if (entities.glasRechts) {
+  const glasRechtsBetrag = Number(glasRechts?.Betrag) || 0;
+  if (glasRechts) {
     positionen.push({
       label: "Glas rechts :",
       betrag: glasRechtsBetrag,
-      detailZeilen: buildGlasDetailZeilen(
-        entities.glasRechts,
-        entities.glastyp,
-      ),
+      werte: formatGlaswerte(glasRechts),
+      details: glasDetails(glastyp),
     });
   }
 
-  const glasLinksBetrag = Number(entities.glasLinks?.Betrag) || 0;
-  if (entities.glasLinks) {
+  const glasLinksBetrag = Number(glasLinks?.Betrag) || 0;
+  if (glasLinks) {
     positionen.push({
       label: "Glas links :",
       betrag: glasLinksBetrag,
-      detailZeilen: buildGlasDetailZeilen(entities.glasLinks, entities.glastyp),
+      werte: formatGlaswerte(glasLinks),
+      details: glasDetails(glastyp),
     });
   }
 
   (entities.zusatzleistungen ?? []).forEach((zusatzleistung) => {
-    if (!zusatzleistung) {
-      return;
-    }
-    const bezeichnung = zusatzleistung.Bezeichnung
-      ? String(zusatzleistung.Bezeichnung)
-      : "Zusatzleistung";
+    if (!zusatzleistung) return;
     positionen.push({
-      label: bezeichnung,
+      label: zusatzleistung.Bezeichnung
+        ? String(zusatzleistung.Bezeichnung)
+        : "Zusatzleistung",
       betrag: Number(zusatzleistung.Betrag) || 0,
     });
   });
@@ -163,234 +178,213 @@ export const buildRechnungPositionen = (
   return positionen;
 };
 
-// Stilisiertes Sehtest-Auge als Platzhalter-Logo oben rechts (kein Abbild
-// des Referenz-Fotos verfügbar/lizenziert - nur die Positionierung und
-// Bildwirkung im Layout werden nachgebildet).
-const LOGO_SVG = `<svg width="110" height="90" viewBox="0 0 110 90" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-  <circle cx="70" cy="45" r="32" fill="none" stroke="#222" stroke-width="3" />
-  <path d="M6 45 C 30 15, 55 15, 70 45 C 55 30, 35 30, 6 45 Z" fill="#1c3f5e" />
-  <circle cx="40" cy="42" r="9" fill="#4a90c2" />
-  <circle cx="40" cy="42" r="4" fill="#0a0a0a" />
-  <text x="52" y="27" font-family="Arial, sans-serif" font-size="8" fill="#222">HVC</text>
-  <text x="52" y="40" font-family="Arial, sans-serif" font-size="8" fill="#222">ZHVD</text>
-  <text x="48" y="53" font-family="Arial, sans-serif" font-size="8" fill="#222">OCGEKM</text>
-  <text x="52" y="66" font-family="Arial, sans-serif" font-size="8" fill="#222">RAD</text>
-</svg>`;
-
 const buildAnschriftZeilen = (
   kunde: DocumentMergeEntities["kunde"],
 ): string[] => {
-  if (!kunde) {
-    return [];
-  }
+  if (!kunde) return [];
   const zeilen: string[] = [];
-  if (kunde.Anrede) {
-    zeilen.push(String(kunde.Anrede));
-  }
-  const vollername = [kunde.Vorname, kunde.Nachname].filter(Boolean).join(" ");
-  if (vollername) {
-    zeilen.push(vollername);
-  }
-  const strassenzeile = [kunde.Straße, kunde.Hausnummer]
-    .filter(Boolean)
-    .join(" ");
-  if (strassenzeile) {
-    zeilen.push(strassenzeile);
-  }
-  const ortszeile = [kunde.Postleitzahl, kunde.Stadt].filter(Boolean).join(" ");
-  if (ortszeile) {
-    zeilen.push(ortszeile);
-  }
+  if (kunde.Anrede) zeilen.push(String(kunde.Anrede));
+  const name = [kunde.Vorname, kunde.Nachname].filter(Boolean).join(" ");
+  if (name) zeilen.push(name);
+  const strasse = [kunde.Straße, kunde.Hausnummer].filter(Boolean).join(" ");
+  if (strasse) zeilen.push(strasse);
+  const ort = [kunde.Postleitzahl, kunde.Stadt].filter(Boolean).join(" ");
+  if (ort) zeilen.push(ort);
   return zeilen;
 };
+
+type BelegArt = "rechnung" | "kostenvoranschlag";
+
+type BelegDaten = {
+  art: BelegArt;
+  entities: DocumentMergeEntities;
+  nummer: string;
+};
+
+const a = RECHNUNG_ABSENDER;
+const e = escapeHtml;
+
+const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
+  const { brille, kunde } = entities;
+  const istRechnung = art === "rechnung";
+  const heute = dayjs();
+  const positionen = buildRechnungPositionen(entities);
+  const summe = Number(brille?.Summe) || 0;
+  const netto = Math.round((summe / (1 + a.mwstSatz / 100)) * 100) / 100;
+  const mwst = Math.round((summe - netto) * 100) / 100;
+  const brillenArt = brille?.BrillenArt ? String(brille.BrillenArt) : "Brille";
+  const berater = brille?.Berater ? String(brille.Berater) : "";
+  const kassenanteil = Number(brille?.KKAnteil) || 0;
+  const bezahlt = String(brille?.Zahlungsstatus ?? "") === "bezahlt";
+
+  const datenbox: [string, string][] = istRechnung
+    ? [
+        ["Rech.-Datum", heute.format("DD.MM.YYYY")],
+        ["Rech.-Nr.", nummer],
+        ["USt.ID.", a.ustId],
+      ]
+    : [
+        ["Datum", heute.format("DD.MM.YYYY")],
+        ["Auftrag", nummer],
+        ["USt.ID.", a.ustId],
+      ];
+
+  const positionenHtml = positionen
+    .map(
+      (p) => `
+    <div class="position">
+      <div class="zeile"><span>${e(p.label)}</span><span>${p.betrag === null ? "" : e(formatEuro(p.betrag))}</span></div>
+      ${p.werte ? `<div class="werte">${e(p.werte)}</div>` : ""}
+      ${(p.details ?? []).map((d) => `<div class="detail">${e(d)}</div>`).join("")}
+    </div>`,
+    )
+    .join("");
+
+  const hinweise = istRechnung
+    ? [
+        berater ? `Es bediente Sie ${e(berater)}.` : "",
+        "Rechnungsdatum ist Liefer-/Leistungsdatum",
+        bezahlt
+          ? ""
+          : `Bitte überweisen Sie den Rechnungsbetrag bis zum ${e(
+              heute.add(a.zahlungszielTage, "day").format("DD.MM.YYYY"),
+            )} auf unser unten genanntes Konto.`,
+      ]
+    : [
+        kassenanteil > 0
+          ? `Abzüglich Kassenanteil ${e(formatEuro(kassenanteil))} beträgt Ihr Eigenanteil ${e(formatEuro(Math.round((summe - kassenanteil) * 100) / 100))}.`
+          : "",
+        berater ? `Es berät Sie ${e(berater)}.` : "",
+        `Dieser Kostenvoranschlag ist unverbindlich und gültig bis ${e(
+          heute.add(a.kostenvoranschlagGueltigTage, "day").format("DD.MM.YYYY"),
+        )}.`,
+      ];
+
+  return `
+<div class="beleg">
+  <div class="absenderzeile">${e(`${a.marke} - ${a.strasseKurz} - ${a.plz} ${a.ort}`)}</div>
+  <img class="logo" src="${logoSehzentrum}" alt="" />
+  <div class="anschrift">
+    ${buildAnschriftZeilen(kunde)
+      .map((z) => `<div>${e(z)}</div>`)
+      .join("")}
+  </div>
+  <table class="datenbox">
+    ${datenbox.map(([l, w]) => `<tr><td>${e(l)}</td><td>${e(w)}</td></tr>`).join("")}
+  </table>
+  <div class="titelbalken">${istRechnung ? "RECHNUNG" : "KOSTENVORANSCHLAG"}</div>
+  <div class="inhalt">
+    <p class="zweck">für eine neue ${e(brillenArt)}&nbsp; lt. optometr. Verordnung</p>
+    ${positionenHtml}
+    <div class="summenbalken"><span>${istRechnung ? "Rechnungsbetrag" : "Gesamtbetrag"}</span><span>${e(formatEuro(summe))}</span></div>
+    <p class="mwst">Im obigen Betrag sind ${a.mwstSatz}% Mwst = ${e(formatEuro(mwst))} enthalten. (Nettopreis: ${e(zahl2.format(netto))} €)</p>
+    <div class="hinweise">${hinweise
+      .filter(Boolean)
+      .map((h) => `<div>${h}</div>`)
+      .join("")}</div>
+  </div>
+  <div class="fusszeile">
+    <p class="dank">Vielen Dank für Ihr Vertrauen, das Sie uns entgegengebracht haben. Unser Service endet aber nicht mit der Bezahlung!<br />Gern stehen wir Ihnen jederzeit mit unserem Wissen, Können und unserer fachlichen Kompetenz zur Seite!</p>
+    <div class="spalten">
+      <div>${e(a.firma)}<br />Inh. : ${e(a.inhaber)}<br />${e(a.strasseKurz)}<br />${e(`${a.plz} ${a.ort}`)}</div>
+      <div>Bankverbindung:<br />${e(a.bankName)}<br />${e(a.bic)}<br />${e(a.iban)}</div>
+      <div>Tel: ${e(a.telefon)}<br />Fax: ${e(a.fax)}<br />Mail: ${e(a.email)}<br />${e(a.web)}</div>
+    </div>
+  </div>
+</div>`;
+};
+
+// Maße in mm nach der A4-Referenz (Logo, Datenbox, Balken)
+export const BELEG_STYLES = `
+  .beleg { position: relative; width: 210mm; height: 297mm; overflow: hidden; background: #fff; font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 11pt; line-height: 1.3; -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
+  .beleg * { box-sizing: border-box; }
+  .beleg .absenderzeile { position: absolute; left: 25mm; top: 42.6mm; font-size: 7.5pt; border-bottom: 0.25mm solid #111; padding-bottom: 0.6mm; }
+  .beleg .logo { position: absolute; left: 128.7mm; top: 17.4mm; width: 57.2mm; }
+  .beleg .anschrift { position: absolute; left: 25mm; top: 52.2mm; line-height: 1.45; }
+  .beleg .datenbox { position: absolute; left: 122mm; top: 75.4mm; width: 61.8mm; border-collapse: collapse; border: 0.25mm solid #333; }
+  .beleg .datenbox td { padding: 0 0.6mm; height: 5.2mm; }
+  .beleg .datenbox td:last-child { background: #e0e0e0; text-align: right; width: 50%; }
+  .beleg .titelbalken { position: absolute; left: 24.7mm; right: 26.2mm; top: 96.2mm; height: 8.6mm; background: #e6e6e6; border-top: 0.3mm solid #555; border-bottom: 0.3mm solid #555; font-size: 17pt; line-height: 8.2mm; padding-left: 0.6mm; }
+  .beleg .inhalt { position: absolute; left: 25mm; right: 26.2mm; top: 111mm; }
+  .beleg .zweck { margin: 0 0 1.4mm; }
+  .beleg .position { margin-bottom: 7mm; }
+  .beleg .position .zeile { display: flex; justify-content: space-between; }
+  .beleg .position .werte { margin-top: 1mm; }
+  .beleg .position .detail { font-size: 8.5pt; margin-top: 0.8mm; }
+  .beleg .summenbalken { display: flex; justify-content: space-between; background: #e6e6e6; border: 0.25mm solid #333; height: 5.4mm; line-height: 5.2mm; padding: 0 0.4mm; margin-top: 1mm; }
+  .beleg .mwst { font-size: 8.5pt; margin: 6mm 0 0; }
+  .beleg .hinweise { font-size: 8.5pt; margin-top: 6mm; line-height: 1.5; }
+  .beleg .fusszeile { position: absolute; left: 23.6mm; right: 26.6mm; top: 254.8mm; font-size: 7pt; }
+  .beleg .dank { text-align: center; margin: 0 0 4.4mm; font-size: 7.5pt; line-height: 1.35; }
+  .beleg .spalten { display: flex; justify-content: space-between; line-height: 1.3; font-size: 6.6pt; }
+  .beleg .spalten > div { flex: 1; }
+  .beleg .spalten > div:nth-child(2) { text-align: center; }
+  .beleg .spalten > div:nth-child(3) { text-align: right; }
+`;
+
+const seite = (
+  titel: string,
+  body: string,
+  vorschau: boolean,
+) => `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>${e(titel)}</title>
+<style>
+  body { margin: 0; }
+  ${BELEG_STYLES}
+  ${vorschau ? "html { background: #eee; } .beleg { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }" : "@page { size: A4; margin: 0; }"}
+</style>
+</head>
+<body>
+${body}
+</body>
+</html>`;
 
 export type RechnungDaten = {
   entities: DocumentMergeEntities;
   rechnungsnummer: string;
 };
 
-// Innerer Inhalt der Rechnungsseite (ohne <html>/<head>) - wird sowohl für
-// die Live-Vorschau im Formulare-Dialog als auch (eingebettet in
-// buildRechnungPrintHtml) für Druck/PDF verwendet.
 export const buildRechnungBodyHtml = ({
   entities,
   rechnungsnummer,
-}: RechnungDaten): string => {
-  const { brille, kunde } = entities;
-  const heute = dayjs();
-  const zahlungsfrist = heute.add(RECHNUNG_ABSENDER.zahlungszielTage, "day");
+}: RechnungDaten): string =>
+  belegHtml({ art: "rechnung", entities, nummer: rechnungsnummer });
 
-  const positionen = buildRechnungPositionen(entities);
-  const summe = Number(brille?.Summe) || 0;
-  const mwstBetrag =
-    Math.round((summe - summe / (1 + RECHNUNG_ABSENDER.mwstSatz / 100)) * 100) /
-    100;
+export const buildRechnungPrintHtml = (daten: RechnungDaten): string =>
+  seite(
+    `Rechnung ${daten.rechnungsnummer}`,
+    buildRechnungBodyHtml(daten),
+    false,
+  );
 
-  const brillenArt = brille?.BrillenArt ? String(brille.BrillenArt) : "Brille";
-  const berater = brille?.Berater ? String(brille.Berater) : "";
+export const buildRechnungPreviewHtml = (daten: RechnungDaten): string =>
+  seite(
+    `Rechnung ${daten.rechnungsnummer}`,
+    buildRechnungBodyHtml(daten),
+    true,
+  );
 
-  const anschriftZeilen = buildAnschriftZeilen(kunde);
+// Kostenvoranschlag im selben Design, auch als Anlage der Anträge
+export type KostenvoranschlagDaten = { entities: DocumentMergeEntities };
 
-  const positionenHtml = positionen
-    .map(
-      (position) => `
-      <tr class="position-zeile">
-        <td class="position-label">${escapeHtml(position.label)}</td>
-        <td class="position-betrag">${escapeHtml(formatEuro(position.betrag))}</td>
-      </tr>
-      ${(position.detailZeilen ?? [])
-        .map(
-          (zeile) =>
-            `<tr class="position-detail"><td colspan="2">${escapeHtml(zeile)}</td></tr>`,
-        )
-        .join("")}`,
-    )
-    .join("");
+export const buildKostenvoranschlagBodyHtml = ({
+  entities,
+}: KostenvoranschlagDaten): string =>
+  belegHtml({
+    art: "kostenvoranschlag",
+    entities,
+    nummer: entities.brille?.id ? String(entities.brille.id) : "",
+  });
 
-  return `
-<div class="rechnung">
-  <div class="kopf">
-    <div class="kopf-links">
-      <div class="absenderzeile">${escapeHtml(
-        `${RECHNUNG_ABSENDER.firma} - ${RECHNUNG_ABSENDER.strasseLang} - ${RECHNUNG_ABSENDER.plz} ${RECHNUNG_ABSENDER.ort}`,
-      )}</div>
-      <div class="anschrift">
-        ${anschriftZeilen.map((zeile) => `<div>${escapeHtml(zeile)}</div>`).join("")}
-      </div>
-    </div>
-    <div class="kopf-rechts">${LOGO_SVG}</div>
-  </div>
+export const buildKostenvoranschlagPrintHtml = (
+  daten: KostenvoranschlagDaten,
+): string =>
+  seite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), false);
 
-  <table class="daten-tabelle">
-    <tbody>
-      <tr>
-        <td>Rech.-Datum</td>
-        <td>${escapeHtml(heute.format("DD.MM.YYYY"))}</td>
-      </tr>
-      <tr class="grau">
-        <td>Rech.-Nr.</td>
-        <td>${escapeHtml(rechnungsnummer)}</td>
-      </tr>
-      <tr>
-        <td>USt.ID.</td>
-        <td>${escapeHtml(RECHNUNG_ABSENDER.ustId)}</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <div class="titelbalken">RECHNUNG</div>
-
-  <p class="zweckzeile">für eine neue ${escapeHtml(brillenArt)} lt. Verordnung lt. optometr. Verordnung</p>
-
-  <table class="positionen-tabelle">
-    <tbody>
-      ${positionenHtml}
-    </tbody>
-  </table>
-
-  <div class="summenbalken">
-    <span>Rechnungsbetrag</span>
-    <span>${escapeHtml(formatEuro(summe))}</span>
-  </div>
-  <p class="mwst-hinweis">Im obigen Betrag sind ${RECHNUNG_ABSENDER.mwstSatz}% Mwst = ${escapeHtml(
-    formatEuro(mwstBetrag),
-  )} enthalten</p>
-
-  ${berater ? `<p>Es bediente Sie ${escapeHtml(berater)}.</p>` : ""}
-  <p>Rechnungsdatum ist Liefer-/Leistungsdatum</p>
-  <p class="fett">Wir bitten um Überweisung bis zum ${escapeHtml(
-    zahlungsfrist.format("DD.MM.YYYY"),
-  )} auf unser Konto:</p>
-  <p class="fett">${escapeHtml(RECHNUNG_ABSENDER.bankName)}&nbsp;&nbsp;IBAN: ${escapeHtml(
-    RECHNUNG_ABSENDER.iban,
-  )} BIC: ${escapeHtml(RECHNUNG_ABSENDER.bic)}</p>
-
-  <div class="fusszeile">
-    <p class="dank">
-      Vielen Dank für Ihr Vertrauen, das Sie uns entgegengebracht haben. Unser Service endet aber nicht mit der Bezahlung!<br />
-      Gern stehen wir Ihnen jederzeit mit unserem Wissen, Können und unserer fachlichen Kompetenz zur Seite!
-    </p>
-    <div class="fusszeile-spalten">
-      <div>
-        <div>${escapeHtml(RECHNUNG_ABSENDER.firma)}</div>
-        <div>Inh.: ${escapeHtml(RECHNUNG_ABSENDER.inhaber)}</div>
-        <div>${escapeHtml(RECHNUNG_ABSENDER.strasseKurz)}</div>
-        <div>${escapeHtml(`${RECHNUNG_ABSENDER.plz} ${RECHNUNG_ABSENDER.ort}`)}</div>
-      </div>
-      <div>
-        <div>Bankverbindung:</div>
-        <div>${escapeHtml(RECHNUNG_ABSENDER.bankName)}</div>
-        <div>${escapeHtml(RECHNUNG_ABSENDER.bic)}</div>
-        <div>${escapeHtml(RECHNUNG_ABSENDER.iban)}</div>
-      </div>
-      <div>
-        <div>Tel: ${escapeHtml(RECHNUNG_ABSENDER.telefon)}</div>
-        <div>Fax: ${escapeHtml(RECHNUNG_ABSENDER.fax)}</div>
-        <div>Mail: ${escapeHtml(RECHNUNG_ABSENDER.email)}</div>
-        <div>${escapeHtml(RECHNUNG_ABSENDER.web)}</div>
-      </div>
-    </div>
-  </div>
-</div>`;
-};
-
-const RECHNUNG_STYLES = `
-  * { box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; color: #111; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .rechnung { padding: 2cm 2cm 1.5cm; font-size: 0.85rem; }
-  .kopf { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1.5em; }
-  .absenderzeile { font-size: 0.75rem; border-bottom: 1px solid #111; padding-bottom: 2px; margin-bottom: 1.2em; display: inline-block; }
-  .anschrift div { line-height: 1.4; }
-  .daten-tabelle { border-collapse: collapse; margin-left: auto; margin-bottom: 1.5em; }
-  .daten-tabelle td { border: 1px solid #999; padding: 3px 10px; }
-  .daten-tabelle td:first-child { background: #eee; }
-  .daten-tabelle td:last-child { text-align: right; min-width: 120px; }
-  .titelbalken { background: #ddd; font-size: 1.4rem; font-weight: bold; letter-spacing: 0.05em; padding: 6px 10px; margin-bottom: 1em; }
-  .zweckzeile { margin: 0 0 1.2em; }
-  .positionen-tabelle { width: 100%; border-collapse: collapse; margin-bottom: 0.5em; }
-  .position-zeile td { padding-top: 8px; }
-  .position-label { text-align: left; }
-  .position-betrag { text-align: right; white-space: nowrap; }
-  .position-detail td { color: #333; padding: 0 0 0 0.5em; }
-  .summenbalken { display: flex; justify-content: space-between; background: #ddd; font-weight: bold; padding: 6px 10px; margin: 0.8em 0 0.3em; }
-  .mwst-hinweis { margin: 0 0 1.2em; }
-  .fett { font-weight: bold; }
-  .fusszeile { margin-top: 2.5em; font-size: 0.7rem; text-align: center; }
-  .dank { margin-bottom: 1.5em; }
-  .fusszeile-spalten { display: flex; justify-content: space-between; text-align: left; border-top: 1px solid #999; padding-top: 0.6em; }
-  .fusszeile-spalten > div { flex: 1; }
-  .fusszeile-spalten > div:nth-child(2) { text-align: center; }
-  .fusszeile-spalten > div:nth-child(3) { text-align: right; }
-`;
-
-export const buildRechnungPrintHtml = (
-  daten: RechnungDaten,
-): string => `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="utf-8" />
-<title>${escapeHtml(`Rechnung ${daten.rechnungsnummer}`)}</title>
-<style>
-  ${RECHNUNG_STYLES}
-  @page { margin: 0; }
-</style>
-</head>
-<body>
-${buildRechnungBodyHtml(daten)}
-</body>
-</html>`;
-
-// Für die Live-Vorschau im Formulare-Dialog (dort ohne @page-Regel, damit
-// die Vorschau nicht auf Druckseitengröße beschnitten wird).
-export const buildRechnungPreviewHtml = (
-  daten: RechnungDaten,
-): string => `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="utf-8" />
-<style>${RECHNUNG_STYLES}</style>
-</head>
-<body>
-${buildRechnungBodyHtml(daten)}
-</body>
-</html>`;
+export const buildKostenvoranschlagPreviewHtml = (
+  daten: KostenvoranschlagDaten,
+): string =>
+  seite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), true);

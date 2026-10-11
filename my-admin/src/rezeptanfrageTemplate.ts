@@ -1,0 +1,203 @@
+// Rezeptanfrage an den Augenarzt (Kategorie "Rezeptanfrage Augenarzt"),
+// nachgebaut nach dem bisherigen Optikerformular auf einer A4-Seite.
+// Vorausgefüllt: Datum, Bearbeiter, Patientendaten, Refraktionswerte und PD
+// des Auftrags sowie die Angaben des zuweisenden Betriebs. Diagnosen,
+// Versorgung, Dringlichkeit und Einwilligung werden angekreuzt.
+import dayjs from "dayjs";
+import type {
+  DocumentMergeEntities,
+  MergeSource,
+} from "./documentTemplateEngine";
+import { RECHNUNG_ABSENDER, escapeHtml } from "./rechnungTemplate";
+import { formatDatum, formatWert, text } from "./werkstattauftragTemplate";
+
+export type RezeptanfrageDaten = { entities: DocumentMergeEntities };
+
+const e = escapeHtml;
+const a = RECHNUNG_ABSENDER;
+
+const feld = (label: string, wert = "", breite = "1fr") =>
+  `<div class="feld" style="flex:${breite}"><div class="label">${e(label)}</div><div class="wert">${e(wert)}</div></div>`;
+
+const box = (label: string) =>
+  `<span class="option"><span class="kaestchen"></span>${e(label)}</span>`;
+
+const DIAGNOSEN = [
+  "Myopie (Kurzsichtigkeit)",
+  "Keratokonus",
+  "Hyperopie (Weitsichtigkeit)",
+  "Katarakt (Grauer Star)",
+  "Astigmatismus (Hornhautverkrümmung)",
+  "Glaukom (Grüner Star)",
+  "Presbyopie (Alterssichtigkeit)",
+  "Makuladegeneration (AMD)",
+  "Anisometropie (Ungleichsichtigkeit)",
+  "Diabetische Retinopathie",
+  "Amblyopie (Schwachsichtigkeit)",
+  "Aphakie / Pseudophakie",
+  "Strabismus (Schielen)",
+  "Netzhautablösung (Zustand nach)",
+  "Nystagmus (Augenzittern)",
+  "Hornhauterkrankung (sonstige)",
+  "Trockenes Auge (DED)",
+  "Zustand nach refraktiver OP (LASIK etc.)",
+];
+
+const VERSORGUNG = [
+  "Einstärkenglas Ferne",
+  "Einstärkenglas Nähe",
+  "Gleitsichtglas",
+  "Bifokalglas",
+  "Kontaktlinsen weich",
+  "Kontaktlinsen formstabil",
+  "Kantenfilterglas",
+  "Prismenbrille",
+  "Sportbrille / Schutzbrille",
+  "Low Vision (vergr. Sehhilfe)",
+  "Sonnenbrille / Tönung",
+];
+
+const werteZeile = (auge: string, glas: MergeSource) =>
+  `<tr><th>${auge}</th>${[
+    formatWert(glas?.Sph, "dioptrie"),
+    formatWert(glas?.Cyl, "dioptrie"),
+    formatWert(glas?.A, "achse"),
+    formatWert(glas?.Add, "dioptrie"),
+    formatWert(glas?.Pr, "zwei"),
+    formatWert(glas?.B, "frei"),
+    formatWert(glas?.Vis, "visus"),
+  ]
+    .map((w) => `<td>${e(w)}</td>`)
+    .join("")}</tr>`;
+
+export const buildRezeptanfrageBodyHtml = ({
+  entities,
+}: RezeptanfrageDaten): string => {
+  const k: Record<string, unknown> = entities.kunde ?? {};
+  const brille: Record<string, unknown> = entities.brille ?? {};
+  const { glasRechts: r, glasLinks: l } = entities;
+  const heute = dayjs().format("DD.MM.YYYY");
+  const pdR = Number(r?.PD);
+  const pdL = Number(l?.PD);
+  const pdGesamt =
+    pdR > 0 && pdL > 0
+      ? formatWert(pdR + pdL, "frei")
+      : formatWert(r?.iod, "frei");
+  const adresse = [
+    [k.Straße, k.Hausnummer].map(text).filter(Boolean).join(" "),
+    [k.Postleitzahl, k.Stadt].map(text).filter(Boolean).join(" "),
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  return `
+<div class="anfrage">
+  <div class="titelzeile">
+    <h1>Rezeptanfrage an den Augenarzt</h1>
+    <div class="meta">Datum: ${e(heute)}<br />Bearbeiter: ${e(text(brille.Berater))}</div>
+  </div>
+
+  <h2>1 Patientendaten</h2>
+  <div class="reihe">${feld("Nachname *", text(k.Nachname))}${feld("Vorname *", text(k.Vorname))}${feld("Geburtsdatum *", formatDatum(k.Geburtsdatum), "0.7")}</div>
+  <div class="reihe">${feld("Adresse (Straße, PLZ, Ort)", adresse, "2")}${feld("Telefon / Mobil", text(k.Handy) || text(k.TelefonnummerPrivat))}</div>
+  <div class="reihe">${feld("Krankenkasse")}${feld("Versichertennummer", text(k.VersichertenNummer))}${feld("Versicherungsstatus", text(k.KrankenversicherungsTyp))}</div>
+
+  <h2>2 Aktuelle Refraktionswerte (Voruntersuchung Optiker)</h2>
+  <table class="werte">
+    <tr><th>Auge</th><th>Sphäre (sph)</th><th>Zylinder (cyl)</th><th>Achse (°)</th><th>Addition (add)</th><th>Prisma</th><th>Basis</th><th>Visus cc</th></tr>
+    ${werteZeile("R (OD)", r)}
+    ${werteZeile("L (OS)", l)}
+  </table>
+  <div class="reihe">${feld("PD rechts (mm)", formatWert(r?.PD, "frei"))}${feld("PD links (mm)", formatWert(l?.PD, "frei"))}${feld("Gesamte PD (mm)", pdGesamt)}${feld("Messdatum", formatDatum(brille.Datum))}</div>
+  <div class="zeile">Werte ermittelt via: ${box("Autorefraktometer")}${box("Subjektive Refraktion")}${box("Skiaskopie")}${box("Übernahme Vorrezept")}</div>
+
+  <h2>3 Krankheitsbilder / Diagnosen</h2>
+  <div class="raster zwei">${DIAGNOSEN.map((d) => `<div>${box(d)}</div>`).join("")}</div>
+  <div class="reihe">${feld("Weitere Diagnosen / ICD-10 Code", "", "3")}${feld("Befunddatum")}</div>
+
+  <h2>4 Gewünschte Versorgung</h2>
+  <div class="raster vier">${VERSORGUNG.map((v) => `<div>${box(v)}</div>`).join("")}<div>${box("Sonstiges:")} ________</div></div>
+  <div class="zeile">Indikation Kantenfiltergläser (GKV § 33 SGB V / Low Vision) – ICD: ____________________</div>
+  <div class="zeile klein">Empfohlene Filterstufe / Tönung / Transmission (%), Filterwellenlänge (nm): ${["400", "420", "450", "480", "511", "527"].map(box).join("")}</div>
+  <div class="reihe">${feld("Besonderer Bedarf (z. B. Bildschirmarbeit, Führerschein, Sport, Beruf)")}</div>
+
+  <h2>5 Anfrage an die augenärztliche Praxis</h2>
+  <div class="reihe">${feld("Zuweisender Optiker / Betrieb", `${a.firma} · ${a.marke}`)}${feld("Telefon / E-Mail Optiker", `${a.telefon} · ${a.email}`)}${feld("Anfragedatum", heute, "0.6")}</div>
+  <div class="reihe">${feld("Letzte augenärztl. Untersuchung (ca.)")}<div class="feld" style="flex:1.4"><div class="label">Aktuelle Brillenglasstärke bekannt</div><div class="wert">${box("Ja")}${box("Nein")}${box("Unbekannt")}</div></div></div>
+  <div class="zeile">Dringlichkeit: ${box("Normal")}${box("Dringend")} (Begründung: ______________________________)</div>
+  <div class="reihe">${feld("Anliegen / Freitext an den Augenarzt")}</div>
+
+  <h2>6 Datenschutz, Einwilligung &amp; Unterschrift</h2>
+  <div class="zeile">${box("Patient hat der Weitergabe seiner Daten an den behandelnden Augenarzt zugestimmt (gemäß DSGVO Art. 9).")}</div>
+  <div class="zeile">${box("Kopie der Refraktionswerte wurde dem Patienten ausgehändigt.")}</div>
+  <div class="unterschriften">
+    <div><div class="strich"></div>Ort, Datum</div>
+    <div><div class="strich"></div>Unterschrift Patient / gesetzl. Vertreter</div>
+    <div><div class="strich"></div>Stempel &amp; Unterschrift Optiker</div>
+  </div>
+  <div class="fuss">Optikerformular · Rezeptanfrage an Augenarzt &nbsp;|&nbsp; Alle Felder mit * sind Pflichtfelder &nbsp;|&nbsp; Dieses Formular verbleibt im Optikerbetrieb</div>
+</div>`;
+};
+
+const STYLES = `
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #222; font-size: 8.3pt; line-height: 1.25; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .anfrage { position: relative; width: 210mm; height: 297mm; padding: 11mm 15mm 9mm 17mm; overflow: hidden; background: #fff; }
+  .titelzeile { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 0.4mm solid #2a63b1; padding-bottom: 1.6mm; margin-bottom: 2mm; }
+  h1 { color: #2a63b1; font-size: 16pt; margin: 0; }
+  .meta { font-size: 8pt; color: #555; min-width: 48mm; }
+  h2 { color: #2a63b1; font-size: 8.8pt; margin: 2.8mm 0 1mm; }
+  .reihe { display: flex; gap: 6mm; border-bottom: 0.2mm solid #ccc; padding-bottom: 0.6mm; margin-bottom: 1mm; }
+  .feld .label { font-size: 7.4pt; color: #777; }
+  .feld .wert { min-height: 4.3mm; font-size: 9pt; color: #111; }
+  .werte { width: 100%; border-collapse: collapse; margin-bottom: 1.4mm; }
+  .werte th, .werte td { border: 0.2mm solid #c9d4e6; padding: 0.6mm 1.2mm; text-align: left; height: 5.6mm; }
+  .werte tr:first-child th { background: #eef3fb; font-weight: normal; color: #666; font-size: 7.6pt; }
+  .werte tr th:first-child { width: 14mm; }
+  .zeile { margin: 1mm 0; }
+  .klein { font-size: 7.6pt; color: #555; }
+  .raster { display: grid; column-gap: 6mm; row-gap: 0; border: 0.2mm solid #ccc; padding: 0.8mm 1.6mm; margin-bottom: 1mm; }
+  .raster > div { padding: 0.5mm 0; border-bottom: 0.2mm solid #eee; }
+  .raster.zwei { grid-template-columns: 1fr 1fr; }
+  .raster.vier { grid-template-columns: repeat(4, 1fr); }
+  .option { display: inline-block; margin-right: 3.5mm; white-space: nowrap; }
+  .kaestchen { display: inline-block; width: 2.8mm; height: 2.8mm; border: 0.25mm solid #444; margin-right: 1.2mm; vertical-align: -0.3mm; }
+  .unterschriften { display: flex; gap: 10mm; margin-top: 9mm; }
+  .unterschriften > div { flex: 1; color: #555; }
+  .strich { border-top: 0.25mm solid #999; margin-bottom: 0.8mm; }
+  .fuss { position: absolute; left: 0; right: 0; bottom: 6mm; text-align: center; font-size: 6.5pt; color: #2a63b1; }
+`;
+
+export const buildRezeptanfragePrintHtml = (
+  daten: RezeptanfrageDaten,
+): string => `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<title>Rezeptanfrage an den Augenarzt</title>
+<style>
+  ${STYLES}
+  @page { size: A4; margin: 0; }
+</style>
+</head>
+<body>
+${buildRezeptanfrageBodyHtml(daten)}
+</body>
+</html>`;
+
+export const buildRezeptanfragePreviewHtml = (
+  daten: RezeptanfrageDaten,
+): string => `<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8" />
+<style>
+  ${STYLES}
+  html { background: #eee; }
+  .anfrage { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
+</style>
+</head>
+<body>
+${buildRezeptanfrageBodyHtml(daten)}
+</body>
+</html>`;

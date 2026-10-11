@@ -8,6 +8,7 @@ import {
   useShowController,
   ListActions,
   useRecordContext,
+  Title,
 } from "react-admin";
 import {
   BooleanField,
@@ -54,6 +55,10 @@ import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import EventIcon from "@mui/icons-material/Event";
 import { supabase } from "./utils";
+import {
+  type NachrichtTermin,
+  renderMessageTemplate,
+} from "./nachrichtenPlatzhalter";
 import {
   buildExternalMessageUrl,
   MessageChannel,
@@ -334,44 +339,6 @@ const normalizeKundeMessageCustomer = (
   };
 };
 
-const createMessageMergeValues = (
-  customer: KundeMessageCustomer,
-): Record<string, string> => ({
-  anrede: customer.anrede,
-  vorname: customer.vorname,
-  firstname: customer.vorname,
-  nachname: customer.nachname,
-  lastname: customer.nachname,
-  name: customer.fullName,
-  fullname: customer.fullName,
-  email: customer.email,
-  telefon: customer.phoneNumber,
-  telefonnummer: customer.phoneNumber,
-  phone: customer.phoneNumber,
-  phonenumber: customer.phoneNumber,
-  sms: customer.phoneNumber,
-  whatsapp: customer.phoneNumber,
-  kundeid: customer.id,
-  kundenid: customer.id,
-});
-
-const renderMessageTemplate = (
-  template: string,
-  customer: KundeMessageCustomer,
-) => {
-  const mergeValues = createMessageMergeValues(customer);
-  const replaceToken = (_match: string, token: string) =>
-    mergeValues[token.trim().toLowerCase()] ?? "";
-
-  return template
-    .replace(/\{\{\s*([^{}[\]]+?)\s*\}\}/g, replaceToken)
-    .replace(/\[\[\s*([^{}[\]]+?)\s*\]\]/g, replaceToken)
-    .replace(/\{\s*([^{}[\]]+?)\s*\}/g, replaceToken)
-    .replace(/\[\s*([^{}[\]]+?)\s*\]/g, replaceToken)
-    .replace(/\{\s*([^{}[\]]+?)\s*\]/g, replaceToken)
-    .replace(/\[\s*([^{}[\]]+?)\s*\}/g, replaceToken);
-};
-
 const kundenFilterDesktop = [
   <TextInput
     key="vorname"
@@ -541,7 +508,7 @@ export const KundenDataTable = (props: Partial<DataTableProps>) => (
     </DataTable.Col>
     <DataTable.Col source="Geschlecht" />
     <DataTable.Col source="Tätigkeit" />
-    <DataTable.Col source="TelefonnummerPrivat" label="Privat Telefonnummer" />
+    <DataTable.Col source="TelefonnummerPrivat" label="Private Telefonnummer" />
     <DataTable.Col
       source="TelefonnummerGeschaeftlich"
       label="Geschäftliche Telefonnummer"
@@ -549,7 +516,7 @@ export const KundenDataTable = (props: Partial<DataTableProps>) => (
     <DataTable.Col source="Handy" />
     <DataTable.Col source="Email" />
     <DataTable.Col source="KrankenkassenNummer" label="Krankenkassennummer" />
-    <DataTable.Col source="VersichertenNummer" label="Versichertenummer" />
+    <DataTable.Col source="VersichertenNummer" label="Versichertennummer" />
     <DataTable.Col
       source="KrankenversicherungsTyp"
       label="Krankenversicherung"
@@ -568,7 +535,7 @@ export const KundenList = () => {
       title="Kunden"
       disableSyncWithLocation
       filters={isMobile ? kundenFilterMobile : kundenFilterDesktop}
-      actions={<ListActions isMobile={isMobile} />}
+      actions={<ListActions />}
     >
       <KundenDataTable />
     </List>
@@ -596,7 +563,7 @@ export const KundeShow = () => {
   }, [showObject, dataProvider]);
 
   return (
-    <Show title="Kunden anzeigen" actions={<KundeShowActions />}>
+    <Show title="Kunde anzeigen" actions={<KundeShowActions />}>
       <ShowLayout>
         <ShowColumns>
           <ShowColumn>
@@ -767,7 +734,7 @@ export const KundeShow = () => {
 };
 
 export const KundeEdit = () => (
-  <Edit title="Kunden bearbeiten" actions={<EditActionsBar />}>
+  <Edit title="Kunde bearbeiten" actions={<EditActionsBar />}>
     <SimpleForm>
       <FormSection title="Datenbankfelder">
         <FieldRow>
@@ -1013,12 +980,14 @@ export const KundeMessage = () => {
 
   const isMountedRef = useRef(true);
 
-  useEffect(
-    () => () => {
+  // StrictMode mountet Effekte im Dev-Modus zweimal: der Merker muss beim
+  // erneuten Mount wieder auf true, sonst bleibt "Lade Nachrichten..." stehen.
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
       isMountedRef.current = false;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const loadMessages = useCallback(async (preferredKey?: string | null) => {
     setIsLoadingMessages(true);
@@ -1141,12 +1110,45 @@ export const KundeMessage = () => {
     };
   }, [recordId, routeState]);
 
+  // Nächster Termin des Kunden für {Termindatum}/{Terminuhrzeit}
+  const [naechsterTermin, setNaechsterTermin] = useState<NachrichtTermin>(null);
+  useEffect(() => {
+    if (!recordId) return;
+    let aktiv = true;
+    supabase
+      .from("termin")
+      .select("Start")
+      .eq("kunde_id", recordId)
+      .gte("Start", new Date().toISOString())
+      .order("Start", { ascending: true })
+      .limit(1)
+      .then(({ data, error }) => {
+        if (!aktiv) return;
+        if (error) {
+          console.error("Fehler beim Laden des nächsten Termins", error);
+          return;
+        }
+        setNaechsterTermin(data?.[0] ?? null);
+      });
+    return () => {
+      aktiv = false;
+    };
+  }, [recordId]);
+
   const messageCustomer = customer ?? fallbackCustomer;
   const renderedMessageTitle = selectedMessage
-    ? renderMessageTemplate(getMessageTitle(selectedMessage), messageCustomer)
+    ? renderMessageTemplate(
+        getMessageTitle(selectedMessage),
+        messageCustomer,
+        naechsterTermin,
+      )
     : "";
   const renderedMessageContent = selectedMessage
-    ? renderMessageTemplate(getMessageContent(selectedMessage), messageCustomer)
+    ? renderMessageTemplate(
+        getMessageContent(selectedMessage),
+        messageCustomer,
+        naechsterTermin,
+      )
     : "";
   const recipientName =
     [messageCustomer.anrede, messageCustomer.vorname, messageCustomer.nachname]
@@ -1328,6 +1330,7 @@ export const KundeMessage = () => {
         padding: { xs: "0.75em", md: "1.5em" },
       }}
     >
+      <Title title="Nachricht senden" />
       <Box
         sx={{
           display: "flex",
