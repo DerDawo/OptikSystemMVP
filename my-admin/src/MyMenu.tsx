@@ -64,7 +64,7 @@ const Brand = () => {
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25)",
         }}
       >
-        <UnicornIcon sx={{ fontSize: 22 }} />
+        <UnicornIcon sx={{ fontSize: 26 }} />
       </Box>
       {open && (
         <Box sx={{ minWidth: 0 }}>
