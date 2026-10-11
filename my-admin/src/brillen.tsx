@@ -48,6 +48,7 @@ import {
   FormulareButton,
   MahnungErstellenButton,
   RechnungErstellenButton,
+  WerkstattauftragButton,
 } from "./FormulareDialog";
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import {
@@ -318,6 +319,7 @@ const BrilleShowActions = () => (
     <RechnungErstellenButton />
     <MahnungErstellenButton />
     <BerechtigungsscheinErstellenButton />
+    <WerkstattauftragButton />
     <FormulareButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
@@ -511,6 +513,7 @@ export const BrilleEdit = () => (
         <RechnungErstellenButton />
         <MahnungErstellenButton />
         <BerechtigungsscheinErstellenButton />
+        <WerkstattauftragButton />
         <FormulareButton />
         <KarteikarteKopierenButton />
       </EditActionsBar>
@@ -539,18 +542,18 @@ export const BrilleEdit = () => (
       <FormSection title="Komponenten">
         <FieldRow>
           <ReferenceInput source="GlasLinks" reference="glass">
-            <SelectInput optionText="id" />
+            <SelectInput />
           </ReferenceInput>
           <ReferenceInput source="GlasRechts" reference="glass">
-            <SelectInput optionText="id" />
+            <SelectInput />
           </ReferenceInput>
         </FieldRow>
         <FieldRow>
           <ReferenceInput source="Fassung" reference="fassung">
-            <SelectInput optionText="id" />
+            <SelectInput />
           </ReferenceInput>
           <ReferenceInput source="Glastyp" reference="glastyp">
-            <SelectInput optionText="id" />
+            <SelectInput />
           </ReferenceInput>
         </FieldRow>
         <Box sx={{ mt: 1 }}>
@@ -662,18 +665,18 @@ export const BrilleCreate = () => (
       <FormSection title="Komponenten">
         <FieldRow>
           <ReferenceInput source="GlasLinks" reference="glass">
-            <SelectInput optionText="id" />
+            <SelectInput />
           </ReferenceInput>
           <ReferenceInput source="GlasRechts" reference="glass">
-            <SelectInput optionText="id" />
+            <SelectInput />
           </ReferenceInput>
         </FieldRow>
         <FieldRow>
           <ReferenceInput source="Fassung" reference="fassung">
-            <SelectInput optionText="id" />
+            <SelectInput />
           </ReferenceInput>
           <ReferenceInput source="Glastyp" reference="glastyp">
-            <SelectInput optionText="id" />
+            <SelectInput />
           </ReferenceInput>
         </FieldRow>
       </FormSection>

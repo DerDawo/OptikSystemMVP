@@ -174,6 +174,26 @@ Entwicklungs-Workflow abdeckt. Alle MCP-Tools (`apply_migration`,
 Parameter und können damit ebenso gegen das Prod-Projekt
 (`cktdtojgrxskihihmnjm`) genutzt werden, ohne `.mcp.json` anzupassen.
 
+## Passwort zurücksetzen: Redirect URLs freigeben
+
+„Passwort vergessen?“ auf der Login-Seite schickt eine Mail, deren Link auf
+`auth-callback.html` neben der gerade geöffneten App zeigt (z. B.
+`https://<app>/auth-callback.html`, siehe `my-admin/src/authProvider.tsx`).
+Die Seite reicht die Tokens an `#/set-password` weiter, wo das neue Passwort
+gesetzt wird. Supabase akzeptiert diese Adresse nur, wenn sie freigegeben ist -
+sonst leitet der Link auf die Site URL und das Zurücksetzen schlägt fehl.
+
+Einmalig je Projekt im Dashboard unter **Authentication → URL Configuration →
+Redirect URLs** eintragen (wird nicht über Migrationen gesteuert):
+
+| Projekt | Redirect URLs |
+|---|---|
+| Dev (`psxrxggwqlltfhfskeoa`) | `http://localhost:5173/auth-callback.html` (Vite-Standardport) und die Vercel-Previews, z. B. `https://*-<vercel-team>.vercel.app/**` |
+| Prod (`cktdtojgrxskihihmnjm`) | `https://<produktions-domain>/auth-callback.html` |
+
+Die Mail-Vorlage („Reset Password“) bleibt unverändert, der Rücksprung kommt
+aus dem `redirectTo` der Anfrage.
+
 ## Edge-Function-Secrets: getrennt für Dev und Prod
 
 > **Aktuell nicht nötig:** Die Oberfläche versendet Nachrichten derzeit nicht

@@ -33,6 +33,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PrintIcon from "@mui/icons-material/Print";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
+import BuildIcon from "@mui/icons-material/Build";
 import {
   RaRecord,
   useGetList,
@@ -49,6 +50,8 @@ import {
   type DocumentMergeEntities,
 } from "./documentTemplateEngine";
 import {
+  buildKostenvoranschlagPreviewHtml,
+  buildKostenvoranschlagPrintHtml,
   buildRechnungPreviewHtml,
   buildRechnungPrintHtml,
 } from "./rechnungTemplate";
@@ -56,6 +59,34 @@ import {
   buildBerechtigungsscheinPreviewHtml,
   buildBerechtigungsscheinPrintHtml,
 } from "./berechtigungsscheinTemplate";
+import {
+  buildWerkstattauftragPreviewHtml,
+  buildWerkstattauftragPrintHtml,
+} from "./werkstattauftragTemplate";
+import {
+  type AntragArt,
+  buildAntragPreviewHtml,
+  buildAntragPrintHtml,
+} from "./antragTemplate";
+import {
+  buildAokBerechtigungsscheinPreviewHtml,
+  buildAokBerechtigungsscheinPrintHtml,
+} from "./aokBerechtigungsscheinTemplate";
+import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
+import {
+  buildErprobungsprotokollPreviewHtml,
+  buildErprobungsprotokollPrintHtml,
+} from "./erprobungsprotokollTemplate";
+import {
+  buildRezeptanfragePreviewHtml,
+  buildRezeptanfragePrintHtml,
+} from "./rezeptanfrageTemplate";
+import {
+  buildOptometrischeVerordnungPreviewHtml,
+  buildOptometrischeVerordnungPrintHtml,
+  buildVerordnungKurzPreviewHtml,
+  buildVerordnungKurzPrintHtml,
+} from "./optometrischeVerordnungTemplate";
 
 // Kategorie, unter der die Rechnungsvorlage(n) in `dokumentvorlage` angelegt
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
@@ -65,6 +96,88 @@ const RECHNUNG_KATEGORIE = "Rechnung";
 // Kategorie für den Berechtigungsschein (#90, Seed-Migration
 // 20260831150200_seed_dokumentvorlage_berechtigungsschein.sql).
 const BERECHTIGUNGSSCHEIN_KATEGORIE = "Berechtigungsschein";
+
+// Kategorie des Werkstattauftrags (Seed-Migration
+// 20260831010100_seed_dokumentvorlage.sql, Vorlage "Werkstattkarte"); das
+// Layout kommt aus werkstattauftragTemplate.ts.
+const WERKSTATTKARTE_KATEGORIE = "Werkstattkarte";
+
+// Weitere Formulare mit Layout im Code (Seed-Migration
+// 20261011120000_seed_dokumentvorlage_antraege.sql)
+const BERECHTIGUNGSSCHEIN_AOK_KATEGORIE = "Berechtigungsschein AOK";
+const VERORDNUNG_KATEGORIE = "Optometrische Verordnung";
+const VERORDNUNG_GKV_KATEGORIE = "Optometrische Verordnung GKV";
+// Kostenvoranschlag im Rechnungsdesign (rechnungTemplate.ts)
+const KOSTENVORANSCHLAG_KATEGORIE = "Kostenvoranschlag";
+
+type LayoutDaten = {
+  entities: DocumentMergeEntities;
+  betrieb?: RaRecord;
+  rechnungsnummer: string;
+};
+
+type Layout = {
+  title: string;
+  preview: (daten: LayoutDaten) => string;
+  print: (daten: LayoutDaten) => string;
+};
+
+const antragLayout = (art: AntragArt): Layout => ({
+  title: "Antrag-Vorschau",
+  preview: (d) => buildAntragPreviewHtml(art, d),
+  print: (d) => buildAntragPrintHtml(art, d),
+});
+
+// Kategorie in `dokumentvorlage` -> code-basiertes Layout
+const LAYOUTS: Record<string, Layout> = {
+  [RECHNUNG_KATEGORIE]: {
+    title: "Rechnungsvorschau",
+    preview: buildRechnungPreviewHtml,
+    print: buildRechnungPrintHtml,
+  },
+  [KOSTENVORANSCHLAG_KATEGORIE]: {
+    title: "Kostenvoranschlag-Vorschau",
+    preview: buildKostenvoranschlagPreviewHtml,
+    print: buildKostenvoranschlagPrintHtml,
+  },
+  [BERECHTIGUNGSSCHEIN_KATEGORIE]: {
+    title: "Berechtigungsschein-Vorschau",
+    preview: buildBerechtigungsscheinPreviewHtml,
+    print: buildBerechtigungsscheinPrintHtml,
+  },
+  [BERECHTIGUNGSSCHEIN_AOK_KATEGORIE]: {
+    title: "Berechtigungsschein-Vorschau",
+    preview: buildAokBerechtigungsscheinPreviewHtml,
+    print: buildAokBerechtigungsscheinPrintHtml,
+  },
+  [WERKSTATTKARTE_KATEGORIE]: {
+    title: "Werkstattauftrag-Vorschau",
+    preview: buildWerkstattauftragPreviewHtml,
+    print: buildWerkstattauftragPrintHtml,
+  },
+  "Antrag Zuschuss": antragLayout("zuschuss"),
+  "Antrag Sozialamt": antragLayout("sozialamt"),
+  [VERORDNUNG_KATEGORIE]: {
+    title: "Verordnung-Vorschau",
+    preview: buildVerordnungKurzPreviewHtml,
+    print: buildVerordnungKurzPrintHtml,
+  },
+  [VERORDNUNG_GKV_KATEGORIE]: {
+    title: "Verordnung-Vorschau",
+    preview: buildOptometrischeVerordnungPreviewHtml,
+    print: buildOptometrischeVerordnungPrintHtml,
+  },
+  Erprobungsprotokoll: {
+    title: "Erprobungsprotokoll-Vorschau",
+    preview: buildErprobungsprotokollPreviewHtml,
+    print: buildErprobungsprotokollPrintHtml,
+  },
+  "Rezeptanfrage Augenarzt": {
+    title: "Rezeptanfrage-Vorschau",
+    preview: buildRezeptanfragePreviewHtml,
+    print: buildRezeptanfragePrintHtml,
+  },
+};
 
 // Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
 // (#57, Seed-Migration 20260831030100_seed_dokumentvorlage_mahnung.sql). Es
@@ -231,44 +344,66 @@ const FormulareDialog = ({
     [mergeEntities],
   );
 
-  const isRechnung = selectedVorlage?.Kategorie === RECHNUNG_KATEGORIE;
-
   const renderedText = selectedVorlage
     ? renderDocumentTemplate(selectedVorlage.Vorlagentext ?? "", mergeValues)
     : "";
 
-  // Rechnungen (#88) haben ein eigenes, code-basiertes HTML-Layout statt des
-  // generischen {{platzhalter}}-Fließtexts - der Vorlagentext des
-  // "Rechnung"-Datensatzes wird dafür nicht mehr verwendet.
-  const rechnungDaten = useMemo(
+  // Kategorien mit eigenem, code-basiertem Layout (Rechnung #88,
+  // Berechtigungsschein #90, Werkstattauftrag, Anträge, ...) statt des
+  // generischen {{platzhalter}}-Fließtexts; der Vorlagentext dieser
+  // Datensätze wird nicht gerendert.
+  const layoutDaten: LayoutDaten = useMemo(
     () => ({
       entities: mergeEntities,
+      betrieb,
       rechnungsnummer: brille.Rechnungsnummer ?? "",
     }),
-    [mergeEntities, brille.Rechnungsnummer],
+    [mergeEntities, betrieb, brille.Rechnungsnummer],
   );
-  const rechnungPreviewHtml = isRechnung
-    ? buildRechnungPreviewHtml(rechnungDaten)
-    : "";
-  const rechnungPrintHtml = isRechnung
-    ? buildRechnungPrintHtml(rechnungDaten)
-    : "";
+  const layoutDef = selectedVorlage
+    ? LAYOUTS[selectedVorlage.Kategorie]
+    : undefined;
+  const layout = layoutDef
+    ? {
+        title: layoutDef.title,
+        preview: layoutDef.preview(layoutDaten),
+        print: layoutDef.print(layoutDaten),
+      }
+    : null;
 
-  // Berechtigungsschein (#90) hat, wie die Rechnung, ein eigenes, code-basiertes
-  // Layout (Ankreuzfelder, Unterschriftszeilen) statt des generischen
-  // Vorlagentexts.
-  const isBerechtigungsschein =
-    selectedVorlage?.Kategorie === BERECHTIGUNGSSCHEIN_KATEGORIE;
-  const berechtigungsscheinDaten = useMemo(
-    () => ({ entities: mergeEntities, betrieb }),
-    [mergeEntities, betrieb],
-  );
-  const berechtigungsscheinPreviewHtml = isBerechtigungsschein
-    ? buildBerechtigungsscheinPreviewHtml(berechtigungsscheinDaten)
-    : "";
-  const berechtigungsscheinPrintHtml = isBerechtigungsschein
-    ? buildBerechtigungsscheinPrintHtml(berechtigungsscheinDaten)
-    : "";
+  // Ausfüllbare PDF-Vorlagen (Beobachtungsbogen, Antrag BAP): das PDF wird im
+  // Browser vorausgefüllt und als Objekt-URL angezeigt bzw. geöffnet
+  const pdfVorlage = selectedVorlage
+    ? PDF_VORLAGEN[selectedVorlage.Kategorie]
+    : undefined;
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+  const [pdfFehler, setPdfFehler] = useState<string | null>(null);
+  useEffect(() => {
+    if (!pdfVorlage) {
+      return;
+    }
+    let abgebrochen = false;
+    let url: string | null = null;
+    ladePdfVorlage(pdfVorlage)
+      .then((bytes) => fuellePdfVorlage(pdfVorlage, bytes, mergeEntities))
+      .then((pdf) => {
+        if (abgebrochen) return;
+        url = URL.createObjectURL(
+          new Blob([pdf as BlobPart], { type: "application/pdf" }),
+        );
+        setPdfUrl(url);
+        setPdfFehler(null);
+      })
+      .catch((error) => {
+        console.error("PDF-Vorlage konnte nicht erstellt werden", error);
+        if (!abgebrochen) setPdfFehler("Das PDF konnte nicht erstellt werden.");
+      });
+    return () => {
+      abgebrochen = true;
+      if (url) URL.revokeObjectURL(url);
+      setPdfUrl(null);
+    };
+  }, [pdfVorlage, mergeEntities]);
 
   const groupedVorlagen = useMemo(() => {
     const map = new Map<string, Dokumentvorlage[]>();
@@ -293,11 +428,21 @@ const FormulareDialog = ({
     if (!selectedVorlage) {
       return;
     }
-    const html = isRechnung
-      ? rechnungPrintHtml
-      : isBerechtigungsschein
-        ? berechtigungsscheinPrintHtml
-        : buildPrintHtml(selectedVorlage.Name, renderedText);
+    if (pdfVorlage) {
+      // Druck und Speichern übernimmt der PDF-Viewer des Browsers
+      const opened = pdfUrl ? window.open(pdfUrl, "_blank") : null;
+      notify(
+        !pdfUrl
+          ? "Das PDF wird noch erstellt – bitte gleich noch einmal versuchen."
+          : opened
+            ? "PDF geöffnet – Drucken oder Speichern im PDF-Viewer."
+            : blockedMessage,
+        { type: opened ? "success" : "warning" },
+      );
+      return;
+    }
+    const html =
+      layout?.print ?? buildPrintHtml(selectedVorlage.Name, renderedText);
     const opened = openDocumentWindow(html, autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
@@ -313,7 +458,11 @@ const FormulareDialog = ({
           justifyContent: "space-between",
         }}
       >
-        {initialKategorie ? `${initialKategorie} erstellen` : "Formulare"}
+        {initialKategorie === WERKSTATTKARTE_KATEGORIE
+          ? "Werkstattauftrag"
+          : initialKategorie
+            ? `${initialKategorie} erstellen`
+            : "Formulare"}
         <IconButton onClick={onClose} size="small">
           <CloseIcon />
         </IconButton>
@@ -386,7 +535,7 @@ const FormulareDialog = ({
                   {selectedVorlage.Kategorie}
                 </Typography>
               </Box>
-              {!isRechnung && !isBerechtigungsschein && (
+              {!layout && !pdfVorlage && (
                 <Button
                   size="small"
                   startIcon={<EditNoteIcon />}
@@ -398,24 +547,32 @@ const FormulareDialog = ({
                 </Button>
               )}
             </Box>
-            {isRechnung ? (
+            {pdfVorlage ? (
+              pdfUrl ? (
+                <Box
+                  component="iframe"
+                  title={pdfVorlage.titel}
+                  src={pdfUrl}
+                  sx={{
+                    width: "100%",
+                    height: 480,
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 1,
+                  }}
+                />
+              ) : pdfFehler ? (
+                <Alert severity="error">{pdfFehler}</Alert>
+              ) : (
+                <Typography color="text.secondary">
+                  PDF wird erstellt…
+                </Typography>
+              )
+            ) : layout ? (
               <Box
                 component="iframe"
-                title="Rechnungsvorschau"
-                srcDoc={rechnungPreviewHtml}
-                sx={{
-                  width: "100%",
-                  height: 480,
-                  border: "1px solid",
-                  borderColor: "divider",
-                  borderRadius: 1,
-                }}
-              />
-            ) : isBerechtigungsschein ? (
-              <Box
-                component="iframe"
-                title="Berechtigungsschein-Vorschau"
-                srcDoc={berechtigungsscheinPreviewHtml}
+                title={layout.title}
+                srcDoc={layout.preview}
                 sx={{
                   width: "100%",
                   height: 480,
@@ -672,6 +829,36 @@ export const BerechtigungsscheinErstellenButton = () => {
         <FormulareDialog
           brille={record}
           initialKategorie={BERECHTIGUNGSSCHEIN_KATEGORIE}
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// "Werkstattauftrag"-Button für die Brillenkartei: öffnet den Formulare-Dialog
+// direkt mit dem Werkstattauftrag (Kategorie "Werkstattkarte") zum Drucken.
+export const WerkstattauftragButton = () => {
+  const record = useRecordContext();
+  const [open, setOpen] = useState(false);
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <>
+      <Button
+        variant="outlined"
+        startIcon={<BuildIcon />}
+        onClick={() => setOpen(true)}
+      >
+        Werkstattauftrag
+      </Button>
+      {open && (
+        <FormulareDialog
+          brille={record}
+          initialKategorie={WERKSTATTKARTE_KATEGORIE}
           onClose={() => setOpen(false)}
         />
       )}

@@ -38,6 +38,16 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Reparaturschein", name: "Reparaturschein" },
   { id: "Rechnung", name: "Rechnung" },
   { id: "Mahnung", name: "Mahnung" },
+  { id: "Antrag Zuschuss", name: "Antrag Zuschuss" },
+  { id: "Antrag Sozialamt", name: "Antrag Sozialamt" },
+  { id: "Berechtigungsschein AOK", name: "Berechtigungsschein AOK" },
+  { id: "Optometrische Verordnung", name: "Optometrische Verordnung" },
+  { id: "Optometrische Verordnung GKV", name: "Optometrische Verordnung GKV" },
+  { id: "Beobachtungsbogen", name: "Beobachtungsbogen" },
+  { id: "Antrag BAP", name: "Antrag BAP" },
+  { id: "Kostenvoranschlag", name: "Kostenvoranschlag" },
+  { id: "Erprobungsprotokoll", name: "Erprobungsprotokoll" },
+  { id: "Rezeptanfrage Augenarzt", name: "Rezeptanfrage Augenarzt" },
 ];
 
 const PLATZHALTER_HINWEIS =
