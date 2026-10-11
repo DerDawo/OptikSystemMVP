@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   leistungenAusNotizen,
+  leistungsText,
   weitereLeistungenPositionen,
 } from "./leistungenAusNotizen";
 import { buildRechnungPositionen } from "./rechnungTemplate";
@@ -75,5 +76,19 @@ describe("Rechnung mit Leistungen eines Prisma-Auftrags", () => {
       zusatzleistungen: [{ Bezeichnung: "Refraktion", Betrag: 28.9 }],
     });
     expect(positionen.at(-1)).toEqual({ label: "Refraktion", betrag: 28.9 });
+  });
+});
+
+describe("leistungsText", () => {
+  it("liest die Leistungen aus PrismaAngaben, die Notizen bleiben frei", () => {
+    const brille = {
+      Notizen: "Kunde wünscht Etui",
+      PrismaAngaben: "Leistungen:\n- Glaseinschliff: 29,50 €",
+      WeitereLeistungen: 29.5,
+    };
+    expect(weitereLeistungenPositionen(29.5, leistungsText(brille))).toEqual([
+      { bezeichnung: "Glaseinschliff", betrag: 29.5 },
+    ]);
+    expect(leistungsText({ Notizen: null, PrismaAngaben: undefined })).toBe("");
   });
 });

@@ -331,11 +331,18 @@ export const useKarteiSpeichern = (
     return { ...brille, ...verknuepft.current } as Datensatz;
   };
 
+  // `daten` bestimmt bei Bedarf mehrere Felder aus der Eingabe (z. B.
+  // Rabatt: Bezeichnung und Prozentsatz)
   const auftrag =
-    (feld: string): Speichern =>
+    (
+      feld: string,
+      daten: (neu: Wert) => Record<string, unknown> = (neu) => ({
+        [feld]: neu,
+      }),
+    ): Speichern =>
     (neu) =>
       einreihen(() =>
-        speichereAuftrag(dataProvider, aktuellerAuftrag(), { [feld]: neu }),
+        speichereAuftrag(dataProvider, aktuellerAuftrag(), daten(neu)),
       );
 
   const komponente =

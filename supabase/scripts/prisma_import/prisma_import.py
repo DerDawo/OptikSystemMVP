@@ -56,7 +56,7 @@ BETRIEB = {
 }
 
 # Prisma-Filiale 999 = gelöschte Datensätze. Auf Wunsch mit übernommen,
-# aber in den Notizen gekennzeichnet.
+# aber gekennzeichnet (Notizen bzw. bei Brillen "PrismaAngaben").
 FILIALE_GELOESCHT = "999"
 
 # Aufträge, die jünger sind, gelten evtl. noch als in Arbeit: Ihr Glas-
@@ -336,8 +336,10 @@ def map_brillen(dump, kunden_ids, heute):
             f"Kassenpositionen: {clean(r['kpos'])}" if clean(r["kpos"]) else None,
             f"Zuzahlung: {euro(num(r['kzuzahlung']))}" if nonzero(r["kzuzahlung"]) else None,
         )
-        notizen = lines(
-            clean(r["memo"]),
+        # Notizen nur mit dem Memo aus Prisma; Leistungen, Kasse, Merkmale
+        # usw. in "PrismaAngaben" (Migration 20261011220000)
+        notizen = clean(r["memo"])
+        prisma_angaben = lines(
             leistungen_text(r, 4),
             kk,
             *(f"Merkmal: {clean(r[f'br_merkmal{i}'])}" for i in (1, 2, 3) if clean(r[f"br_merkmal{i}"])),
@@ -357,6 +359,7 @@ def map_brillen(dump, kunden_ids, heute):
             "Werkstatt": clean(r["werkstatt"]),
             "Abholung": date(r["br_datum2"]),
             "Notizen": notizen,
+            "PrismaAngaben": prisma_angaben,
             "GlasLinks": glas_ids.get("Links"),
             "GlasRechts": glas_ids.get("Rechts"),
             "Fassung": fassung_id,
@@ -635,7 +638,7 @@ def main():
         insert_rows(con, "glastyp", glastypen)
         insert_rows(con, "glass", glaeser)
         # Summe aus Prisma übernehmen: Die Leistungen stehen als Freitext in
-        # den Notizen (kein Katalogbezug), die automatische Neuberechnung
+        # "PrismaAngaben" (kein Katalogbezug), die automatische Neuberechnung
         # würde sie unterschlagen. Trigger nur innerhalb dieser Transaktion aus.
         con.run("alter table public.brille disable trigger brille_calc_summe_trigger")
         insert_rows(con, "brille", [{**b, "created_at": b["created_at"] or heute} for b in brillen])
