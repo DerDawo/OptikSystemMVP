@@ -7,6 +7,7 @@ import {
   ListActions,
   useRecordContext,
   Title,
+  RaRecord,
 } from "react-admin";
 import {
   BooleanField,
@@ -37,9 +38,11 @@ import {
   Stack,
   TextField as MuiTextField,
   Theme,
+  Tooltip,
   Typography,
   useMediaQuery,
 } from "@mui/material";
+import { useTastenkuerzel } from "./tastenkuerzel";
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
@@ -398,37 +401,44 @@ const kundenFilterMobile = [
     label="Kundennummer"
   />,
 ];
+const nachrichtRouteState = (record: RaRecord): KundeMessageRouteState => ({
+  kunde: {
+    id: record.id,
+    Anrede: record.Anrede,
+    Vorname: record.Vorname,
+    Nachname: record.Nachname,
+    Email: record.Email,
+    Handy: record.Handy,
+    TelefonnummerPrivat: record.TelefonnummerPrivat,
+    TelefonnummerGeschaeftlich: record.TelefonnummerGeschaeftlich,
+  },
+});
+
 const MessageButton = () => {
   const record = useRecordContext();
   const navigate = useNavigate();
+  const oeffneNachricht = () => {
+    if (!record) return;
+    navigate(`/kunde/${record.id}/message`, {
+      state: nachrichtRouteState(record),
+    });
+  };
+  useTastenkuerzel({ m: oeffneNachricht });
 
   if (!record) {
     return null;
   }
 
-  const routeState: KundeMessageRouteState = {
-    kunde: {
-      id: record.id,
-      Anrede: record.Anrede,
-      Vorname: record.Vorname,
-      Nachname: record.Nachname,
-      Email: record.Email,
-      Handy: record.Handy,
-      TelefonnummerPrivat: record.TelefonnummerPrivat,
-      TelefonnummerGeschaeftlich: record.TelefonnummerGeschaeftlich,
-    },
-  };
-
   return (
-    <Button
-      variant="contained"
-      startIcon={<SendIcon />}
-      onClick={() =>
-        navigate(`/kunde/${record.id}/message`, { state: routeState })
-      }
-    >
-      Nachricht senden
-    </Button>
+    <Tooltip title="Alt + M">
+      <Button
+        variant="contained"
+        startIcon={<SendIcon />}
+        onClick={oeffneNachricht}
+      >
+        Nachricht senden
+      </Button>
+    </Tooltip>
   );
 };
 
@@ -866,6 +876,15 @@ export const KundeCreate = () => {
   );
 };
 
+// "123 Zeichen · 1 SMS" – lange SMS werden in Teilen zu 153 Zeichen
+// verschickt, Sonderzeichen/Emojis verkürzen die Teile (ungefähre Angabe).
+const smsLaengeText = (text: string) => {
+  const laenge = [...text].length;
+  if (laenge === 0) return " ";
+  const teile = laenge <= 160 ? 1 : Math.ceil(laenge / 153);
+  return `${laenge} Zeichen · ${teile} SMS`;
+};
+
 export const KundeMessage = () => {
   const recordId = useParams().id ?? "";
   const location = useLocation();
@@ -1084,6 +1103,15 @@ export const KundeMessage = () => {
         naechsterTermin,
       )
     : "";
+  // Text der gewählten Vorlage, vor dem Senden änderbar (wie das
+  // SMS-Fenster in Prisma). Wechsel der Vorlage setzt ihn neu.
+  const [nachrichtText, setNachrichtText] = useState("");
+  const [nachrichtBetreff, setNachrichtBetreff] = useState("");
+  useEffect(() => {
+    setNachrichtText(renderedMessageContent);
+    setNachrichtBetreff(renderedMessageTitle);
+  }, [renderedMessageContent, renderedMessageTitle]);
+
   const recipientName =
     [messageCustomer.anrede, messageCustomer.vorname, messageCustomer.nachname]
       .filter(Boolean)
@@ -1111,8 +1139,8 @@ export const KundeMessage = () => {
     setSendFormError(null);
     setExternalLinks([]);
 
-    if (!selectedMessage) {
-      setSendFormError("Bitte wähle eine Nachricht aus.");
+    if (!nachrichtText.trim()) {
+      setSendFormError("Bitte wähle eine Vorlage oder schreibe einen Text.");
       return;
     }
 
@@ -1131,8 +1159,8 @@ export const KundeMessage = () => {
       channel,
       url: buildExternalMessageUrl(channel, {
         to: deliveryTargets[channel],
-        message: renderedMessageContent,
-        subject: renderedMessageTitle,
+        message: nachrichtText,
+        subject: nachrichtBetreff,
       }),
     }));
 
@@ -1519,39 +1547,27 @@ export const KundeMessage = () => {
               Telefonnummer: {messageCustomer.phoneNumber || "nicht vorhanden"}
             </Typography>
           </Stack>
-          <Box
-            sx={{
-              border: "1px solid",
-              borderColor: "divider",
-              borderRadius: 1,
-              padding: "1em",
-              backgroundColor: "action.hover",
-              minHeight: "8rem",
-              minWidth: 0,
-              maxHeight: { md: "18rem" },
-              overflowY: { md: "auto" },
-            }}
-          >
-            {selectedMessage ? (
-              <>
-                <Typography
-                  variant="h6"
-                  sx={{ mb: 1, overflowWrap: "break-word" }}
-                >
-                  {renderedMessageTitle}
-                </Typography>
-                <Typography
-                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
-                >
-                  {renderedMessageContent}
-                </Typography>
-              </>
-            ) : (
-              <Typography sx={{ color: "text.secondary" }}>
-                Wähle eine Nachricht aus, um den Inhalt zu sehen.
-              </Typography>
-            )}
-          </Box>
+          <Stack spacing={1.5}>
+            {selectedChannels.email ? (
+              <MuiTextField
+                label="Betreff (E-Mail)"
+                value={nachrichtBetreff}
+                onChange={(e) => setNachrichtBetreff(e.target.value)}
+                fullWidth
+              />
+            ) : null}
+            <MuiTextField
+              label="Text"
+              placeholder="Vorlage links auswählen oder Text schreiben"
+              value={nachrichtText}
+              onChange={(e) => setNachrichtText(e.target.value)}
+              multiline
+              minRows={6}
+              maxRows={16}
+              fullWidth
+              helperText={smsLaengeText(nachrichtText)}
+            />
+          </Stack>
         </Card>
       </Box>
 

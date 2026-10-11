@@ -19,6 +19,7 @@ import EuroIcon from "@mui/icons-material/Euro";
 import EventIcon from "@mui/icons-material/Event";
 import SearchIcon from "@mui/icons-material/Search";
 import { formatCurrency } from "./CurrencyField";
+import { useTastenkuerzel } from "./tastenkuerzel";
 import { OrderStatusKey, getBrilleOrderStatus } from "./orderStatus";
 
 /*
@@ -97,6 +98,16 @@ export const KundenAuftraege = () => {
     abfrage("Start"),
     optionen,
   );
+
+  const neu = (pfad: string) => {
+    setMenuAnker(null);
+    if (kunde) navigate(pfad, { state: { kunde_id: kunde.id } });
+  };
+  useTastenkuerzel({
+    b: () => neu("/brille/create"),
+    l: () => neu("/kontaktlinse/create"),
+    e: () => neu("/termin/create"),
+  });
 
   const glastypIds = useMemo(
     () => [
@@ -196,11 +207,6 @@ export const KundenAuftraege = () => {
 
   if (!kunde) return null;
 
-  const neu = (pfad: string) => {
-    setMenuAnker(null);
-    navigate(pfad, { state: { kunde_id: kunde.id } });
-  };
-
   const filterNamen: Record<Filter, string> = {
     alle: "Alle",
     brille: "Brillen",
@@ -239,11 +245,24 @@ export const KundenAuftraege = () => {
           open={Boolean(menuAnker)}
           onClose={() => setMenuAnker(null)}
         >
-          <MenuItem onClick={() => neu("/brille/create")}>Brille</MenuItem>
+          <MenuItem onClick={() => neu("/brille/create")}>
+            Brille
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 3 }}>
+              Alt + B
+            </Typography>
+          </MenuItem>
           <MenuItem onClick={() => neu("/kontaktlinse/create")}>
             Kontaktlinsen
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 3 }}>
+              Alt + L
+            </Typography>
           </MenuItem>
-          <MenuItem onClick={() => neu("/termin/create")}>Termin</MenuItem>
+          <MenuItem onClick={() => neu("/termin/create")}>
+            Termin
+            <Typography variant="caption" color="text.secondary" sx={{ ml: 3 }}>
+              Alt + E
+            </Typography>
+          </MenuItem>
         </Menu>
         <Button
           variant="outlined"
