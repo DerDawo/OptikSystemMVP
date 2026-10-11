@@ -4,8 +4,6 @@ import {
   DateInput,
   List,
   ReferenceField,
-  ReferenceInput,
-  SelectInput,
   Show,
   SimpleForm,
   TextField,
@@ -19,6 +17,7 @@ import {
 } from "react-admin";
 import type { RaRecord } from "react-admin";
 import { useLocation } from "react-router-dom";
+import { KundeInput } from "./KundeInput";
 import {
   Field,
   FieldRow,
@@ -102,9 +101,7 @@ export const TerminEdit = () => (
         </FieldRow>
       </FormSection>
       <FormSection title="Termin">
-        <ReferenceInput source="kunde_id" reference="kunde">
-          <SelectInput optionText={kundeOptionText} />
-        </ReferenceInput>
+        <KundeInput />
         <FieldRow>
           <DateTimeInput source="Start" />
           <DateTimeInput source="Ende" />
@@ -131,9 +128,7 @@ export const TerminCreate = () => {
     <Create title="Neuen Termin anlegen">
       <SimpleForm defaultValues={defaultValues}>
         <FormSection title="Termin">
-          <ReferenceInput source="kunde_id" reference="kunde">
-            <SelectInput optionText={kundeOptionText} />
-          </ReferenceInput>
+          <KundeInput />
           <FieldRow>
             <DateTimeInput source="Start" />
             <DateTimeInput source="Ende" />

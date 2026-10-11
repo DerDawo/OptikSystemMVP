@@ -36,6 +36,8 @@ import {
   useNotify,
 } from "react-admin";
 import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { KundeInput } from "./KundeInput";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
@@ -347,6 +349,9 @@ export const BrilleShow = () => (
       <ShowColumns>
         <ShowColumn>
           <ShowSection title="Beratung">
+            <Field label="Kunde">
+              <ReferenceField source="kunde_id" reference="kunde" link="show" />
+            </Field>
             <Field label="Bedient von">
               <MitarbeiterField source="Berater" label="Bedient von" />
             </Field>
@@ -546,6 +551,7 @@ export const BrilleEdit = () => (
   >
     <SimpleForm>
       <FormSection title="Beratung">
+        <KundeInput />
         <FieldRow>
           <MitarbeiterInput source="Berater" label="Bedient von" />
           <RefraktionInput
@@ -679,111 +685,117 @@ export const BrilleEdit = () => (
   </Edit>
 );
 
-export const BrilleCreate = () => (
-  <Create>
-    <SimpleForm>
-      <FormSection title="Beratung">
-        <FieldRow>
-          <MitarbeiterInput source="Berater" label="Bedient von" />
-          <RefraktionInput
-            source="Refraktion"
-            label="Refraktion durch (Mitarbeiter / Arzt)"
-          />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Auftragsdaten">
-        <FieldRow>
-          <BrillenArtInput />
-          <DateInput source="Datum" />
-        </FieldRow>
-        <FieldRow>
-          <TextInput source="Werkstatt" />
-          <DateInput source="Abholung" />
-        </FieldRow>
-        <TextInput source="Notizen" multiline fullWidth />
-      </FormSection>
-      <FormSection title="Komponenten">
-        <FieldRow>
-          <ReferenceInput source="GlasLinks" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
-          <ReferenceInput source="GlasRechts" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
-        </FieldRow>
-        <FieldRow>
-          <ReferenceInput source="Fassung" reference="fassung">
-            <SelectInput />
-          </ReferenceInput>
-          <ReferenceInput source="Glastyp" reference="glastyp">
-            <SelectInput />
-          </ReferenceInput>
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Zusatzleistungen">
-        <ReferenceArrayInput
-          source="ZusatzleistungIDs"
-          reference="zusatzleistung"
-        >
-          <AutocompleteArrayInput
-            optionText="Bezeichnung"
-            label="Zusatzleistungen"
-            fullWidth
-          />
-        </ReferenceArrayInput>
-      </FormSection>
-      <FormSection title="Rabatt">
-        <FieldRow>
-          <SelectInput
-            source="RabattBezeichnung"
-            choices={RABATT_CODES}
-            helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
-          />
+export const BrilleCreate = () => {
+  const location = useLocation();
+  const defaultValues =
+    (location.state as Record<string, unknown> | undefined) ?? {};
+  return (
+    <Create>
+      <SimpleForm defaultValues={defaultValues}>
+        <FormSection title="Beratung">
+          <KundeInput />
+          <FieldRow>
+            <MitarbeiterInput source="Berater" label="Bedient von" />
+            <RefraktionInput
+              source="Refraktion"
+              label="Refraktion durch (Mitarbeiter / Arzt)"
+            />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Auftragsdaten">
+          <FieldRow>
+            <BrillenArtInput />
+            <DateInput source="Datum" />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Werkstatt" />
+            <DateInput source="Abholung" />
+          </FieldRow>
+          <TextInput source="Notizen" multiline fullWidth />
+        </FormSection>
+        <FormSection title="Komponenten">
+          <FieldRow>
+            <ReferenceInput source="GlasLinks" reference="glass">
+              <SelectInput />
+            </ReferenceInput>
+            <ReferenceInput source="GlasRechts" reference="glass">
+              <SelectInput />
+            </ReferenceInput>
+          </FieldRow>
+          <FieldRow>
+            <ReferenceInput source="Fassung" reference="fassung">
+              <SelectInput />
+            </ReferenceInput>
+            <ReferenceInput source="Glastyp" reference="glastyp">
+              <SelectInput />
+            </ReferenceInput>
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Zusatzleistungen">
+          <ReferenceArrayInput
+            source="ZusatzleistungIDs"
+            reference="zusatzleistung"
+          >
+            <AutocompleteArrayInput
+              optionText="Bezeichnung"
+              label="Zusatzleistungen"
+              fullWidth
+            />
+          </ReferenceArrayInput>
+        </FormSection>
+        <FormSection title="Rabatt">
+          <FieldRow>
+            <SelectInput
+              source="RabattBezeichnung"
+              choices={RABATT_CODES}
+              helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
+            />
+            <NumberInput
+              source="RabattProzent"
+              label="Rabatt in %"
+              helperText="VIP 15 / ZNEU 10 / zw 35 / Sonderrabatt individuell"
+            />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Preis & Zahlung">
           <NumberInput
-            source="RabattProzent"
-            label="Rabatt in %"
-            helperText="VIP 15 / ZNEU 10 / zw 35 / Sonderrabatt individuell"
+            source="WeitereLeistungen"
+            label="Weitere Leistungen / Nachlass (€)"
+            helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus den Notizen."
           />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Preis & Zahlung">
-        <NumberInput
-          source="WeitereLeistungen"
-          label="Weitere Leistungen / Nachlass (€)"
-          helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus den Notizen."
-        />
-        <SummeUndRestbetragVorschau />
-        <FieldRow>
-          <NumberInput source="Anzahlung" />
-          <NumberInput source="KKAnteil" label="KK-Anteil" />
-        </FieldRow>
-        <FieldRow>
-          <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
-          <SelectInput
-            source="Zahlungsstatus"
-            choices={zahlungsstatusChoices}
-          />
-        </FieldRow>
-      </FormSection>
-      <FormSection title="Verordnung">
-        <FieldRow>
-          <TextInput source="VerordnenderArzt" />
-          <DateInput source="Verordnungsdatum" />
-        </FieldRow>
-        <TextInput source="Diagnose" fullWidth />
-      </FormSection>
-      <FormSection title="Kassenzulassung (§ 33 SGB V)">
-        <FieldRow>
-          <BooleanInput
-            source="ErstverordnungMuster8Vorhanden"
-            label="Erstverordnung (Muster 8) liegt im System vor"
-          />
-          <DateInput
-            source="ErstverordnungMuster8Datum"
-            label="Ausstellungsdatum Muster 8"
-          />
-        </FieldRow>
-      </FormSection>
-    </SimpleForm>
-  </Create>
-);
+          <SummeUndRestbetragVorschau />
+          <FieldRow>
+            <NumberInput source="Anzahlung" />
+            <NumberInput source="KKAnteil" label="KK-Anteil" />
+          </FieldRow>
+          <FieldRow>
+            <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
+            <SelectInput
+              source="Zahlungsstatus"
+              choices={zahlungsstatusChoices}
+            />
+          </FieldRow>
+        </FormSection>
+        <FormSection title="Verordnung">
+          <FieldRow>
+            <TextInput source="VerordnenderArzt" />
+            <DateInput source="Verordnungsdatum" />
+          </FieldRow>
+          <TextInput source="Diagnose" fullWidth />
+        </FormSection>
+        <FormSection title="Kassenzulassung (§ 33 SGB V)">
+          <FieldRow>
+            <BooleanInput
+              source="ErstverordnungMuster8Vorhanden"
+              label="Erstverordnung (Muster 8) liegt im System vor"
+            />
+            <DateInput
+              source="ErstverordnungMuster8Datum"
+              label="Ausstellungsdatum Muster 8"
+            />
+          </FieldRow>
+        </FormSection>
+      </SimpleForm>
+    </Create>
+  );
+};
