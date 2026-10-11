@@ -18,6 +18,7 @@ import {
   FunctionField,
 } from "react-admin";
 import { useLocation } from "react-router-dom";
+import { MitarbeiterField, MitarbeiterInput } from "./mitarbeiter";
 import { CurrencyField } from "./CurrencyField";
 import {
   Field,
@@ -49,7 +50,9 @@ export const KontaktlinseList = () => (
           <FunctionField render={KundeOptionText} />
         </ReferenceField>
       </DataTable.Col>
-      <DataTable.Col source="Berater" />
+      <DataTable.Col source="Berater" label="Bedient von">
+        <MitarbeiterField source="Berater" label="Bedient von" />
+      </DataTable.Col>
       <DataTable.Col source="Datum">
         <DateField source="Datum" />
       </DataTable.Col>
@@ -74,7 +77,7 @@ export const KontaktlinseShow = () => (
     <ShowLayout>
       <ShowSection title="Beratung">
         <Field label="Bedient von">
-          <TextField source="Berater" />
+          <MitarbeiterField source="Berater" label="Bedient von" />
         </Field>
       </ShowSection>
       <ShowSection title="Auftragsdaten">
@@ -172,7 +175,7 @@ export const KontaktlinseEdit = () => (
   <Edit>
     <SimpleForm>
       <FormSection title="Beratung">
-        <TextInput source="Berater" label="Bedient von" />
+        <MitarbeiterInput source="Berater" label="Bedient von" />
       </FormSection>
       <FormSection title="Auftragsdaten">
         <FieldRow>
@@ -247,7 +250,7 @@ export const KontaktlinseCreate = () => {
     >
       <SimpleForm defaultValues={defaultValues}>
         <FormSection title="Beratung">
-          <TextInput source="Berater" label="Bedient von" />
+          <MitarbeiterInput source="Berater" label="Bedient von" />
         </FormSection>
         <FormSection title="Auftragsdaten">
           <FieldRow>

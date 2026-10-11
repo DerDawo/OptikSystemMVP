@@ -12,6 +12,7 @@
 import type { DocumentMergeEntities } from "./documentTemplateEngine";
 import dayjs from "dayjs";
 import logoSehzentrum from "./assets/logo-sehzentrum.jpg?inline";
+import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 // Firmen-/Bankstammdaten: es gibt (noch) keine eigene Stammdaten-Tabelle mit
 // Adresse und Bank (siehe Kommentar in der Rechnungs-Seed-Migration), daher
@@ -284,7 +285,7 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
   const netto = Math.round((summe / (1 + a.mwstSatz / 100)) * 100) / 100;
   const mwst = Math.round((summe - netto) * 100) / 100;
   const brillenArt = brille?.BrillenArt ? String(brille.BrillenArt) : "Brille";
-  const berater = brille?.Berater ? String(brille.Berater) : "";
+  const berater = mitarbeiterAnzeige(brille?.Berater);
   const kassenanteil = Number(brille?.KKAnteil) || 0;
   const bezahlt = String(brille?.Zahlungsstatus ?? "") === "bezahlt";
 

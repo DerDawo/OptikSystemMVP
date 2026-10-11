@@ -41,6 +41,11 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
 import PrintIcon from "@mui/icons-material/Print";
 import { Box, Button, TextField as MuiTextField } from "@mui/material";
+import {
+  MitarbeiterField,
+  MitarbeiterInput,
+  RefraktionInput,
+} from "./mitarbeiter";
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
@@ -251,8 +256,12 @@ export const BrilleList = () => (
           />
         </ReferenceField>
       </DataTable.Col>
-      <DataTable.Col source="Berater" />
-      <DataTable.Col source="Refraktion" />
+      <DataTable.Col source="Berater" label="Bedient von">
+        <MitarbeiterField source="Berater" label="Bedient von" />
+      </DataTable.Col>
+      <DataTable.Col source="Refraktion" label="Refraktion durch">
+        <MitarbeiterField source="Refraktion" label="Refraktion durch" />
+      </DataTable.Col>
       <DataTable.Col source="Datum">
         <DateField source="Datum" />
       </DataTable.Col>
@@ -339,10 +348,13 @@ export const BrilleShow = () => (
         <ShowColumn>
           <ShowSection title="Beratung">
             <Field label="Bedient von">
-              <TextField source="Berater" />
+              <MitarbeiterField source="Berater" label="Bedient von" />
             </Field>
             <Field label="Refraktion durch (Mitarbeiter / Arzt)">
-              <TextField source="Refraktion" />
+              <MitarbeiterField
+                source="Refraktion"
+                label="Refraktion durch (Mitarbeiter / Arzt)"
+              />
             </Field>
           </ShowSection>
           <ShowSection title="Auftragsdaten">
@@ -535,11 +547,10 @@ export const BrilleEdit = () => (
     <SimpleForm>
       <FormSection title="Beratung">
         <FieldRow>
-          <TextInput source="Berater" label="Bedient von" />
-          <TextInput
+          <MitarbeiterInput source="Berater" label="Bedient von" />
+          <RefraktionInput
             source="Refraktion"
             label="Refraktion durch (Mitarbeiter / Arzt)"
-            helperText="Name, Praxis oder z. B. lt. ärztl. Verordnung"
           />
         </FieldRow>
       </FormSection>
@@ -673,11 +684,10 @@ export const BrilleCreate = () => (
     <SimpleForm>
       <FormSection title="Beratung">
         <FieldRow>
-          <TextInput source="Berater" label="Bedient von" />
-          <TextInput
+          <MitarbeiterInput source="Berater" label="Bedient von" />
+          <RefraktionInput
             source="Refraktion"
             label="Refraktion durch (Mitarbeiter / Arzt)"
-            helperText="Name, Praxis oder z. B. lt. ärztl. Verordnung"
           />
         </FieldRow>
       </FormSection>
