@@ -133,3 +133,77 @@ describe("Rezeptanfrage an den Augenarzt", () => {
     expect(html).not.toContain("Hornhautverkruemmung");
   });
 });
+
+describe("Vorgeschlagene Kreuze", () => {
+  const mitVorherigerBrille = {
+    ...entities,
+    vorherigesGlasRechts: { Sph: 0.5, Cyl: -0.5 },
+    vorherigesGlasLinks: { Sph: 1, Cyl: -0.75 },
+  };
+
+  it("kreuzt im AOK-Berechtigungsschein die Veränderung an", () => {
+    const html = buildAokBerechtigungsscheinPrintHtml({
+      entities: mitVorherigerBrille,
+    });
+    expect(html.match(/class="box"[^>]* checked/g)?.length).toBe(2);
+  });
+
+  it("schlägt in der GKV-Verordnung 'keine Veränderung' vor", () => {
+    const html = buildOptometrischeVerordnungPrintHtml({
+      entities: {
+        ...entities,
+        vorherigesGlasRechts: entities.glasRechts,
+        vorherigesGlasLinks: entities.glasLinks,
+      },
+    });
+    expect(html).toMatch(/checked \/>keine Veränderung/);
+  });
+
+  it("kreuzt in der Rezeptanfrage Diagnosen und Versorgung an", () => {
+    const html = buildRezeptanfragePrintHtml({ entities });
+    expect(html).toMatch(/checked \/>Hyperopie/);
+    expect(html).toMatch(/checked \/>Presbyopie/);
+    expect(html).toMatch(/checked \/>Gleitsichtglas/);
+    expect(html).not.toMatch(/checked \/>Myopie/);
+  });
+});
+
+describe("Neue Angaben zu Kasse und Verordnung", () => {
+  const mitAngaben = {
+    ...entities,
+    kunde: {
+      ...entities.kunde,
+      Krankenkasse: "AOK PLUS",
+      Versichertenstatus: "1000000",
+      VersichertenkarteGueltigBis: "2028-12-31",
+    },
+    brille: {
+      ...entities.brille,
+      VerordnenderArzt: "Dr. med. Seher",
+      Verordnungsdatum: "2026-09-01",
+      Diagnose: "H35.3 Makuladegeneration",
+    },
+  };
+
+  it("füllt Kasse, Status und Kartengültigkeit im Berechtigungsschein", () => {
+    const html = buildAokBerechtigungsscheinPrintHtml({ entities: mitAngaben });
+    expect(html).toContain("AOK PLUS");
+    expect(html).toContain("1000000");
+    expect(html).toContain("31.12.2028");
+  });
+
+  it("kreuzt in der GKV-Verordnung die Kassenart an", () => {
+    const html = buildOptometrischeVerordnungPrintHtml({
+      entities: mitAngaben,
+    });
+    expect(html).toMatch(/checked \/>AOK/);
+    expect(html).not.toMatch(/checked \/>BKK/);
+  });
+
+  it("übernimmt Arzt, Datum und Diagnose ins Erprobungsprotokoll", () => {
+    const html = buildErprobungsprotokollPrintHtml({ entities: mitAngaben });
+    expect(html).toContain("Muster 8A vom 01.09.2026");
+    expect(html).toContain("Dr. med. Seher");
+    expect(html).toContain("H35.3 Makuladegeneration");
+  });
+});

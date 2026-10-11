@@ -17,11 +17,19 @@ import {
   formatWert,
   text,
 } from "./werkstattauftragTemplate";
+import {
+  alterVorherigeBrille,
+  brillenartKategorie,
+  sehstaerkeVeraendert,
+} from "./formularVorschlaege";
+
+// Textfelder bekommen einen Text, Kästchen true (angekreuzt)
+export type PdfFeldwerte = Record<string, string | boolean>;
 
 export type PdfVorlage = {
   datei: string;
   titel: string;
-  felder: (entities: DocumentMergeEntities) => Record<string, string>;
+  felder: (entities: DocumentMergeEntities) => PdfFeldwerte;
 };
 
 // Auswahllisten im Beobachtungsbogen schreiben positive Werte ohne "+"
@@ -51,12 +59,13 @@ const betrag = (value: number) => (value ? formatEuro(value) : "");
 const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
   const k = kunde(entities);
   const brille: Record<string, unknown> = entities.brille ?? {};
-  const werte = (glas: MergeSource, auge: "OD" | "OS") => ({
-    [`SPH ${auge}`]: ohnePlus(formatWert(glas?.Sph, "dioptrie")),
-    [`CYL ${auge}`]: ohnePlus(formatWert(glas?.Cyl, "dioptrie")),
-    [`AXE ${auge}`]: formatWert(glas?.A, "achse"),
-    [`ADD ${auge}`]: formatWert(glas?.Add, "zwei"),
-    [`VCC ${auge}`]: formatWert(glas?.Vis, "zwei"),
+  // suffix "" = Refraktion (neue Brille), " ALT" = bisherige Korrektur
+  const werte = (glas: MergeSource, auge: "OD" | "OS", suffix = "") => ({
+    [`SPH ${auge}${suffix}`]: ohnePlus(formatWert(glas?.Sph, "dioptrie")),
+    [`CYL ${auge}${suffix}`]: ohnePlus(formatWert(glas?.Cyl, "dioptrie")),
+    [`AXE ${auge}${suffix}`]: formatWert(glas?.A, "achse"),
+    [`ADD ${auge}${suffix}`]: formatWert(glas?.Add, "zwei"),
+    [`VCC ${auge}${suffix}`]: formatWert(glas?.Vis, "zwei"),
   });
   return {
     Name: text(k.Nachname),
@@ -68,6 +77,8 @@ const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
     Datum: dayjs().format("DD.MM.YYYY"),
     ...werte(entities.glasRechts, "OD"),
     ...werte(entities.glasLinks, "OS"),
+    ...werte(entities.vorherigesGlasRechts, "OD", " ALT"),
+    ...werte(entities.vorherigesGlasLinks, "OS", " ALT"),
   };
 };
 
@@ -127,6 +138,27 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     [`hd_${start + 4}`]: text(k.KundenNummer),
   });
 
+  // B a) Werte der vorhandenen Brille (Seite 3): Sph, Cyl, Achse, Visus,
+  // HSA, MA, NZ, Add, NZ-Add - MA, NZ und NZ-Add kennt das Programm nicht
+  const vorhanden = (glas: MergeSource, start: number) => ({
+    [`pr_${start}`]: formatWert(glas?.Sph, "dioptrie"),
+    [`pr_${start + 1}`]: formatWert(glas?.Cyl, "dioptrie"),
+    [`pr_${start + 2}`]: formatWert(glas?.A, "achse"),
+    [`pr_${start + 3}`]: formatWert(glas?.Vis, "visus"),
+    [`pr_${start + 4}`]: formatWert(glas?.HSA, "frei"),
+    [`pr_${start + 7}`]: formatWert(glas?.Add, "dioptrie"),
+  });
+  // Kästchen "Art der Brille": Fern, Nah, Bifokal, Gleitsicht, Office
+  const art = (brillenArt: unknown, felder: Record<string, string>) => {
+    const kategorie = brillenartKategorie(brillenArt);
+    return kategorie && felder[kategorie] ? { [felder[kategorie]]: true } : {};
+  };
+  const veraendert = sehstaerkeVeraendert(entities) === true;
+  const alter = alterVorherigeBrille(entities);
+  const addAlt = Number(entities.vorherigesGlasRechts?.Add) || 0;
+  const addNeu = Number(r?.Add) || 0;
+  const glasart = brillenartKategorie(brille.BrillenArt);
+
   return {
     f_4: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
     f_5: formatDatum(k.Geburtsdatum),
@@ -161,6 +193,36 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     ...messung(l, 118),
     ...neueBrille(r, 225),
     ...neueBrille(l, 233),
+    // vorhandene Brille (vorheriger Auftrag)
+    ...vorhanden(entities.vorherigesGlasRechts, 85),
+    ...vorhanden(entities.vorherigesGlasLinks, 94),
+    ...art(entities.vorherigeBrille?.BrillenArt, {
+      Fernbrille: "cb_77",
+      Nahbrille: "cb_78",
+      Bifokalbrille: "cb_79",
+      Gleitsichtbrille: "cb_80",
+      Officebrille: "cb_81",
+    }),
+    // "ist ca. __ Jahre alt; Glasstärken entsprechen nicht mehr dem Bedarf"
+    ...(veraendert && alter !== null
+      ? { tb_103: true, tbf_104: String(alter) }
+      : {}),
+    // fortschreitende Presbyopie: Addition gegenüber der alten Brille gestiegen
+    ...(addAlt > 0 && addNeu > addAlt ? { tb_105: true } : {}),
+    // Empfohlene Glasart (Seite 2) und Art der neuen Brille (Seite 5)
+    ...(glasart === "Officebrille" ? { cb_44: true } : {}),
+    ...(glasart === "Gleitsichtbrille" ? { cb_45: true } : {}),
+    ...(glasart === "Bifokalbrille" ? { cb_46: true } : {}),
+    ...(glasart === "Fernbrille" || glasart === "Nahbrille"
+      ? { cb_43: true }
+      : {}),
+    ...art(brille.BrillenArt, {
+      Fernbrille: "cb_217",
+      Nahbrille: "cb_218",
+      Bifokalbrille: "cb_219",
+      Gleitsichtbrille: "cb_220",
+      Officebrille: "cb_221",
+    }),
   };
 };
 
@@ -196,13 +258,18 @@ export const fuellePdfVorlage = async (
   pdfBytes: ArrayBuffer | Uint8Array,
   entities: DocumentMergeEntities,
 ): Promise<Uint8Array> => {
-  const { PDFDocument, PDFDropdown, PDFTextField } = await import("pdf-lib");
+  const { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } =
+    await import("pdf-lib");
   const pdf = await PDFDocument.load(pdfBytes);
   const form = pdf.getForm();
   for (const [name, wert] of Object.entries(vorlage.felder(entities))) {
     if (!wert) continue;
     const feld = form.getFieldMaybe(name);
     try {
+      if (wert === true) {
+        if (feld instanceof PDFCheckBox) feld.check();
+        continue;
+      }
       if (feld instanceof PDFTextField) {
         feld.setText(passeAnFeldlaenge(wert, feld.getMaxLength()));
         // feste Größe statt "automatisch" (füllt sonst die ganze Feldhöhe);

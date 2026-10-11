@@ -165,7 +165,7 @@ export const buildBerechtigungsscheinBodyHtml = ({
     <table class="feld-tabelle">
       <tr><td class="feld-label">Name, Vorname</td><td class="feld-wert">${escapeHtml(vollername)}</td></tr>
       <tr><td class="feld-label">Geburtsdatum</td><td class="feld-wert">${escapeHtml(formatDatum(kunde?.Geburtsdatum))}</td></tr>
-      <tr><td class="feld-label">Krankenkasse</td><td class="feld-wert">${escapeHtml(formatWert(kunde?.KrankenversicherungsTyp))}</td></tr>
+      <tr><td class="feld-label">Krankenkasse</td><td class="feld-wert">${escapeHtml(formatWert(kunde?.Krankenkasse || kunde?.KrankenversicherungsTyp))}</td></tr>
       <tr><td class="feld-label">Versichertennummer</td><td class="feld-wert">${escapeHtml(formatWert(kunde?.VersichertenNummer))}</td></tr>
     </table>
   </div>
