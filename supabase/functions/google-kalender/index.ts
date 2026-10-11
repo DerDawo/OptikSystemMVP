@@ -16,7 +16,7 @@
 //   nach dem letzten Abgleich wird übersprungen.
 import { createClient } from 'npm:@supabase/supabase-js@2.49.4';
 import { corsHeaders } from '../_shared/cors.ts';
-import { IcsTermin, leseIcs, namensWoerter, passenderKunde } from './ics.ts';
+import { leseIcs, namensWoerter, passenderKunde, type IcsTermin } from './ics.ts';
 
 const TAG = 86_400_000;
 const MIN_ABSTAND_MS = 60_000;
@@ -70,7 +70,12 @@ Deno.serve(async (req) => {
         const bis = Date.now() + 365 * TAG;
         const imZeitraum = (t: IcsTermin) =>
             t.ende.getTime() >= von && t.start.getTime() <= bis;
-        const termine = alle.filter((t) => imZeitraum(t) && !t.abgesagt);
+        // je Kennung nur ein Eintrag (sonst lehnt der upsert den Stapel ab)
+        const termine = [
+            ...new Map(
+                alle.filter((t) => imZeitraum(t) && !t.abgesagt).map((t) => [t.uid, t]),
+            ).values(),
+        ];
         const uidsImFeed = new Set(termine.map((t) => t.uid));
 
         // Bisher übernommene Google-Termine
@@ -101,7 +106,7 @@ Deno.serve(async (req) => {
         let neu = 0;
         let geaendert = 0;
         let ohneKunde = 0;
-        const zeilen = [];
+        const zeilen: Record<string, unknown>[] = [];
         for (const t of termine) {
             const alt = bestehende.get(t.uid);
             const kunde_id = alt?.kunde_id ?? (await kundeZu(t.titel));
