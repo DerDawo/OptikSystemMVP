@@ -16,7 +16,9 @@ import logoSehzentrum from "./assets/logo-sehzentrum.jpg?inline";
 // Firmen-/Bankstammdaten: es gibt (noch) keine eigene Stammdaten-Tabelle mit
 // Adresse und Bank (siehe Kommentar in der Rechnungs-Seed-Migration), daher
 // hier als Konstanten hinterlegt.
-export const RECHNUNG_ABSENDER = {
+// Standardwerte, falls in der Tabelle `betrieb` (Seite "Betriebsdaten")
+// ein Feld leer ist (#132).
+export const STANDARD_ABSENDER = {
   firma: "Augenoptik Ulm",
   marke: "Sehzentrum Gera",
   inhaber: "Robert Ulm",
@@ -35,6 +37,61 @@ export const RECHNUNG_ABSENDER = {
   mwstSatz: 19,
   zahlungszielTage: 14,
   kostenvoranschlagGueltigTage: 28,
+};
+
+export type Absender = typeof STANDARD_ABSENDER;
+
+// Aktuelle Absenderdaten für Belege, Formulare und SMS-Platzhalter. Das
+// Objekt wird beim App-Start bzw. nach dem Speichern der Betriebsdaten über
+// uebernehmeBetriebsdaten() aktualisiert; die Templates lesen es erst beim
+// Erzeugen eines Belegs, sehen also immer den aktuellen Stand.
+export const RECHNUNG_ABSENDER: Absender = { ...STANDARD_ABSENDER };
+
+const textOder = (wert: unknown, standard: string) =>
+  typeof wert === "string" && wert.trim() ? wert.trim() : standard;
+
+const zahlOder = (wert: unknown, standard: number) => {
+  const zahl = typeof wert === "string" ? Number(wert) : wert;
+  return typeof zahl === "number" && Number.isFinite(zahl) ? zahl : standard;
+};
+
+/** Bildet eine Zeile der Tabelle `betrieb` auf die Absenderdaten ab. */
+export const absenderAusBetrieb = (
+  betrieb: Record<string, unknown> | null | undefined,
+): Absender => {
+  const b = betrieb ?? {};
+  const s = STANDARD_ABSENDER;
+  const strasse = textOder(b.Strasse, "");
+  return {
+    firma: textOder(b.Firmenname, s.firma),
+    marke: textOder(b.Marke, s.marke),
+    inhaber: textOder(b.Inhaber, s.inhaber),
+    strasseLang: strasse || s.strasseLang,
+    strasseKurz: strasse || s.strasseKurz,
+    plz: textOder(b.PLZ, s.plz),
+    ort: textOder(b.Ort, s.ort),
+    telefon: textOder(b.Telefon, s.telefon),
+    fax: textOder(b.Fax, s.fax),
+    email: textOder(b.Email, s.email),
+    web: textOder(b.Website, s.web),
+    ustId: textOder(b.UStIdNr, s.ustId),
+    bankName: textOder(b.Bank, s.bankName),
+    iban: textOder(b.IBAN, s.iban),
+    bic: textOder(b.BIC, s.bic),
+    mwstSatz: zahlOder(b.MwStSatz, s.mwstSatz),
+    zahlungszielTage: zahlOder(b.ZahlungszielTage, s.zahlungszielTage),
+    kostenvoranschlagGueltigTage: zahlOder(
+      b.KostenvoranschlagGueltigTage,
+      s.kostenvoranschlagGueltigTage,
+    ),
+  };
+};
+
+/** Übernimmt die Betriebsdaten in RECHNUNG_ABSENDER (#132). */
+export const uebernehmeBetriebsdaten = (
+  betrieb: Record<string, unknown> | null | undefined,
+) => {
+  Object.assign(RECHNUNG_ABSENDER, absenderAusBetrieb(betrieb));
 };
 
 export const escapeHtml = (value: string): string =>
@@ -160,6 +217,20 @@ export const buildRechnungPositionen = (
       betrag: Number(zusatzleistung.Betrag) || 0,
     });
   });
+
+  // Leistungen/Nachlässe ohne Katalogbezug (#131), z. B. die Freitext-
+  // Leistungen der Prisma-Altaufträge. Zählen wie Zusatzleistungen ohne Rabatt
+  // zur Summe, damit Positionen und Rechnungsbetrag zusammenpassen.
+  const weitereLeistungen = Number(entities.brille?.WeitereLeistungen) || 0;
+  if (weitereLeistungen !== 0) {
+    positionen.push({
+      label:
+        weitereLeistungen > 0
+          ? "Weitere Leistungen (siehe Auftrag)"
+          : "Nachlass (siehe Auftrag)",
+      betrag: weitereLeistungen,
+    });
+  }
 
   const rabattProzent = Number(entities.brille?.RabattProzent) || 0;
   if (rabattProzent > 0) {

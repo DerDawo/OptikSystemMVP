@@ -375,8 +375,10 @@ Festgelegte Regeln:
   Tausende Altaufträge in der Mahnungen-Übersicht). Die Auftragssumme wird
   aus Prisma übernommen; `brille_calc_summe_trigger` ist dafür nur während
   des Imports deaktiviert, weil die Leistungen als Freitext ohne
-  Katalogbezug vorliegen. Eine spätere Bearbeitung in der App berechnet die
-  Summe neu (ohne diese Freitext-Leistungen).
+  Katalogbezug vorliegen. Seit #131 steht die Differenz zwischen
+  Prisma-Summe und Einzelposten in `brille."WeitereLeistungen"`; die
+  Summenberechnung zählt sie mit, und die Belege zeigen sie als eigene
+  Position. Eine spätere Bearbeitung ändert die Summe daher nicht mehr.
 - Glas-Auftragsstatus `abgeholt`; Aufträge der letzten 60 Tage `bestellt` bzw.
   `zu bestellen` je nach Prisma-Bestellkennzeichen (`glbest` J/F).
 - Termine: In Prisma leer, es wird nichts übernommen.

@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  absenderAusBetrieb,
   buildKostenvoranschlagBodyHtml,
   buildRechnungBodyHtml,
   buildRechnungPositionen,
   formatGlaswerte,
   RECHNUNG_ABSENDER,
+  STANDARD_ABSENDER,
 } from "./rechnungTemplate";
 import type { DocumentMergeEntities } from "./documentTemplateEngine";
 
@@ -78,6 +80,27 @@ describe("buildRechnungPositionen", () => {
     expect(rabatt.betrag).toBeCloseTo(-31.98, 2);
   });
 
+  it("zeigt weitere Leistungen bzw. Nachlass als eigene Position (#131)", () => {
+    const mit = buildRechnungPositionen({
+      ...ENTITIES,
+      brille: { ...ENTITIES.brille, WeitereLeistungen: 42.5 },
+    });
+    expect(mit.at(-1)).toEqual({
+      label: "Weitere Leistungen (siehe Auftrag)",
+      betrag: 42.5,
+    });
+    const nachlass = buildRechnungPositionen({
+      ...ENTITIES,
+      brille: { ...ENTITIES.brille, WeitereLeistungen: -10 },
+    });
+    expect(nachlass.at(-1)).toEqual({
+      label: "Nachlass (siehe Auftrag)",
+      betrag: -10,
+    });
+    const ohne = buildRechnungPositionen(ENTITIES);
+    expect(ohne.some((p) => p.label.includes("siehe Auftrag"))).toBe(false);
+  });
+
   it("schreibt Sphäre immer mit Vorzeichen, Achse nur mit Zylinder", () => {
     expect(formatGlaswerte({ Sph: -1, Cyl: 0, A: 90 })).toBe("sph: - 1,00");
   });
@@ -141,5 +164,26 @@ describe("buildKostenvoranschlagBodyHtml", () => {
     expect(html).toContain("unverbindlich und gültig bis");
     expect(html).toContain("beträgt Ihr Eigenanteil 229,30 EUR");
     expect(html).not.toContain("Rech.-Nr.");
+  });
+});
+
+describe("absenderAusBetrieb (#132)", () => {
+  it("übernimmt gepflegte Felder, sonst die Standardwerte", () => {
+    const absender = absenderAusBetrieb({
+      Firmenname: "Optik Muster",
+      Strasse: "Hauptstraße 1",
+      Telefon: "  ",
+      MwStSatz: "7",
+      ZahlungszielTage: null,
+    });
+    expect(absender.firma).toBe("Optik Muster");
+    expect(absender.strasseLang).toBe("Hauptstraße 1");
+    expect(absender.strasseKurz).toBe("Hauptstraße 1");
+    expect(absender.telefon).toBe(STANDARD_ABSENDER.telefon);
+    expect(absender.mwstSatz).toBe(7);
+    expect(absender.zahlungszielTage).toBe(
+      STANDARD_ABSENDER.zahlungszielTage,
+    );
+    expect(absenderAusBetrieb(null)).toEqual(STANDARD_ABSENDER);
   });
 });
