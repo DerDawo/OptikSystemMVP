@@ -113,12 +113,19 @@ export async function importSf6Katalog(
   onProgress?.(
     `Lege Hersteller "${katalog.hersteller.name}" an/aktualisiere ihn ...`,
   );
+  // Ein im Betrieb geänderter Herstellername (z. B. "POC" statt
+  // "POL Optic GmbH") bleibt beim erneuten Import erhalten.
+  const { data: vorhandenerHersteller } = await supabase
+    .from("glashersteller")
+    .select("name")
+    .eq("code", katalog.hersteller.code)
+    .maybeSingle();
   const { data: herstellerRow, error: herstellerError } = await supabase
     .from("glashersteller")
     .upsert(
       {
         code: katalog.hersteller.code,
-        name: katalog.hersteller.name,
+        name: vorhandenerHersteller?.name || katalog.hersteller.name,
         updated_at: now,
       },
       { onConflict: "code" },
