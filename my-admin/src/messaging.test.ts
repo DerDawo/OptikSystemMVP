@@ -50,9 +50,7 @@ describe("buildExternalMessageUrl", () => {
 
 describe("Telefonnummern für SMS/WhatsApp", () => {
   it("bereitet Schrägstriche, 0049 und Freitext auf", () => {
-    expect(normalizePhoneNumberForSms("0365/123 45 67")).toBe(
-      "+493651234567",
-    );
+    expect(normalizePhoneNumberForSms("0365/123 45 67")).toBe("+493651234567");
     expect(normalizePhoneNumberForSms("0049 170 1234567")).toBe(
       "+491701234567",
     );
