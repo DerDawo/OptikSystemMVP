@@ -77,6 +77,12 @@ import {
   ShowSection,
   DatenbankInfo,
 } from "./EntityLayout";
+import {
+  AnredeInput,
+  GeschlechtAusAnrede,
+  GeschlechtInput,
+  KundeVerwaltung,
+} from "./KundeFelder";
 import { KundenAuftraege } from "./KundenAuftraege";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
@@ -662,24 +668,15 @@ export const KundeShow = () => {
 export const KundeEdit = () => (
   <Edit title="Kunde bearbeiten" actions={<EditActionsBar />}>
     <SimpleForm>
-      <FormSection title="Datenbankfelder">
-        <FieldRow>
-          <TextInput source="id" InputProps={{ disabled: true }} />
-          <DateInput source="created_at" InputProps={{ disabled: true }} />
-        </FieldRow>
-        <FieldRow>
-          <TextInput source="KundenNummer" />
-          <DateInput source="Aufnahmedatum" />
-        </FieldRow>
-      </FormSection>
+      <GeschlechtAusAnrede />
       <FormSection title="Stammdaten">
         <FieldRow>
-          <TextInput source="Anrede" />
+          <AnredeInput />
           <TextInput source="Nachname" />
           <TextInput source="Vorname" />
         </FieldRow>
         <FieldRow>
-          <TextInput source="Geschlecht" />
+          <GeschlechtInput />
           <DateInput source="Geburtsdatum" />
           <TextInput source="Tätigkeit" />
         </FieldRow>
@@ -732,6 +729,7 @@ export const KundeEdit = () => (
       <FormSection title="Notizen">
         <TextInput source="Notizen" label="Notizen" multiline fullWidth />
       </FormSection>
+      <KundeVerwaltung />
     </SimpleForm>
   </Edit>
 );
@@ -747,6 +745,7 @@ export const KundeCreate = () => {
     Vorname: "",
     Geburtsdatum: "",
     KundenNummer: "",
+    Aufnahmedatum: new Date().toISOString().slice(0, 10),
     ...locationState,
   };
 
@@ -756,28 +755,15 @@ export const KundeCreate = () => {
       transform={(data) => ({ ...data, created_at: new Date().toISOString() })}
     >
       <SimpleForm defaultValues={defaultValues}>
-        <FormSection title="Datenbankfelder">
-          <FieldRow>
-            <TextInput source="id" InputProps={{ disabled: true }} />
-            <DateInput
-              source="created_at"
-              InputProps={{ disabled: true }}
-              label="Erstellt am"
-            />
-          </FieldRow>
-          <FieldRow>
-            <TextInput source="KundenNummer" />
-            <DateInput source="Aufnahmedatum" />
-          </FieldRow>
-        </FormSection>
+        <GeschlechtAusAnrede />
         <FormSection title="Stammdaten">
           <FieldRow>
-            <TextInput source="Anrede" />
+            <AnredeInput />
             <TextInput source="Nachname" />
             <TextInput source="Vorname" />
           </FieldRow>
           <FieldRow>
-            <TextInput source="Geschlecht" />
+            <GeschlechtInput />
             <DateInput source="Geburtsdatum" />
             <TextInput source="Tätigkeit" />
           </FieldRow>
@@ -842,6 +828,7 @@ export const KundeCreate = () => {
         <FormSection title="Notizen">
           <TextInput source="Notizen" label="Notizen" multiline fullWidth />
         </FormSection>
+        <KundeVerwaltung />
       </SimpleForm>
     </Create>
   );
