@@ -416,6 +416,7 @@ const MessageButton = () => {
       Vorname: record.Vorname,
       Nachname: record.Nachname,
       Email: record.Email,
+      Handy: record.Handy,
       TelefonnummerPrivat: record.TelefonnummerPrivat,
       TelefonnummerGeschaeftlich: record.TelefonnummerGeschaeftlich,
     },
