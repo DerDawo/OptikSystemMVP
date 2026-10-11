@@ -7,7 +7,7 @@ import {
   Theme,
   useMediaQuery,
 } from "@mui/material";
-import { Title, useDataProvider, ListBase } from "react-admin";
+import { Title, useDataProvider, ListBase, Pagination } from "react-admin";
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -278,13 +278,15 @@ const CustomerSearch = () => {
             key={`${resource}-${JSON.stringify(submittedFilter)}-${hasSearched ? "searched" : "idle"}`}
             resource={resource}
             filter={submittedFilter}
-            perPage={10}
-            sort={{ field: "id", order: "ASC" }}
+            perPage={25}
+            sort={{ field: "Nachname", order: "ASC" }}
             disableSyncWithLocation
             storeKey={false}
             queryOptions={{ enabled: hasSearched }}
           >
             <KundenDataTable />
+            {/* Ohne Pagination waren nur die ersten Treffer sichtbar */}
+            <Pagination rowsPerPageOptions={[25, 50, 100]} />
           </ListBase>
         ) : null}
       </Box>
