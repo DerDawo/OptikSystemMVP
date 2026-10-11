@@ -3,9 +3,9 @@
     "name": "UNICORN – Optik Ulm Systems",
     "icons": [
         {
-            "src": "favicon.svg",
-            "sizes": "any",
-            "type": "image/svg+xml"
+            "src": "unicorn-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
         },
         {
             "src": "favicon.ico",
