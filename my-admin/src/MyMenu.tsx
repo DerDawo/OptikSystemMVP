@@ -25,7 +25,6 @@ import {
   DocumentIcon,
   FrameIcon,
   GlassesIcon,
-  UnicornIcon,
   ImportIcon,
   LayersIcon,
   LensIcon,
@@ -35,6 +34,7 @@ import {
   TagIcon,
   UsersIcon,
 } from "./icons";
+import unicornLogo from "./assets/unicorn-weiss.png";
 
 const Brand = () => {
   const [open] = useSidebarState();
@@ -64,7 +64,12 @@ const Brand = () => {
           boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25)",
         }}
       >
-        <UnicornIcon sx={{ fontSize: 26 }} />
+        <Box
+          component="img"
+          src={unicornLogo}
+          alt=""
+          sx={{ width: 26, height: 26, display: "block" }}
+        />
       </Box>
       {open && (
         <Box sx={{ minWidth: 0 }}>
