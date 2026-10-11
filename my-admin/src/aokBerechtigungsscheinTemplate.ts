@@ -108,7 +108,7 @@ export const buildAokBerechtigungsscheinBodyHtml = ({
   return `
 <div class="seite">
   <div class="kassenfeld">
-    <div class="feld" style="left:0;top:0;width:79.85mm;height:9.86mm"><span class="lbl">Krankenkasse bzw. Kostenträger</span></div>
+    <div class="feld" style="left:0;top:0;width:79.85mm;height:9.86mm"><span class="lbl">Krankenkasse bzw. Kostenträger</span><div class="feldwert">${wert(text(kunde.Krankenkasse))}</div></div>
     <div class="feld" style="left:0;top:9.86mm;width:79.85mm;height:19.9mm">
       <span class="lbl">Name, Vorname des Versicherten</span>
       <span class="lbl rechts" style="top:4.6mm">geb. am</span>
@@ -117,9 +117,9 @@ export const buildAokBerechtigungsscheinBodyHtml = ({
     </div>
     <div class="feld" style="left:0;top:29.76mm;width:28mm;height:8.54mm"><span class="lbl">Kassen-Nr.</span><div class="feldwert">${wert(text(kunde.KrankenkassenNummer))}</div></div>
     <div class="feld" style="left:28mm;top:29.76mm;width:32.35mm;height:8.54mm"><span class="lbl">Versicherten-Nr.</span><div class="feldwert">${wert(text(kunde.VersichertenNummer))}</div></div>
-    <div class="feld" style="left:60.35mm;top:29.76mm;width:19.5mm;height:8.54mm"><span class="lbl">Status</span></div>
+    <div class="feld" style="left:60.35mm;top:29.76mm;width:19.5mm;height:8.54mm"><span class="lbl">Status</span><div class="feldwert">${wert(text(kunde.Versichertenstatus))}</div></div>
     <div class="feld" style="left:0;top:38.3mm;width:28mm;height:8.5mm"><span class="lbl">Augenoptiker-IK</span><div class="feldwert">${wert(text(betrieb?.IKNummer))}</div></div>
-    <div class="feld" style="left:28mm;top:38.3mm;width:27.75mm;height:8.5mm"><span class="lbl">VK gültig bis</span></div>
+    <div class="feld" style="left:28mm;top:38.3mm;width:27.75mm;height:8.5mm"><span class="lbl">VK gültig bis</span><div class="feldwert">${wert(formatDatum(kunde.VersichertenkarteGueltigBis))}</div></div>
     <div class="feld" style="left:55.75mm;top:38.3mm;width:24.1mm;height:8.5mm"><span class="lbl">Datum</span><div class="feldwert">${wert(dayjs().format("DD.MM.YYYY"))}</div></div>
   </div>
 

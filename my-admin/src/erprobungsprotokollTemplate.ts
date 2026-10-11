@@ -46,6 +46,8 @@ export const buildErprobungsprotokollBodyHtml = ({
     .filter(Boolean)
     .join(", ");
   const ik = text(betrieb?.IKNummer);
+  const brille: Record<string, unknown> = entities.brille ?? {};
+  const verordnungsdatum = formatDatum(brille.Verordnungsdatum);
 
   return `
 <div class="protokoll">
@@ -59,10 +61,10 @@ export const buildErprobungsprotokollBodyHtml = ({
   <h2>1. Versicherte / Verordnung</h2>
   <table class="raster vier">
     <tr><th>Name</th><td>${e(name)}</td><th>Geb.-Datum</th><td>${e(formatDatum(k.Geburtsdatum))}</td></tr>
-    <tr><th>Anschrift</th><td>${e(anschrift)}</td><th>Krankenkasse</th><td></td></tr>
+    <tr><th>Anschrift</th><td>${e(anschrift)}</td><th>Krankenkasse</th><td>${e(text(k.Krankenkasse))}</td></tr>
     <tr><th>Versicherten-Nr.</th><td>${e(text(k.VersichertenNummer))}</td><th>Kostenträger-Kennung</th><td>${e(text(k.KrankenkassenNummer))}</td></tr>
-    <tr class="hoch"><th>Verordnung</th><td>Muster 8A vom</td><th>Verordnender Arzt</th><td></td></tr>
-    <tr><th>Diagnose</th><td></td><th>Datum Erprobung</th><td>${e(dayjs().format("DD.MM.YYYY"))}</td></tr>
+    <tr class="hoch"><th>Verordnung</th><td>Muster 8A vom ${e(verordnungsdatum)}</td><th>Verordnender Arzt</th><td>${e(text(brille.VerordnenderArzt))}</td></tr>
+    <tr><th>Diagnose</th><td>${e(text(brille.Diagnose))}</td><th>Datum Erprobung</th><td>${e(dayjs().format("DD.MM.YYYY"))}</td></tr>
   </table>
 
   <h2>2. Augenärztlicher Befund (lt. Verordnung)</h2>

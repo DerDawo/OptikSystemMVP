@@ -13,6 +13,7 @@ import {
   KAESTCHEN_STYLES,
   anzahlGlaeser,
   kaestchen as kaestchenInput,
+  kassenart,
   sehstaerkeVeraendert,
 } from "./formularVorschlaege";
 
@@ -70,13 +71,13 @@ export const buildOptometrischeVerordnungBodyHtml = ({
 <div class="seite">
   <h1>Optometrische Verordnung</h1>
   <table class="kassen">
-    <tr>${KASSEN.map((kasse) => `<td>${kaestchen(kasse)}</td>`).join("")}</tr>
+    <tr>${KASSEN.map((kasse) => `<td>${kaestchen(kasse, kassenart(kunde.Krankenkasse) === kasse)}</td>`).join("")}</tr>
   </table>
   <table class="versicherter">
     <tr><th>Name, Vorname:</th><td>${wert(name)}</td><th>geb. am:</th><td>${wert(formatDatum(kunde.Geburtsdatum))}</td></tr>
     <tr><th>Adresse:</th><td>${wert(adresse)}</td><th>Ausgestellt am:</th><td>${wert(dayjs().format("DD.MM.YYYY"))}</td></tr>
     <tr><th>Kassen-Nr.:</th><td>${wert(text(kunde.KrankenkassenNummer))}</td><th>Versicherten-Nr.:</th><td>${wert(text(kunde.VersichertenNummer))}</td></tr>
-    <tr><th>Status:</th><td></td><th>VK gültig bis:</th><td></td></tr>
+    <tr><th>Status:</th><td>${wert(text(kunde.Versichertenstatus))}</td><th>VK gültig bis:</th><td>${wert(formatDatum(kunde.VersichertenkarteGueltigBis))}</td></tr>
   </table>
 
   <h2>I. Erklärung des Optometristen</h2>

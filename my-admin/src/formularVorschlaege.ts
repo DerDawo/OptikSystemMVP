@@ -158,3 +158,22 @@ export const brillenartKategorie = (
   if (/fern|einstärken/.test(art)) return "Fernbrille";
   return null;
 };
+
+// Kassenart für die Ankreuzzeile der GKV-Verordnung aus dem Kassennamen
+// (Ersatzkassen wie TK, Barmer, DAK, KKH, hkk laufen über den vdek)
+export const kassenart = (krankenkasse: unknown): string | null => {
+  const name = String(krankenkasse ?? "").toLowerCase();
+  if (!name) return null;
+  if (/\baok\b/.test(name)) return "AOK";
+  if (/\blkk\b|svlfg|landwirtschaft/.test(name)) return "LKK";
+  if (/\bbkk\b|betriebskrankenkasse/.test(name)) return "BKK";
+  if (/\bikk\b|innungskrankenkasse/.test(name)) return "IKK";
+  if (/knappschaft/.test(name)) return "Knappschaft";
+  if (
+    /\btk\b|techniker|barmer|\bdak\b|\bkkh\b|\bhkk\b|\bhek\b|ersatzkasse|vdek/.test(
+      name,
+    )
+  )
+    return "vDAK";
+  return null;
+};

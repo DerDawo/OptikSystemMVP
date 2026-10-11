@@ -167,3 +167,43 @@ describe("Vorgeschlagene Kreuze", () => {
     expect(html).not.toMatch(/checked \/>Myopie/);
   });
 });
+
+describe("Neue Angaben zu Kasse und Verordnung", () => {
+  const mitAngaben = {
+    ...entities,
+    kunde: {
+      ...entities.kunde,
+      Krankenkasse: "AOK PLUS",
+      Versichertenstatus: "1000000",
+      VersichertenkarteGueltigBis: "2028-12-31",
+    },
+    brille: {
+      ...entities.brille,
+      VerordnenderArzt: "Dr. med. Seher",
+      Verordnungsdatum: "2026-09-01",
+      Diagnose: "H35.3 Makuladegeneration",
+    },
+  };
+
+  it("füllt Kasse, Status und Kartengültigkeit im Berechtigungsschein", () => {
+    const html = buildAokBerechtigungsscheinPrintHtml({ entities: mitAngaben });
+    expect(html).toContain("AOK PLUS");
+    expect(html).toContain("1000000");
+    expect(html).toContain("31.12.2028");
+  });
+
+  it("kreuzt in der GKV-Verordnung die Kassenart an", () => {
+    const html = buildOptometrischeVerordnungPrintHtml({
+      entities: mitAngaben,
+    });
+    expect(html).toMatch(/checked \/>AOK/);
+    expect(html).not.toMatch(/checked \/>BKK/);
+  });
+
+  it("übernimmt Arzt, Datum und Diagnose ins Erprobungsprotokoll", () => {
+    const html = buildErprobungsprotokollPrintHtml({ entities: mitAngaben });
+    expect(html).toContain("Muster 8A vom 01.09.2026");
+    expect(html).toContain("Dr. med. Seher");
+    expect(html).toContain("H35.3 Makuladegeneration");
+  });
+});

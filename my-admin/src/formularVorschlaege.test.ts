@@ -7,6 +7,7 @@ import {
   diagnoseVorschlaege,
   ermitteltViaVorschlaege,
   kaestchen,
+  kassenart,
   sehstaerkeVeraendert,
   versorgungVorschlaege,
 } from "./formularVorschlaege";
@@ -97,5 +98,18 @@ describe("Vorschläge aus den Werten", () => {
       '<input type="checkbox" class="kaestchen" checked />',
     );
     expect(kaestchen()).not.toContain("checked");
+  });
+});
+
+describe("kassenart", () => {
+  it("ordnet Kassennamen der Kassenart zu", () => {
+    expect(kassenart("AOK PLUS")).toBe("AOK");
+    expect(kassenart("Techniker Krankenkasse (TK)")).toBe("vDAK");
+    expect(kassenart("BARMER")).toBe("vDAK");
+    expect(kassenart("IKK classic")).toBe("IKK");
+    expect(kassenart("BKK firmus")).toBe("BKK");
+    expect(kassenart("Knappschaft")).toBe("Knappschaft");
+    expect(kassenart("SVLFG")).toBe("LKK");
+    expect(kassenart("")).toBeNull();
   });
 });

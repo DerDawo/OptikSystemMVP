@@ -479,6 +479,17 @@ export const BrilleShow = () => (
               <NumberField source="Mahnstufe" />
             </Field>
           </ShowSection>
+          <ShowSection title="Verordnung">
+            <Field>
+              <TextField source="VerordnenderArzt" />
+            </Field>
+            <Field>
+              <DateField source="Verordnungsdatum" />
+            </Field>
+            <Field>
+              <TextField source="Diagnose" />
+            </Field>
+          </ShowSection>
           <ShowSection title="Kassenzulassung (§ 33 SGB V)">
             <Field label="Erstverordnung (Muster 8) vorhanden">
               <BooleanField source="ErstverordnungMuster8Vorhanden" />
@@ -624,6 +635,13 @@ export const BrilleEdit = () => (
           />
         </FieldRow>
       </FormSection>
+      <FormSection title="Verordnung">
+        <FieldRow>
+          <TextInput source="VerordnenderArzt" />
+          <DateInput source="Verordnungsdatum" />
+        </FieldRow>
+        <TextInput source="Diagnose" fullWidth />
+      </FormSection>
       <FormSection title="Kassenzulassung (§ 33 SGB V)">
         <FieldRow>
           <BooleanInput
@@ -719,6 +737,13 @@ export const BrilleCreate = () => (
             choices={zahlungsstatusChoices}
           />
         </FieldRow>
+      </FormSection>
+      <FormSection title="Verordnung">
+        <FieldRow>
+          <TextInput source="VerordnenderArzt" />
+          <DateInput source="Verordnungsdatum" />
+        </FieldRow>
+        <TextInput source="Diagnose" fullWidth />
       </FormSection>
       <FormSection title="Kassenzulassung (§ 33 SGB V)">
         <FieldRow>

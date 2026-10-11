@@ -110,7 +110,7 @@ export const buildRezeptanfrageBodyHtml = ({
   <h2>1 Patientendaten</h2>
   <div class="reihe">${feld("Nachname *", text(k.Nachname))}${feld("Vorname *", text(k.Vorname))}${feld("Geburtsdatum *", formatDatum(k.Geburtsdatum), "0.7")}</div>
   <div class="reihe">${feld("Adresse (Straße, PLZ, Ort)", adresse, "2")}${feld("Telefon / Mobil", text(k.Handy) || text(k.TelefonnummerPrivat))}</div>
-  <div class="reihe">${feld("Krankenkasse")}${feld("Versichertennummer", text(k.VersichertenNummer))}${feld("Versicherungsstatus", text(k.KrankenversicherungsTyp))}</div>
+  <div class="reihe">${feld("Krankenkasse", text(k.Krankenkasse))}${feld("Versichertennummer", text(k.VersichertenNummer))}${feld("Versicherungsstatus", text(k.KrankenversicherungsTyp))}</div>
 
   <h2>2 Aktuelle Refraktionswerte (Voruntersuchung Optiker)</h2>
   <table class="werte">
@@ -123,7 +123,7 @@ export const buildRezeptanfrageBodyHtml = ({
 
   <h2>3 Krankheitsbilder / Diagnosen</h2>
   <div class="raster zwei">${DIAGNOSEN.map((d) => `<div>${box(d, diagnosen.has(d))}</div>`).join("")}</div>
-  <div class="reihe">${feld("Weitere Diagnosen / ICD-10 Code", "", "3")}${feld("Befunddatum")}</div>
+  <div class="reihe">${feld("Weitere Diagnosen / ICD-10 Code", text(brille.Diagnose), "3")}${feld("Befunddatum")}</div>
 
   <h2>4 Gewünschte Versorgung</h2>
   <div class="raster vier">${VERSORGUNG.map((v) => `<div>${box(v, versorgung.has(v))}</div>`).join("")}<div>${box("Sonstiges:")} ________</div></div>
