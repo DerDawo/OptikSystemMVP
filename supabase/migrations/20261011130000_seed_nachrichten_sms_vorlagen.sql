@@ -1,6 +1,6 @@
 -- SMS-/WhatsApp-Vorlagen für "Nachricht senden" beim Kunden: Abholung von
--- Brille und Kontaktlinsen, Terminerinnerung, Rückruf zum Einschleifen und
--- Nachsendung der Rechnung.
+-- Brille und Kontaktlinsen, Terminerinnerung, Rückruf zum Einschleifen,
+-- Nachsendung der Rechnung und allgemeine Bitte um Rückruf.
 --
 -- Platzhalter (my-admin/src/nachrichtenPlatzhalter.ts): {Vorname},
 -- {Nachname}, {Anrede}, {Optiker} (Name des Betriebs), {OptikerTelefon},
@@ -29,6 +29,10 @@ from (values
   (
     'Rechnung per WhatsApp nachgesendet',
     'Guten Tag {Anrede} {Nachname}, zur Sicherheit haben wir Ihnen Ihre Rechnung soeben noch einmal per WhatsApp zugeschickt. Falls Sie Rückfragen dazu haben, rufen Sie uns einfach unter {OptikerTelefon} an. Ihr Team von {Optiker}.'
+  ),
+  (
+    'Bitte um Rückruf (allgemein)',
+    'Guten Tag {Anrede} {Nachname}, wir möchten gerne ein kurzes Anliegen mit Ihnen besprechen. Bitte rufen Sie uns bei Gelegenheit unter {OptikerTelefon} zurück. Vielen Dank! Ihr Team von {Optiker}.'
   )
 ) as v (titel, text)
 where not exists (

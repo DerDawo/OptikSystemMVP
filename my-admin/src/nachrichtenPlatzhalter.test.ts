@@ -50,13 +50,14 @@ describe("SMS-Vorlagen der Migration", () => {
   );
   const texte = [...sql.matchAll(/\(\s*'([^']+)',\s*'([^']+)'\s*\)/g)];
 
-  it("enthält die fünf Vorlagen", () => {
+  it("enthält die sechs Vorlagen", () => {
     expect(texte.map((t) => t[1])).toEqual([
       "Brille fertig (Abholung)",
       "Kontaktlinsen / Pflegemittel abholbereit",
       "Terminerinnerung Sehtest / Beratung",
       "Brillengläser da – bitte um Rückruf",
       "Rechnung per WhatsApp nachgesendet",
+      "Bitte um Rückruf (allgemein)",
     ]);
   });
 
