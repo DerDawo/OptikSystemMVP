@@ -564,32 +564,26 @@ export const KundeShow = () => {
         <ShowColumns spalten="minmax(0, 1fr) minmax(0, 1.8fr)">
           <ShowColumn kompakt>
             <ShowSection title="Stammdaten">
-              {/* Kundennummer, Aufnahmedatum und Anrede in einer Reihe */}
+              {/* Anrede, Vorname und Nachname in einer Reihe */}
               <Box
                 sx={{
                   gridColumn: "1 / -1",
                   display: "grid",
-                  gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+                  gridTemplateColumns: { xs: "1fr", sm: "0.6fr 1fr 1fr" },
                   gap: "0.25em 2em",
                   "& > *": { minWidth: 0 },
                 }}
               >
                 <Field>
-                  <TextField source="KundenNummer" />
-                </Field>
-                <Field>
-                  <DateField source="Aufnahmedatum" />
-                </Field>
-                <Field>
                   <TextField source="Anrede" />
                 </Field>
+                <Field>
+                  <TextField source="Vorname" />
+                </Field>
+                <Field>
+                  <TextField source="Nachname" />
+                </Field>
               </Box>
-              <Field>
-                <TextField source="Vorname" />
-              </Field>
-              <Field>
-                <TextField source="Nachname" />
-              </Field>
               <Field>
                 <TextField source="Geschlecht" />
               </Field>
@@ -660,6 +654,12 @@ export const KundeShow = () => {
             <ShowSection title="Merkmale">
               <DirektFeld source="Merkmal1" label="Beruf" />
               <DirektFeld source="Merkmal2" label="Besonderes" />
+              <Field>
+                <TextField source="KundenNummer" />
+              </Field>
+              <Field>
+                <DateField source="Aufnahmedatum" />
+              </Field>
             </ShowSection>
             <DatenbankInfo />
           </ShowColumn>
