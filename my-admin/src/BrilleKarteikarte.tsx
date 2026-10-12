@@ -1410,7 +1410,7 @@ export const BrilleKarteikarte = () => {
             {/* Medizinische Notizen des Kunden (Kundenkartei) - hier
                 sichtbar und direkt bearbeitbar, gespeichert beim Kunden */}
             <Beschriftung z={15} s="5 / 6">
-              Med. Notizen
+              Notizen
             </Beschriftung>
             <Feld z={15} s={RECHTS}>
               {kunde ? (
