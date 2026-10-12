@@ -14,6 +14,10 @@ import {
   Box,
   Button,
   Card,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   MenuItem,
   Select,
@@ -101,6 +105,28 @@ const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
   { feld: "iod", titel: "iod" },
 ];
 const WERTE_LINKS = WERTE.slice(0, 8);
+
+// Bestellstatus eines Glases (Spalte glass."Auftragsstatus")
+const GLAS_BESTELLSTATUS = [
+  "zu bestellen",
+  "bestellt",
+  "eingetroffen",
+  "abgeholt",
+].map((s) => ({ id: s, name: s }));
+
+// Dunkelblaue Knöpfe wie in Prisma (Glasassistent, Bestelloptionen)
+const prismaKnopf = {
+  bgcolor: "#1d4e8f",
+  "&:hover": { bgcolor: "#173f74" },
+  color: "#fff",
+  fontWeight: 700,
+  textTransform: "none",
+  borderRadius: "3px",
+  minHeight: 24,
+  py: 0.25,
+  px: 3,
+  width: 210,
+} as const;
 
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
 const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
@@ -198,7 +224,7 @@ const Beschriftung = ({
       gridColumn: s,
       alignSelf: "center",
       fontStyle: "italic",
-      fontSize: "0.78rem",
+      fontSize: "0.72rem",
       color: "text.secondary",
       textAlign: rechts ? "right" : "left",
       pr: rechts ? 1 : 0,
@@ -230,14 +256,14 @@ const Feld = ({
       gridRow: `${z} / span ${h}`,
       gridColumn: s,
       bgcolor: summe ? summenFarbe(theme) : feldFarbe(theme),
-      minHeight: 28,
+      minHeight: 24,
       minWidth: 0,
       px: "6px",
       py: mehrzeilig ? "4px" : 0,
       display: "flex",
       alignItems: mehrzeilig ? "flex-start" : "center",
       justifyContent: rechts ? "flex-end" : "flex-start",
-      fontSize: "0.95rem",
+      fontSize: "0.9rem",
       lineHeight: 1.35,
       fontWeight: summe ? 600 : 400,
       color: "text.primary",
@@ -285,12 +311,12 @@ const Wert = ({
   <Box
     sx={(theme) => ({
       bgcolor: feldFarbe(theme),
-      minHeight: 28,
+      minHeight: 24,
       px: "6px",
       display: "flex",
       alignItems: "center",
       justifyContent: rechts ? "flex-end" : links ? "flex-start" : "center",
-      fontSize: "0.95rem",
+      fontSize: "0.9rem",
       whiteSpace: "nowrap",
       overflow: "hidden",
       "&:focus-within": aktivesFeld(theme),
@@ -304,7 +330,7 @@ const Spaltentitel = ({ children }: { children: ReactNode }) => (
   <Box
     sx={{
       fontStyle: "italic",
-      fontSize: "0.78rem",
+      fontSize: "0.72rem",
       color: "text.secondary",
       alignSelf: "end",
       whiteSpace: "nowrap",
@@ -339,8 +365,8 @@ const AuftragPosition = ({ brille, z, s }: Platz & { brille: Datensatz }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        minHeight: 28,
-        fontSize: "0.95rem",
+        minHeight: 24,
+        fontSize: "0.9rem",
       }}
     >
       <IconButton
@@ -544,7 +570,7 @@ const ZusatzleistungAuswahl = ({
         gridRow: z,
         gridColumn: s,
         bgcolor: feldFarbe(theme),
-        minHeight: 28,
+        minHeight: 24,
         minWidth: 0,
         display: "flex",
         alignItems: "center",
@@ -568,7 +594,7 @@ const ZusatzleistungAuswahl = ({
         )}
         sx={{
           px: "6px",
-          fontSize: "0.95rem",
+          fontSize: "0.9rem",
           "& .MuiSelect-select": { py: 0 },
         }}
         inputProps={{ "aria-label": "Zusatzleistung hinzufügen" }}
@@ -664,6 +690,7 @@ export const BrilleKarteikarte = () => {
 
   const refresh = useRefresh();
   const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
+  const [bestellOffen, setBestellOffen] = useState(false);
 
   if (!brille) return null;
 
@@ -751,7 +778,7 @@ export const BrilleKarteikarte = () => {
     <Card
       variant="outlined"
       sx={(theme) => ({
-        p: { xs: 1.5, md: 2.5 },
+        p: { xs: 1, md: 1.5 },
         background:
           theme.palette.mode === "dark"
             ? undefined
@@ -761,14 +788,21 @@ export const BrilleKarteikarte = () => {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", xl: "minmax(160px, 230px) 1fr" },
-          gap: { xs: 1.5, xl: 3 },
+          // Kundenname schmal links wie in Prisma, die Karteikarte nutzt die
+          // übrige Breite
+          gridTemplateColumns: { xs: "1fr", md: "120px minmax(0, 1fr)" },
+          gap: { xs: 1, md: 1.5 },
         }}
       >
         <Typography
-          variant="h5"
           component="div"
-          sx={{ fontWeight: 400, color: "text.secondary", lineHeight: 1.2 }}
+          sx={{
+            fontSize: "1.15rem",
+            fontWeight: 400,
+            color: "text.secondary",
+            lineHeight: 1.25,
+            overflowWrap: "anywhere",
+          }}
         >
           {kunde ? (
             <Link
@@ -804,7 +838,7 @@ export const BrilleKarteikarte = () => {
               display: "grid",
               gridTemplateColumns: SPALTEN,
               columnGap: "6px",
-              rowGap: "4px",
+              rowGap: "3px",
               minWidth: 820,
             }}
           >
@@ -836,7 +870,7 @@ export const BrilleKarteikarte = () => {
                 alignSelf: "center",
                 textAlign: "right",
                 pr: 1,
-                fontSize: "0.95rem",
+                fontSize: "0.9rem",
               }}
             >
               {brille.id}
@@ -996,26 +1030,31 @@ export const BrilleKarteikarte = () => {
               ];
             })}
 
-            {/* Glasassistent (im Bearbeiten-Formular) */}
-            <Box sx={{ gridRow: 7, gridColumn: LINKS, py: "4px" }}>
+            {/* Glasassistent (im Bearbeiten-Formular) und Bestelloptionen */}
+            <Box
+              sx={{
+                gridRow: 7,
+                gridColumn: LINKS,
+                py: "2px",
+                display: "flex",
+                gap: 2,
+              }}
+            >
               <Button
                 variant="contained"
                 disableElevation
                 onClick={() => navigate(`/brille/${brille.id}`)}
-                sx={{
-                  bgcolor: "#1d4e8f",
-                  "&:hover": { bgcolor: "#173f74" },
-                  color: "#fff",
-                  fontWeight: 700,
-                  textTransform: "none",
-                  borderRadius: "3px",
-                  minHeight: 30,
-                  py: 0.25,
-                  px: 3,
-                  width: 210,
-                }}
+                sx={prismaKnopf}
               >
                 Glasassistent
+              </Button>
+              <Button
+                variant="contained"
+                disableElevation
+                onClick={() => setBestellOffen(true)}
+                sx={prismaKnopf}
+              >
+                Bestelloptionen
               </Button>
             </Box>
 
@@ -1102,7 +1141,7 @@ export const BrilleKarteikarte = () => {
               )}
             </Feld>
 
-            <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 24 }} />
+            <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 10 }} />
 
             {/* Fassung */}
             <Box sx={{ gridRow: 13, gridColumn: "2 / 3" }}>
@@ -1198,10 +1237,10 @@ export const BrilleKarteikarte = () => {
             </Feld>
 
             {/* Zusatzleistungen */}
-            <Box sx={{ gridRow: 16, gridColumn: "2 / 3", pt: 1.5 }}>
+            <Box sx={{ gridRow: 16, gridColumn: "2 / 3", pt: 0.75 }}>
               <Spaltentitel>Lagernr.</Spaltentitel>
             </Box>
-            <Box sx={{ gridRow: 16, gridColumn: "3 / 7", pt: 1.5 }}>
+            <Box sx={{ gridRow: 16, gridColumn: "3 / 7", pt: 0.75 }}>
               <Spaltentitel>Zusatzleistungen</Spaltentitel>
             </Box>
             {posten.map((p, i) => [
@@ -1379,9 +1418,7 @@ export const BrilleKarteikarte = () => {
             </Feld>
 
             {/* Verordnung (für Kassenanträge) */}
-            <Box
-              sx={{ gridRow: zRest + 1, gridColumn: "1 / -1", height: 16 }}
-            />
+            <Box sx={{ gridRow: zRest + 1, gridColumn: "1 / -1", height: 8 }} />
             <Beschriftung z={zArzt} s="1 / 2">
               Arzt
             </Beschriftung>
@@ -1454,6 +1491,97 @@ export const BrilleKarteikarte = () => {
           </Box>
         </Box>
       </Box>
+      <Dialog
+        open={bestellOffen}
+        onClose={() => setBestellOffen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Bestelloptionen</DialogTitle>
+        <DialogContent>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "60px minmax(0, 1fr) 80px",
+              columnGap: "12px",
+              rowGap: "8px",
+              alignItems: "center",
+            }}
+          >
+            <span />
+            <Box
+              sx={{
+                fontStyle: "italic",
+                fontSize: "0.8rem",
+                color: "text.secondary",
+              }}
+            >
+              Bestellstatus Glas
+            </Box>
+            <Box
+              sx={{
+                fontStyle: "italic",
+                fontSize: "0.8rem",
+                color: "text.secondary",
+              }}
+            >
+              Liefern
+            </Box>
+            {augen.map(({ seite, glas }, i) => {
+              const speichere = komponente(
+                "glass",
+                i === 0 ? "GlasRechts" : "GlasLinks",
+                glas,
+                { Seite: i === 0 ? "Rechts" : "Links" },
+              );
+              return [
+                <Box key={`${seite}-s`} sx={{ fontWeight: 600 }}>
+                  {seite === "R" ? "Rechts" : "Links"}
+                </Box>,
+                <Feld key={`${seite}-a`} z={0} s="auto">
+                  <Auswahl
+                    name={`Bestellstatus ${seite}`}
+                    wert={glas?.Auftragsstatus}
+                    optionen={GLAS_BESTELLSTATUS}
+                    speichere={speichere("Auftragsstatus")}
+                  />
+                </Feld>,
+                <Box key={`${seite}-l`}>
+                  <Haken
+                    an={Boolean(glas?.Liefern)}
+                    name={`Liefern ${seite}`}
+                    speichere={speichere("Liefern")}
+                  />
+                </Box>,
+              ];
+            })}
+            <Box
+              sx={{
+                gridColumn: "1 / -1",
+                mt: 1,
+                fontStyle: "italic",
+                fontSize: "0.8rem",
+                color: "text.secondary",
+              }}
+            >
+              Glastyp – Status beim Hersteller
+            </Box>
+            <span />
+            <Feld z={0} s="auto">
+              {textFeld(
+                "glastyp.Bestellstatus.dialog",
+                "Status Glastyp",
+                glasFeld("Bestellstatus"),
+                glastyp?.Bestellstatus,
+              )}
+            </Feld>
+            <span />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBestellOffen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };
