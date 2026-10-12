@@ -128,7 +128,7 @@ export const ermitteltViaVorschlaege = (
   const vorschlaege = new Set<string>();
   if (/verordnung|rezept|vorrezept/.test(refraktion))
     vorschlaege.add("Übernahme Vorrezept");
-  else if (/sehtest|refraktion|subjektiv/.test(refraktion))
+  else if (/sehtest|refraktion|subjektiv|optometrisch/.test(refraktion))
     vorschlaege.add("Subjektive Refraktion");
   return vorschlaege;
 };
