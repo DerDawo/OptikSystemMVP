@@ -581,7 +581,11 @@ export const KundeShow = () => {
   return (
     <Show title="Kunde anzeigen" actions={<KundeShowActions />}>
       <ShowLayout>
-        <ShowColumns spalten="minmax(0, 1fr) minmax(0, 1.8fr)">
+        {/* Aufträge auch in schmaleren Fenstern neben den Stammdaten */}
+        <ShowColumns
+          spalten="minmax(0, 1fr) minmax(0, 1.8fr)"
+          spaltenMittel="minmax(0, 1fr) minmax(0, 1.3fr)"
+        >
           <ShowColumn kompakt>
             <ShowSection title="Stammdaten">
               {/* Anrede, Vorname und Nachname in einer Reihe */}

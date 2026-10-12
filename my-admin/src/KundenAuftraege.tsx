@@ -260,7 +260,7 @@ export const KundenAuftraege = () => {
 
       <Box
         sx={{
-          maxHeight: { xs: "none", lg: "60vh" },
+          maxHeight: { xs: "none", md: "70vh" },
           overflowY: "auto",
           borderTop: 1,
           borderColor: "divider",
