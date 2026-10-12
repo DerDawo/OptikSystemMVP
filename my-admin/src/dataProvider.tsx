@@ -12,6 +12,7 @@ import type {
   RaRecord,
   UpdateParams,
 } from "react-admin";
+import { leereDatumsfelderZuNull } from "./leereDatumsfelder";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
@@ -153,7 +154,8 @@ const brilleZusatzleistungenProvider = {
     }
     return { ...result, data: await attachZusatzleistungIds(result.data) };
   },
-  create: async (resource: string, params: CreateParams) => {
+  create: async (resource: string, eingabe: CreateParams) => {
+    const params = { ...eingabe, data: leereDatumsfelderZuNull(eingabe.data) };
     if (resource !== "brille") {
       return rawDataProvider.create(resource, params);
     }
@@ -165,7 +167,8 @@ const brilleZusatzleistungenProvider = {
       data: { ...result.data, ZusatzleistungIDs: ZusatzleistungIDs ?? [] },
     };
   },
-  update: async (resource: string, params: UpdateParams) => {
+  update: async (resource: string, eingabe: UpdateParams) => {
+    const params = { ...eingabe, data: leereDatumsfelderZuNull(eingabe.data) };
     if (resource !== "brille") {
       return rawDataProvider.update(resource, params);
     }
