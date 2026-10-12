@@ -69,6 +69,11 @@ describe("Vorschläge aus den Werten", () => {
         brille: { Refraktion: "lt. ärztl. Verordnung" },
       }),
     ]).toEqual(["Übernahme Vorrezept"]);
+    expect([
+      ...ermitteltViaVorschlaege({
+        brille: { Refraktion: "Robert Ulm lt. optometrischer Messung" },
+      }),
+    ]).toEqual(["Subjektive Refraktion"]);
   });
 
   it("ordnet Brillenarten Kategorien zu", () => {
