@@ -547,8 +547,8 @@ export const KundeShow = () => {
       <ShowLayout>
         {/* Kundenkartei wie in Prisma, daneben die Aufträge */}
         <ShowColumns
-          spalten="minmax(0, 1.7fr) minmax(0, 1fr)"
-          spaltenMittel="minmax(0, 1.5fr) minmax(0, 1fr)"
+          spalten="minmax(0, 1fr) minmax(0, 2fr)"
+          spaltenMittel="minmax(0, 1fr) minmax(0, 1fr)"
         >
           <ShowColumn>
             <KundeKarteikarte />

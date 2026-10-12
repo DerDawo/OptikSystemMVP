@@ -160,6 +160,7 @@ const KarteikarteKopierenDialog = ({
         neueBrille.Berater = original.Berater;
         neueBrille.Refraktion = original.Refraktion;
         neueBrille.Werkstatt = original.Werkstatt;
+        neueBrille.Achtung = original.Achtung;
         neueBrille.Notizen = original.Notizen;
         neueBrille.RabattBezeichnung = original.RabattBezeichnung;
         neueBrille.RabattProzent = original.RabattProzent;

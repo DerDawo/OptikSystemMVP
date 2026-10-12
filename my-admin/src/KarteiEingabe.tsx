@@ -308,12 +308,16 @@ export const Auswahl = ({
   speichere,
   name,
   rechts,
+  schlicht,
 }: {
   wert: unknown;
   optionen: { id: string; name: string }[];
   speichere: Speichern;
   name: string;
   rechts?: boolean;
+  // wie ein leeres Feld in Prisma: ohne Pfeil, leer statt "–"; die Liste
+  // öffnet sich beim Klick ins Feld
+  schlicht?: boolean;
 }) => {
   const notify = useNotify();
   const [vorlaeufig, setVorlaeufig] = useState<string | null>(null);
@@ -341,9 +345,11 @@ export const Auswahl = ({
         }
       }}
       inputProps={{ "aria-label": name }}
-      IconComponent={rechts ? () => null : undefined}
+      IconComponent={rechts || schlicht ? () => null : undefined}
       renderValue={
-        rechts ? (v) => liste.find((o) => o.id === v)?.name ?? "" : undefined
+        rechts || schlicht
+          ? (v) => liste.find((o) => o.id === v)?.name ?? ""
+          : undefined
       }
       sx={{
         mx: "-6px",
@@ -356,7 +362,7 @@ export const Auswahl = ({
           alignItems: "center",
           justifyContent: rechts ? "flex-end" : "flex-start",
           height: "100%",
-          ...(rechts ? { pr: "0 !important" } : {}),
+          ...(rechts || schlicht ? { pr: "0 !important" } : {}),
         },
       }}
     >

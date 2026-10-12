@@ -1,6 +1,7 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
+  Identifier,
   Link,
   useDataProvider,
   useGetList,
@@ -36,6 +37,9 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import EditIcon from "@mui/icons-material/Edit";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import { formatCurrency } from "./CurrencyField";
 import {
   MITARBEITER,
@@ -57,6 +61,7 @@ import {
 import { rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
+import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -77,32 +82,45 @@ const zahl = (wert: unknown) => {
 const text = (wert: unknown) =>
   wert === null || wert === undefined ? "" : String(wert).trim();
 
+// Öffnet das Fenster "Verordnung" der Brillenkartei (aus dem Optionen-Menü)
+export const VERORDNUNG_OEFFNEN = "brille-verordnung-oeffnen";
+
+// Datum wie in Prisma: 15.05.2026
 const datum = (wert: unknown) =>
-  wert ? new Date(String(wert)).toLocaleDateString("de-DE") : "";
+  wert
+    ? new Date(String(wert)).toLocaleDateString("de-DE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "";
 
-const dioptrie = new Intl.NumberFormat("de-DE", {
-  minimumFractionDigits: 2,
+// Zahlen wie in Prisma: Punkt als Dezimalzeichen, feste Nachkommastellen,
+// kein Plus-Zeichen, keine Tausenderpunkte (0.75, -0.25, 32.0, 235.00)
+const prismaZahl = (stellen: number) =>
+  new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: stellen,
+    maximumFractionDigits: stellen,
+    useGrouping: false,
+  });
+const dezimal = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
-  signDisplay: "exceptZero",
+  useGrouping: false,
 });
-const dezimal = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
-const betrag = new Intl.NumberFormat("de-DE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const betrag = prismaZahl(2);
 
-const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
-  { feld: "Sph", titel: "Sph", vorzeichen: true },
-  { feld: "Cyl", titel: "Cyl", vorzeichen: true },
-  { feld: "A", titel: "A" },
-  { feld: "PD", titel: "PD" },
-  { feld: "Add", titel: "Add", vorzeichen: true },
-  { feld: "y_h", titel: "y/h" },
-  { feld: "Pr", titel: "Pr" },
-  { feld: "B", titel: "B" },
-  { feld: "HSA", titel: "HSA" },
-  { feld: "Vis", titel: "Vis" },
-  { feld: "iod", titel: "iod" },
+const WERTE: { feld: string; titel: string; stellen: number }[] = [
+  { feld: "Sph", titel: "Sph", stellen: 2 },
+  { feld: "Cyl", titel: "Cyl", stellen: 2 },
+  { feld: "A", titel: "A", stellen: 0 },
+  { feld: "PD", titel: "PD", stellen: 1 },
+  { feld: "Add", titel: "Add", stellen: 2 },
+  { feld: "y_h", titel: "y/h", stellen: 1 },
+  { feld: "Pr", titel: "Pr", stellen: 2 },
+  { feld: "B", titel: "B", stellen: 0 },
+  { feld: "HSA", titel: "HSA", stellen: 1 },
+  { feld: "Vis", titel: "Vis", stellen: 2 },
+  { feld: "iod", titel: "iod", stellen: 1 },
 ];
 const WERTE_LINKS = WERTE.slice(0, 8);
 
@@ -130,13 +148,25 @@ const prismaKnopf = {
 
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
 const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
+// Achtungsfeld: an wen die Rechnung geht
+const ACHTUNG_AUSWAHL = ["RG für KK", "RG für AG", "RG für ST"].map((a) => ({
+  id: a,
+  name: a,
+}));
 
 const WERTE_RECHTS = WERTE.slice(8);
 
-const wertText = (glas: Datensatz | undefined, feld: string, vz?: boolean) => {
+const wertText = (
+  glas: Datensatz | undefined,
+  feld: string,
+  stellen: number,
+) => {
   const n = zahl(glas?.[feld]);
   if (n === null) return "";
-  return vz ? dioptrie.format(n) : dezimal.format(n);
+  // Werte mit mehr Nachkommastellen nicht abschneiden (z. B. A 80.5)
+  return Number.isInteger(n * 10 ** stellen)
+    ? prismaZahl(stellen).format(n)
+    : dezimal.format(n);
 };
 
 // Visus als Ausklappliste (Werte des Betriebs), alle anderen Werte zum
@@ -178,7 +208,7 @@ const WertEingabe = ({
       rechts
       name={`${w.titel} ${seite}`}
       wert={glas?.[w.feld]}
-      anzeige={wertText(glas, w.feld, w.vorzeichen)}
+      anzeige={wertText(glas, w.feld, w.stellen)}
       speichere={speichere}
     />
   );
@@ -191,7 +221,7 @@ const betragText = (wert: unknown) => {
 
 /*
  * Raster wie in Prisma (Breiten aus dem Original, Felder wachsen mit):
- * 1 Beschriftung | 2 Lagernr. | 3 Rest links | 4 Abstand |
+ * 1 Beschriftung | 2-3 Felder links | 4 Abstand |
  * 5 Beschriftung rechts | 6 Feld rechts | 7 Summen-Beschriftung | 8 Betrag
  */
 const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
@@ -496,7 +526,7 @@ export const WerteTabelle = ({
                         />
                       </Box>
                     ) : (
-                      wertText(glas, w.feld, w.vorzeichen)
+                      wertText(glas, w.feld, w.stellen)
                     )}
                   </TableCell>
                 ))}
@@ -652,9 +682,72 @@ const ZusatzleistungEntfernen = ({ zuordnung }: { zuordnung: Datensatz }) => {
   );
 };
 
+// Zwei Häkchen "ja"/"nein" wie eine Auswahl: ja = bezahlt, nein = offen
+// (auch bei "teilweise offen" angehakt); Ratenzahlung/Versicherung: keins
+const BezahlungJaNein = ({
+  status,
+  speichere,
+}: {
+  status: string;
+  speichere: Speichern;
+}) => {
+  const notify = useNotify();
+  const [vorlaeufig, setVorlaeufig] = useState<string | null>(null);
+  useEffect(() => setVorlaeufig(null), [status]);
+  const aktuell = vorlaeufig ?? status;
+  const setze = async (neu: string) => {
+    if (aktuell === neu) return;
+    setVorlaeufig(neu);
+    try {
+      await speichere(neu);
+    } catch {
+      setVorlaeufig(null);
+      notify("Bezahlung konnte nicht gespeichert werden.", { type: "error" });
+    }
+  };
+  const knopf = (beschriftung: string, an: boolean, neu: string) => (
+    // Klick aufs Häkchen oder auf das Wort speichert (einmal)
+    <Box
+      onClick={() => setze(neu)}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        fontSize: "0.8rem",
+        cursor: "pointer",
+      }}
+    >
+      <IconButton
+        size="small"
+        aria-label={`Bezahlung ${beschriftung}`}
+        aria-pressed={an}
+        sx={{ p: 0.25 }}
+      >
+        {an ? (
+          <CheckBoxIcon fontSize="small" />
+        ) : (
+          <CheckBoxOutlineBlankIcon
+            fontSize="small"
+            sx={{ color: "text.disabled" }}
+          />
+        )}
+      </IconButton>
+      {beschriftung}
+    </Box>
+  );
+  return (
+    <Box sx={{ display: "flex", gap: 1.5 }}>
+      {knopf("ja", aktuell === "bezahlt", "bezahlt")}
+      {knopf(
+        "nein",
+        aktuell === "offen" || aktuell === "teilweise offen",
+        "offen",
+      )}
+    </Box>
+  );
+};
+
 export const BrilleKarteikarte = () => {
   const brille = useRecordContext<Datensatz>();
-  const navigate = useNavigate();
 
   const { data: kunde } = useGetOne<Datensatz>(
     "kunde",
@@ -679,6 +772,33 @@ export const BrilleKarteikarte = () => {
     { id: brille?.Fassung as number },
     { enabled: brille?.Fassung != null },
   );
+  // Glastypen der letzten Aufträge für die Ausklappliste am Glastyp
+  const { data: letzteGlastypen } = useGetList<Datensatz>(
+    "glastyp",
+    {
+      pagination: { page: 1, perPage: 300 },
+      sort: { field: "id", order: "DESC" },
+    },
+    { staleTime: 5 * 60 * 1000 },
+  );
+  const glastypNamen = useMemo(
+    () =>
+      [
+        ...new Set(
+          (letzteGlastypen ?? [])
+            .map((g) => text(g.Bezeichnung))
+            .filter(Boolean),
+        ),
+      ].sort((a, b) => a.localeCompare(b, "de")),
+    [letzteGlastypen],
+  );
+  const glastypFeld = useRef<HTMLDivElement>(null);
+  const [verordnungOffen, setVerordnungOffen] = useState(false);
+  useEffect(() => {
+    const oeffnen = () => setVerordnungOffen(true);
+    window.addEventListener(VERORDNUNG_OEFFNEN, oeffnen);
+    return () => window.removeEventListener(VERORDNUNG_OEFFNEN, oeffnen);
+  }, []);
   const { data: zuordnungen } = useGetList<Datensatz>(
     "brille_hat_zusatzleistungen",
     {
@@ -699,8 +819,10 @@ export const BrilleKarteikarte = () => {
   );
 
   const refresh = useRefresh();
+  const dataProvider = useDataProvider();
   const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
   const [bestellOffen, setBestellOffen] = useState(false);
+  const [assistentOffen, setAssistentOffen] = useState(false);
 
   if (!brille) return null;
 
@@ -782,7 +904,6 @@ export const BrilleKarteikarte = () => {
   const zNotizen = zSumme + 1;
   const zZahlungen = zNotizen + 2;
   const zRest = zZahlungen + 1;
-  const zArzt = zRest + 2;
 
   return (
     <Card
@@ -898,16 +1019,34 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Berater")}
               />
             </Feld>
+            {/* Achtungsfeld (wo in Prisma "Werkstatt" steht): an wen die
+                Rechnung geht - gesetzt rot hervorgehoben */}
             <Beschriftung z={2} s="5 / 6">
-              Werkstatt
+              ACHTUNG
             </Beschriftung>
             <Feld z={2} s={RECHTS}>
-              <Auswahl
-                name="Werkstatt"
-                wert={mitarbeiterAnzeige(brille.Werkstatt) || null}
-                optionen={MITARBEITER_AUSWAHL}
-                speichere={auftrag("Werkstatt")}
-              />
+              <Box
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignSelf: "stretch",
+                  ...(text(brille.Achtung)
+                    ? {
+                        color: "error.main",
+                        fontWeight: 700,
+                        "& .MuiInputBase-root": { color: "inherit" },
+                      }
+                    : {}),
+                }}
+              >
+                <Auswahl
+                  name="ACHTUNG"
+                  wert={text(brille.Achtung) || null}
+                  optionen={ACHTUNG_AUSWAHL}
+                  speichere={auftrag("Achtung")}
+                />
+              </Box>
             </Feld>
 
             <Beschriftung z={3} s="1 / 2">
@@ -921,21 +1060,25 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Refraktion")}
               />
             </Feld>
+            {/* "Bezahlung" ja/nein (statt Abholung): ja = Zahlungsstatus
+                "bezahlt", nein = "offen" */}
             <Beschriftung z={3} s="5 / 6">
-              Abholung
+              Bezahlung
             </Beschriftung>
-            <Feld z={3} s="6 / 7">
-              {textFeld(
-                "Abholung",
-                "Abholung",
-                auftrag("Abholung"),
-                brille.Abholung,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.Abholung),
-                },
-              )}
-            </Feld>
+            <Box
+              sx={{
+                gridRow: 3,
+                gridColumn: "6 / 7",
+                display: "flex",
+                alignItems: "center",
+                ml: "-4px",
+              }}
+            >
+              <BezahlungJaNein
+                status={text(brille.Zahlungsstatus)}
+                speichere={auftrag("Zahlungsstatus")}
+              />
+            </Box>
             <Beschriftung z={3} s="7 / 8" rechts>
               Rechnungsnr.
             </Beschriftung>
@@ -990,10 +1133,9 @@ export const BrilleKarteikarte = () => {
                 seite
               );
               return [
-                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2">
-                  <Box component="span" sx={{ pl: 3 }}>
-                    {marke}
-                  </Box>
+                // R/L direkt vor den Werten wie in Prisma
+                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2" rechts>
+                  {marke}
                 </Beschriftung>,
                 <Zellen
                   key={`${seite}-w`}
@@ -1003,7 +1145,7 @@ export const BrilleKarteikarte = () => {
                 >
                   {WERTE_LINKS.map(wertFeld)}
                 </Zellen>,
-                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6">
+                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6" rechts>
                   {seite}
                 </Beschriftung>,
                 <Zellen
@@ -1040,7 +1182,7 @@ export const BrilleKarteikarte = () => {
               ];
             })}
 
-            {/* Glasassistent (im Bearbeiten-Formular) und Bestelloptionen */}
+            {/* Glasassistent (öffnet direkt hier) und Bestelloptionen */}
             <Box
               sx={{
                 gridRow: 7,
@@ -1053,7 +1195,7 @@ export const BrilleKarteikarte = () => {
               <Button
                 variant="contained"
                 disableElevation
-                onClick={() => navigate(`/brille/${brille.id}`)}
+                onClick={() => setAssistentOffen(true)}
                 sx={prismaKnopf}
               >
                 Glasassistent
@@ -1072,13 +1214,60 @@ export const BrilleKarteikarte = () => {
             <Beschriftung z={8} s="1 / 2">
               Glastyp
             </Beschriftung>
+            {/* Glastyp mit Ausklapp-Pfeil wie in Prisma: Liste der zuletzt
+                verwendeten Glastypen, freie Eingabe bleibt möglich */}
             <Feld z={8} s={LINKS}>
-              {textFeld(
-                "glastyp.Bezeichnung",
-                "Glastyp",
-                glasFeld("Bezeichnung"),
-                glastyp?.Bezeichnung,
-              )}
+              <Box
+                ref={glastypFeld}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignSelf: "stretch",
+                }}
+              >
+                {textFeld(
+                  "glastyp.Bezeichnung",
+                  "Glastyp",
+                  glasFeld("Bezeichnung"),
+                  glastyp?.Bezeichnung,
+                  { vorschlaege: glastypNamen },
+                )}
+              </Box>
+              <IconButton
+                size="small"
+                aria-label="Glastyp-Liste öffnen"
+                tabIndex={-1}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  // Feld in Bearbeitung bringen, dann die Liste aufklappen
+                  const suche = () =>
+                    glastypFeld.current?.querySelector<HTMLElement>(
+                      '[aria-label="Glastyp"]',
+                    );
+                  suche()?.focus();
+                  window.setTimeout(
+                    () =>
+                      suche()?.dispatchEvent(
+                        new MouseEvent("mousedown", { bubbles: true }),
+                      ),
+                    50,
+                  );
+                }}
+                sx={{
+                  mr: "-6px",
+                  ml: "4px",
+                  p: 0,
+                  width: 24,
+                  height: 22,
+                  borderRadius: "2px",
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <ArrowDropDownIcon fontSize="small" />
+              </IconButton>
             </Feld>
             <Beschriftung z={8} s="5 / 6">
               Größe
@@ -1154,12 +1343,6 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 10 }} />
 
             {/* Fassung */}
-            <Box sx={{ gridRow: 13, gridColumn: "2 / 3" }}>
-              <Spaltentitel>Lagernr.</Spaltentitel>
-            </Box>
-            <Box sx={{ gridRow: 13, gridColumn: "3 / 4" }}>
-              <Spaltentitel>Fassung</Spaltentitel>
-            </Box>
             <Zellen z={13} s="6 / 8" spalten="100fr 165fr">
               <Spaltentitel>Farbe</Spaltentitel>
               <Spaltentitel>Größe</Spaltentitel>
@@ -1167,15 +1350,10 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 13, gridColumn: "8 / 9" }}>
               <Spaltentitel>Betrag</Spaltentitel>
             </Box>
-            <Feld z={14} s="2 / 3">
-              {textFeld(
-                "fassung.Lagernummer",
-                "Lagernummer",
-                fassungFeld("Lagernummer"),
-                fassung?.Lagernummer,
-              )}
-            </Feld>
-            <Feld z={14} s="3 / 4">
+            <Beschriftung z={14} s="1 / 2">
+              Fassung
+            </Beschriftung>
+            <Feld z={14} s="2 / 4">
               {textFeld(
                 "fassung.Bezeichnung",
                 "Fassung",
@@ -1223,48 +1401,76 @@ export const BrilleKarteikarte = () => {
                 },
               )}
             </Feld>
-            <Beschriftung z={15} s="2 / 3" rechts>
-              Linie
-            </Beschriftung>
-            <Feld z={15} s="3 / 4">
-              {textFeld(
-                "fassung.Linie",
-                "Linie",
-                fassungFeld("Linie"),
-                fassung?.Linie,
-              )}
-            </Feld>
-            <Beschriftung z={15} s="5 / 6">
+            {/* Ein Feld "Hersteller" (statt Linie + Hersteller); bei
+                Prisma-Aufträgen steht die Marke oft in "Linie" und wird
+                angezeigt, solange kein Hersteller eingetragen ist */}
+            <Beschriftung z={15} s="1 / 2">
               Hersteller
             </Beschriftung>
-            <Feld z={15} s={RECHTS}>
+            <Feld z={15} s="2 / 4">
               {textFeld(
                 "fassung.Hersteller",
                 "Hersteller Fassung",
                 fassungFeld("Hersteller"),
-                fassung?.Hersteller,
+                text(fassung?.Hersteller) || text(fassung?.Linie) || null,
               )}
             </Feld>
 
+            {/* Medizinische Notizen des Kunden (Kundenkartei) - hier
+                sichtbar und direkt bearbeitbar, gespeichert beim Kunden */}
+            <Beschriftung z={15} s="5 / 6">
+              Med. Notizen
+            </Beschriftung>
+            <Feld z={15} s={RECHTS}>
+              {kunde ? (
+                <Box
+                  title={text(kunde.Notizen)}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    alignSelf: "stretch",
+                  }}
+                >
+                  {textFeld(
+                    "kunde.Notizen",
+                    "Medizinische Notizen",
+                    async (neu) => {
+                      await dataProvider.update("kunde", {
+                        id: kunde.id,
+                        data: { Notizen: neu },
+                        previousData: kunde,
+                      });
+                      refresh();
+                    },
+                    kunde.Notizen,
+                    {
+                      // mehrzeilig bearbeiten, damit Zeilenumbrüche
+                      // erhalten bleiben; angezeigt in einer Zeile
+                      mehrzeilig: true,
+                      anzeige: text(kunde.Notizen).replace(/\s*\n\s*/g, " · "),
+                    },
+                  )}
+                </Box>
+              ) : null}
+            </Feld>
+
             {/* Zusatzleistungen */}
-            <Box sx={{ gridRow: 16, gridColumn: "2 / 3", pt: 0.75 }}>
-              <Spaltentitel>Lagernr.</Spaltentitel>
-            </Box>
-            <Box sx={{ gridRow: 16, gridColumn: "3 / 7", pt: 0.75 }}>
-              <Spaltentitel>Zusatzleistungen</Spaltentitel>
-            </Box>
+            <Box sx={{ gridRow: 16, gridColumn: "1 / -1", height: 6 }} />
+            <Beschriftung z={zZusatz} s="1 / 2">
+              Zusatzleistungen
+            </Beschriftung>
             {posten.map((p, i) => [
-              <Feld key={`zl-n-${i}`} z={zZusatz + i} s="2 / 3" />,
               p.auswahl ? (
                 <ZusatzleistungAuswahl
                   key={`zl-b-${i}`}
                   z={zZusatz + i}
-                  s="3 / 7"
+                  s="2 / 7"
                   brilleId={brille.id}
                   vorhanden={leistungIds}
                 />
               ) : (
-                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="3 / 7">
+                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="2 / 7">
                   <Box component="span" sx={{ flex: 1, minWidth: 0 }}>
                     {p.bezeichnung}
                   </Box>
@@ -1284,6 +1490,7 @@ export const BrilleKarteikarte = () => {
             <Zellen z={zRabatt} s={BREIT} spalten="1fr 110px">
               <Wert links>
                 <Auswahl
+                  schlicht
                   name="Rabatt"
                   wert={brille.RabattBezeichnung}
                   optionen={rabattOptionen(brille.RabattBezeichnung)}
@@ -1426,81 +1633,89 @@ export const BrilleKarteikarte = () => {
             <Feld z={zRest} s="8 / 9" rechts summe>
               {betragText(rest)}
             </Feld>
-
-            {/* Verordnung (für Kassenanträge) */}
-            <Box sx={{ gridRow: zRest + 1, gridColumn: "1 / -1", height: 8 }} />
-            <Beschriftung z={zArzt} s="1 / 2">
-              Arzt
-            </Beschriftung>
-            <Feld z={zArzt} s={LINKS}>
+          </Box>
+        </Box>
+      </Box>
+      {assistentOffen && (
+        <GlasassistentDialog
+          onClose={() => setAssistentOffen(false)}
+          glastypId={brille.Glastyp as Identifier | null}
+          glasRechtsId={brille.GlasRechts as Identifier | null}
+          glasLinksId={brille.GlasLinks as Identifier | null}
+          direktSpeichern={async (verweise) => {
+            if (Object.keys(verweise).length > 0) {
+              await dataProvider.update("brille", {
+                id: brille.id,
+                data: verweise,
+                previousData: brille,
+              });
+            }
+            refresh();
+          }}
+        />
+      )}
+      {/* Verordnung (für Kassenanträge) - in Prisma nicht auf der Karte,
+          daher im Fenster über "Optionen → Verordnung" */}
+      <Dialog
+        open={verordnungOffen}
+        onClose={() => setVerordnungOffen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Verordnung</DialogTitle>
+        <DialogContent>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "130px minmax(0, 1fr)",
+              columnGap: "12px",
+              rowGap: "8px",
+              alignItems: "center",
+              "& > .feld": (theme) => ({
+                bgcolor: feldFarbe(theme),
+                minHeight: 28,
+                px: "6px",
+                display: "flex",
+                alignItems: "center",
+                borderRadius: "3px",
+                "&:focus-within": aktivesFeld(theme),
+              }),
+            }}
+          >
+            <Typography variant="body2">Arzt</Typography>
+            <Box className="feld">
               {textFeld(
                 "VerordnenderArzt",
                 "Arzt",
                 auftrag("VerordnenderArzt"),
                 brille.VerordnenderArzt,
               )}
-            </Feld>
-            <Beschriftung z={zArzt} s="5 / 6">
-              Verordnung
-            </Beschriftung>
-            <Feld z={zArzt} s="6 / 7">
+            </Box>
+            <Typography variant="body2">Verordnung vom</Typography>
+            <Box className="feld">
               {textFeld(
                 "Verordnungsdatum",
                 "Verordnung",
                 auftrag("Verordnungsdatum"),
                 brille.Verordnungsdatum,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.Verordnungsdatum),
-                },
+                { typ: "datum", anzeige: datum(brille.Verordnungsdatum) },
               )}
-            </Feld>
-            <Beschriftung z={zArzt} s="7 / 8" rechts>
-              Muster 8
-            </Beschriftung>
-            <Feld z={zArzt} s="8 / 9">
-              {brille.ErstverordnungMuster8Vorhanden
-                ? datum(brille.ErstverordnungMuster8Datum) || "ja"
-                : ""}
-            </Feld>
-            <Beschriftung z={zArzt + 1} s="1 / 2">
-              Diagnose
-            </Beschriftung>
-            <Feld z={zArzt + 1} s={BREIT}>
+            </Box>
+            <Typography variant="body2">Diagnose</Typography>
+            <Box className="feld">
               {textFeld(
                 "Diagnose",
                 "Diagnose",
                 auftrag("Diagnose"),
                 brille.Diagnose,
               )}
-            </Feld>
-
-            {/* Übernommene Prisma-Angaben (Leistungen, Kasse, Merkmale,
-                Rechnungsdatum) klein am Ende statt in den Notizen */}
-            {text(brille.PrismaAngaben) && (
-              <Box
-                sx={{
-                  gridRow: zArzt + 2,
-                  gridColumn: "1 / -1",
-                  mt: 2,
-                  fontSize: "0.72rem",
-                  color: "text.secondary",
-                  whiteSpace: "normal",
-                }}
-              >
-                <Box component="span" sx={{ fontStyle: "italic" }}>
-                  Angaben aus Prisma:{" "}
-                </Box>
-                {text(brille.PrismaAngaben)
-                  .split(/\r?\n/)
-                  .map((z) => z.trim().replace(/^-\s*/, ""))
-                  .filter((z) => z && z !== "Leistungen:")
-                  .join(" · ")}
-              </Box>
-            )}
+            </Box>
           </Box>
-        </Box>
-      </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVerordnungOffen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
       <Dialog
         open={bestellOffen}
         onClose={() => setBestellOffen(false)}
