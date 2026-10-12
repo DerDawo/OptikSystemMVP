@@ -62,6 +62,7 @@ import { rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
+import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -739,6 +740,113 @@ const BezahlungJaNein = ({
         aktuell === "offen" || aktuell === "teilweise offen",
         "offen",
       )}
+    </Box>
+  );
+};
+
+// Diagnosen zum Anhaken, darunter Freitext; gespeichert als Text in
+// "Diagnose" (siehe diagnosen.ts)
+const DiagnoseAuswahl = ({
+  wert,
+  speichere,
+}: {
+  wert: unknown;
+  speichere: Speichern;
+}) => {
+  const notify = useNotify();
+  const [vorlaeufig, setVorlaeufig] = useState<string | null>(null);
+  useEffect(() => setVorlaeufig(null), [wert]);
+  const { gewaehlt, rest } = zerlegeDiagnose(vorlaeufig ?? wert);
+  const sichern = async (neu: string | null) => {
+    setVorlaeufig(neu ?? "");
+    try {
+      await speichere(neu);
+    } catch {
+      setVorlaeufig(null);
+      notify("Diagnose konnte nicht gespeichert werden.", { type: "error" });
+    }
+  };
+  return (
+    <Box sx={{ flex: 1, minWidth: 0, py: "2px" }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+          columnGap: 1,
+        }}
+      >
+        {DIAGNOSEN.map((d) => {
+          const an = gewaehlt.includes(d);
+          return (
+            <Box
+              key={d}
+              onClick={() =>
+                sichern(
+                  baueDiagnose(
+                    an ? gewaehlt.filter((x) => x !== d) : [...gewaehlt, d],
+                    rest,
+                  ),
+                )
+              }
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.25,
+                cursor: "pointer",
+                fontSize: "0.8rem",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <IconButton
+                size="small"
+                aria-label={`Diagnose ${d}`}
+                aria-pressed={an}
+                sx={{ p: 0.25 }}
+              >
+                {an ? (
+                  <CheckBoxIcon fontSize="small" />
+                ) : (
+                  <CheckBoxOutlineBlankIcon
+                    fontSize="small"
+                    sx={{ color: "text.disabled" }}
+                  />
+                )}
+              </IconButton>
+              {d}
+            </Box>
+          );
+        })}
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mt: 0.5,
+          px: "6px",
+          minHeight: 24,
+          borderTop: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Box
+          component="span"
+          sx={{
+            fontSize: "0.72rem",
+            fontStyle: "italic",
+            color: "text.secondary",
+          }}
+        >
+          weitere
+        </Box>
+        <Eingabe
+          name="Diagnose weitere Angaben"
+          wert={rest}
+          speichere={(neu) =>
+            sichern(baueDiagnose(gewaehlt, String(neu ?? "")))
+          }
+        />
+      </Box>
     </Box>
   );
 };
@@ -1631,17 +1739,10 @@ export const BrilleKarteikarte = () => {
               Diagnose
             </Beschriftung>
             <Feld z={zRest + 2} s="2 / 9" mehrzeilig>
-              <Box
-                sx={{ flex: 1, minWidth: 0, minHeight: 64, display: "flex" }}
-              >
-                {textFeld(
-                  "Diagnose",
-                  "Diagnose",
-                  auftrag("Diagnose"),
-                  brille.Diagnose,
-                  { mehrzeilig: true },
-                )}
-              </Box>
+              <DiagnoseAuswahl
+                wert={brille.Diagnose}
+                speichere={auftrag("Diagnose")}
+              />
             </Feld>
           </Box>
         </Box>
