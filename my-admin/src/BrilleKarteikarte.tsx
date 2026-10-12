@@ -62,6 +62,7 @@ import { leseRabattEingabe, rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
+import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
 
 /*
@@ -1198,8 +1199,12 @@ export const BrilleKarteikarte = () => {
               Rechnungsnr.
             </Beschriftung>
             <Feld z={3} s="8 / 9" summe>
-              <Box component="span" sx={{ fontWeight: 400 }}>
-                {text(brille.Rechnungsnummer)}
+              <Box component="span" sx={{ fontWeight: 400, width: "100%" }}>
+                <RechnungsnummerFeld
+                  art="brille"
+                  id={brille.id}
+                  nummer={brille.Rechnungsnummer}
+                />
               </Box>
             </Feld>
 
