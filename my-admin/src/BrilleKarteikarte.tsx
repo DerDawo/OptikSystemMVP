@@ -131,7 +131,7 @@ const GLAS_BESTELLSTATUS = [
 ].map((s) => ({ id: s, name: s }));
 
 // Dunkelblaue Knöpfe wie in Prisma (Glasassistent, Bestelloptionen)
-const prismaKnopf = {
+export const prismaKnopf = {
   bgcolor: "#1d4e8f",
   "&:hover": { bgcolor: "#173f74" },
   color: "#fff",
@@ -222,25 +222,25 @@ const betragText = (wert: unknown) => {
  * 1 Beschriftung | 2-3 Felder links | 4 Abstand |
  * 5 Beschriftung rechts | 6 Feld rechts | 7 Summen-Beschriftung | 8 Betrag
  */
-const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
+export const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
 const LINKS = "2 / 4";
 const RECHTS = "6 / 9";
 const BREIT = "2 / 7";
 
-const feldFarbe = (theme: Theme) =>
+export const feldFarbe = (theme: Theme) =>
   theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#e8eef6";
-const summenFarbe = (theme: Theme) =>
+export const summenFarbe = (theme: Theme) =>
   theme.palette.mode === "dark" ? "rgba(255,255,255,0.14)" : "#e2e3e5";
 
 // Rahmen um das Feld, in dem gerade getippt wird
-const aktivesFeld = (theme: Theme) => ({
+export const aktivesFeld = (theme: Theme) => ({
   boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
 });
 
-type Platz = { z: number; s: string; h?: number };
+export type Platz = { z: number; s: string; h?: number };
 
 // Kursive, graue Beschriftung wie in Prisma
-const Beschriftung = ({
+export const Beschriftung = ({
   z,
   s,
   children,
@@ -265,7 +265,7 @@ const Beschriftung = ({
 );
 
 // Helles Feld mit Wert
-const Feld = ({
+export const Feld = ({
   z,
   s,
   h = 1,
@@ -307,7 +307,7 @@ const Feld = ({
 );
 
 // Mehrere gleich breite Zellen in einem Rasterbereich (Werte, Farbe/Größe)
-const Zellen = ({
+export const Zellen = ({
   z,
   s,
   spalten,
@@ -327,7 +327,7 @@ const Zellen = ({
   </Box>
 );
 
-const Wert = ({
+export const Wert = ({
   children,
   rechts,
   links,
@@ -354,7 +354,7 @@ const Wert = ({
   </Box>
 );
 
-const Spaltentitel = ({ children }: { children: ReactNode }) => (
+export const Spaltentitel = ({ children }: { children: ReactNode }) => (
   <Box
     sx={{
       fontStyle: "italic",
