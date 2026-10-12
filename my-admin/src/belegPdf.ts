@@ -92,12 +92,26 @@ const herunterladen = (datei: File) => {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 };
 
+// writeText verbraucht die Klick-Berechtigung nicht, das Teilen klappt danach
+export const inZwischenablage = async (text: string) => {
+  try {
+    if (!navigator.clipboard?.writeText) return false;
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
 export type VersandErgebnis = "geteilt" | "abgebrochen" | "heruntergeladen";
 
 /*
  * Beleg verschicken: wo der Rechner das Teilen von Dateien kann (Windows,
  * macOS, Handy), öffnet sich das Teilen-Fenster mit angehängtem PDF (dort
- * Mail/Outlook oder WhatsApp wählen). Sonst wird das PDF gespeichert und das
+ * Mail/Outlook oder WhatsApp wählen). Das Teilen-Fenster kann keinen
+ * Empfänger übergeben, deshalb liegt die E-Mail-Adresse des Kunden vorher in
+ * der Zwischenablage (in Outlook bei „An" mit Strg+V einfügen;
+ * `beiAdresseKopiert` meldet das). Sonst wird das PDF gespeichert und das
  * E-Mail-Programm bzw. WhatsApp mit vorbereitetem Text an den Kunden
  * geöffnet - das PDF dort anhängen.
  */
@@ -105,11 +119,16 @@ export const belegVersenden = async (
   kanal: Extract<MessageChannel, "email" | "whatsapp">,
   datei: File,
   nachricht: { an: string; betreff: string; text: string },
+  beiAdresseKopiert?: (adresse: string) => void,
 ): Promise<VersandErgebnis> => {
   const teilbar =
     typeof navigator.canShare === "function" &&
     navigator.canShare({ files: [datei] });
   if (teilbar) {
+    if (kanal === "email" && nachricht.an) {
+      const kopiert = await inZwischenablage(nachricht.an);
+      if (kopiert) beiAdresseKopiert?.(nachricht.an);
+    }
     try {
       await navigator.share({
         files: [datei],

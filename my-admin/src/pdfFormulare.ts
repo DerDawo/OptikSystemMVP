@@ -308,6 +308,65 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
   };
 };
 
+// Erprobungsbericht elektronische Lupe (Vorbereitung Muster 8A, Felder siehe
+// scripts/erprobungsbericht-lupe-felder.mjs): Patient, Kasse/IK, Fernvisus
+// mit Korrektur aus dem Auftrag, Ort/Datum. Messwerte, Kreuze und Gerät
+// trägt der Optiker im PDF ein.
+const erprobungsberichtLupeFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  return {
+    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    geburtsdatum: formatDatum(k.Geburtsdatum),
+    kasse_ik: [text(k.Krankenkasse), text(k.KrankenkassenNummer)]
+      .filter(Boolean)
+      .join(" / "),
+    fern_od: formatWert(entities.glasRechts?.Vis, "zwei"),
+    fern_os: formatWert(entities.glasLinks?.Vis, "zwei"),
+    ort_datum: `${RECHNUNG_ABSENDER.ort}, ${dayjs().format("DD.MM.YYYY")}`,
+  };
+};
+
+// Abholbestätigung mit Schuldanerkenntnis (Felder siehe
+// scripts/abholbestaetigung-felder.mjs): Kunde, Auftrag und Beträge aus dem
+// Auftrag; Zahlungsziel, IBAN, Ratenzahlung und Ausweis trägt der Optiker
+// im PDF ein.
+const abholbestaetigungFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  const brille: Record<string, unknown> = entities.brille ?? {};
+  const zahl = (wert: unknown) => Number(wert) || 0;
+  const summe = zahl(brille.Summe);
+  const kassenanteil = zahl(brille.KKAnteil);
+  const anzahlung = zahl(brille.Anzahlung);
+  const offen = Math.round((summe - kassenanteil - anzahlung) * 100) / 100;
+  const fassung = [entities.fassung?.Hersteller, entities.fassung?.Bezeichnung]
+    .map(text)
+    .filter(Boolean)
+    .join(" ");
+  return {
+    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    geburtsdatum: formatDatum(k.Geburtsdatum),
+    anschrift: adresse(k),
+    telefon_email: [telefon(k), text(k.Email)].filter(Boolean).join(" / "),
+    auftragsnummer: [text(brille.id), text(brille.Rechnungsnummer)]
+      .filter(Boolean)
+      .join(" / "),
+    auftragsdatum: formatDatum(brille.Datum),
+    abgabedatum: dayjs().format("DD.MM.YYYY"),
+    leistung: [
+      text(brille.BrillenArt),
+      fassung && `Fassung ${fassung}`,
+      text(entities.glastyp?.Bezeichnung),
+    ]
+      .filter(Boolean)
+      .join(", "),
+    gesamtpreis: betrag(summe),
+    kassenanteil: betrag(kassenanteil),
+    anzahlung: betrag(anzahlung),
+    offener_betrag: summe ? formatEuro(offen) : "",
+    ort_datum: dayjs().format("DD.MM.YYYY"),
+  };
+};
+
 // Kategorie in `dokumentvorlage` -> PDF-Vorlage
 export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
   Beobachtungsbogen: {
@@ -332,6 +391,16 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "berechtigungsschein-gkv.pdf",
     titel: "Berechtigungsschein (GKV)",
     felder: berechtigungsscheinGkvFelder,
+  },
+  Abholbestätigung: {
+    datei: "abholbestaetigung.pdf",
+    titel: "Abholbestätigung mit Schuldanerkenntnis",
+    felder: abholbestaetigungFelder,
+  },
+  "Erprobungsbericht Lupe": {
+    datei: "erprobungsbericht-lupe.pdf",
+    titel: "Erprobungsbericht elektronische Lupe",
+    felder: erprobungsberichtLupeFelder,
   },
 };
 

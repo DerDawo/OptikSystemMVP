@@ -114,17 +114,26 @@ export const KontaktlinseRechnungButton = () => {
           : anrede === "Herr" && nachname
             ? `Sehr geehrter Herr ${nachname}`
             : "Guten Tag";
-      const ergebnis = await belegVersenden(kanal, datei, {
-        an:
-          kanal === "email"
-            ? String(kunde?.Email ?? "").trim()
-            : choosePhoneNumberForMessaging([
-                kunde?.Handy,
-                kunde?.TelefonnummerPrivat,
-              ]),
-        betreff: `Rechnung ${nummer}`,
-        text: `${gruss},\n\nanbei erhalten Sie Ihre Rechnung Nr. ${nummer} als PDF.\n\nMit freundlichen Grüßen\n${RECHNUNG_ABSENDER.firma}`,
-      });
+      const ergebnis = await belegVersenden(
+        kanal,
+        datei,
+        {
+          an:
+            kanal === "email"
+              ? String(kunde?.Email ?? "").trim()
+              : choosePhoneNumberForMessaging([
+                  kunde?.Handy,
+                  kunde?.TelefonnummerPrivat,
+                ]),
+          betreff: `Rechnung ${nummer}`,
+          text: `${gruss},\n\nanbei erhalten Sie Ihre Rechnung Nr. ${nummer} als PDF.\n\nMit freundlichen Grüßen\n${RECHNUNG_ABSENDER.firma}`,
+        },
+        (adresse) =>
+          notify(
+            `E-Mail-Adresse ${adresse} kopiert – in Outlook bei „An“ mit Strg+V einfügen.`,
+            { type: "info", autoHideDuration: 15000 },
+          ),
+      );
       if (ergebnis === "heruntergeladen") {
         notify(
           `PDF „${datei.name}“ gespeichert und ${
