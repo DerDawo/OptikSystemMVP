@@ -5,6 +5,7 @@ import {
   buildRechnungBodyHtml,
   buildRechnungPositionen,
   formatGlaswerte,
+  GOOGLE_BEWERTUNG_URL,
   RECHNUNG_ABSENDER,
   STANDARD_ABSENDER,
 } from "./rechnungTemplate";
@@ -121,6 +122,19 @@ describe("buildRechnungBodyHtml", () => {
     expect(html).toContain(`${RECHNUNG_ABSENDER.mwstSatz}% Mwst`);
     expect(html).toContain("RECHNUNG");
     expect(html).toContain("Sehzentrum Gera - Werdauerstr.38 - 07551 Gera");
+  });
+
+  it("lädt dezent zur Google-Bewertung ein (Link aus dem QR-Code)", () => {
+    expect(html).toContain(
+      "Wie zufrieden waren Sie mit Ihrem Besuch?<br />Teilen Sie Ihre Erfahrung gern auf Google.",
+    );
+    expect(html).toContain('class="bewertung-qr"');
+    expect(html).toContain(GOOGLE_BEWERTUNG_URL.replace(/&/g, "&amp;"));
+    expect(GOOGLE_BEWERTUNG_URL).toMatch(
+      /^https:\/\/www\.google\.com\/maps\/place\/Augenoptik\+Ulm\//,
+    );
+    const kv = buildKostenvoranschlagBodyHtml({ entities: ENTITIES });
+    expect(kv).not.toContain("bewertung");
   });
 
   it("zeigt Anrede, Kundenname und Berater", () => {
