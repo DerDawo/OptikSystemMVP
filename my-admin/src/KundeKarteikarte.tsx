@@ -320,8 +320,8 @@ export const KundeKarteikarte = () => {
         sx={{
           display: "grid",
           gridTemplateColumns: {
-            xs: "100px minmax(0, 1fr) 84px",
-            md: "112px minmax(0, 1fr) 104px",
+            xs: "108px minmax(0, 1fr) 84px",
+            md: "120px minmax(0, 1fr) 104px",
           },
           columnGap: "12px",
           rowGap: "6px",
@@ -409,97 +409,86 @@ export const KundeKarteikarte = () => {
           />,
         )}
 
+        {/* Versichertennummer und "Kasse" (Krankenkasse, Kassen-Nr., Status,
+            Versicherungsart im Fenster) */}
         {zeile(
-          "Krankenkasse",
+          "Versicherten-Nr.",
           <Feld grau>
             <Eingabe
-              name="Krankenkasse"
-              wert={kunde.Krankenkasse}
-              speichere={speichere("Krankenkasse")}
+              name="Versicherten-Nr."
+              wert={kunde.VersichertenNummer}
+              speichere={speichere("VersichertenNummer")}
             />
           </Feld>,
           <PrismaKnopf onClick={() => setKasseOffen(true)}>Kasse</PrismaKnopf>,
           true,
         )}
-        {zeile(
-          "",
-          <Feld grau>
-            <Eingabe
-              name="Versichertenstatus"
-              wert={kunde.Versichertenstatus}
-              speichere={speichere("Versichertenstatus")}
-            />
-          </Feld>,
-        )}
 
-        {zeile("Merkmal 1", text("Merkmal1", "Merkmal 1"), undefined, true)}
-        {zeile("Merkmal 2", text("Merkmal2", "Merkmal 2"))}
-        {zeile("Merkmal 3", text("Merkmal3", "Merkmal 3"))}
-        {zeile("Merkmal 4", text("Merkmal4", "Merkmal 4"))}
+        {zeile("Beruf", text("Merkmal1", "Beruf"), undefined, true)}
 
+        {/* Hinweise (Auswahl) und medizinische Notizen in einem Feld */}
         {zeile(
-          "Hinweise",
-          <Feld>
-            <Select
-              multiple
-              variant="standard"
-              disableUnderline
-              displayEmpty
-              fullWidth
-              value={hinweise}
-              onChange={async (e) => {
-                const neu = e.target.value as string[];
-                try {
-                  await speichere("Hinweise")(neu as never);
-                } catch {
-                  notify("Hinweise konnten nicht gespeichert werden.", {
-                    type: "error",
-                  });
-                }
-              }}
-              renderValue={(werte) =>
-                werte.length === 0 ? (
-                  ""
-                ) : (
-                  <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                    {werte.map((h) => (
-                      <Chip
-                        key={h}
-                        label={h}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Box>
-                )
-              }
-              inputProps={{ "aria-label": "Hinweise" }}
-              sx={{ "& .MuiSelect-select": { py: "3px" } }}
+          "Med. Hinweise",
+          <Feld mehrzeilig>
+            <Box
+              sx={{ width: "100%", display: "flex", flexDirection: "column" }}
             >
-              {[
-                ...HINWEISE,
-                ...hinweise.filter((h) => !HINWEISE.includes(h)),
-              ].map((h) => (
-                <MenuItem key={h} value={h}>
-                  {h}
-                </MenuItem>
-              ))}
-            </Select>
+              <Select
+                multiple
+                variant="standard"
+                disableUnderline
+                displayEmpty
+                fullWidth
+                value={hinweise}
+                onChange={async (e) => {
+                  const neu = e.target.value as string[];
+                  try {
+                    await speichere("Hinweise")(neu as never);
+                  } catch {
+                    notify("Hinweise konnten nicht gespeichert werden.", {
+                      type: "error",
+                    });
+                  }
+                }}
+                renderValue={(werte) =>
+                  werte.length === 0 ? (
+                    ""
+                  ) : (
+                    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                      {werte.map((h) => (
+                        <Chip
+                          key={h}
+                          label={h}
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                  )
+                }
+                inputProps={{ "aria-label": "Hinweise" }}
+                sx={{ "& .MuiSelect-select": { py: "3px" } }}
+              >
+                {[
+                  ...HINWEISE,
+                  ...hinweise.filter((h) => !HINWEISE.includes(h)),
+                ].map((h) => (
+                  <MenuItem key={h} value={h}>
+                    {h}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Eingabe
+                name="Medizinische Notizen"
+                wert={kunde.Notizen}
+                speichere={speichere("Notizen")}
+                mehrzeilig
+              />
+            </Box>
           </Feld>,
           undefined,
           true,
-        )}
-        {zeile(
-          "Med. Notizen",
-          <Feld mehrzeilig>
-            <Eingabe
-              name="Medizinische Notizen"
-              wert={kunde.Notizen}
-              speichere={speichere("Notizen")}
-              mehrzeilig
-            />
-          </Feld>,
         )}
       </Box>
 
