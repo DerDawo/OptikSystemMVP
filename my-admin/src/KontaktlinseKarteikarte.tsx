@@ -31,13 +31,14 @@ import { Auswahl, Eingabe, Haken, Speichern } from "./KarteiEingabe";
 import {
   Beschriftung,
   Feld,
+  fokussiereRabattfeld,
   SPALTEN,
   Spaltentitel,
   Wert,
   Zellen,
 } from "./BrilleKarteikarte";
 import { MITARBEITER, mitarbeiterAnzeige } from "./mitarbeiterNamen";
-import { rabattDaten, rabattOptionen } from "./rabatte";
+import { leseRabattEingabe, rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 
 /*
@@ -707,19 +708,42 @@ export const KontaktlinseKarteikarte = () => {
                 name="Rabatt"
                 wert={cl.RabattBezeichnung}
                 optionen={rabattOptionen(cl.RabattBezeichnung)}
-                speichere={(neu) =>
-                  sichere(rabattDaten(neu == null ? null : String(neu)))
-                }
+                speichere={async (neu) => {
+                  await sichere(rabattDaten(neu == null ? null : String(neu)));
+                  if (neu === "Sonderrabatt") fokussiereRabattfeld();
+                }}
               />
             </Feld>
             <Feld z={16} s="6 / 7" rechts>
-              {eingabe("RabattProzent", "Rabatt in %", {
-                typ: "zahl",
-                rechts: true,
-                anzeige: zahl(cl.RabattProzent)
-                  ? `${prismaZahl(cl.RabattProzent, 0)} %`
-                  : "",
-              })}
+              {/* Prozent ("5") oder Euro ("50 €", wird in Prozent der
+                  Summe vor Rabatt umgerechnet) */}
+              <Eingabe
+                name="Rabatt in %"
+                rechts
+                wert={cl.RabattProzent}
+                speichere={(eingabe) =>
+                  sichere({
+                    RabattProzent: leseRabattEingabe(
+                      String(eingabe ?? ""),
+                      PREISFELDER.reduce((s, f) => s + (zahl(cl[f]) ?? 0), 0),
+                    ),
+                  })
+                }
+                anzeige={
+                  zahl(cl.RabattProzent) ? (
+                    `${prismaZahl(cl.RabattProzent, 0)} %`
+                  ) : text(cl.RabattBezeichnung) ? (
+                    <Box
+                      component="span"
+                      sx={{ color: "text.disabled", fontStyle: "italic" }}
+                    >
+                      % oder €
+                    </Box>
+                  ) : (
+                    ""
+                  )
+                }
+              />
             </Feld>
             {summenzeile(
               16,
