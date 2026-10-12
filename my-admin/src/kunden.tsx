@@ -78,6 +78,7 @@ import {
 import { KundenAuftraege } from "./KundenAuftraege";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { KundeKarteikarte } from "./KundeKarteikarte";
+import { KrankenkasseInput } from "./krankenkassen";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -598,7 +599,7 @@ export const KundeEdit = () => (
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
-          <TextInput source="Krankenkasse" />
+          <KrankenkasseInput />
           <TextInput source="KrankenkassenNummer" label="Kassen-Nr." />
           <TextInput source="VersichertenNummer" label="Versicherten-Nr." />
           <TextInput source="Versichertenstatus" label="Status" />
@@ -688,7 +689,7 @@ export const KundeCreate = () => {
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
-            <TextInput source="Krankenkasse" />
+            <KrankenkasseInput />
             <TextInput source="KrankenkassenNummer" label="Kassen-Nr." />
             <TextInput source="VersichertenNummer" label="Versicherten-Nr." />
             <TextInput source="Versichertenstatus" label="Status" />

@@ -64,6 +64,11 @@ import {
   ZusatzleistungCreate,
 } from "./zusatzleistung";
 import { TerminList, TerminShow, TerminEdit, TerminCreate } from "./termin";
+import {
+  KrankenkasseList,
+  KrankenkasseEdit,
+  KrankenkasseCreate,
+} from "./krankenkassen";
 import { TerminKalender } from "./TerminKalender";
 import {
   DokumentvorlageList,
@@ -130,6 +135,13 @@ export const App = () => {
         edit={KontaktlinseEdit}
         create={KontaktlinseCreate}
         icon={VisibilityIcon}
+      />
+      <Resource
+        name="krankenkasse"
+        recordRepresentation={byField("Name")}
+        list={KrankenkasseList}
+        edit={KrankenkasseEdit}
+        create={KrankenkasseCreate}
       />
       <Resource
         name="brillenart"

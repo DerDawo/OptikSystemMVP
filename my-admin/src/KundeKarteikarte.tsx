@@ -26,6 +26,7 @@ import { Auswahl, Eingabe, Speichern } from "./KarteiEingabe";
 import { HINWEISE } from "./KundeFelder";
 import { kontaktAktionen } from "./kontaktLinks";
 import { NachrichtHandy, NachrichtKanal } from "./NachrichtHandy";
+import { ikVon, useKrankenkassen } from "./krankenkassen";
 
 /*
  * Kundenkartei im Aufbau der Prisma-Kundenmaske: links kursive Beschriftungen,
@@ -210,6 +211,7 @@ export const KundeKarteikarte = () => {
   const notify = useNotify();
   const [nachricht, setNachricht] = useState<NachrichtKanal | null>(null);
   const [kasseOffen, setKasseOffen] = useState(false);
+  const kassen = useKrankenkassen();
 
   if (!kunde) return null;
 
@@ -223,6 +225,17 @@ export const KundeKarteikarte = () => {
       });
       refresh();
     };
+
+  // Kasse aus der Liste: hinterlegtes IK wird als Kassen-Nr. übernommen
+  const speichereKasse: Speichern = async (neu) => {
+    const ik = ikVon(kassen, neu);
+    await dataProvider.update("kunde", {
+      id: kunde.id,
+      data: { Krankenkasse: neu, ...(ik ? { KrankenkassenNummer: ik } : {}) },
+      previousData: kunde,
+    });
+    refresh();
+  };
 
   const text = (feld: string, name: string, extra: object = {}) => (
     <Feld>
@@ -529,14 +542,24 @@ export const KundeKarteikarte = () => {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "150px minmax(0, 1fr)",
+              gridTemplateColumns: {
+                xs: "112px minmax(0, 1fr)",
+                sm: "150px minmax(0, 1fr)",
+              },
               columnGap: "12px",
               rowGap: "8px",
               alignItems: "center",
             }}
           >
             <Beschriftung>Krankenkasse</Beschriftung>
-            {text("Krankenkasse", "Krankenkasse")}
+            <Feld>
+              <Eingabe
+                name="Krankenkasse"
+                wert={kunde.Krankenkasse}
+                speichere={speichereKasse}
+                vorschlaege={kassen.map((k) => k.Name)}
+              />
+            </Feld>
             <Beschriftung>Kassen-Nr.</Beschriftung>
             {text("KrankenkassenNummer", "Kassen-Nr.")}
             <Beschriftung>Versicherten-Nr.</Beschriftung>
