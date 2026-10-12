@@ -1328,26 +1328,18 @@ export const BrilleKarteikarte = () => {
                 },
               )}
             </Feld>
+            {/* Ein Feld "Hersteller" (statt Linie + Hersteller); bei
+                Prisma-Aufträgen steht die Marke oft in "Linie" und wird
+                angezeigt, solange kein Hersteller eingetragen ist */}
             <Beschriftung z={15} s="1 / 2">
-              Linie
-            </Beschriftung>
-            <Feld z={15} s="2 / 4">
-              {textFeld(
-                "fassung.Linie",
-                "Linie",
-                fassungFeld("Linie"),
-                fassung?.Linie,
-              )}
-            </Feld>
-            <Beschriftung z={15} s="5 / 6">
               Hersteller
             </Beschriftung>
-            <Feld z={15} s={RECHTS}>
+            <Feld z={15} s="2 / 4">
               {textFeld(
                 "fassung.Hersteller",
                 "Hersteller Fassung",
                 fassungFeld("Hersteller"),
-                fassung?.Hersteller,
+                text(fassung?.Hersteller) || text(fassung?.Linie) || null,
               )}
             </Feld>
 
