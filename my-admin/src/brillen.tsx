@@ -387,7 +387,7 @@ export const BrilleEdit = () => (
     }
   >
     <SimpleForm>
-      <FormSection title="Beratung">
+      <FormSection title="Auftrag">
         <KundeInput />
         <FieldRow>
           <MitarbeiterInput source="Berater" label="Bedient von" />
@@ -522,7 +522,7 @@ export const BrilleCreate = () => {
   return (
     <Create>
       <SimpleForm defaultValues={defaultValues}>
-        <FormSection title="Beratung">
+        <FormSection title="Auftrag">
           <KundeInput />
           <FieldRow>
             <MitarbeiterInput source="Berater" label="Bedient von" />
