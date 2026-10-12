@@ -9,7 +9,7 @@ import {
   Title,
   RaRecord,
 } from "react-admin";
-import { DateField, Show, TextField, FunctionField } from "react-admin";
+import { DateField, Show, FunctionField } from "react-admin";
 import { DateInput, Edit, SimpleForm, TextInput } from "react-admin";
 import { Create } from "react-admin";
 import {
@@ -60,28 +60,24 @@ import {
 } from "./messaging";
 import {
   EditActionsBar,
-  Field,
   FieldRow,
   FormSection,
   ShowActionsBar,
   ShowColumn,
   ShowColumns,
   ShowLayout,
-  ShowSection,
   DatenbankInfo,
 } from "./EntityLayout";
 import {
   AnredeInput,
   GeschlechtAusAnrede,
   GeschlechtInput,
-  HinweiseChips,
   HinweiseInput,
   KundeVerwaltung,
 } from "./KundeFelder";
 import { KundenAuftraege } from "./KundenAuftraege";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
-import { KontaktFeld } from "./KontaktFeld";
-import { DirektFeld } from "./DirektFeld";
+import { KundeKarteikarte } from "./KundeKarteikarte";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -525,39 +521,6 @@ export const KundenList = () => {
   );
 };
 
-// Zwischenüberschrift innerhalb einer Kachel (Stammdaten | Adresse | Kontakt)
-const Unterteilung = ({ titel }: { titel: string }) => (
-  <Box sx={{ gridColumn: "1 / -1", mt: 1 }}>
-    <Divider textAlign="left">
-      <Typography variant="caption" color="text.secondary">
-        {titel}
-      </Typography>
-    </Divider>
-  </Box>
-);
-
-// Aus Prisma übernommene, nicht medizinische Angaben klein am Ende
-const PrismaAngabenZeile = () => {
-  const record = useRecordContext();
-  const angaben = String(record?.PrismaAngaben ?? "")
-    .split(/\r?\n/)
-    .map((z) => z.trim())
-    .filter(Boolean);
-  if (angaben.length === 0) return null;
-  return (
-    <Typography
-      variant="caption"
-      color="text.secondary"
-      sx={{ display: "block", px: 0.5, overflowWrap: "anywhere" }}
-    >
-      <Box component="span" sx={{ fontStyle: "italic" }}>
-        Angaben aus Prisma:{" "}
-      </Box>
-      {angaben.join(" · ")}
-    </Typography>
-  );
-};
-
 export const KundeShow = () => {
   const showObject = useShowController();
   const dataProvider = useDataProvider();
@@ -581,102 +544,13 @@ export const KundeShow = () => {
   return (
     <Show title="Kunde anzeigen" actions={<KundeShowActions />}>
       <ShowLayout>
-        <ShowColumns spalten="minmax(0, 1fr) minmax(0, 1.8fr)">
-          <ShowColumn kompakt>
-            <ShowSection title="Stammdaten">
-              {/* Anrede, Vorname und Nachname in einer Reihe */}
-              <Box
-                sx={{
-                  gridColumn: "1 / -1",
-                  display: "grid",
-                  gridTemplateColumns: { xs: "1fr", sm: "0.6fr 1fr 1fr" },
-                  gap: "0.25em 2em",
-                  "& > *": { minWidth: 0 },
-                }}
-              >
-                <Field>
-                  <TextField source="Anrede" />
-                </Field>
-                <Field>
-                  <TextField source="Vorname" />
-                </Field>
-                <Field>
-                  <TextField source="Nachname" />
-                </Field>
-              </Box>
-              <Field>
-                <TextField source="Geschlecht" />
-              </Field>
-              <Field>
-                <DateField source="Geburtsdatum" />
-              </Field>
-              <Field>
-                <TextField source="Tätigkeit" />
-              </Field>
-              <Unterteilung titel="Adresse" />
-              <Field>
-                <TextField source="Straße" />
-              </Field>
-              <Field>
-                <TextField source="Hausnummer" />
-              </Field>
-              <Field>
-                <TextField source="Postleitzahl" />
-              </Field>
-              <Field>
-                <TextField source="Stadt" />
-              </Field>
-              <Unterteilung titel="Kontakt" />
-              <Field>
-                <KontaktFeld source="TelefonnummerPrivat" />
-              </Field>
-              <Field>
-                <KontaktFeld source="TelefonnummerGeschaeftlich" />
-              </Field>
-              <Field>
-                <KontaktFeld source="Handy" />
-              </Field>
-              <Field>
-                <KontaktFeld source="Email" />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Versicherung">
-              <Field>
-                <TextField source="KrankenkassenNummer" />
-              </Field>
-              <Field>
-                <TextField source="VersichertenNummer" />
-              </Field>
-              <Field>
-                <TextField source="KrankenversicherungsTyp" />
-              </Field>
-              <Field>
-                <TextField source="Krankenkasse" />
-              </Field>
-              <Field>
-                <TextField source="Versichertenstatus" />
-              </Field>
-              <Field>
-                <DateField source="VersichertenkarteGueltigBis" />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Medizinische Notizen">
-              <Field label="Hinweise">
-                <HinweiseChips />
-              </Field>
-              <DirektFeld source="Notizen" label="Medizinische Notizen" />
-            </ShowSection>
-            <ShowSection title="Merkmale">
-              <DirektFeld source="Merkmal1" label="Beruf" />
-              <DirektFeld source="Merkmal2" label="Besonderes" />
-              <Field>
-                <TextField source="KundenNummer" />
-              </Field>
-              <Field>
-                <DateField source="Aufnahmedatum" />
-              </Field>
-            </ShowSection>
-            <PrismaAngabenZeile />
+        {/* Kundenkartei wie in Prisma, daneben die Aufträge */}
+        <ShowColumns
+          spalten="minmax(0, 1.5fr) minmax(0, 1fr)"
+          spaltenMittel="minmax(0, 1.3fr) minmax(0, 1fr)"
+        >
+          <ShowColumn>
+            <KundeKarteikarte />
             <DatenbankInfo />
           </ShowColumn>
           <ShowColumn>
@@ -701,8 +575,6 @@ export const KundeEdit = () => (
           <AnredeInput />
           <TextInput source="Vorname" />
           <TextInput source="Nachname" />
-        </FieldRow>
-        <FieldRow>
           <GeschlechtInput />
           <DateInput source="Geburtsdatum" />
           <TextInput source="Tätigkeit" />
@@ -712,8 +584,6 @@ export const KundeEdit = () => (
         <FieldRow>
           <TextInput source="Straße" />
           <TextInput source="Hausnummer" />
-        </FieldRow>
-        <FieldRow>
           <TextInput source="Postleitzahl" />
           <TextInput source="Stadt" />
         </FieldRow>
@@ -728,30 +598,37 @@ export const KundeEdit = () => (
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
-          <TextInput source="KrankenkassenNummer" />
-          <TextInput source="VersichertenNummer" />
-          <TextInput source="KrankenversicherungsTyp" />
-        </FieldRow>
-        <FieldRow>
           <TextInput source="Krankenkasse" />
-          <TextInput source="Versichertenstatus" />
-          <DateInput source="VersichertenkarteGueltigBis" />
+          <TextInput source="KrankenkassenNummer" label="Kassen-Nr." />
+          <TextInput source="VersichertenNummer" label="Versicherten-Nr." />
+          <TextInput source="Versichertenstatus" label="Status" />
+          <TextInput
+            source="KrankenversicherungsTyp"
+            label="Versicherungsart"
+          />
+          <DateInput
+            source="VersichertenkarteGueltigBis"
+            label="Karte gültig bis"
+          />
         </FieldRow>
       </FormSection>
       <FormSection title="Medizinische Notizen">
-        <HinweiseInput />
-        <TextInput
-          source="Notizen"
-          label="Medizinische Notizen"
-          helperText="Nur medizinische Angaben (z. B. Erkrankungen, OPs, Unverträglichkeiten)"
-          multiline
-          fullWidth
-        />
+        <FieldRow>
+          <HinweiseInput />
+          <TextInput
+            source="Notizen"
+            label="Medizinische Notizen (Erkrankungen, OPs, Unverträglichkeiten)"
+            multiline
+            fullWidth
+          />
+        </FieldRow>
       </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
           <TextInput source="Merkmal1" label="Beruf" />
           <TextInput source="Merkmal2" label="Besonderes" />
+          <TextInput source="KundenNummer" label="Kundennummer" />
+          <DateInput source="Aufnahmedatum" />
         </FieldRow>
       </FormSection>
       <KundeVerwaltung />
@@ -786,8 +663,6 @@ export const KundeCreate = () => {
             <AnredeInput />
             <TextInput source="Vorname" />
             <TextInput source="Nachname" />
-          </FieldRow>
-          <FieldRow>
             <GeschlechtInput />
             <DateInput source="Geburtsdatum" />
             <TextInput source="Tätigkeit" />
@@ -797,8 +672,6 @@ export const KundeCreate = () => {
           <FieldRow>
             <TextInput source="Straße" />
             <TextInput source="Hausnummer" />
-          </FieldRow>
-          <FieldRow>
             <TextInput source="Postleitzahl" />
             <TextInput source="Stadt" />
           </FieldRow>
@@ -819,36 +692,37 @@ export const KundeCreate = () => {
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
-            <TextInput
-              source="KrankenkassenNummer"
-              label="Krankenkassennummer"
-            />
-            <TextInput source="VersichertenNummer" label="Versichertennummer" />
+            <TextInput source="Krankenkasse" />
+            <TextInput source="KrankenkassenNummer" label="Kassen-Nr." />
+            <TextInput source="VersichertenNummer" label="Versicherten-Nr." />
+            <TextInput source="Versichertenstatus" label="Status" />
             <TextInput
               source="KrankenversicherungsTyp"
-              label="Krankenversicherungs Typ"
+              label="Versicherungsart"
             />
-          </FieldRow>
-          <FieldRow>
-            <TextInput source="Krankenkasse" />
-            <TextInput source="Versichertenstatus" />
-            <DateInput source="VersichertenkarteGueltigBis" />
+            <DateInput
+              source="VersichertenkarteGueltigBis"
+              label="Karte gültig bis"
+            />
           </FieldRow>
         </FormSection>
         <FormSection title="Medizinische Notizen">
-          <HinweiseInput />
-          <TextInput
-            source="Notizen"
-            label="Medizinische Notizen"
-            helperText="Nur medizinische Angaben (z. B. Erkrankungen, OPs, Unverträglichkeiten)"
-            multiline
-            fullWidth
-          />
+          <FieldRow>
+            <HinweiseInput />
+            <TextInput
+              source="Notizen"
+              label="Medizinische Notizen (Erkrankungen, OPs, Unverträglichkeiten)"
+              multiline
+              fullWidth
+            />
+          </FieldRow>
         </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>
             <TextInput source="Merkmal1" label="Beruf" />
             <TextInput source="Merkmal2" label="Besonderes" />
+            <TextInput source="KundenNummer" label="Kundennummer" />
+            <DateInput source="Aufnahmedatum" />
           </FieldRow>
         </FormSection>
         <KundeVerwaltung />

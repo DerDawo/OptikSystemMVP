@@ -69,21 +69,25 @@ const alleAusgewaehlt = (auswahl: Auswahl) =>
 interface KarteikarteKopierenDialogProps {
   original: RaRecord;
   onClose: () => void;
+  // "Optische Werte kopieren": nur die Glaswerte vorausgewählt
+  nurGlaswerte?: boolean;
 }
 
 const KarteikarteKopierenDialog = ({
   original,
   onClose,
+  nurGlaswerte,
 }: KarteikarteKopierenDialogProps) => {
   const dataProvider = useDataProvider();
   const notify = useNotify();
   const navigate = useNavigate();
 
+  // Üblich ist das Weiterführen des ganzen Auftrags: alles vorausgewählt
   const [auswahl, setAuswahl] = useState<Auswahl>({
-    glaswerte: false,
-    glasausfuehrung: false,
-    fassung: false,
-    formdaten: false,
+    glaswerte: true,
+    glasausfuehrung: !nurGlaswerte,
+    fassung: !nurGlaswerte,
+    formdaten: !nurGlaswerte,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -168,7 +172,9 @@ const KarteikarteKopierenDialog = ({
 
       notify("Neuer Auftrag aus Karteikarte angelegt.", { type: "success" });
       onClose();
-      navigate(`/brille/${data.id}`);
+      // direkt in die neue Karteikarte (dort lässt sich alles direkt
+      // bearbeiten)
+      navigate(`/brille/${data.id}/show`);
     } catch {
       notify("Karteikarte konnte nicht kopiert werden", { type: "error" });
     } finally {
@@ -272,7 +278,13 @@ const KarteikarteKopierenDialog = ({
 
 // Button für die Brillenkartei (BrilleShow/BrilleEdit), der den
 // "Karteikarte kopieren"-Dialog öffnet.
-export const KarteikarteKopierenButton = () => {
+export const KarteikarteKopierenButton = ({
+  nurGlaswerte,
+  label = "Karteikarte kopieren",
+}: {
+  nurGlaswerte?: boolean;
+  label?: string;
+} = {}) => {
   const record = useRecordContext();
   const [open, setOpen] = useState(false);
 
@@ -281,10 +293,11 @@ export const KarteikarteKopierenButton = () => {
   return (
     <>
       <Button startIcon={<ContentCopyIcon />} onClick={() => setOpen(true)}>
-        Karteikarte kopieren
+        {label}
       </Button>
       {open && (
         <KarteikarteKopierenDialog
+          nurGlaswerte={nurGlaswerte}
           original={record}
           onClose={() => setOpen(false)}
         />

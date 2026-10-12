@@ -31,7 +31,6 @@ import { useGetMany, useGetOne, useRecordContext } from "react-admin";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { KundeInput } from "./KundeInput";
-import { OptionenMenu } from "./PrismaMenues";
 import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { brillenartOptionen } from "./brillenarten";
 import { rabattDaten, rabattOptionen } from "./rabatte";
@@ -40,8 +39,7 @@ import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
-import PrintIcon from "@mui/icons-material/Print";
-import { Box, Button, TextField as MuiTextField } from "@mui/material";
+import { Box, TextField as MuiTextField } from "@mui/material";
 import {
   MitarbeiterField,
   MitarbeiterInput,
@@ -57,6 +55,7 @@ import {
   WerkstattauftragButton,
 } from "./FormulareDialog";
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
+import { BrilleOptionenMenu } from "./BrilleOptionen";
 import {
   EditActionsBar,
   FieldRow,
@@ -319,15 +318,8 @@ const BrilleShowActions = () => (
   <ShowActionsBar>
     <RechnungErstellenButton />
     <FormulareButton />
-    <OptionenMenu>
-      <KarteikarteKopierenButton />
-      <BerechtigungsscheinErstellenButton />
-      <WerkstattauftragButton />
-      <MahnungErstellenButton />
-      <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
-        Drucken
-      </Button>
-    </OptionenMenu>
+    <KarteikarteKopierenButton />
+    <BrilleOptionenMenu />
   </ShowActionsBar>
 );
 
@@ -387,7 +379,7 @@ export const BrilleEdit = () => (
     }
   >
     <SimpleForm>
-      <FormSection title="Beratung">
+      <FormSection title="Auftrag">
         <KundeInput />
         <FieldRow>
           <MitarbeiterInput source="Berater" label="Bedient von" />
@@ -522,7 +514,7 @@ export const BrilleCreate = () => {
   return (
     <Create>
       <SimpleForm defaultValues={defaultValues}>
-        <FormSection title="Beratung">
+        <FormSection title="Auftrag">
           <KundeInput />
           <FieldRow>
             <MitarbeiterInput source="Berater" label="Bedient von" />

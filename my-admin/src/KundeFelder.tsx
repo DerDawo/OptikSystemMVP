@@ -1,14 +1,8 @@
 import { useEffect } from "react";
-import { Box, Chip, Typography } from "@mui/material";
-import {
-  DateInput,
-  SelectArrayInput,
-  SelectInput,
-  TextInput,
-  useRecordContext,
-} from "react-admin";
+import { Box, Chip } from "@mui/material";
+import { SelectArrayInput, SelectInput, useRecordContext } from "react-admin";
 import { useFormContext, useWatch } from "react-hook-form";
-import { DatenbankInfo, FieldRow } from "./EntityLayout";
+import { DatenbankInfo } from "./EntityLayout";
 
 // Anrede: Werte des Datenbanktyps public.anrede, Herr/Frau zuerst
 const ANREDEN = ["Frau", "Herr", "Dr.", "Prof.", "Prof. Dr."].map((a) => ({
@@ -51,17 +45,10 @@ export const GeschlechtAusAnrede = () => {
   return null;
 };
 
-// Kundennummer, Aufnahmedatum und technische Angaben klein am Ende des
-// Formulars
+// Technische Angaben (ID, angelegt am) klein am Ende des Formulars;
+// Kundennummer und Aufnahmedatum stehen bei den Merkmalen
 export const KundeVerwaltung = () => (
-  <Box sx={{ mt: 3, width: "100%", maxWidth: 520 }}>
-    <Typography variant="caption" color="text.secondary">
-      Verwaltung
-    </Typography>
-    <FieldRow>
-      <TextInput source="KundenNummer" size="small" helperText={false} />
-      <DateInput source="Aufnahmedatum" size="small" helperText={false} />
-    </FieldRow>
+  <Box sx={{ mt: 1, width: "100%" }}>
     <DatenbankInfo />
   </Box>
 );
@@ -84,7 +71,7 @@ export const HinweiseInput = () => {
       source="Hinweise"
       label="Hinweise"
       choices={alle.map((h) => ({ id: h, name: h }))}
-      helperText="Mehrfachauswahl"
+      helperText={false}
       format={(wert) => (Array.isArray(wert) ? wert : [])}
     />
   );

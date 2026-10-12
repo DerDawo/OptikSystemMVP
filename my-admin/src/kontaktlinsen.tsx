@@ -75,7 +75,7 @@ export const KontaktlinseList = () => (
 export const KontaktlinseShow = () => (
   <Show>
     <ShowLayout>
-      <ShowSection title="Beratung">
+      <ShowSection title="Auftrag">
         <Field label="Bedient von">
           <MitarbeiterField source="Berater" label="Bedient von" />
         </Field>
@@ -174,7 +174,7 @@ export const KontaktlinseShow = () => (
 export const KontaktlinseEdit = () => (
   <Edit redirect={zurueckNachSpeichern}>
     <SimpleForm>
-      <FormSection title="Beratung">
+      <FormSection title="Auftrag">
         <MitarbeiterInput source="Berater" label="Bedient von" />
       </FormSection>
       <FormSection title="Auftragsdaten">
@@ -247,7 +247,7 @@ export const KontaktlinseCreate = () => {
       transform={(data) => ({ ...data, created_at: new Date().toISOString() })}
     >
       <SimpleForm defaultValues={defaultValues}>
-        <FormSection title="Beratung">
+        <FormSection title="Auftrag">
           <MitarbeiterInput source="Berater" label="Bedient von" />
         </FormSection>
         <FormSection title="Auftragsdaten">
