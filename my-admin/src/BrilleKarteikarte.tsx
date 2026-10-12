@@ -55,7 +55,9 @@ import {
 } from "./KarteiEingabe";
 import { brillenartOptionen } from "./brillenarten";
 import {
+  leistungenAusNotizen,
   leistungsText,
+  setzeNotizLeistungBetrag,
   weitereLeistungenPositionen,
 } from "./leistungenAusNotizen";
 import { leseRabattEingabe, rabattDaten, rabattOptionen } from "./rabatte";
@@ -969,17 +971,23 @@ export const BrilleKarteikarte = () => {
   // Zusatzleistungen plus "Weitere Leistungen" (Freitext aus Prisma),
   // mindestens drei Zeilen wie in Prisma
   const weitere = zahl(brille.WeitereLeistungen);
+  // Betrag je Zeile änderbar: Katalogleistung -> Preis für diesen Auftrag
+  // (brille_hat_zusatzleistungen.Betrag), Prisma-Leistung -> Zeile im Text
+  // und WeitereLeistungen, Rest -> WeitereLeistungen
+  const prismaZeilen = leistungenAusNotizen(leistungsText(brille));
   const posten: {
     bezeichnung: string;
     betrag: unknown;
     zuordnung?: Datensatz;
     auswahl?: boolean;
+    prismaIndex?: number;
+    rest?: boolean;
   }[] = [
     ...(zuordnungen ?? []).map((z) => {
       const l = leistungen?.find((x) => x.id === z.ZusatzleistungID);
       return {
         bezeichnung: text(l?.Bezeichnung),
-        betrag: l?.Betrag,
+        betrag: zahl(z.Betrag) ?? l?.Betrag,
         zuordnung: z,
       };
     }),
@@ -987,8 +995,43 @@ export const BrilleKarteikarte = () => {
       weitere ?? 0,
       leistungsText(brille),
       "(aus Prisma)",
-    ).map((l) => ({ bezeichnung: l.bezeichnung, betrag: l.betrag })),
+    ).map((l, i) => ({
+      bezeichnung: l.bezeichnung,
+      betrag: l.betrag,
+      ...(i < prismaZeilen.length ? { prismaIndex: i } : { rest: true }),
+    })),
   ];
+  const speichereZusatzbetrag =
+    (p: (typeof posten)[number]): Speichern =>
+    async (neu) => {
+      const wert = neu === null || neu === "" ? null : Number(neu);
+      if (p.zuordnung) {
+        await dataProvider.update("brille_hat_zusatzleistungen", {
+          id: p.zuordnung.id,
+          data: { Betrag: wert },
+          previousData: p.zuordnung,
+        });
+        refresh();
+        return;
+      }
+      const alt = zahl(p.betrag) ?? 0;
+      const differenz = (wert ?? 0) - alt;
+      const daten: Record<string, unknown> = {
+        WeitereLeistungen: Math.round(((weitere ?? 0) + differenz) * 100) / 100,
+      };
+      if (p.prismaIndex !== undefined) {
+        const feld = text(brille.PrismaAngaben).includes("Leistungen:")
+          ? "PrismaAngaben"
+          : "Notizen";
+        const neuerText = setzeNotizLeistungBetrag(
+          brille[feld],
+          p.prismaIndex,
+          wert ?? 0,
+        );
+        if (neuerText !== null) daten[feld] = neuerText;
+      }
+      await auftrag("WeitereLeistungen", () => daten)(wert);
+    };
   // eine Zeile mit der Auswahl zum Hinzufügen, wie die leeren Zeilen in Prisma
   posten.push({ bezeichnung: "", betrag: null, auswahl: true });
   while (posten.length < 3) posten.push({ bezeichnung: "", betrag: null });
@@ -1600,7 +1643,19 @@ export const BrilleKarteikarte = () => {
                 </Feld>
               ),
               <Feld key={`zl-e-${i}`} z={zZusatz + i} s="8 / 9" rechts>
-                {betragText(p.betrag)}
+                {p.auswahl || (!p.bezeichnung && p.betrag == null)
+                  ? null
+                  : textFeld(
+                      `zl-betrag-${i}`,
+                      `Betrag ${p.bezeichnung}`,
+                      speichereZusatzbetrag(p),
+                      zahl(p.betrag),
+                      {
+                        typ: "zahl",
+                        rechts: true,
+                        anzeige: betragText(p.betrag),
+                      },
+                    )}
               </Feld>,
             ])}
 
