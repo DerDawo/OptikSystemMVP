@@ -86,9 +86,12 @@ export const NachrichtHandy = ({
     );
     notify(
       kanal === "whatsapp"
-        ? "WhatsApp wurde mit der Nachricht geöffnet – dort noch auf Senden tippen."
+        ? "WhatsApp geöffnet. Der Text ist auch kopiert – ist das Eingabefeld leer, hineinklicken und Strg+V drücken, dann senden."
         : "SMS-App wurde mit der Nachricht geöffnet.",
-      { type: "info" },
+      {
+        type: "info",
+        autoHideDuration: kanal === "whatsapp" ? 15000 : undefined,
+      },
     );
     onClose();
   };

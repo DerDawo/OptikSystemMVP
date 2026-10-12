@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useDataProvider } from "react-admin";
+import { useDataProvider, useNotify } from "react-admin";
 import { useNavigate } from "react-router-dom";
 import {
   Box,
@@ -72,6 +72,7 @@ const kundeName = (kunde?: Kunde) =>
 
 const AufgabenKarte = ({ liste }: { liste: Liste }) => {
   const navigate = useNavigate();
+  const notify = useNotify();
   const firma = RECHNUNG_ABSENDER.firma;
   return (
     <Card
@@ -161,14 +162,18 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
                     <IconButton
                       size="small"
                       aria-label={`WhatsApp an ${kundeName(zeile.kunde)}`}
-                      onClick={() =>
+                      onClick={() => {
                         openExternalMessage(
                           buildExternalMessageUrl("whatsapp", {
                             to: nummer,
                             message: zeile.nachricht!(zeile.kunde, firma),
                           }),
-                        )
-                      }
+                        );
+                        notify(
+                          "WhatsApp geöffnet. Der Text ist auch kopiert – ist das Eingabefeld leer, Strg+V drücken.",
+                          { type: "info", autoHideDuration: 15000 },
+                        );
+                      }}
                       sx={{ color: "#1da851" }}
                     >
                       <WhatsAppIcon fontSize="small" />

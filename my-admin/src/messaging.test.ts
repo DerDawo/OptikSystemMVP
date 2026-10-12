@@ -8,6 +8,7 @@ import {
   buildExternalMessageUrl,
   choosePhoneNumberForMessaging,
   normalizePhoneNumberForSms,
+  whatsappWebUrl,
 } from "./messaging";
 
 describe("buildExternalMessageUrl", () => {
@@ -73,5 +74,23 @@ describe("Telefonnummern für SMS/WhatsApp", () => {
       "0365 123456",
     );
     expect(choosePhoneNumberForMessaging([null, undefined, ""])).toBe("");
+  });
+});
+
+describe("whatsappWebUrl", () => {
+  it("macht aus wa.me einen direkten WhatsApp-Web-Link", () => {
+    const url = buildExternalMessageUrl("whatsapp", {
+      to: "0170 1234567",
+      message: "Hallo & 100% fertig",
+    });
+    expect(whatsappWebUrl(url)).toBe(
+      "https://web.whatsapp.com/send?phone=491701234567&text=Hallo%20%26%20100%25%20fertig",
+    );
+    expect(new URL(url).searchParams.get("text")).toBe("Hallo & 100% fertig");
+  });
+
+  it("lässt andere Links in Ruhe", () => {
+    expect(whatsappWebUrl("mailto:a@b.de?body=x")).toBeNull();
+    expect(whatsappWebUrl("https://example.org")).toBeNull();
   });
 });
