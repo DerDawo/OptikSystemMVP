@@ -552,8 +552,9 @@ export const KontaktlinseKarteikarte = () => {
             <Beschriftung z={2} s="5 / 6">
               Rech. Nr.
             </Beschriftung>
+            {/* wird über "Rechnung erstellen" fortlaufend vergeben */}
             <Feld z={2} s="6 / 7" rechts>
-              {eingabe("Rechnungsnummer", "Rechnungsnummer", { rechts: true })}
+              {text(cl.Rechnungsnummer)}
             </Feld>
             <Beschriftung z={2} s="7 / 8" rechts>
               Abholdatum

@@ -30,6 +30,7 @@ import {
   KarteiwerteKopieren,
   KontaktlinseKarteikarte,
 } from "./KontaktlinseKarteikarte";
+import { KontaktlinseRechnungButton } from "./KontaktlinseRechnung";
 import { KundeInput } from "./KundeInput";
 import { MitarbeiterField, MitarbeiterInput } from "./mitarbeiter";
 import { CurrencyField } from "./CurrencyField";
@@ -90,6 +91,7 @@ const KontaktlinseShowActions = () => {
   const cl = useRecordContext();
   return (
     <ShowActionsBar>
+      <KontaktlinseRechnungButton />
       {cl && <KarteiwerteKopieren cl={cl as { id: number }} />}
     </ShowActionsBar>
   );
