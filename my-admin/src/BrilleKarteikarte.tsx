@@ -66,6 +66,7 @@ import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
 import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
+import { HerstellerBestellung } from "./HerstellerBestellung";
 import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
 
 /*
@@ -1905,7 +1906,7 @@ export const BrilleKarteikarte = () => {
       <Dialog
         open={bestellOffen}
         onClose={() => setBestellOffen(false)}
-        maxWidth="sm"
+        maxWidth="md"
         fullWidth
       >
         <DialogTitle>Bestelloptionen</DialogTitle>
@@ -1988,6 +1989,13 @@ export const BrilleKarteikarte = () => {
             </Feld>
             <span />
           </Box>
+          <HerstellerBestellung
+            brille={brille}
+            kunde={kunde}
+            glastyp={glastyp}
+            fassung={fassung}
+            augen={augen}
+          />
         </DialogContent>
         <DialogActions>
           <Button onClick={() => setBestellOffen(false)}>Schließen</Button>
