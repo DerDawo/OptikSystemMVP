@@ -82,9 +82,6 @@ const zahl = (wert: unknown) => {
 const text = (wert: unknown) =>
   wert === null || wert === undefined ? "" : String(wert).trim();
 
-// Öffnet das Fenster "Verordnung" der Brillenkartei (aus dem Optionen-Menü)
-export const VERORDNUNG_OEFFNEN = "brille-verordnung-oeffnen";
-
 // Datum wie in Prisma: 15.05.2026
 const datum = (wert: unknown) =>
   wert
@@ -793,12 +790,6 @@ export const BrilleKarteikarte = () => {
     [letzteGlastypen],
   );
   const glastypFeld = useRef<HTMLDivElement>(null);
-  const [verordnungOffen, setVerordnungOffen] = useState(false);
-  useEffect(() => {
-    const oeffnen = () => setVerordnungOffen(true);
-    window.addEventListener(VERORDNUNG_OEFFNEN, oeffnen);
-    return () => window.removeEventListener(VERORDNUNG_OEFFNEN, oeffnen);
-  }, []);
   const { data: zuordnungen } = useGetList<Datensatz>(
     "brille_hat_zusatzleistungen",
     {
@@ -1633,6 +1624,25 @@ export const BrilleKarteikarte = () => {
             <Feld z={zRest} s="8 / 9" rechts summe>
               {betragText(rest)}
             </Feld>
+
+            {/* Diagnose (für Kassenanträge) groß über die ganze Breite */}
+            <Box sx={{ gridRow: zRest + 1, gridColumn: "1 / -1", height: 8 }} />
+            <Beschriftung z={zRest + 2} s="1 / 2">
+              Diagnose
+            </Beschriftung>
+            <Feld z={zRest + 2} s="2 / 9" mehrzeilig>
+              <Box
+                sx={{ flex: 1, minWidth: 0, minHeight: 64, display: "flex" }}
+              >
+                {textFeld(
+                  "Diagnose",
+                  "Diagnose",
+                  auftrag("Diagnose"),
+                  brille.Diagnose,
+                  { mehrzeilig: true },
+                )}
+              </Box>
+            </Feld>
           </Box>
         </Box>
       </Box>
@@ -1654,68 +1664,6 @@ export const BrilleKarteikarte = () => {
           }}
         />
       )}
-      {/* Verordnung (für Kassenanträge) - in Prisma nicht auf der Karte,
-          daher im Fenster über "Optionen → Verordnung" */}
-      <Dialog
-        open={verordnungOffen}
-        onClose={() => setVerordnungOffen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-        <DialogTitle>Verordnung</DialogTitle>
-        <DialogContent>
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: "130px minmax(0, 1fr)",
-              columnGap: "12px",
-              rowGap: "8px",
-              alignItems: "center",
-              "& > .feld": (theme) => ({
-                bgcolor: feldFarbe(theme),
-                minHeight: 28,
-                px: "6px",
-                display: "flex",
-                alignItems: "center",
-                borderRadius: "3px",
-                "&:focus-within": aktivesFeld(theme),
-              }),
-            }}
-          >
-            <Typography variant="body2">Arzt</Typography>
-            <Box className="feld">
-              {textFeld(
-                "VerordnenderArzt",
-                "Arzt",
-                auftrag("VerordnenderArzt"),
-                brille.VerordnenderArzt,
-              )}
-            </Box>
-            <Typography variant="body2">Verordnung vom</Typography>
-            <Box className="feld">
-              {textFeld(
-                "Verordnungsdatum",
-                "Verordnung",
-                auftrag("Verordnungsdatum"),
-                brille.Verordnungsdatum,
-                { typ: "datum", anzeige: datum(brille.Verordnungsdatum) },
-              )}
-            </Box>
-            <Typography variant="body2">Diagnose</Typography>
-            <Box className="feld">
-              {textFeld(
-                "Diagnose",
-                "Diagnose",
-                auftrag("Diagnose"),
-                brille.Diagnose,
-              )}
-            </Box>
-          </Box>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setVerordnungOffen(false)}>Schließen</Button>
-        </DialogActions>
-      </Dialog>
       <Dialog
         open={bestellOffen}
         onClose={() => setBestellOffen(false)}

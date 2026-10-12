@@ -505,12 +505,8 @@ export const BrilleEdit = () => (
           />
         </FieldRow>
       </FormSection>
-      <FormSection title="Verordnung">
-        <FieldRow>
-          <TextInput source="VerordnenderArzt" />
-          <DateInput source="Verordnungsdatum" />
-        </FieldRow>
-        <TextInput source="Diagnose" fullWidth />
+      <FormSection title="Diagnose">
+        <TextInput source="Diagnose" multiline minRows={3} fullWidth />
       </FormSection>
       <DatenbankInfo />
     </SimpleForm>

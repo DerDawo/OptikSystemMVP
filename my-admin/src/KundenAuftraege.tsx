@@ -26,11 +26,10 @@ import { OrderStatusKey, getBrilleOrderStatus } from "./orderStatus";
 /*
  * Alle Vorgänge eines Kunden in einer Liste wie in der Prisma-Kundenkartei:
  * Brillen- und Kontaktlinsenaufträge nach Datum, mit Status-Symbolen,
- * "Neu anlegen"-Menü, Filter und Suche.
+ * "Neu anlegen"-Menü und Suche.
  */
 
 type Art = "brille" | "kontaktlinse";
-type Filter = "alle" | Art;
 
 type Zeile = {
   key: string;
@@ -61,9 +60,9 @@ const randFarbe: Record<Zeile["status"], string> = {
 // Spalten wie in der Prisma-Kundenmaske: Status | Art | Datum | Betrag
 const SPALTEN = "3.4em minmax(0, 1fr) 6.2em 6.5em";
 
-// Kopfknöpfe "Neuanlegen" / "Alle" im Prisma-Blau
+// Kopfknopf "Neuanlegen" im Prisma-Blau
 const prismaKopf = {
-  flex: 1,
+  flex: "0 1 280px",
   justifyContent: "space-between",
   bgcolor: "#1d4e8f",
   "&:hover": { bgcolor: "#173f74", transform: "none" },
@@ -86,10 +85,8 @@ const text = (wert: unknown) =>
 export const KundenAuftraege = () => {
   const kunde = useRecordContext();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<Filter>("alle");
   const [suche, setSuche] = useState("");
   const [menuAnker, setMenuAnker] = useState<HTMLElement | null>(null);
-  const [filterAnker, setFilterAnker] = useState<HTMLElement | null>(null);
 
   const abfrage = (sortFeld: string) => ({
     filter: { kunde_id: kunde?.id },
@@ -185,19 +182,11 @@ export const KundenAuftraege = () => {
   const sichtbar = useMemo(() => {
     const begriff = suche.trim().toLowerCase();
     return zeilen.filter(
-      (z) =>
-        (filter === "alle" || z.art === filter) &&
-        (!begriff || z.suchtext.toLowerCase().includes(begriff)),
+      (z) => !begriff || z.suchtext.toLowerCase().includes(begriff),
     );
-  }, [zeilen, filter, suche]);
+  }, [zeilen, suche]);
 
   if (!kunde) return null;
-
-  const filterNamen: Record<Filter, string> = {
-    alle: "Alle",
-    brille: "Brillen",
-    kontaktlinse: "Kontaktlinsen",
-  };
 
   const laedt = brillen.isPending || linsen.isPending;
 
@@ -239,34 +228,6 @@ export const KundenAuftraege = () => {
               Alt + L
             </Typography>
           </MenuItem>
-        </Menu>
-        <Button
-          variant="contained"
-          endIcon={<ArrowDropDownIcon />}
-          onClick={(e: MouseEvent<HTMLElement>) =>
-            setFilterAnker(e.currentTarget)
-          }
-          sx={prismaKopf}
-        >
-          {filterNamen[filter]}
-        </Button>
-        <Menu
-          anchorEl={filterAnker}
-          open={Boolean(filterAnker)}
-          onClose={() => setFilterAnker(null)}
-        >
-          {(Object.keys(filterNamen) as Filter[]).map((f) => (
-            <MenuItem
-              key={f}
-              selected={f === filter}
-              onClick={() => {
-                setFilter(f);
-                setFilterAnker(null);
-              }}
-            >
-              {filterNamen[f]}
-            </MenuItem>
-          ))}
         </Menu>
       </Box>
 
