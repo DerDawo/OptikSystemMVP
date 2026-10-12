@@ -7,7 +7,7 @@
 // hierauf aufsetzen, indem sie lediglich weitere `dokumentvorlage`-Datensätze
 // mit Kategorie "Rechnung"/"Mahnung" anlegen - an dieser Dialog-/Render-Logik
 // muss dafür nichts geändert werden.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Alert,
@@ -18,6 +18,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Tooltip,
   Typography,
   TextField,
   CircularProgress,
@@ -993,7 +994,8 @@ const FormulareDialog = ({
 // Formulare-Dialog für den aktuellen Auftrag öffnet.
 export const FormulareButton = ({
   label = "Formulare",
-}: { label?: string } = {}) => {
+  symbol,
+}: { label?: string; symbol?: boolean } = {}) => {
   const record = useRecordContext();
   const [open, setOpen] = useState(false);
 
@@ -1003,13 +1005,13 @@ export const FormulareButton = ({
 
   return (
     <>
-      <Button
-        variant="outlined"
-        startIcon={<DescriptionIcon />}
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel={label}
+        icon={<DescriptionIcon />}
         onClick={() => setOpen(true)}
-      >
-        {label}
-      </Button>
+        variant="outlined"
+      />
       {open && (
         <FormulareDialog brille={record} onClose={() => setOpen(false)} />
       )}
@@ -1021,7 +1023,50 @@ export const FormulareButton = ({
 // zuerst die fortlaufende Rechnungsnummer (RPC `assign_rechnungsnummer`,
 // siehe Migration 20260831020000_rechnungsnummer_vergabe.sql) und öffnet
 // anschließend den Formulare-Dialog, auf die Kategorie "Rechnung" gefiltert.
-export const RechnungErstellenButton = () => {
+// Knopf mit Beschriftung oder - in der Symbolleiste der Karteikarte - nur
+// als Symbol mit Tooltip
+const KnopfOderSymbol = ({
+  symbol,
+  titel,
+  icon,
+  onClick,
+  disabled,
+  variant,
+}: {
+  symbol?: boolean;
+  titel: string;
+  icon: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  variant: "contained" | "outlined";
+}) =>
+  symbol ? (
+    <Tooltip title={titel} placement="left">
+      <span>
+        <IconButton
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={titel}
+          sx={{ color: "inherit" }}
+        >
+          {icon}
+        </IconButton>
+      </span>
+    </Tooltip>
+  ) : (
+    <Button
+      variant={variant}
+      startIcon={icon}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {titel}
+    </Button>
+  );
+
+export const RechnungErstellenButton = ({
+  symbol,
+}: { symbol?: boolean } = {}) => {
   const record = useRecordContext();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -1062,14 +1107,14 @@ export const RechnungErstellenButton = () => {
 
   return (
     <>
-      <Button
-        variant="contained"
-        startIcon={<ReceiptIcon />}
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel="Rechnung erstellen"
+        icon={<ReceiptIcon />}
         onClick={handleClick}
         disabled={assigning}
-      >
-        Rechnung erstellen
-      </Button>
+        variant="contained"
+      />
       {open && rechnungsBrille && (
         <FormulareDialog
           brille={rechnungsBrille}
@@ -1179,7 +1224,9 @@ export const BerechtigungsscheinErstellenButton = () => {
 
 // "Werkstattauftrag"-Button für die Brillenkartei: öffnet den Formulare-Dialog
 // direkt mit dem Werkstattauftrag (Kategorie "Werkstattkarte") zum Drucken.
-export const WerkstattauftragButton = () => {
+export const WerkstattauftragButton = ({
+  symbol,
+}: { symbol?: boolean } = {}) => {
   const record = useRecordContext();
   const [open, setOpen] = useState(false);
 
@@ -1189,13 +1236,13 @@ export const WerkstattauftragButton = () => {
 
   return (
     <>
-      <Button
-        variant="outlined"
-        startIcon={<BuildIcon />}
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel="Werkstattauftrag"
+        icon={<BuildIcon />}
         onClick={() => setOpen(true)}
-      >
-        Werkstattauftrag
-      </Button>
+        variant="outlined"
+      />
       {open && (
         <FormulareDialog
           brille={record}

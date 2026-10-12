@@ -56,6 +56,7 @@ import {
 } from "./FormulareDialog";
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import { BrilleOptionenMenu } from "./BrilleOptionen";
+import { BrilleSymbolleiste } from "./BrilleSymbolleiste";
 import {
   EditActionsBar,
   FieldRow,
@@ -326,7 +327,23 @@ const BrilleShowActions = () => (
 export const BrilleShow = () => (
   <Show actions={<BrilleShowActions />}>
     <ShowLayout>
-      <BrilleKarteikarte />
+      {/* Karteikarte mit der Symbolleiste am rechten Rand wie in Prisma */}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 1,
+          alignItems: "flex-start",
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <BrilleKarteikarte />
+        </Box>
+        <Box sx={{ display: { xs: "none", md: "block" } }}>
+          <BrilleSymbolleiste />
+        </Box>
+      </Box>
       <RelatedSection title="Weitere Aufträge dieses Kunden">
         <ReferenceManyField
           reference="brille"
