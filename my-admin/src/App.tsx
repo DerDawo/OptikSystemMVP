@@ -87,7 +87,7 @@ import {
 import { GlaskatalogImportPage } from "./glaskatalog/GlaskatalogImportPage";
 import { RechnungenList } from "./Rechnungen";
 import { MahnungenList } from "./Mahnungen";
-import { Dashboard } from "./Dashboard";
+import { Dashboard, StatistikSeite } from "./Dashboard";
 import { BetriebEdit } from "./betrieb";
 
 import PersonIcon from "@mui/icons-material/Person";
@@ -244,6 +244,7 @@ export const App = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/rechnungen" element={<RechnungenList />} />
         <Route path="/mahnungen" element={<MahnungenList />} />
+        <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/kalender" element={<TerminKalender />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />
         <Route path="/glaskatalog-import" element={<GlaskatalogImportPage />} />
