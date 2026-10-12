@@ -5,10 +5,13 @@
 const DATUMSFELDER = new Set([
   "Abholung",
   "Aufnahmedatum",
+  "Bestellt",
   "Datum",
   "Ende",
   "ErstverordnungMuster8Datum",
+  "Fertig",
   "Geburtsdatum",
+  "KVVersendet",
   "Nachkontrolltermin",
   "Start",
   "Verordnungsdatum",

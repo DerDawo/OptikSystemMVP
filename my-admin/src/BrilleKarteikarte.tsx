@@ -65,6 +65,7 @@ import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
 import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
+import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
 import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
 
 /*
@@ -166,9 +167,11 @@ const ACHTUNG_AUSWAHL = [
   "RG für AG",
   "RG für ST",
   "RG für VS",
-  "SW",
-  "NS",
-  "SF",
+  "SW (Sackwalze)",
+  "NS (Nöhlsau)",
+  "SF (Stänkerfritze)",
+  "GH (Geizhals)",
+  "UM (Umstandsmeier)",
 ].map((a) => ({
   id: a,
   name: a,
@@ -1132,6 +1135,7 @@ export const BrilleKarteikarte = () => {
         </Typography>
 
         <Box sx={{ overflowX: "auto", minWidth: 0 }}>
+          <AuftragsstatusLeiste brille={brille} auftrag={auftrag} />
           <Box
             sx={{
               display: "grid",
