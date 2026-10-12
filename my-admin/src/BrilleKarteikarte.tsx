@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
+  Identifier,
   Link,
   useDataProvider,
   useGetList,
@@ -58,6 +59,7 @@ import {
 import { rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
+import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -680,7 +682,6 @@ const ZusatzleistungEntfernen = ({ zuordnung }: { zuordnung: Datensatz }) => {
 
 export const BrilleKarteikarte = () => {
   const brille = useRecordContext<Datensatz>();
-  const navigate = useNavigate();
 
   const { data: kunde } = useGetOne<Datensatz>(
     "kunde",
@@ -755,6 +756,7 @@ export const BrilleKarteikarte = () => {
   const dataProvider = useDataProvider();
   const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
   const [bestellOffen, setBestellOffen] = useState(false);
+  const [assistentOffen, setAssistentOffen] = useState(false);
 
   if (!brille) return null;
 
@@ -1117,7 +1119,7 @@ export const BrilleKarteikarte = () => {
               ];
             })}
 
-            {/* Glasassistent (im Bearbeiten-Formular) und Bestelloptionen */}
+            {/* Glasassistent (öffnet direkt hier) und Bestelloptionen */}
             <Box
               sx={{
                 gridRow: 7,
@@ -1130,7 +1132,7 @@ export const BrilleKarteikarte = () => {
               <Button
                 variant="contained"
                 disableElevation
-                onClick={() => navigate(`/brille/${brille.id}`)}
+                onClick={() => setAssistentOffen(true)}
                 sx={prismaKnopf}
               >
                 Glasassistent
@@ -1571,6 +1573,24 @@ export const BrilleKarteikarte = () => {
           </Box>
         </Box>
       </Box>
+      {assistentOffen && (
+        <GlasassistentDialog
+          onClose={() => setAssistentOffen(false)}
+          glastypId={brille.Glastyp as Identifier | null}
+          glasRechtsId={brille.GlasRechts as Identifier | null}
+          glasLinksId={brille.GlasLinks as Identifier | null}
+          direktSpeichern={async (verweise) => {
+            if (Object.keys(verweise).length > 0) {
+              await dataProvider.update("brille", {
+                id: brille.id,
+                data: verweise,
+                previousData: brille,
+              });
+            }
+            refresh();
+          }}
+        />
+      )}
       {/* Verordnung (für Kassenanträge) - in Prisma nicht auf der Karte,
           daher im Fenster über "Optionen → Verordnung" */}
       <Dialog
