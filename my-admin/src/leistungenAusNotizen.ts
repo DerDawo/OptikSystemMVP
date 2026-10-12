@@ -33,10 +33,11 @@ export const leistungenAusNotizen = (notizen: unknown): NotizLeistung[] => {
 
 // Text mit den Prisma-Leistungen eines Auftrags: seit der Bereinigung der
 // Notizen in brille."PrismaAngaben", bei älteren Ständen noch in den Notizen
-export const leistungsText = (
-  brille: { PrismaAngaben?: unknown; Notizen?: unknown } | undefined,
-) =>
-  [brille?.PrismaAngaben, brille?.Notizen]
+export const leistungsText = (brille: unknown) =>
+  [
+    (brille as Record<string, unknown> | undefined)?.PrismaAngaben,
+    (brille as Record<string, unknown> | undefined)?.Notizen,
+  ]
     .filter((t) => t != null && String(t).trim() !== "")
     .join("\n");
 
