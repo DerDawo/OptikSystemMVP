@@ -70,15 +70,22 @@ export const ShowLayout = ({ children }: { children: ReactNode }) => (
 export const ShowColumns = ({
   children,
   spalten = "minmax(0, 1.4fr) minmax(0, 1fr)",
+  spaltenMittel,
 }: {
   children: ReactNode;
   // Spaltenaufteilung ab breiten Bildschirmen (lg)
   spalten?: string;
+  // optional schon ab mittleren Fensterbreiten (md) zweispaltig
+  spaltenMittel?: string;
 }) => (
   <Box
     sx={{
       display: "grid",
-      gridTemplateColumns: { xs: "1fr", lg: spalten },
+      gridTemplateColumns: {
+        xs: "1fr",
+        ...(spaltenMittel ? { md: spaltenMittel } : {}),
+        lg: spalten,
+      },
       gap: "1em",
       width: "100%",
       minWidth: 0,
