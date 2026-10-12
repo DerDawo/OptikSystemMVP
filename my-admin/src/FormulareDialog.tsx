@@ -38,7 +38,9 @@ import EditNoteIcon from "@mui/icons-material/EditNote";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import BuildIcon from "@mui/icons-material/Build";
 import {
+  Confirm,
   RaRecord,
+  useDataProvider,
   useGetList,
   useGetMany,
   useGetOne,
@@ -233,6 +235,16 @@ const LAYOUTS: Record<string, Layout> = {
 // Name der zur aktuellen Mahnstufe passenden Vorlage wird explizit über
 // `initialVorlageName` vorgegeben.
 const MAHNUNG_KATEGORIE = "Mahnung";
+
+// Formulararten, die eigene Knöpfe öffnen (Rechnung, Mahnung,
+// Berechtigungsschein, Werkstattauftrag): die letzte aktive Vorlage einer
+// solchen Art lässt sich nicht ausblenden
+const UNVERZICHTBARE_KATEGORIEN = [
+  RECHNUNG_KATEGORIE,
+  MAHNUNG_KATEGORIE,
+  BERECHTIGUNGSSCHEIN_KATEGORIE,
+  WERKSTATTKARTE_KATEGORIE,
+];
 const MAHNUNG_VORLAGE_NACH_STUFE: Record<number, string> = {
   1: "Zahlungserinnerung",
   2: "2. Mahnung",
@@ -310,12 +322,44 @@ const FormulareDialog = ({
   const [ansicht, setAnsicht] = useState<"liste" | "vorschau">("liste");
   const [typ, setTyp] = useState<string>("");
 
-  const { data: vorlagen, isPending: vorlagenLoading } =
-    useGetList<Dokumentvorlage>("dokumentvorlage", {
-      pagination: { page: 1, perPage: 200 },
-      sort: { field: "Kategorie", order: "ASC" },
-      filter: { Aktiv: true },
-    });
+  const {
+    data: vorlagen,
+    isPending: vorlagenLoading,
+    refetch: vorlagenNeuLaden,
+  } = useGetList<Dokumentvorlage>("dokumentvorlage", {
+    pagination: { page: 1, perPage: 200 },
+    sort: { field: "Kategorie", order: "ASC" },
+    filter: { Aktiv: true },
+  });
+
+  // Formular aus der Liste ausblenden ("Aktiv" aus) - nicht löschen; wieder
+  // einblenden unter Einstellungen -> Dokumentvorlagen
+  const dataProvider = useDataProvider();
+  const [ausblendenFrage, setAusblendenFrage] = useState(false);
+  const letzteIhrerArt =
+    selectedVorlage != null &&
+    UNVERZICHTBARE_KATEGORIEN.includes(selectedVorlage.Kategorie) &&
+    (vorlagen ?? []).filter((v) => v.Kategorie === selectedVorlage.Kategorie)
+      .length <= 1;
+  const ausblenden = async () => {
+    setAusblendenFrage(false);
+    if (!selectedVorlage) return;
+    try {
+      await dataProvider.update("dokumentvorlage", {
+        id: selectedVorlage.id,
+        data: { Aktiv: false },
+        previousData: selectedVorlage,
+      });
+      notify(
+        `„${selectedVorlage.Name}“ ausgeblendet. Wieder einblenden: Einstellungen → Dokumentvorlagen („Aktiv“).`,
+        { type: "success" },
+      );
+      setSelectedVorlage(null);
+      vorlagenNeuLaden();
+    } catch {
+      notify("Formular konnte nicht ausgeblendet werden.", { type: "error" });
+    }
+  };
 
   useEffect(() => {
     if (!initialKategorie || vorlagenLoading || selectedVorlage) {
@@ -789,6 +833,31 @@ const FormulareDialog = ({
               >
                 Text ändern
               </Button>
+              <Button
+                variant="contained"
+                disableElevation
+                disabled={!selectedVorlage}
+                onClick={() =>
+                  letzteIhrerArt
+                    ? notify(
+                        `„${selectedVorlage?.Name}“ wird für den Knopf „${selectedVorlage?.Kategorie}“ gebraucht und kann nicht ausgeblendet werden.`,
+                        { type: "warning" },
+                      )
+                    : setAusblendenFrage(true)
+                }
+                sx={PRISMA_KNOPF}
+              >
+                Ausblenden
+              </Button>
+              <Confirm
+                isOpen={ausblendenFrage}
+                title={`„${selectedVorlage?.Name ?? ""}“ ausblenden?`}
+                content="Das Formular erscheint dann nicht mehr in dieser Liste. Es wird nicht gelöscht und lässt sich unter Einstellungen → Dokumentvorlagen („Aktiv“ anhaken) wieder einblenden."
+                confirm="Ausblenden"
+                cancel="Abbrechen"
+                onConfirm={ausblenden}
+                onClose={() => setAusblendenFrage(false)}
+              />
             </Box>
           </Box>
         ) : !selectedVorlage ? null : (

@@ -8,7 +8,6 @@ import {
 } from "react-admin";
 import { Show, TextField } from "react-admin";
 import {
-  BooleanInput,
   DateInput,
   Edit,
   Create,
@@ -512,18 +511,6 @@ export const BrilleEdit = () => (
           <DateInput source="Verordnungsdatum" />
         </FieldRow>
         <TextInput source="Diagnose" fullWidth />
-      </FormSection>
-      <FormSection title="Kassenzulassung (§ 33 SGB V)">
-        <FieldRow>
-          <BooleanInput
-            source="ErstverordnungMuster8Vorhanden"
-            label="Erstverordnung (Muster 8) liegt im System vor"
-          />
-          <DateInput
-            source="ErstverordnungMuster8Datum"
-            label="Ausstellungsdatum Muster 8"
-          />
-        </FieldRow>
       </FormSection>
       <DatenbankInfo />
     </SimpleForm>

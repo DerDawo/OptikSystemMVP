@@ -1,6 +1,7 @@
 import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
+  Identifier,
   Link,
   useDataProvider,
   useGetList,
@@ -58,6 +59,7 @@ import {
 import { rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
+import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -144,6 +146,11 @@ const prismaKnopf = {
 
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
 const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
+// Achtungsfeld: an wen die Rechnung geht
+const ACHTUNG_AUSWAHL = ["RG für KK", "RG für AG", "RG für ST"].map((a) => ({
+  id: a,
+  name: a,
+}));
 
 const WERTE_RECHTS = WERTE.slice(8);
 
@@ -212,7 +219,7 @@ const betragText = (wert: unknown) => {
 
 /*
  * Raster wie in Prisma (Breiten aus dem Original, Felder wachsen mit):
- * 1 Beschriftung | 2 Lagernr. | 3 Rest links | 4 Abstand |
+ * 1 Beschriftung | 2-3 Felder links | 4 Abstand |
  * 5 Beschriftung rechts | 6 Feld rechts | 7 Summen-Beschriftung | 8 Betrag
  */
 const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
@@ -675,7 +682,6 @@ const ZusatzleistungEntfernen = ({ zuordnung }: { zuordnung: Datensatz }) => {
 
 export const BrilleKarteikarte = () => {
   const brille = useRecordContext<Datensatz>();
-  const navigate = useNavigate();
 
   const { data: kunde } = useGetOne<Datensatz>(
     "kunde",
@@ -747,8 +753,10 @@ export const BrilleKarteikarte = () => {
   );
 
   const refresh = useRefresh();
+  const dataProvider = useDataProvider();
   const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
   const [bestellOffen, setBestellOffen] = useState(false);
+  const [assistentOffen, setAssistentOffen] = useState(false);
 
   if (!brille) return null;
 
@@ -945,16 +953,34 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Berater")}
               />
             </Feld>
+            {/* Achtungsfeld (wo in Prisma "Werkstatt" steht): an wen die
+                Rechnung geht - gesetzt rot hervorgehoben */}
             <Beschriftung z={2} s="5 / 6">
-              Werkstatt
+              ACHTUNG
             </Beschriftung>
             <Feld z={2} s={RECHTS}>
-              <Auswahl
-                name="Werkstatt"
-                wert={mitarbeiterAnzeige(brille.Werkstatt) || null}
-                optionen={MITARBEITER_AUSWAHL}
-                speichere={auftrag("Werkstatt")}
-              />
+              <Box
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignSelf: "stretch",
+                  ...(text(brille.Achtung)
+                    ? {
+                        color: "error.main",
+                        fontWeight: 700,
+                        "& .MuiInputBase-root": { color: "inherit" },
+                      }
+                    : {}),
+                }}
+              >
+                <Auswahl
+                  name="ACHTUNG"
+                  wert={text(brille.Achtung) || null}
+                  optionen={ACHTUNG_AUSWAHL}
+                  speichere={auftrag("Achtung")}
+                />
+              </Box>
             </Feld>
 
             <Beschriftung z={3} s="1 / 2">
@@ -968,21 +994,28 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Refraktion")}
               />
             </Feld>
+            {/* "Bezahlt" als Häkchen (statt Abholung): setzt den
+                Zahlungsstatus auf "bezahlt" bzw. zurück auf "offen" */}
             <Beschriftung z={3} s="5 / 6">
-              Abholung
+              Bezahlt
             </Beschriftung>
-            <Feld z={3} s="6 / 7">
-              {textFeld(
-                "Abholung",
-                "Abholung",
-                auftrag("Abholung"),
-                brille.Abholung,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.Abholung),
-                },
-              )}
-            </Feld>
+            <Box
+              sx={{
+                gridRow: 3,
+                gridColumn: "6 / 7",
+                display: "flex",
+                alignItems: "center",
+                ml: "-4px",
+              }}
+            >
+              <Haken
+                an={brille.Zahlungsstatus === "bezahlt"}
+                name="Bezahlt"
+                speichere={(neu) =>
+                  auftrag("Zahlungsstatus")(neu ? "bezahlt" : "offen")
+                }
+              />
+            </Box>
             <Beschriftung z={3} s="7 / 8" rechts>
               Rechnungsnr.
             </Beschriftung>
@@ -1037,10 +1070,9 @@ export const BrilleKarteikarte = () => {
                 seite
               );
               return [
-                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2">
-                  <Box component="span" sx={{ pl: 3 }}>
-                    {marke}
-                  </Box>
+                // R/L direkt vor den Werten wie in Prisma
+                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2" rechts>
+                  {marke}
                 </Beschriftung>,
                 <Zellen
                   key={`${seite}-w`}
@@ -1050,7 +1082,7 @@ export const BrilleKarteikarte = () => {
                 >
                   {WERTE_LINKS.map(wertFeld)}
                 </Zellen>,
-                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6">
+                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6" rechts>
                   {seite}
                 </Beschriftung>,
                 <Zellen
@@ -1087,7 +1119,7 @@ export const BrilleKarteikarte = () => {
               ];
             })}
 
-            {/* Glasassistent (im Bearbeiten-Formular) und Bestelloptionen */}
+            {/* Glasassistent (öffnet direkt hier) und Bestelloptionen */}
             <Box
               sx={{
                 gridRow: 7,
@@ -1100,7 +1132,7 @@ export const BrilleKarteikarte = () => {
               <Button
                 variant="contained"
                 disableElevation
-                onClick={() => navigate(`/brille/${brille.id}`)}
+                onClick={() => setAssistentOffen(true)}
                 sx={prismaKnopf}
               >
                 Glasassistent
@@ -1248,12 +1280,6 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 10 }} />
 
             {/* Fassung */}
-            <Box sx={{ gridRow: 13, gridColumn: "2 / 3" }}>
-              <Spaltentitel>Lagernr.</Spaltentitel>
-            </Box>
-            <Box sx={{ gridRow: 13, gridColumn: "3 / 4" }}>
-              <Spaltentitel>Fassung</Spaltentitel>
-            </Box>
             <Zellen z={13} s="6 / 8" spalten="100fr 165fr">
               <Spaltentitel>Farbe</Spaltentitel>
               <Spaltentitel>Größe</Spaltentitel>
@@ -1261,15 +1287,10 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 13, gridColumn: "8 / 9" }}>
               <Spaltentitel>Betrag</Spaltentitel>
             </Box>
-            <Feld z={14} s="2 / 3">
-              {textFeld(
-                "fassung.Lagernummer",
-                "Lagernummer",
-                fassungFeld("Lagernummer"),
-                fassung?.Lagernummer,
-              )}
-            </Feld>
-            <Feld z={14} s="3 / 4">
+            <Beschriftung z={14} s="1 / 2">
+              Fassung
+            </Beschriftung>
+            <Feld z={14} s="2 / 4">
               {textFeld(
                 "fassung.Bezeichnung",
                 "Fassung",
@@ -1317,48 +1338,76 @@ export const BrilleKarteikarte = () => {
                 },
               )}
             </Feld>
-            <Beschriftung z={15} s="2 / 3" rechts>
-              Linie
-            </Beschriftung>
-            <Feld z={15} s="3 / 4">
-              {textFeld(
-                "fassung.Linie",
-                "Linie",
-                fassungFeld("Linie"),
-                fassung?.Linie,
-              )}
-            </Feld>
-            <Beschriftung z={15} s="5 / 6">
+            {/* Ein Feld "Hersteller" (statt Linie + Hersteller); bei
+                Prisma-Aufträgen steht die Marke oft in "Linie" und wird
+                angezeigt, solange kein Hersteller eingetragen ist */}
+            <Beschriftung z={15} s="1 / 2">
               Hersteller
             </Beschriftung>
-            <Feld z={15} s={RECHTS}>
+            <Feld z={15} s="2 / 4">
               {textFeld(
                 "fassung.Hersteller",
                 "Hersteller Fassung",
                 fassungFeld("Hersteller"),
-                fassung?.Hersteller,
+                text(fassung?.Hersteller) || text(fassung?.Linie) || null,
               )}
             </Feld>
 
+            {/* Medizinische Notizen des Kunden (Kundenkartei) - hier
+                sichtbar und direkt bearbeitbar, gespeichert beim Kunden */}
+            <Beschriftung z={15} s="5 / 6">
+              Med. Notizen
+            </Beschriftung>
+            <Feld z={15} s={RECHTS}>
+              {kunde ? (
+                <Box
+                  title={text(kunde.Notizen)}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    alignSelf: "stretch",
+                  }}
+                >
+                  {textFeld(
+                    "kunde.Notizen",
+                    "Medizinische Notizen",
+                    async (neu) => {
+                      await dataProvider.update("kunde", {
+                        id: kunde.id,
+                        data: { Notizen: neu },
+                        previousData: kunde,
+                      });
+                      refresh();
+                    },
+                    kunde.Notizen,
+                    {
+                      // mehrzeilig bearbeiten, damit Zeilenumbrüche
+                      // erhalten bleiben; angezeigt in einer Zeile
+                      mehrzeilig: true,
+                      anzeige: text(kunde.Notizen).replace(/\s*\n\s*/g, " · "),
+                    },
+                  )}
+                </Box>
+              ) : null}
+            </Feld>
+
             {/* Zusatzleistungen */}
-            <Box sx={{ gridRow: 16, gridColumn: "2 / 3", pt: 0.75 }}>
-              <Spaltentitel>Lagernr.</Spaltentitel>
-            </Box>
-            <Box sx={{ gridRow: 16, gridColumn: "3 / 7", pt: 0.75 }}>
-              <Spaltentitel>Zusatzleistungen</Spaltentitel>
-            </Box>
+            <Box sx={{ gridRow: 16, gridColumn: "1 / -1", height: 6 }} />
+            <Beschriftung z={zZusatz} s="1 / 2">
+              Zusatzleistungen
+            </Beschriftung>
             {posten.map((p, i) => [
-              <Feld key={`zl-n-${i}`} z={zZusatz + i} s="2 / 3" />,
               p.auswahl ? (
                 <ZusatzleistungAuswahl
                   key={`zl-b-${i}`}
                   z={zZusatz + i}
-                  s="3 / 7"
+                  s="2 / 7"
                   brilleId={brille.id}
                   vorhanden={leistungIds}
                 />
               ) : (
-                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="3 / 7">
+                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="2 / 7">
                   <Box component="span" sx={{ flex: 1, minWidth: 0 }}>
                     {p.bezeichnung}
                   </Box>
@@ -1524,6 +1573,24 @@ export const BrilleKarteikarte = () => {
           </Box>
         </Box>
       </Box>
+      {assistentOffen && (
+        <GlasassistentDialog
+          onClose={() => setAssistentOffen(false)}
+          glastypId={brille.Glastyp as Identifier | null}
+          glasRechtsId={brille.GlasRechts as Identifier | null}
+          glasLinksId={brille.GlasLinks as Identifier | null}
+          direktSpeichern={async (verweise) => {
+            if (Object.keys(verweise).length > 0) {
+              await dataProvider.update("brille", {
+                id: brille.id,
+                data: verweise,
+                previousData: brille,
+              });
+            }
+            refresh();
+          }}
+        />
+      )}
       {/* Verordnung (für Kassenanträge) - in Prisma nicht auf der Karte,
           daher im Fenster über "Optionen → Verordnung" */}
       <Dialog
@@ -1578,27 +1645,6 @@ export const BrilleKarteikarte = () => {
                 "Diagnose",
                 auftrag("Diagnose"),
                 brille.Diagnose,
-              )}
-            </Box>
-            <Typography variant="body2">Muster 8 liegt vor</Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Haken
-                an={Boolean(brille.ErstverordnungMuster8Vorhanden)}
-                name="Muster 8 liegt vor"
-                speichere={auftrag("ErstverordnungMuster8Vorhanden")}
-              />
-            </Box>
-            <Typography variant="body2">Muster 8 vom</Typography>
-            <Box className="feld">
-              {textFeld(
-                "ErstverordnungMuster8Datum",
-                "Muster 8 vom",
-                auftrag("ErstverordnungMuster8Datum"),
-                brille.ErstverordnungMuster8Datum,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.ErstverordnungMuster8Datum),
-                },
               )}
             </Box>
           </Box>
