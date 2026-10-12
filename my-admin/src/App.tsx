@@ -1,4 +1,5 @@
 // in src/App.tsx
+import { SerienbriefSeite } from "./SerienbriefSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
 import { dataProvider } from "./dataProvider";
@@ -245,6 +246,7 @@ export const App = () => {
         <Route path="/rechnungen" element={<RechnungenList />} />
         <Route path="/mahnungen" element={<MahnungenList />} />
         <Route path="/statistiken" element={<StatistikSeite />} />
+        <Route path="/serienbrief" element={<SerienbriefSeite />} />
         <Route path="/kalender" element={<TerminKalender />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />
         <Route path="/glaskatalog-import" element={<GlaskatalogImportPage />} />
