@@ -144,6 +144,11 @@ const prismaKnopf = {
 
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
 const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
+// Achtungsfeld: an wen die Rechnung geht
+const ACHTUNG_AUSWAHL = ["RG für KK", "RG für AG", "RG für ST"].map((a) => ({
+  id: a,
+  name: a,
+}));
 
 const WERTE_RECHTS = WERTE.slice(8);
 
@@ -945,16 +950,34 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Berater")}
               />
             </Feld>
+            {/* Achtungsfeld (wo in Prisma "Werkstatt" steht): an wen die
+                Rechnung geht - gesetzt rot hervorgehoben */}
             <Beschriftung z={2} s="5 / 6">
-              Werkstatt
+              ACHTUNG
             </Beschriftung>
             <Feld z={2} s={RECHTS}>
-              <Auswahl
-                name="Werkstatt"
-                wert={mitarbeiterAnzeige(brille.Werkstatt) || null}
-                optionen={MITARBEITER_AUSWAHL}
-                speichere={auftrag("Werkstatt")}
-              />
+              <Box
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignSelf: "stretch",
+                  ...(text(brille.Achtung)
+                    ? {
+                        color: "error.main",
+                        fontWeight: 700,
+                        "& .MuiInputBase-root": { color: "inherit" },
+                      }
+                    : {}),
+                }}
+              >
+                <Auswahl
+                  name="ACHTUNG"
+                  wert={text(brille.Achtung) || null}
+                  optionen={ACHTUNG_AUSWAHL}
+                  speichere={auftrag("Achtung")}
+                />
+              </Box>
             </Feld>
 
             <Beschriftung z={3} s="1 / 2">
