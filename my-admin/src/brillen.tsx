@@ -546,10 +546,6 @@ export const BrilleCreate = () => {
             <BrillenArtInput />
             <DateInput source="Datum" />
           </FieldRow>
-          <FieldRow>
-            <TextInput source="Werkstatt" />
-            <DateInput source="Abholung" />
-          </FieldRow>
           <TextInput source="Notizen" multiline fullWidth />
         </FormSection>
         <FormSection title="Komponenten">
