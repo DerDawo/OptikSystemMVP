@@ -274,6 +274,10 @@ export const germanMessages: TranslationMessages = {
       Diagnose: "Diagnose (ICD-10)",
     }),
     kontaktlinse: resource("Kontaktlinse |||| Kontaktlinsen"),
+    krankenkasse: resource("Krankenkasse |||| Krankenkassen", {
+      Geoeffnet: "Geöffnet für",
+      IK: "IK / Kassen-Nr.",
+    }),
     brillenart: resource("Brillenart |||| Brillenarten"),
     glass: resource("Glas |||| Gläser", {
       PD: "PD",

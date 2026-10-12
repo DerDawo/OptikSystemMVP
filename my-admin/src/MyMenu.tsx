@@ -228,6 +228,7 @@ export const MyMenu = () => (
         "/zusatzleistung",
         "/glaskatalog",
         "/glashersteller",
+        "/krankenkasse",
       ]}
     >
       <Menu.Item to="/glass" primaryText="Gläser" leftIcon={<LensIcon />} />
@@ -260,6 +261,11 @@ export const MyMenu = () => (
         to="/glaskatalog-import"
         primaryText="Katalog-Import (SF6)"
         leftIcon={<ImportIcon />}
+      />
+      <Menu.Item
+        to="/krankenkasse"
+        primaryText="Krankenkassen"
+        leftIcon={<BuildingIcon />}
       />
     </SubMenu>
     <SubMenu

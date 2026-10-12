@@ -172,6 +172,8 @@ export const Eingabe = ({
             : optionen
         }
         sx={{ ...flaeche, display: "flex", alignItems: "center" }}
+        // lange Einträge (z. B. Krankenkassen) auch bei schmalem Feld lesbar
+        slotProps={{ popper: { sx: { minWidth: 280 } } }}
         renderInput={(params) => (
           <InputBase
             ref={params.InputProps.ref}
