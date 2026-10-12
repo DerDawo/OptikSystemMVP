@@ -24,7 +24,7 @@ import {
   sehstaerkeVeraendert,
 } from "./formularVorschlaege";
 import { verteileWerte } from "./aokBerechtigungsscheinTemplate";
-import { MWST, abrechnungsZeilen } from "./kassenanteil";
+import { bruttoZeilenEinzeln } from "./kassenanteil";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
@@ -255,9 +255,10 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
     [`${zeile}_hsa`]: formatWert(w.HSA, "frei"),
   });
   const kassenanteil = Number(brille.KKAnteil) || 0;
-  // Kostenabrechnung: Hilfsmittelpositionen netto, dazu eine Zeile MwSt.,
-  // damit die Spalte den Rechnungsbetrag (KK-Anteil inkl. MwSt.) ergibt
-  const abrechnung = abrechnungsZeilen({
+  // Kostenabrechnung: jedes Glas (jede Hilfsmittelposition) einzeln mit
+  // Faktor 1 und Bruttopreis; die Zeilen ergeben den Rechnungsbetrag
+  // (KK-Anteil inkl. MwSt.)
+  const abrechnung = bruttoZeilenEinzeln({
     augen: [
       { seite: "R", glas: entities.glasRechts ?? undefined },
       { seite: "L", glas: entities.glasLinks ?? undefined },
@@ -265,22 +266,13 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
     kkAnteil: kassenanteil,
     gespeichert: brille.KassenPositionen,
   });
-  const zeilen = [
-    ...abrechnung.zeilen.map((z) => ({
+  const zeilen = abrechnung.zeilen
+    .map((z) => ({
       hmv: z.nummer,
       faktor: String(z.faktor),
       betrag: formatWert(z.betrag, "zwei"),
-    })),
-    ...(abrechnung.zeilen.length > 0
-      ? [
-          {
-            hmv: `zzgl. ${Math.round(MWST * 100)} % MwSt.`,
-            faktor: "",
-            betrag: formatWert(abrechnung.mwst, "zwei"),
-          },
-        ]
-      : []),
-  ].slice(0, 9);
+    }))
+    .slice(0, 9);
   const abrechnungsFelder = Object.fromEntries(
     zeilen.flatMap((z, i) => [
       [`abr${i + 1}_hmv`, z.hmv],

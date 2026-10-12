@@ -497,15 +497,17 @@ const eindeutigeZusaetze = (
 // Positionen aus dem KK-Rechner; bei älteren Aufträgen ohne gespeicherte
 // Positionen die Glaspositionen aus den Werten, ergänzt um eindeutig aus
 // dem KK-Anteil ableitbare Zuschläge.
-export const abrechnungsZeilen = ({
-  augen,
-  kkAnteil,
-  gespeichert,
-}: {
+type AbrechnungsEingabe = {
   augen: { seite: "R" | "L"; glas: Record<string, unknown> | undefined }[];
   kkAnteil: number;
   gespeichert?: unknown;
-}): { zeilen: AbrechnungsZeile[]; netto: number; mwst: number } => {
+};
+
+const abrechnungsPositionen = ({
+  augen,
+  kkAnteil,
+  gespeichert,
+}: AbrechnungsEingabe): GespeichertePosition[] => {
   let positionen: GespeichertePosition[];
   if (Array.isArray(gespeichert) && gespeichert.length > 0) {
     positionen = (gespeichert as GespeichertePosition[]).filter(
@@ -523,7 +525,52 @@ export const abrechnungsZeilen = ({
       }
     }
   }
-  const zeilen = zusammenfassen(positionen);
+  return positionen;
+};
+
+export const abrechnungsZeilen = (
+  eingabe: AbrechnungsEingabe,
+): { zeilen: AbrechnungsZeile[]; netto: number; mwst: number } => {
+  const zeilen = zusammenfassen(abrechnungsPositionen(eingabe));
   const netto = rund(zeilen.reduce((s, z) => s + z.betrag, 0));
   return { zeilen, netto, mwst: rund(mitMwst(netto) - netto) };
+};
+
+// Berechtigungsschein: jedes Glas (jede Position) in einer eigenen Zeile
+// mit Faktor 1 und Bruttobetrag. Die Zeilen ergeben zusammen genau den
+// Rechnungsbetrag (KK-Anteil); Rundungscents gehen an die Zeilen mit dem
+// größten Rest (z. B. 2 × 16,23 netto = 38,63 brutto -> 19,32 + 19,31).
+export const bruttoZeilenEinzeln = (
+  eingabe: AbrechnungsEingabe,
+): { zeilen: AbrechnungsZeile[]; summe: number } => {
+  const einzeln = abrechnungsPositionen(eingabe).flatMap((p) =>
+    Array.from({ length: Math.max(0, Math.round(p.faktor)) }, () => ({
+      nummer: p.nummer,
+      genau: p.netto * (1 + MWST) * 100,
+    })),
+  );
+  if (einzeln.length === 0) return { zeilen: [], summe: 0 };
+  const genauSumme = einzeln.reduce((s, z) => s + z.genau, 0);
+  const kk = Math.round(eingabe.kkAnteil * 100);
+  // Ziel in Cent: der KK-Anteil, wenn er zur Summe passt, sonst die Summe
+  const ziel =
+    kk > 0 && Math.abs(kk - Math.round(genauSumme)) <= 5
+      ? kk
+      : Math.round(genauSumme);
+  const cents = einzeln.map((z) => Math.floor(z.genau + 1e-6));
+  let fehlend = ziel - cents.reduce((s, c) => s + c, 0);
+  const reihenfolge = einzeln
+    .map((z, i) => ({ i, rest: z.genau - Math.floor(z.genau + 1e-6) }))
+    .sort((a, b) => b.rest - a.rest || a.i - b.i);
+  for (let k = 0; fehlend !== 0 && reihenfolge.length > 0; k++) {
+    const { i } = reihenfolge[k % reihenfolge.length];
+    cents[i] += fehlend > 0 ? 1 : -1;
+    fehlend += fehlend > 0 ? -1 : 1;
+  }
+  const zeilen = einzeln.map((z, i) => ({
+    nummer: z.nummer,
+    faktor: 1,
+    betrag: cents[i] / 100,
+  }));
+  return { zeilen, summe: ziel / 100 };
 };

@@ -180,22 +180,25 @@ describe("Berechtigungsschein GKV (Original-PDF)", () => {
     });
   });
 
-  it("trägt Hilfsmittelpositionen, Faktor, Betrag und MwSt. ein", () => {
+  it("trägt jedes Glas einzeln mit Bruttopreis ein", () => {
     const werte = felder({
       ...entities,
       brille: { ...entities.brille, BrillenArt: "Fernbrille", KKAnteil: 54.62 },
       glasRechts: { Sph: 2.25, Cyl: 0.5, A: 50 },
       glasLinks: { Sph: 2.5, Cyl: 0.5, A: 152 },
     });
+    // je Glas 16,23 netto = 19,31… brutto, Brillenglasbestimmung 13,44 netto
+    // = 15,99… brutto; der Rundungscent geht an das erste Glas
     expect(werte).toMatchObject({
       abr1_hmv: "25.21.01.0900",
-      abr1_faktor: "2",
-      abr1_betrag: "32,46",
-      abr2_hmv: "25.99.99.0001",
+      abr1_faktor: "1",
+      abr1_betrag: "19,32",
+      abr2_hmv: "25.21.01.0900",
       abr2_faktor: "1",
-      abr2_betrag: "13,44",
-      abr3_hmv: "zzgl. 19 % MwSt.",
-      abr3_betrag: "8,72",
+      abr2_betrag: "19,31",
+      abr3_hmv: "25.99.99.0001",
+      abr3_faktor: "1",
+      abr3_betrag: "15,99",
       rechnungsbetrag: "54,62",
     });
     expect(werte.abr4_hmv).toBeUndefined();
