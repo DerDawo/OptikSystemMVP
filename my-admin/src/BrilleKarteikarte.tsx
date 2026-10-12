@@ -217,7 +217,7 @@ const betragText = (wert: unknown) => {
 
 /*
  * Raster wie in Prisma (Breiten aus dem Original, Felder wachsen mit):
- * 1 Beschriftung | 2 Lagernr. | 3 Rest links | 4 Abstand |
+ * 1 Beschriftung | 2-3 Felder links | 4 Abstand |
  * 5 Beschriftung rechts | 6 Feld rechts | 7 Summen-Beschriftung | 8 Betrag
  */
 const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
@@ -1060,10 +1060,9 @@ export const BrilleKarteikarte = () => {
                 seite
               );
               return [
-                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2">
-                  <Box component="span" sx={{ pl: 3 }}>
-                    {marke}
-                  </Box>
+                // R/L direkt vor den Werten wie in Prisma
+                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2" rechts>
+                  {marke}
                 </Beschriftung>,
                 <Zellen
                   key={`${seite}-w`}
@@ -1073,7 +1072,7 @@ export const BrilleKarteikarte = () => {
                 >
                   {WERTE_LINKS.map(wertFeld)}
                 </Zellen>,
-                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6">
+                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6" rechts>
                   {seite}
                 </Beschriftung>,
                 <Zellen
@@ -1271,10 +1270,7 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 10 }} />
 
             {/* Fassung */}
-            <Box sx={{ gridRow: 13, gridColumn: "2 / 3" }}>
-              <Spaltentitel>Lagernr.</Spaltentitel>
-            </Box>
-            <Box sx={{ gridRow: 13, gridColumn: "3 / 4" }}>
+            <Box sx={{ gridRow: 13, gridColumn: "2 / 4" }}>
               <Spaltentitel>Fassung</Spaltentitel>
             </Box>
             <Zellen z={13} s="6 / 8" spalten="100fr 165fr">
@@ -1284,15 +1280,7 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 13, gridColumn: "8 / 9" }}>
               <Spaltentitel>Betrag</Spaltentitel>
             </Box>
-            <Feld z={14} s="2 / 3">
-              {textFeld(
-                "fassung.Lagernummer",
-                "Lagernummer",
-                fassungFeld("Lagernummer"),
-                fassung?.Lagernummer,
-              )}
-            </Feld>
-            <Feld z={14} s="3 / 4">
+            <Feld z={14} s="2 / 4">
               {textFeld(
                 "fassung.Bezeichnung",
                 "Fassung",
@@ -1340,10 +1328,10 @@ export const BrilleKarteikarte = () => {
                 },
               )}
             </Feld>
-            <Beschriftung z={15} s="2 / 3" rechts>
+            <Beschriftung z={15} s="1 / 2">
               Linie
             </Beschriftung>
-            <Feld z={15} s="3 / 4">
+            <Feld z={15} s="2 / 4">
               {textFeld(
                 "fassung.Linie",
                 "Linie",
@@ -1364,24 +1352,20 @@ export const BrilleKarteikarte = () => {
             </Feld>
 
             {/* Zusatzleistungen */}
-            <Box sx={{ gridRow: 16, gridColumn: "2 / 3", pt: 0.75 }}>
-              <Spaltentitel>Lagernr.</Spaltentitel>
-            </Box>
-            <Box sx={{ gridRow: 16, gridColumn: "3 / 7", pt: 0.75 }}>
+            <Box sx={{ gridRow: 16, gridColumn: "2 / 7", pt: 0.75 }}>
               <Spaltentitel>Zusatzleistungen</Spaltentitel>
             </Box>
             {posten.map((p, i) => [
-              <Feld key={`zl-n-${i}`} z={zZusatz + i} s="2 / 3" />,
               p.auswahl ? (
                 <ZusatzleistungAuswahl
                   key={`zl-b-${i}`}
                   z={zZusatz + i}
-                  s="3 / 7"
+                  s="2 / 7"
                   brilleId={brille.id}
                   vorhanden={leistungIds}
                 />
               ) : (
-                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="3 / 7">
+                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="2 / 7">
                   <Box component="span" sx={{ flex: 1, minWidth: 0 }}>
                     {p.bezeichnung}
                   </Box>
