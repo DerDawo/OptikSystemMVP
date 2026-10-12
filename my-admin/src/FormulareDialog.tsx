@@ -79,6 +79,7 @@ import {
   buildAokBerechtigungsscheinPreviewHtml,
   buildAokBerechtigungsscheinPrintHtml,
 } from "./aokBerechtigungsscheinTemplate";
+import { heuteIso } from "./AuftragsstatusLeiste";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
 import { belegAlsPdf, belegVersenden } from "./belegPdf";
 import { choosePhoneNumberForMessaging } from "./messaging";
@@ -239,6 +240,19 @@ const LAYOUTS: Record<string, Layout> = {
 // Name der zur aktuellen Mahnstufe passenden Vorlage wird explizit über
 // `initialVorlageName` vorgegeben.
 const MAHNUNG_KATEGORIE = "Mahnung";
+
+// Formulare, auf die eine Genehmigung des Kostenträgers folgt: Drucken, PDF
+// oder Versand merkt sich das Datum am Auftrag ("KVVersendet"); ohne Haken
+// "genehmigt" erscheint der Auftrag nach 14 Tagen im Dashboard
+export const KV_KATEGORIEN = [
+  "Kostenvoranschlag",
+  "Antrag BAP",
+  "Antrag Zuschuss",
+  "Antrag Sozialamt",
+  "Berechtigungsschein",
+  "Berechtigungsschein AOK",
+  "Berechtigungsschein GKV",
+];
 
 // Formulararten, die eigene Knöpfe öffnen (Rechnung, Mahnung,
 // Berechtigungsschein, Werkstattauftrag): die letzte aktive Vorlage einer
@@ -721,6 +735,7 @@ const FormulareDialog = ({
             { type: "info", autoHideDuration: 15000 },
           ),
       );
+      if (ergebnis !== "abgebrochen") kvMerken();
       if (ergebnis === "heruntergeladen") {
         notify(
           kanal === "email"
@@ -736,6 +751,26 @@ const FormulareDialog = ({
     }
   };
 
+  // Kostenvoranschlag/Antrag gedruckt oder verschickt: Datum am Auftrag
+  // merken (nur Brillenaufträge; Fehler hier stören den Druck nicht)
+  const refresh = useRefresh();
+  const kvMerken = () => {
+    if (
+      !selectedVorlage ||
+      !KV_KATEGORIEN.includes(selectedVorlage.Kategorie) ||
+      typeof brille.id !== "number"
+    )
+      return;
+    dataProvider
+      .update("brille", {
+        id: brille.id,
+        data: { KVVersendet: heuteIso() },
+        previousData: brille,
+      })
+      .then(() => refresh())
+      .catch(() => undefined);
+  };
+
   const handleAction = (
     autoPrint: boolean,
     successMessage: string,
@@ -744,6 +779,7 @@ const FormulareDialog = ({
     if (!selectedVorlage) {
       return;
     }
+    if (autoPrint) kvMerken();
     if (pdfVorlage) {
       // Druck und Speichern übernimmt der PDF-Viewer des Browsers
       const opened = pdfUrl ? window.open(pdfUrl, "_blank") : null;
