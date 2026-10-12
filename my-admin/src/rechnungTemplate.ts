@@ -275,16 +275,25 @@ type BelegDaten = {
   art: BelegArt;
   entities: DocumentMergeEntities;
   nummer: string;
+  // abweichende Positionen und Zweckzeile (Kontaktlinsen-Rechnung)
+  positionen?: RechnungPosition[];
+  zweck?: string;
 };
 
 const a = RECHNUNG_ABSENDER;
 const e = escapeHtml;
 
-const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
+const belegHtml = ({
+  art,
+  entities,
+  nummer,
+  positionen: eigenePositionen,
+  zweck,
+}: BelegDaten): string => {
   const { brille, kunde } = entities;
   const istRechnung = art === "rechnung";
   const heute = dayjs();
-  const positionen = buildRechnungPositionen(entities);
+  const positionen = eigenePositionen ?? buildRechnungPositionen(entities);
   const rund = (wert: number) => Math.round(wert * 100) / 100;
   const summe = Number(brille?.Summe) || 0;
   const kassenanteil = Number(brille?.KKAnteil) || 0;
@@ -358,7 +367,7 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
   <div class="titelbalken">${istRechnung ? "RECHNUNG" : "KOSTENVORANSCHLAG"}</div>
   <div class="inhalt">
    <div class="inhalt-block">
-    <p class="zweck">für eine neue ${e(brillenArt)}&nbsp; lt. optometr. Verordnung</p>
+    <p class="zweck">${zweck ? e(zweck) : `für eine neue ${e(brillenArt)}&nbsp; lt. optometr. Verordnung`}</p>
     ${positionenHtml}
     ${
       kassenanteil > 0
@@ -522,3 +531,118 @@ export const buildKostenvoranschlagPreviewHtml = (
   daten: KostenvoranschlagDaten,
 ): string =>
   seite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), true);
+
+// Rechnung für einen Kontaktlinsenauftrag im selben Design: Kontaktlinse
+// rechts/links mit Werten, Zusatzleistungen, Rabatt; Summe, KK-Anteil und
+// Anzahlung aus dem Auftrag
+export type KontaktlinsenRechnungDaten = {
+  kontaktlinse: Record<string, unknown>;
+  kunde?: DocumentMergeEntities["kunde"];
+  rechnungsnummer: string;
+};
+
+const textOderLeer = (wert: unknown) =>
+  wert === null || wert === undefined ? "" : String(wert).trim();
+
+export const buildKontaktlinsenPositionen = (
+  cl: Record<string, unknown>,
+): RechnungPosition[] => {
+  const positionen: RechnungPosition[] = [];
+  let mitPreis = 0;
+  for (const [endung, label] of [
+    ["Rechts", "Kontaktlinse rechts :"],
+    ["Links", "Kontaktlinse links :"],
+  ] as const) {
+    const preis = asNumber(cl[`Preis${endung}`]);
+    const werte = [
+      formatGlaswerte({
+        Sph: cl[`Sph${endung}`],
+        Cyl: cl[`Cyl${endung}`],
+        A: cl[`Achse${endung}`],
+        Add: cl[`Add${endung}`],
+      } as DocumentMergeEntities["glasLinks"]),
+      asNumber(cl[`Radius${endung}`]) !== null
+        ? `BC ${zahl2.format(Number(cl[`Radius${endung}`]))}`
+        : "",
+      asNumber(cl[`Durchmesser${endung}`]) !== null
+        ? `DM ${zahl2.format(Number(cl[`Durchmesser${endung}`]))}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("  ");
+    const typ = [
+      textOderLeer(cl[`Linsentyp${endung}`]),
+      textOderLeer(cl[`Hersteller${endung}`]),
+    ]
+      .filter(Boolean)
+      .join(" – ");
+    if (preis === null && !werte && !typ) continue;
+    if (preis !== null) mitPreis += preis;
+    positionen.push({
+      label,
+      betrag: preis,
+      werte: werte || undefined,
+      details: typ ? [typ] : [],
+    });
+  }
+  for (const n of [1, 2, 3]) {
+    const bezeichnung = textOderLeer(cl[`Zusatzleistung${n}`]);
+    const betrag = asNumber(cl[`Zusatzbetrag${n}`]);
+    if (!bezeichnung && betrag === null) continue;
+    if (betrag !== null) mitPreis += betrag;
+    positionen.push({ label: bezeichnung || "Zusatzleistung", betrag });
+  }
+  const prozent = asNumber(cl.RabattProzent) ?? 0;
+  if (prozent > 0 && mitPreis > 0) {
+    const bezeichnung = textOderLeer(cl.RabattBezeichnung);
+    positionen.push({
+      label: `Rabatt${bezeichnung ? `: ${bezeichnung}` : ""} (-${prozent} %)`,
+      betrag: -Math.round(mitPreis * prozent) / 100,
+    });
+  }
+  // ältere Aufträge ohne Einzelpreise: Gesamtbetrag als eine Position
+  const summe = asNumber(cl.Summe) ?? 0;
+  if (mitPreis === 0 && summe > 0) {
+    positionen.push({ label: "Kontaktlinsen", betrag: summe });
+  }
+  return positionen;
+};
+
+const kontaktlinsenBeleg = ({
+  kontaktlinse: cl,
+  kunde,
+  rechnungsnummer,
+}: KontaktlinsenRechnungDaten) => {
+  const positionen = buildKontaktlinsenPositionen(cl);
+  // Rechnungsbetrag = Summe der Positionen (passt immer zu den Zeilen)
+  const summe =
+    Math.round(positionen.reduce((s, p) => s + (p.betrag ?? 0), 0) * 100) / 100;
+  return belegHtml({
+    art: "rechnung",
+    nummer: rechnungsnummer,
+    entities: {
+      kunde,
+      brille: {
+        Summe: summe,
+        KKAnteil: cl.KKAnteil,
+        Anzahlung: cl.Anzahlung,
+        Berater: cl.Berater,
+        Zahlungsstatus: cl.Zahlungsstatus,
+      },
+    } as DocumentMergeEntities,
+    positionen,
+    zweck: `für neue Kontaktlinsen${
+      textOderLeer(cl.Linsenart) ? ` (${textOderLeer(cl.Linsenart)})` : ""
+    }`,
+  });
+};
+
+export const buildKontaktlinsenRechnungPrintHtml = (
+  daten: KontaktlinsenRechnungDaten,
+): string =>
+  seite(`Rechnung ${daten.rechnungsnummer}`, kontaktlinsenBeleg(daten), false);
+
+export const buildKontaktlinsenRechnungPreviewHtml = (
+  daten: KontaktlinsenRechnungDaten,
+): string =>
+  seite(`Rechnung ${daten.rechnungsnummer}`, kontaktlinsenBeleg(daten), true);

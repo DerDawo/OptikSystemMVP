@@ -58,7 +58,7 @@ import {
   leistungsText,
   weitereLeistungenPositionen,
 } from "./leistungenAusNotizen";
-import { rabattDaten, rabattOptionen } from "./rabatte";
+import { leseRabattEingabe, rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
@@ -82,6 +82,16 @@ const zahl = (wert: unknown) => {
 
 const text = (wert: unknown) =>
   wert === null || wert === undefined ? "" : String(wert).trim();
+
+// Rabattfeld (Prozent/Euro) nach der Auswahl "Sonderrabatt" zum Tippen öffnen
+export const fokussiereRabattfeld = () =>
+  window.setTimeout(
+    () =>
+      document
+        .querySelector<HTMLElement>('[aria-label="Rabatt in %"]')
+        ?.focus(),
+    300,
+  );
 
 // Datum wie in Prisma: 15.05.2026
 const datum = (wert: unknown) =>
@@ -789,6 +799,8 @@ const DiagnoseAuswahl = ({
                 )
               }
               sx={{
+                // lange Einträge (Asthenopische Beschwerden) über zwei Spalten
+                gridColumn: d.length > 16 ? "span 2" : undefined,
                 display: "flex",
                 alignItems: "center",
                 gap: 0.25,
@@ -816,36 +828,40 @@ const DiagnoseAuswahl = ({
             </Box>
           );
         })}
-      </Box>
-      <Box
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
-          mt: 0.5,
-          px: "6px",
-          minHeight: 24,
-          borderTop: 1,
-          borderColor: "divider",
-        }}
-      >
+        {/* frei editierbares Feld für weitere Diagnosen */}
         <Box
-          component="span"
-          sx={{
-            fontSize: "0.72rem",
-            fontStyle: "italic",
-            color: "text.secondary",
-          }}
+          sx={(theme) => ({
+            gridColumn: "span 2",
+            display: "flex",
+            alignItems: "center",
+            minHeight: 24,
+            px: "6px",
+            borderRadius: "3px",
+            bgcolor: theme.palette.background.paper,
+            border: 1,
+            borderColor: "divider",
+            fontSize: "0.8rem",
+            "&:focus-within": aktivesFeld(theme),
+          })}
         >
-          weitere
+          <Eingabe
+            name="Diagnose weitere Angaben"
+            wert={rest}
+            anzeige={
+              rest || (
+                <Box
+                  component="span"
+                  sx={{ color: "text.disabled", fontStyle: "italic" }}
+                >
+                  weitere Diagnose eintragen …
+                </Box>
+              )
+            }
+            speichere={(neu) =>
+              sichern(baueDiagnose(gewaehlt, String(neu ?? "")))
+            }
+          />
         </Box>
-        <Eingabe
-          name="Diagnose weitere Angaben"
-          wert={rest}
-          speichere={(neu) =>
-            sichern(baueDiagnose(gewaehlt, String(neu ?? "")))
-          }
-        />
       </Box>
     </Box>
   );
@@ -1593,23 +1609,40 @@ export const BrilleKarteikarte = () => {
                   name="Rabatt"
                   wert={brille.RabattBezeichnung}
                   optionen={rabattOptionen(brille.RabattBezeichnung)}
-                  speichere={auftrag("RabattBezeichnung", (neu) =>
-                    rabattDaten(neu == null ? null : String(neu)),
-                  )}
+                  speichere={async (neu) => {
+                    await auftrag("RabattBezeichnung", (wert) =>
+                      rabattDaten(wert == null ? null : String(wert)),
+                    )(neu);
+                    // Sonderrabatt: gleich den Betrag eintragen lassen
+                    if (neu === "Sonderrabatt") fokussiereRabattfeld();
+                  }}
                 />
               </Wert>
+              {/* Prozent ("5") oder Euro ("50 €", wird in Prozent der
+                  Rabattbasis umgerechnet) */}
               <Wert rechts>
                 {textFeld(
                   "RabattProzent",
                   "Rabatt in %",
-                  auftrag("RabattProzent"),
+                  (eingabe) =>
+                    auftrag("RabattProzent")(
+                      leseRabattEingabe(String(eingabe ?? ""), rabattBasis),
+                    ),
                   brille.RabattProzent,
                   {
-                    typ: "zahl",
                     rechts: true,
-                    anzeige: rabattProzent
-                      ? `${dezimal.format(rabattProzent)} %`
-                      : "",
+                    anzeige: rabattProzent ? (
+                      `${dezimal.format(rabattProzent)} %`
+                    ) : text(brille.RabattBezeichnung) ? (
+                      <Box
+                        component="span"
+                        sx={{ color: "text.disabled", fontStyle: "italic" }}
+                      >
+                        % oder €
+                      </Box>
+                    ) : (
+                      ""
+                    ),
                   },
                 )}
               </Wert>

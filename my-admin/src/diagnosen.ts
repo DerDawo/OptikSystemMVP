@@ -14,6 +14,8 @@ export const DIAGNOSEN = [
   "Psyche",
   "Lider (XA/DC)",
   "Strabismus",
+  "Asthenopische Beschwerden",
+  "Office-Probleme",
 ];
 
 const normal = (t: string) => t.trim().toLowerCase();
