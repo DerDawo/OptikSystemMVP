@@ -33,6 +33,7 @@ import { alpha, type Theme } from "@mui/material/styles";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import dayjs from "dayjs";
 import { CurrencyField } from "./CurrencyField";
+import { DashboardAufgaben } from "./DashboardAufgaben";
 import { BrilleStatusChip, getBrilleOrderStatus } from "./orderStatus";
 import { tokensFor } from "./designTokens";
 import { CalendarIcon, CheckIcon, GlassesIcon, UserPlusIcon } from "./icons";
@@ -42,6 +43,7 @@ type BrilleRow = {
   kunde_id?: number | string | null;
   Datum?: string | null;
   Abholung?: string | null;
+  Fertig?: string | null;
   Summe?: number | null;
   Restbetrag?: number | null;
   Mahnstufe?: number | null;
@@ -441,9 +443,11 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
         dataProvider.getList("kunde", {
           pagination: { page: 1, perPage: 1 },
           sort: { field: "id", order: "ASC" },
+          // Aufnahmedatum statt created_at: beim Prisma-Import bekamen alle
+          // übernommenen Kunden das Importdatum als created_at
           filter: {
-            "created_at@gte": startOfMonth,
-            "created_at@lt": startOfNextMonth,
+            "Aufnahmedatum@gte": startOfMonth,
+            "Aufnahmedatum@lt": startOfNextMonth,
           },
         }),
         // Unbezahlte Aufträge mit offenem Restbetrag (Restbetrag wird in der
@@ -483,7 +487,11 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
         (row) => getBrilleOrderStatus(row).key === "bereit",
       );
       const abholbereitRows = [...abholbereitAll]
-        .sort((a, b) => (a.Abholung ?? "").localeCompare(b.Abholung ?? ""))
+        .sort((a, b) =>
+          (a.Fertig ?? a.Abholung ?? "").localeCompare(
+            b.Fertig ?? b.Abholung ?? "",
+          ),
+        )
         .slice(0, 8);
 
       const neueKunden = neueKundenRes.total ?? neueKundenRes.data.length;
@@ -703,6 +711,8 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
             </Box>
           )}
 
+          {!statistik && <DashboardAufgaben stand={lastUpdated} />}
+
           <Box
             sx={{
               display: "grid",
@@ -854,10 +864,15 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
                                   color: (theme) => tokensFor(theme).text3,
                                 }}
                               >
-                                Abholung:{" "}
-                                {row.Abholung
-                                  ? dayjs(row.Abholung).format("DD.MM.YYYY")
-                                  : "—"}
+                                {row.Fertig
+                                  ? `fertig seit ${dayjs(row.Fertig).format("DD.MM.YYYY")}`
+                                  : `Abholung: ${
+                                      row.Abholung
+                                        ? dayjs(row.Abholung).format(
+                                            "DD.MM.YYYY",
+                                          )
+                                        : "—"
+                                    }`}
                               </Typography>
                             </Box>
                             <BrilleStatusChip record={row} />
