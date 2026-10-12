@@ -546,8 +546,8 @@ export const KundeShow = () => {
       <ShowLayout>
         {/* Kundenkartei wie in Prisma, daneben die Aufträge */}
         <ShowColumns
-          spalten="minmax(0, 1.5fr) minmax(0, 1fr)"
-          spaltenMittel="minmax(0, 1.3fr) minmax(0, 1fr)"
+          spalten="minmax(0, 1.7fr) minmax(0, 1fr)"
+          spaltenMittel="minmax(0, 1.5fr) minmax(0, 1fr)"
         >
           <ShowColumn>
             <KundeKarteikarte />
@@ -605,10 +605,6 @@ export const KundeEdit = () => (
           <TextInput
             source="KrankenversicherungsTyp"
             label="Versicherungsart"
-          />
-          <DateInput
-            source="VersichertenkarteGueltigBis"
-            label="Karte gültig bis"
           />
         </FieldRow>
       </FormSection>
@@ -699,10 +695,6 @@ export const KundeCreate = () => {
             <TextInput
               source="KrankenversicherungsTyp"
               label="Versicherungsart"
-            />
-            <DateInput
-              source="VersichertenkarteGueltigBis"
-              label="Karte gültig bis"
             />
           </FieldRow>
         </FormSection>

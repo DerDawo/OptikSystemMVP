@@ -169,6 +169,40 @@ const Teile = ({
   </Box>
 );
 
+// Feld | Beschriftung + Feld in einer Zeile; reicht der Platz nicht, rutscht
+// der rechte Teil geschlossen in die nächste Zeile, statt zu schrumpfen
+const Umbruch = ({
+  links,
+  beschriftung,
+  rechts,
+}: {
+  links: ReactNode;
+  beschriftung: string;
+  rechts: ReactNode;
+}) => (
+  <Box
+    sx={{
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "6px 8px",
+      alignItems: "center",
+    }}
+  >
+    <Box sx={{ flex: "1 1 120px", minWidth: 120 }}>{links}</Box>
+    <Box
+      sx={{
+        flex: "1 1 250px",
+        display: "flex",
+        gap: "8px",
+        alignItems: "center",
+      }}
+    >
+      <Beschriftung>{beschriftung}</Beschriftung>
+      <Box sx={{ flex: 1, minWidth: 130 }}>{rechts}</Box>
+    </Box>
+  </Box>
+);
+
 export const KundeKarteikarte = () => {
   const kunde = useRecordContext<Datensatz>();
   const dataProvider = useDataProvider();
@@ -286,8 +320,8 @@ export const KundeKarteikarte = () => {
         sx={{
           display: "grid",
           gridTemplateColumns: {
-            xs: "110px minmax(0, 1fr) 96px",
-            md: "140px minmax(0, 1fr) 140px",
+            xs: "100px minmax(0, 1fr) 84px",
+            md: "112px minmax(0, 1fr) 104px",
           },
           columnGap: "12px",
           rowGap: "6px",
@@ -295,11 +329,11 @@ export const KundeKarteikarte = () => {
       >
         {zeile(
           "Kunden-Nummer",
-          <Teile spalten="minmax(0, 1fr) auto minmax(0, 1fr)">
-            {text("KundenNummer", "Kunden-Nummer", { rechts: true })}
-            <Beschriftung rechts>Aufnahmedatum</Beschriftung>
-            {datum("Aufnahmedatum", "Aufnahmedatum")}
-          </Teile>,
+          <Umbruch
+            links={text("KundenNummer", "Kunden-Nummer")}
+            beschriftung="Aufnahmedatum"
+            rechts={datum("Aufnahmedatum", "Aufnahmedatum")}
+          />,
         )}
         {zeile(
           "Anrede",
@@ -321,14 +355,14 @@ export const KundeKarteikarte = () => {
         {zeile("Nachname", text("Nachname", "Nachname"))}
         {zeile(
           "Strasse",
-          <Teile spalten="minmax(0, 1fr) 90px">
+          <Teile spalten="minmax(0, 1fr) minmax(70px, 90px)">
             {text("Straße", "Straße")}
             {text("Hausnummer", "Hausnummer")}
           </Teile>,
         )}
         {zeile(
           "PLZ/Ort",
-          <Teile spalten="100px minmax(0, 1fr)">
+          <Teile spalten="minmax(80px, 100px) minmax(0, 1fr)">
             {text("Postleitzahl", "Postleitzahl")}
             {text("Stadt", "Ort")}
           </Teile>,
@@ -359,18 +393,20 @@ export const KundeKarteikarte = () => {
         )}
         {zeile(
           "Geburtsdatum",
-          <Teile spalten="minmax(0, 1fr) auto minmax(0, 1fr)">
-            {datum("Geburtsdatum", "Geburtsdatum")}
-            <Beschriftung rechts>bevorzugt</Beschriftung>
-            <Feld>
-              <Auswahl
-                name="bevorzugter Kontaktweg"
-                wert={kunde.Kontaktweg}
-                optionen={KONTAKTWEGE}
-                speichere={speichere("Kontaktweg")}
-              />
-            </Feld>
-          </Teile>,
+          <Umbruch
+            links={datum("Geburtsdatum", "Geburtsdatum")}
+            beschriftung="bevorzugt"
+            rechts={
+              <Feld>
+                <Auswahl
+                  name="bevorzugter Kontaktweg"
+                  wert={kunde.Kontaktweg}
+                  optionen={KONTAKTWEGE}
+                  speichere={speichere("Kontaktweg")}
+                />
+              </Feld>
+            }
+          />,
         )}
 
         {zeile(
@@ -527,8 +563,6 @@ export const KundeKarteikarte = () => {
                 speichere={speichere("KrankenversicherungsTyp")}
               />
             </Feld>
-            <Beschriftung>Karte gültig bis</Beschriftung>
-            {datum("VersichertenkarteGueltigBis", "Karte gültig bis")}
           </Box>
         </DialogContent>
         <DialogActions>
