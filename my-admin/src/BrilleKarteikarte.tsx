@@ -395,6 +395,16 @@ const AuftragPosition = ({ brille, z, s }: Platz & { brille: Datensatz }) => {
 // Werte-Tabelle R/L aus den Glas-Datensätzen eines Auftrags, mit Liefern
 // und Betrag je Glas. Wird im Bearbeiten-Formular verwendet; mit `brille`
 // (gespeicherter Auftrag) lassen sich die Werte direkt eintippen.
+// Zelle der Wertetabelle zum direkten Eintippen: als Feld erkennbar
+const eingabeZelle = (theme: Theme) => ({
+  display: "flex",
+  alignItems: "center",
+  minHeight: 28,
+  px: "6px",
+  borderRadius: "4px",
+  bgcolor: feldFarbe(theme),
+});
+
 export const WerteTabelle = ({
   rechtsId,
   linksId,
@@ -477,7 +487,7 @@ export const WerteTabelle = ({
                 {WERTE.map((w) => (
                   <TableCell key={w.feld} align="right" sx={{ minWidth: 48 }}>
                     {bearbeitbar ? (
-                      <Box sx={{ display: "flex", minHeight: 24 }}>
+                      <Box sx={eingabeZelle}>
                         <WertEingabe
                           w={w}
                           seite={seite}
@@ -505,7 +515,7 @@ export const WerteTabelle = ({
                 </TableCell>
                 <TableCell align="right" sx={{ minWidth: 80 }}>
                   {bearbeitbar ? (
-                    <Box sx={{ display: "flex", minHeight: 24 }}>
+                    <Box sx={eingabeZelle}>
                       <Eingabe
                         typ="zahl"
                         rechts

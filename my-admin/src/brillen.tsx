@@ -431,14 +431,7 @@ export const BrilleEdit = () => (
         <TextInput source="Notizen" multiline fullWidth />
       </FormSection>
       <FormSection title="Komponenten">
-        <FieldRow>
-          <ReferenceInput source="GlasRechts" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
-          <ReferenceInput source="GlasLinks" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
-        </FieldRow>
+        {/* Werte direkt in der Tabelle eintippen (ohne Glas-Auswahl) */}
         <WerteVorschau />
         <FieldRow>
           <ReferenceInput source="Fassung" reference="fassung">
