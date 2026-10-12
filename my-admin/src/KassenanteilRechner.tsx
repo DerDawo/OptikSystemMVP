@@ -12,7 +12,13 @@ import {
   Typography,
 } from "@mui/material";
 import CalculateIcon from "@mui/icons-material/Calculate";
-import { MWST, ZUSAETZE, berechneKassenanteil, mitMwst } from "./kassenanteil";
+import {
+  GespeichertePosition,
+  MWST,
+  ZUSAETZE,
+  berechneKassenanteil,
+  mitMwst,
+} from "./kassenanteil";
 
 type Glas = Record<string, unknown> | undefined;
 
@@ -155,7 +161,7 @@ export const KassenanteilRechner = ({
                 {"gruppe" in z && z.gruppe !== gruppeVor(i) && (
                   <Divider sx={{ my: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">
-                      {z.gruppe} (bei Bedarf anhaken)
+                      {String(z.gruppe)} (bei Bedarf anhaken)
                     </Typography>
                   </Divider>
                 )}

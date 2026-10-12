@@ -27,7 +27,7 @@ import {
   SingleFieldList,
   ChipField,
 } from "react-admin";
-import { useGetMany, useGetOne } from "react-admin";
+import { useGetMany, useGetOne, useRecordContext } from "react-admin";
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { KundeInput } from "./KundeInput";
