@@ -1459,7 +1459,11 @@ export const KundeMessage = () => {
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Bitte in der geöffneten App absenden. Erneut öffnen:
+              Bitte in der geöffneten App absenden.
+              {externalLinks.some((link) => link.channel === "whatsapp")
+                ? " WhatsApp: Der Text ist kopiert – ist das Feld leer, Strg+V drücken."
+                : ""}{" "}
+              Erneut öffnen:
             </Typography>
             {externalLinks.map((link) => (
               <Button

@@ -120,11 +120,45 @@ export const buildExternalMessageUrl = (
   }
 };
 
-export const openExternalMessage = (url: string): void => {
+// WhatsApp am PC: direkt WhatsApp Web statt der Zwischenseite von wa.me
+// ("App öffnen / Weiter zu WhatsApp Web"). Liefert null für andere Links.
+export const whatsappWebUrl = (url: string): string | null => {
+  const treffer = /^https:\/\/wa\.me\/(\d+)(?:\?text=(.*))?$/.exec(url);
+  if (!treffer) return null;
+  const text = treffer[2] ?? "";
+  return `https://web.whatsapp.com/send?phone=${treffer[1]}${text ? `&text=${text}` : ""}`;
+};
+
+const istHandy = () =>
+  typeof navigator !== "undefined" &&
+  /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+
+/*
+ * Öffnet die passende App. Bei WhatsApp kommt der Text zusätzlich in die
+ * Zwischenablage: die installierte WhatsApp-Web-App öffnet zwar den Chat,
+ * verwirft aber oft den mitgeschickten Text - dann reicht Strg+V. Am PC
+ * nutzt WhatsApp immer denselben Browser-Tab, statt jedes Mal einen neuen
+ * zu öffnen. Rückgabe: true, wenn es ein WhatsApp-Link war.
+ */
+export const openExternalMessage = (url: string): boolean => {
+  const webUrl = whatsappWebUrl(url);
+  if (webUrl) {
+    const text = new URL(url).searchParams.get("text") ?? "";
+    if (text) navigator.clipboard?.writeText(text).catch(() => undefined);
+    if (istHandy()) {
+      window.open(url, "_blank", "noopener,noreferrer");
+    } else {
+      const fenster = window.open(webUrl, "unicorn-whatsapp");
+      if (fenster) fenster.opener = null;
+    }
+    return true;
+  }
+
   if (url.startsWith("https://")) {
     window.open(url, "_blank", "noopener,noreferrer");
-    return;
+    return false;
   }
 
   window.location.href = url;
+  return false;
 };
