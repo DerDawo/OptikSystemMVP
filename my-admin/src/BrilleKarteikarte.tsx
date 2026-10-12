@@ -752,6 +752,7 @@ export const BrilleKarteikarte = () => {
   );
 
   const refresh = useRefresh();
+  const dataProvider = useDataProvider();
   const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
   const [bestellOffen, setBestellOffen] = useState(false);
 
@@ -991,21 +992,28 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Refraktion")}
               />
             </Feld>
+            {/* "Bezahlt" als Häkchen (statt Abholung): setzt den
+                Zahlungsstatus auf "bezahlt" bzw. zurück auf "offen" */}
             <Beschriftung z={3} s="5 / 6">
-              Abholung
+              Bezahlt
             </Beschriftung>
-            <Feld z={3} s="6 / 7">
-              {textFeld(
-                "Abholung",
-                "Abholung",
-                auftrag("Abholung"),
-                brille.Abholung,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.Abholung),
-                },
-              )}
-            </Feld>
+            <Box
+              sx={{
+                gridRow: 3,
+                gridColumn: "6 / 7",
+                display: "flex",
+                alignItems: "center",
+                ml: "-4px",
+              }}
+            >
+              <Haken
+                an={brille.Zahlungsstatus === "bezahlt"}
+                name="Bezahlt"
+                speichere={(neu) =>
+                  auftrag("Zahlungsstatus")(neu ? "bezahlt" : "offen")
+                }
+              />
+            </Box>
             <Beschriftung z={3} s="7 / 8" rechts>
               Rechnungsnr.
             </Beschriftung>
@@ -1341,6 +1349,45 @@ export const BrilleKarteikarte = () => {
                 fassungFeld("Hersteller"),
                 text(fassung?.Hersteller) || text(fassung?.Linie) || null,
               )}
+            </Feld>
+
+            {/* Medizinische Notizen des Kunden (Kundenkartei) - hier
+                sichtbar und direkt bearbeitbar, gespeichert beim Kunden */}
+            <Beschriftung z={15} s="5 / 6">
+              Med. Notizen
+            </Beschriftung>
+            <Feld z={15} s={RECHTS}>
+              {kunde ? (
+                <Box
+                  title={text(kunde.Notizen)}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    alignSelf: "stretch",
+                  }}
+                >
+                  {textFeld(
+                    "kunde.Notizen",
+                    "Medizinische Notizen",
+                    async (neu) => {
+                      await dataProvider.update("kunde", {
+                        id: kunde.id,
+                        data: { Notizen: neu },
+                        previousData: kunde,
+                      });
+                      refresh();
+                    },
+                    kunde.Notizen,
+                    {
+                      // mehrzeilig bearbeiten, damit Zeilenumbrüche
+                      // erhalten bleiben; angezeigt in einer Zeile
+                      mehrzeilig: true,
+                      anzeige: text(kunde.Notizen).replace(/\s*\n\s*/g, " · "),
+                    },
+                  )}
+                </Box>
+              ) : null}
             </Feld>
 
             {/* Zusatzleistungen */}
