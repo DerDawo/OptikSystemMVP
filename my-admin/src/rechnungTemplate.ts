@@ -419,14 +419,78 @@ const BEWERTUNG_HTML = `<div class="bewertung">
     <img class="bewertung-qr" src="${bewertungQr}" alt="QR-Code zur Google-Bewertung" />
   </div>`;
 
-// Reicht der Platz unter den Positionen nicht (sehr lange Rechnung), wird
-// die Bewertungs-Einladung ausgeblendet statt die Fußzeile zu überdecken
+// Platz für die Bewertungs-Einladung, ohne etwas zu überdecken:
+// 1. unten rechts über dem Dankestext, der QR-Code notfalls kleiner
+//    (20 -> 18 -> 16 -> 15 mm, alle im Ausdruck lesbar);
+// 2. reicht das nicht (viele Positionen): QR-Code 18 mm mit kurzem Hinweis
+//    rechts neben MwSt-Hinweis und Zahlungstext - an der ersten Stelle, an
+//    der keine Textzeile liegt (gemessen an den echten Zeilen);
+// 3. sonst ausblenden.
 const BEWERTUNG_PLATZ_PRUEFEN = `<script>
 (function () {
+  var beleg = document.querySelector(".beleg");
   var b = document.querySelector(".bewertung");
   var f = document.querySelector(".fusszeile");
-  if (b && f && b.getBoundingClientRect().bottom > f.getBoundingClientRect().top)
-    b.style.visibility = "hidden";
+  var q = document.querySelector(".bewertung-qr");
+  var t = document.querySelector(".bewertung-text");
+  var balken = document.querySelector(".summenbalken");
+  if (!beleg || !b || !f || !q || !t) return;
+  var passt = function () {
+    return b.getBoundingClientRect().bottom <= f.getBoundingClientRect().top - 2;
+  };
+  var groessen = [20, 18, 16, 15];
+  for (var i = 0; i < groessen.length; i++) {
+    q.style.width = groessen[i] + "mm";
+    q.style.height = groessen[i] + "mm";
+    if (i > 0) b.style.paddingTop = "1mm";
+    if (passt()) return;
+  }
+  // 2. seitlich neben den Hinweisen
+  var r0 = beleg.getBoundingClientRect();
+  var mm = r0.width / 210;
+  var zeilen = [];
+  // nur die Textzeilen selbst messen (nicht die volle Breite der Absätze)
+  [".mwst", ".hinweise"].forEach(function (sel) {
+    var el = document.querySelector(sel);
+    if (!el) return;
+    var gang = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    var knoten;
+    while ((knoten = gang.nextNode())) {
+      var range = document.createRange();
+      range.selectNodeContents(knoten);
+      var rs = range.getClientRects();
+      for (var k = 0; k < rs.length; k++) zeilen.push(rs[k]);
+    }
+  });
+  beleg.appendChild(b);
+  t.innerHTML = "Teilen Sie Ihre Erfahrung gern auf Google.";
+  b.style.position = "absolute";
+  b.style.right = "26.2mm";
+  b.style.margin = "0";
+  b.style.padding = "0";
+  b.style.width = "22mm";
+  b.style.flexDirection = "column-reverse";
+  b.style.gap = "1mm";
+  t.style.fontSize = "5.5pt";
+  t.style.textAlign = "center";
+  t.style.lineHeight = "1.25";
+  q.style.width = "18mm";
+  q.style.height = "18mm";
+  var oben = (balken ? balken.getBoundingClientRect().bottom : r0.top) + 2 * mm;
+  var grenze = f.getBoundingClientRect().top - 2 * mm;
+  for (var y = oben; y + 1 <= grenze; y += mm) {
+    b.style.top = (y - r0.top) + "px";
+    var box = b.getBoundingClientRect();
+    if (box.bottom > grenze) break;
+    var frei = true;
+    for (var z = 0; z < zeilen.length; z++) {
+      var l = zeilen[z];
+      if (l.right > box.left - 2 * mm && l.left < box.right &&
+          l.bottom > box.top && l.top < box.bottom) { frei = false; break; }
+    }
+    if (frei) return;
+  }
+  b.style.visibility = "hidden";
 })();
 </script>`;
 
