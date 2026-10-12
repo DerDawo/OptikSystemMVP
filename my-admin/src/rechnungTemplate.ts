@@ -12,6 +12,7 @@
 import type { DocumentMergeEntities } from "./documentTemplateEngine";
 import dayjs from "dayjs";
 import logoSehzentrum from "./assets/logo-sehzentrum.jpg?inline";
+import bewertungQr from "./assets/google-bewertung-qr.png?inline";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 import {
   leistungsText,
@@ -356,6 +357,7 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
   </table>
   <div class="titelbalken">${istRechnung ? "RECHNUNG" : "KOSTENVORANSCHLAG"}</div>
   <div class="inhalt">
+   <div class="inhalt-block">
     <p class="zweck">für eine neue ${e(brillenArt)}&nbsp; lt. optometr. Verordnung</p>
     ${positionenHtml}
     ${
@@ -380,6 +382,8 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
       .filter(Boolean)
       .map((h) => `<div>${h}</div>`)
       .join("")}</div>
+   </div>
+    ${istRechnung ? BEWERTUNG_HTML : ""}
   </div>
   <div class="fusszeile">
     <p class="dank">Vielen Dank für Ihr Vertrauen, das Sie uns entgegengebracht haben. Unser Service endet aber nicht mit der Bezahlung!<br />Gern stehen wir Ihnen jederzeit mit unserem Wissen, Können und unserer fachlichen Kompetenz zur Seite!</p>
@@ -392,6 +396,31 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
 </div>`;
 };
 
+// Dezente Einladung zur Google-Bewertung (nur auf Rechnungen): Ziel ist
+// genau der Link aus dem QR-Code des Betriebs (Google-Eintrag "Augenoptik
+// Ulm", Bewertungen). Das Bild wurde aus genau diesem Link neu erzeugt
+// (Fehlerkorrektur L statt Q: Version 10, 57 Module statt 73) und wird 20 mm
+// breit gedruckt (ca. 0,34 mm je Modul) - kleiner als das Original und
+// trotzdem im Ausdruck sicher lesbar.
+export const GOOGLE_BEWERTUNG_URL =
+  "https://www.google.com/maps/place/Augenoptik+Ulm/@50.8522328,12.0867627,642m/data=!3m1!1e3!4m8!3m7!1s0x47a6cf06ebbd0651:0xc4f10eddabfaeeba!8m2!3d50.8522328!4d12.0867627!9m1!1b1!16s%252Fg%252F1thpvvx_?entry=ttu&g_ep=EgoyMDI1MDUyOC4wIKXMDSoASAFQAw%253D%253D";
+
+const BEWERTUNG_HTML = `<div class="bewertung">
+    <div class="bewertung-text">Wie zufrieden waren Sie mit Ihrem Besuch?<br />Teilen Sie Ihre Erfahrung gern auf Google.<br /><a href="${e(GOOGLE_BEWERTUNG_URL)}">Zur Bewertung auf Google</a></div>
+    <img class="bewertung-qr" src="${bewertungQr}" alt="QR-Code zur Google-Bewertung" />
+  </div>`;
+
+// Reicht der Platz unter den Positionen nicht (sehr lange Rechnung), wird
+// die Bewertungs-Einladung ausgeblendet statt die Fußzeile zu überdecken
+const BEWERTUNG_PLATZ_PRUEFEN = `<script>
+(function () {
+  var b = document.querySelector(".bewertung");
+  var f = document.querySelector(".fusszeile");
+  if (b && f && b.getBoundingClientRect().bottom > f.getBoundingClientRect().top)
+    b.style.visibility = "hidden";
+})();
+</script>`;
+
 // Maße in mm nach der A4-Referenz (Logo, Datenbox, Balken)
 export const BELEG_STYLES = `
   .beleg { position: relative; width: 210mm; height: 297mm; overflow: hidden; background: #fff; font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 11pt; line-height: 1.3; -webkit-print-color-adjust: exact; print-color-adjust: exact; box-sizing: border-box; }
@@ -403,7 +432,12 @@ export const BELEG_STYLES = `
   .beleg .datenbox td { padding: 0 0.6mm; height: 5.2mm; }
   .beleg .datenbox td:last-child { background: #e0e0e0; text-align: right; width: 50%; }
   .beleg .titelbalken { position: absolute; left: 24.7mm; right: 26.2mm; top: 96.2mm; height: 8.6mm; background: #e6e6e6; border-top: 0.3mm solid #555; border-bottom: 0.3mm solid #555; font-size: 17pt; line-height: 8.2mm; padding-left: 0.6mm; }
-  .beleg .inhalt { position: absolute; left: 25mm; right: 26.2mm; top: 111mm; }
+  .beleg .inhalt { position: absolute; left: 25mm; right: 26.2mm; top: 111mm; bottom: 46mm; display: flex; flex-direction: column; }
+  .beleg .inhalt-block { flex: 0 0 auto; }
+  .beleg .bewertung { margin-top: auto; padding-top: 2mm; flex: 0 0 auto; display: flex; justify-content: flex-end; align-items: center; gap: 3mm; }
+  .beleg .bewertung-text { font-size: 7.5pt; line-height: 1.45; color: #666; text-align: right; }
+  .beleg .bewertung-text a { color: #4a6a8a; text-decoration: none; }
+  .beleg .bewertung-qr { width: 20mm; height: 20mm; image-rendering: pixelated; }
   .beleg .zweck { margin: 0 0 1.4mm; }
   .beleg .position { margin-bottom: 7mm; }
   .beleg .position .zeile { display: flex; justify-content: space-between; }
@@ -438,6 +472,7 @@ const seite = (
 </head>
 <body>
 ${body}
+${BEWERTUNG_PLATZ_PRUEFEN}
 </body>
 </html>`;
 

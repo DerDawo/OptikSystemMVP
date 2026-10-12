@@ -37,6 +37,8 @@ import PrintIcon from "@mui/icons-material/Print";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import BuildIcon from "@mui/icons-material/Build";
+import EmailIcon from "@mui/icons-material/Email";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import {
   Confirm,
   RaRecord,
@@ -78,6 +80,8 @@ import {
   buildAokBerechtigungsscheinPrintHtml,
 } from "./aokBerechtigungsscheinTemplate";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
+import { belegAlsPdf, belegVersenden } from "./belegPdf";
+import { choosePhoneNumberForMessaging } from "./messaging";
 import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
   buildErprobungsprotokollPreviewHtml,
@@ -617,6 +621,72 @@ const FormulareDialog = ({
   );
   const textAenderbar = Boolean(selectedVorlage) && !layout && !pdfVorlage;
 
+  // HTML für Druck und PDF (bei Anträgen samt angeklickter Kästchen)
+  const druckHtml = () => {
+    const vorschau = vorschauRef.current?.contentDocument;
+    return layoutDef?.ausVorschau && vorschau
+      ? vorschauAlsHtml(vorschau)
+      : (layout?.print ??
+          buildPrintHtml(selectedVorlage?.Name ?? "", renderedText));
+  };
+
+  // Rechnung/Mahnung als PDF per E-Mail oder WhatsApp an den Kunden
+  const versendbar =
+    Boolean(layout) &&
+    (selectedVorlage?.Kategorie === RECHNUNG_KATEGORIE ||
+      selectedVorlage?.Kategorie === MAHNUNG_KATEGORIE);
+  const [versendet, setVersendet] = useState<"email" | "whatsapp" | null>(null);
+  const versenden = async (kanal: "email" | "whatsapp") => {
+    if (!selectedVorlage) return;
+    setVersendet(kanal);
+    try {
+      const nummer = String(brille.Rechnungsnummer ?? "").trim();
+      const art =
+        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE
+          ? "Rechnung"
+          : selectedVorlage.Name;
+      const datei = await belegAlsPdf(
+        druckHtml(),
+        `${art}${nummer ? `-${nummer}` : ""}.pdf`.replace(
+          /[^\w.\-äöüÄÖÜß]+/g,
+          "-",
+        ),
+      );
+      const nachname = String(kunde?.Nachname ?? "").trim();
+      const anrede = String(kunde?.Anrede ?? "").trim();
+      const gruss =
+        anrede === "Frau" && nachname
+          ? `Sehr geehrte Frau ${nachname}`
+          : anrede === "Herr" && nachname
+            ? `Sehr geehrter Herr ${nachname}`
+            : "Guten Tag";
+      const firma = String(betrieb?.Firmenname ?? "").trim();
+      const ergebnis = await belegVersenden(kanal, datei, {
+        an:
+          kanal === "email"
+            ? String(kunde?.Email ?? "").trim()
+            : choosePhoneNumberForMessaging([
+                kunde?.Handy,
+                kunde?.TelefonnummerPrivat,
+              ]),
+        betreff: `${art}${nummer ? ` ${nummer}` : ""}`,
+        text: `${gruss},\n\nanbei erhalten Sie Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""} als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
+      });
+      if (ergebnis === "heruntergeladen") {
+        notify(
+          kanal === "email"
+            ? `PDF „${datei.name}“ gespeichert und E-Mail geöffnet – bitte das PDF dort anhängen.`
+            : `PDF „${datei.name}“ gespeichert und WhatsApp geöffnet – bitte das PDF dort anhängen.`,
+          { type: "info" },
+        );
+      }
+    } catch {
+      notify("PDF konnte nicht erstellt werden.", { type: "error" });
+    } finally {
+      setVersendet(null);
+    }
+  };
+
   const handleAction = (
     autoPrint: boolean,
     successMessage: string,
@@ -638,12 +708,7 @@ const FormulareDialog = ({
       );
       return;
     }
-    const vorschau = vorschauRef.current?.contentDocument;
-    const html =
-      layoutDef?.ausVorschau && vorschau
-        ? vorschauAlsHtml(vorschau)
-        : (layout?.print ?? buildPrintHtml(selectedVorlage.Name, renderedText));
-    const opened = openDocumentWindow(html, autoPrint);
+    const opened = openDocumentWindow(druckHtml(), autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
     });
@@ -1049,6 +1114,29 @@ const FormulareDialog = ({
               >
                 Drucken
               </Button>
+              {versendbar && (
+                <>
+                  <Button
+                    startIcon={<EmailIcon />}
+                    disabled={versendet !== null}
+                    onClick={() => versenden("email")}
+                  >
+                    {versendet === "email"
+                      ? "PDF wird erstellt …"
+                      : "Per E-Mail"}
+                  </Button>
+                  <Button
+                    startIcon={<WhatsAppIcon />}
+                    disabled={versendet !== null}
+                    onClick={() => versenden("whatsapp")}
+                    sx={{ color: "#1da851" }}
+                  >
+                    {versendet === "whatsapp"
+                      ? "PDF wird erstellt …"
+                      : "Per WhatsApp"}
+                  </Button>
+                </>
+              )}
             </>
           )}
           <Box sx={{ flex: 1 }} />

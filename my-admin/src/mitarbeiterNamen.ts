@@ -6,8 +6,8 @@ export const MITARBEITER = ["Andrea Heydrich", "Robert Ulm"];
 // Reihenfolge des Betriebs (eigene Mitarbeiter, dann Augenärzte/Praxen).
 // Ältere abweichende Angaben bleiben beim jeweiligen Auftrag erhalten.
 export const REFRAKTION = [
-  "Robert Ulm",
-  "Andrea Heydrich",
+  "Robert Ulm lt. optometrischer Messung",
+  "Andrea Heydrich lt. optometrischer Messung",
   "Praxis Dr. Schroth",
   "Dr. Elbasyounis",
   "Dr. Jana Weiser",

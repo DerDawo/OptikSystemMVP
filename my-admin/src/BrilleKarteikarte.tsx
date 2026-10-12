@@ -62,6 +62,7 @@ import { rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
+import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -130,7 +131,7 @@ const GLAS_BESTELLSTATUS = [
 ].map((s) => ({ id: s, name: s }));
 
 // Dunkelblaue Knöpfe wie in Prisma (Glasassistent, Bestelloptionen)
-const prismaKnopf = {
+export const prismaKnopf = {
   bgcolor: "#1d4e8f",
   "&:hover": { bgcolor: "#173f74" },
   color: "#fff",
@@ -221,25 +222,25 @@ const betragText = (wert: unknown) => {
  * 1 Beschriftung | 2-3 Felder links | 4 Abstand |
  * 5 Beschriftung rechts | 6 Feld rechts | 7 Summen-Beschriftung | 8 Betrag
  */
-const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
+export const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
 const LINKS = "2 / 4";
 const RECHTS = "6 / 9";
 const BREIT = "2 / 7";
 
-const feldFarbe = (theme: Theme) =>
+export const feldFarbe = (theme: Theme) =>
   theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#e8eef6";
-const summenFarbe = (theme: Theme) =>
+export const summenFarbe = (theme: Theme) =>
   theme.palette.mode === "dark" ? "rgba(255,255,255,0.14)" : "#e2e3e5";
 
 // Rahmen um das Feld, in dem gerade getippt wird
-const aktivesFeld = (theme: Theme) => ({
+export const aktivesFeld = (theme: Theme) => ({
   boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
 });
 
-type Platz = { z: number; s: string; h?: number };
+export type Platz = { z: number; s: string; h?: number };
 
 // Kursive, graue Beschriftung wie in Prisma
-const Beschriftung = ({
+export const Beschriftung = ({
   z,
   s,
   children,
@@ -264,7 +265,7 @@ const Beschriftung = ({
 );
 
 // Helles Feld mit Wert
-const Feld = ({
+export const Feld = ({
   z,
   s,
   h = 1,
@@ -306,7 +307,7 @@ const Feld = ({
 );
 
 // Mehrere gleich breite Zellen in einem Rasterbereich (Werte, Farbe/Größe)
-const Zellen = ({
+export const Zellen = ({
   z,
   s,
   spalten,
@@ -326,7 +327,7 @@ const Zellen = ({
   </Box>
 );
 
-const Wert = ({
+export const Wert = ({
   children,
   rechts,
   links,
@@ -353,7 +354,7 @@ const Wert = ({
   </Box>
 );
 
-const Spaltentitel = ({ children }: { children: ReactNode }) => (
+export const Spaltentitel = ({ children }: { children: ReactNode }) => (
   <Box
     sx={{
       fontStyle: "italic",
@@ -739,6 +740,113 @@ const BezahlungJaNein = ({
         aktuell === "offen" || aktuell === "teilweise offen",
         "offen",
       )}
+    </Box>
+  );
+};
+
+// Diagnosen zum Anhaken, darunter Freitext; gespeichert als Text in
+// "Diagnose" (siehe diagnosen.ts)
+const DiagnoseAuswahl = ({
+  wert,
+  speichere,
+}: {
+  wert: unknown;
+  speichere: Speichern;
+}) => {
+  const notify = useNotify();
+  const [vorlaeufig, setVorlaeufig] = useState<string | null>(null);
+  useEffect(() => setVorlaeufig(null), [wert]);
+  const { gewaehlt, rest } = zerlegeDiagnose(vorlaeufig ?? wert);
+  const sichern = async (neu: string | null) => {
+    setVorlaeufig(neu ?? "");
+    try {
+      await speichere(neu);
+    } catch {
+      setVorlaeufig(null);
+      notify("Diagnose konnte nicht gespeichert werden.", { type: "error" });
+    }
+  };
+  return (
+    <Box sx={{ flex: 1, minWidth: 0, py: "2px" }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+          columnGap: 1,
+        }}
+      >
+        {DIAGNOSEN.map((d) => {
+          const an = gewaehlt.includes(d);
+          return (
+            <Box
+              key={d}
+              onClick={() =>
+                sichern(
+                  baueDiagnose(
+                    an ? gewaehlt.filter((x) => x !== d) : [...gewaehlt, d],
+                    rest,
+                  ),
+                )
+              }
+              sx={{
+                display: "flex",
+                alignItems: "center",
+                gap: 0.25,
+                cursor: "pointer",
+                fontSize: "0.8rem",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <IconButton
+                size="small"
+                aria-label={`Diagnose ${d}`}
+                aria-pressed={an}
+                sx={{ p: 0.25 }}
+              >
+                {an ? (
+                  <CheckBoxIcon fontSize="small" />
+                ) : (
+                  <CheckBoxOutlineBlankIcon
+                    fontSize="small"
+                    sx={{ color: "text.disabled" }}
+                  />
+                )}
+              </IconButton>
+              {d}
+            </Box>
+          );
+        })}
+      </Box>
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
+          mt: 0.5,
+          px: "6px",
+          minHeight: 24,
+          borderTop: 1,
+          borderColor: "divider",
+        }}
+      >
+        <Box
+          component="span"
+          sx={{
+            fontSize: "0.72rem",
+            fontStyle: "italic",
+            color: "text.secondary",
+          }}
+        >
+          weitere
+        </Box>
+        <Eingabe
+          name="Diagnose weitere Angaben"
+          wert={rest}
+          speichere={(neu) =>
+            sichern(baueDiagnose(gewaehlt, String(neu ?? "")))
+          }
+        />
+      </Box>
     </Box>
   );
 };
@@ -1410,7 +1518,7 @@ export const BrilleKarteikarte = () => {
             {/* Medizinische Notizen des Kunden (Kundenkartei) - hier
                 sichtbar und direkt bearbeitbar, gespeichert beim Kunden */}
             <Beschriftung z={15} s="5 / 6">
-              Med. Notizen
+              Notizen
             </Beschriftung>
             <Feld z={15} s={RECHTS}>
               {kunde ? (
@@ -1631,17 +1739,10 @@ export const BrilleKarteikarte = () => {
               Diagnose
             </Beschriftung>
             <Feld z={zRest + 2} s="2 / 9" mehrzeilig>
-              <Box
-                sx={{ flex: 1, minWidth: 0, minHeight: 64, display: "flex" }}
-              >
-                {textFeld(
-                  "Diagnose",
-                  "Diagnose",
-                  auftrag("Diagnose"),
-                  brille.Diagnose,
-                  { mehrzeilig: true },
-                )}
-              </Box>
+              <DiagnoseAuswahl
+                wert={brille.Diagnose}
+                speichere={auftrag("Diagnose")}
+              />
             </Feld>
           </Box>
         </Box>
