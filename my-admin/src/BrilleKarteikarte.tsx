@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Link,
@@ -36,6 +36,7 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import EditIcon from "@mui/icons-material/Edit";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import { formatCurrency } from "./CurrencyField";
 import {
   MITARBEITER,
@@ -77,32 +78,45 @@ const zahl = (wert: unknown) => {
 const text = (wert: unknown) =>
   wert === null || wert === undefined ? "" : String(wert).trim();
 
+// Öffnet das Fenster "Verordnung" der Brillenkartei (aus dem Optionen-Menü)
+export const VERORDNUNG_OEFFNEN = "brille-verordnung-oeffnen";
+
+// Datum wie in Prisma: 15.05.2026
 const datum = (wert: unknown) =>
-  wert ? new Date(String(wert)).toLocaleDateString("de-DE") : "";
+  wert
+    ? new Date(String(wert)).toLocaleDateString("de-DE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "";
 
-const dioptrie = new Intl.NumberFormat("de-DE", {
-  minimumFractionDigits: 2,
+// Zahlen wie in Prisma: Punkt als Dezimalzeichen, feste Nachkommastellen,
+// kein Plus-Zeichen, keine Tausenderpunkte (0.75, -0.25, 32.0, 235.00)
+const prismaZahl = (stellen: number) =>
+  new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: stellen,
+    maximumFractionDigits: stellen,
+    useGrouping: false,
+  });
+const dezimal = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
-  signDisplay: "exceptZero",
+  useGrouping: false,
 });
-const dezimal = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
-const betrag = new Intl.NumberFormat("de-DE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const betrag = prismaZahl(2);
 
-const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
-  { feld: "Sph", titel: "Sph", vorzeichen: true },
-  { feld: "Cyl", titel: "Cyl", vorzeichen: true },
-  { feld: "A", titel: "A" },
-  { feld: "PD", titel: "PD" },
-  { feld: "Add", titel: "Add", vorzeichen: true },
-  { feld: "y_h", titel: "y/h" },
-  { feld: "Pr", titel: "Pr" },
-  { feld: "B", titel: "B" },
-  { feld: "HSA", titel: "HSA" },
-  { feld: "Vis", titel: "Vis" },
-  { feld: "iod", titel: "iod" },
+const WERTE: { feld: string; titel: string; stellen: number }[] = [
+  { feld: "Sph", titel: "Sph", stellen: 2 },
+  { feld: "Cyl", titel: "Cyl", stellen: 2 },
+  { feld: "A", titel: "A", stellen: 0 },
+  { feld: "PD", titel: "PD", stellen: 1 },
+  { feld: "Add", titel: "Add", stellen: 2 },
+  { feld: "y_h", titel: "y/h", stellen: 1 },
+  { feld: "Pr", titel: "Pr", stellen: 2 },
+  { feld: "B", titel: "B", stellen: 0 },
+  { feld: "HSA", titel: "HSA", stellen: 1 },
+  { feld: "Vis", titel: "Vis", stellen: 2 },
+  { feld: "iod", titel: "iod", stellen: 1 },
 ];
 const WERTE_LINKS = WERTE.slice(0, 8);
 
@@ -133,10 +147,17 @@ const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
 
 const WERTE_RECHTS = WERTE.slice(8);
 
-const wertText = (glas: Datensatz | undefined, feld: string, vz?: boolean) => {
+const wertText = (
+  glas: Datensatz | undefined,
+  feld: string,
+  stellen: number,
+) => {
   const n = zahl(glas?.[feld]);
   if (n === null) return "";
-  return vz ? dioptrie.format(n) : dezimal.format(n);
+  // Werte mit mehr Nachkommastellen nicht abschneiden (z. B. A 80.5)
+  return Number.isInteger(n * 10 ** stellen)
+    ? prismaZahl(stellen).format(n)
+    : dezimal.format(n);
 };
 
 // Visus als Ausklappliste (Werte des Betriebs), alle anderen Werte zum
@@ -178,7 +199,7 @@ const WertEingabe = ({
       rechts
       name={`${w.titel} ${seite}`}
       wert={glas?.[w.feld]}
-      anzeige={wertText(glas, w.feld, w.vorzeichen)}
+      anzeige={wertText(glas, w.feld, w.stellen)}
       speichere={speichere}
     />
   );
@@ -496,7 +517,7 @@ export const WerteTabelle = ({
                         />
                       </Box>
                     ) : (
-                      wertText(glas, w.feld, w.vorzeichen)
+                      wertText(glas, w.feld, w.stellen)
                     )}
                   </TableCell>
                 ))}
@@ -679,6 +700,33 @@ export const BrilleKarteikarte = () => {
     { id: brille?.Fassung as number },
     { enabled: brille?.Fassung != null },
   );
+  // Glastypen der letzten Aufträge für die Ausklappliste am Glastyp
+  const { data: letzteGlastypen } = useGetList<Datensatz>(
+    "glastyp",
+    {
+      pagination: { page: 1, perPage: 300 },
+      sort: { field: "id", order: "DESC" },
+    },
+    { staleTime: 5 * 60 * 1000 },
+  );
+  const glastypNamen = useMemo(
+    () =>
+      [
+        ...new Set(
+          (letzteGlastypen ?? [])
+            .map((g) => text(g.Bezeichnung))
+            .filter(Boolean),
+        ),
+      ].sort((a, b) => a.localeCompare(b, "de")),
+    [letzteGlastypen],
+  );
+  const glastypFeld = useRef<HTMLDivElement>(null);
+  const [verordnungOffen, setVerordnungOffen] = useState(false);
+  useEffect(() => {
+    const oeffnen = () => setVerordnungOffen(true);
+    window.addEventListener(VERORDNUNG_OEFFNEN, oeffnen);
+    return () => window.removeEventListener(VERORDNUNG_OEFFNEN, oeffnen);
+  }, []);
   const { data: zuordnungen } = useGetList<Datensatz>(
     "brille_hat_zusatzleistungen",
     {
@@ -782,7 +830,6 @@ export const BrilleKarteikarte = () => {
   const zNotizen = zSumme + 1;
   const zZahlungen = zNotizen + 2;
   const zRest = zZahlungen + 1;
-  const zArzt = zRest + 2;
 
   return (
     <Card
@@ -1072,13 +1119,60 @@ export const BrilleKarteikarte = () => {
             <Beschriftung z={8} s="1 / 2">
               Glastyp
             </Beschriftung>
+            {/* Glastyp mit Ausklapp-Pfeil wie in Prisma: Liste der zuletzt
+                verwendeten Glastypen, freie Eingabe bleibt möglich */}
             <Feld z={8} s={LINKS}>
-              {textFeld(
-                "glastyp.Bezeichnung",
-                "Glastyp",
-                glasFeld("Bezeichnung"),
-                glastyp?.Bezeichnung,
-              )}
+              <Box
+                ref={glastypFeld}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignSelf: "stretch",
+                }}
+              >
+                {textFeld(
+                  "glastyp.Bezeichnung",
+                  "Glastyp",
+                  glasFeld("Bezeichnung"),
+                  glastyp?.Bezeichnung,
+                  { vorschlaege: glastypNamen },
+                )}
+              </Box>
+              <IconButton
+                size="small"
+                aria-label="Glastyp-Liste öffnen"
+                tabIndex={-1}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  // Feld in Bearbeitung bringen, dann die Liste aufklappen
+                  const suche = () =>
+                    glastypFeld.current?.querySelector<HTMLElement>(
+                      '[aria-label="Glastyp"]',
+                    );
+                  suche()?.focus();
+                  window.setTimeout(
+                    () =>
+                      suche()?.dispatchEvent(
+                        new MouseEvent("mousedown", { bubbles: true }),
+                      ),
+                    50,
+                  );
+                }}
+                sx={{
+                  mr: "-6px",
+                  ml: "4px",
+                  p: 0,
+                  width: 24,
+                  height: 22,
+                  borderRadius: "2px",
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <ArrowDropDownIcon fontSize="small" />
+              </IconButton>
             </Feld>
             <Beschriftung z={8} s="5 / 6">
               Größe
@@ -1284,6 +1378,7 @@ export const BrilleKarteikarte = () => {
             <Zellen z={zRabatt} s={BREIT} spalten="1fr 110px">
               <Wert links>
                 <Auswahl
+                  schlicht
                   name="Rabatt"
                   wert={brille.RabattBezeichnung}
                   optionen={rabattOptionen(brille.RabattBezeichnung)}
@@ -1426,81 +1521,92 @@ export const BrilleKarteikarte = () => {
             <Feld z={zRest} s="8 / 9" rechts summe>
               {betragText(rest)}
             </Feld>
-
-            {/* Verordnung (für Kassenanträge) */}
-            <Box sx={{ gridRow: zRest + 1, gridColumn: "1 / -1", height: 8 }} />
-            <Beschriftung z={zArzt} s="1 / 2">
-              Arzt
-            </Beschriftung>
-            <Feld z={zArzt} s={LINKS}>
+          </Box>
+        </Box>
+      </Box>
+      {/* Verordnung (für Kassenanträge) - in Prisma nicht auf der Karte,
+          daher im Fenster über "Optionen → Verordnung" */}
+      <Dialog
+        open={verordnungOffen}
+        onClose={() => setVerordnungOffen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Verordnung</DialogTitle>
+        <DialogContent>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "130px minmax(0, 1fr)",
+              columnGap: "12px",
+              rowGap: "8px",
+              alignItems: "center",
+              "& > .feld": (theme) => ({
+                bgcolor: feldFarbe(theme),
+                minHeight: 28,
+                px: "6px",
+                display: "flex",
+                alignItems: "center",
+                borderRadius: "3px",
+                "&:focus-within": aktivesFeld(theme),
+              }),
+            }}
+          >
+            <Typography variant="body2">Arzt</Typography>
+            <Box className="feld">
               {textFeld(
                 "VerordnenderArzt",
                 "Arzt",
                 auftrag("VerordnenderArzt"),
                 brille.VerordnenderArzt,
               )}
-            </Feld>
-            <Beschriftung z={zArzt} s="5 / 6">
-              Verordnung
-            </Beschriftung>
-            <Feld z={zArzt} s="6 / 7">
+            </Box>
+            <Typography variant="body2">Verordnung vom</Typography>
+            <Box className="feld">
               {textFeld(
                 "Verordnungsdatum",
                 "Verordnung",
                 auftrag("Verordnungsdatum"),
                 brille.Verordnungsdatum,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.Verordnungsdatum),
-                },
+                { typ: "datum", anzeige: datum(brille.Verordnungsdatum) },
               )}
-            </Feld>
-            <Beschriftung z={zArzt} s="7 / 8" rechts>
-              Muster 8
-            </Beschriftung>
-            <Feld z={zArzt} s="8 / 9">
-              {brille.ErstverordnungMuster8Vorhanden
-                ? datum(brille.ErstverordnungMuster8Datum) || "ja"
-                : ""}
-            </Feld>
-            <Beschriftung z={zArzt + 1} s="1 / 2">
-              Diagnose
-            </Beschriftung>
-            <Feld z={zArzt + 1} s={BREIT}>
+            </Box>
+            <Typography variant="body2">Diagnose</Typography>
+            <Box className="feld">
               {textFeld(
                 "Diagnose",
                 "Diagnose",
                 auftrag("Diagnose"),
                 brille.Diagnose,
               )}
-            </Feld>
-
-            {/* Übernommene Prisma-Angaben (Leistungen, Kasse, Merkmale,
-                Rechnungsdatum) klein am Ende statt in den Notizen */}
-            {text(brille.PrismaAngaben) && (
-              <Box
-                sx={{
-                  gridRow: zArzt + 2,
-                  gridColumn: "1 / -1",
-                  mt: 2,
-                  fontSize: "0.72rem",
-                  color: "text.secondary",
-                  whiteSpace: "normal",
-                }}
-              >
-                <Box component="span" sx={{ fontStyle: "italic" }}>
-                  Angaben aus Prisma:{" "}
-                </Box>
-                {text(brille.PrismaAngaben)
-                  .split(/\r?\n/)
-                  .map((z) => z.trim().replace(/^-\s*/, ""))
-                  .filter((z) => z && z !== "Leistungen:")
-                  .join(" · ")}
-              </Box>
-            )}
+            </Box>
+            <Typography variant="body2">Muster 8 liegt vor</Typography>
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              <Haken
+                an={Boolean(brille.ErstverordnungMuster8Vorhanden)}
+                name="Muster 8 liegt vor"
+                speichere={auftrag("ErstverordnungMuster8Vorhanden")}
+              />
+            </Box>
+            <Typography variant="body2">Muster 8 vom</Typography>
+            <Box className="feld">
+              {textFeld(
+                "ErstverordnungMuster8Datum",
+                "Muster 8 vom",
+                auftrag("ErstverordnungMuster8Datum"),
+                brille.ErstverordnungMuster8Datum,
+                {
+                  typ: "datum",
+                  anzeige: datum(brille.ErstverordnungMuster8Datum),
+                },
+              )}
+            </Box>
           </Box>
-        </Box>
-      </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVerordnungOffen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
       <Dialog
         open={bestellOffen}
         onClose={() => setBestellOffen(false)}
