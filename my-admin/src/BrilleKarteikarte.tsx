@@ -38,6 +38,8 @@ import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import EditIcon from "@mui/icons-material/Edit";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import { formatCurrency } from "./CurrencyField";
 import {
   MITARBEITER,
@@ -680,6 +682,70 @@ const ZusatzleistungEntfernen = ({ zuordnung }: { zuordnung: Datensatz }) => {
   );
 };
 
+// Zwei Häkchen "ja"/"nein" wie eine Auswahl: ja = bezahlt, nein = offen
+// (auch bei "teilweise offen" angehakt); Ratenzahlung/Versicherung: keins
+const BezahlungJaNein = ({
+  status,
+  speichere,
+}: {
+  status: string;
+  speichere: Speichern;
+}) => {
+  const notify = useNotify();
+  const [vorlaeufig, setVorlaeufig] = useState<string | null>(null);
+  useEffect(() => setVorlaeufig(null), [status]);
+  const aktuell = vorlaeufig ?? status;
+  const setze = async (neu: string) => {
+    if (aktuell === neu) return;
+    setVorlaeufig(neu);
+    try {
+      await speichere(neu);
+    } catch {
+      setVorlaeufig(null);
+      notify("Bezahlung konnte nicht gespeichert werden.", { type: "error" });
+    }
+  };
+  const knopf = (beschriftung: string, an: boolean, neu: string) => (
+    // Klick aufs Häkchen oder auf das Wort speichert (einmal)
+    <Box
+      onClick={() => setze(neu)}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        fontSize: "0.8rem",
+        cursor: "pointer",
+      }}
+    >
+      <IconButton
+        size="small"
+        aria-label={`Bezahlung ${beschriftung}`}
+        aria-pressed={an}
+        sx={{ p: 0.25 }}
+      >
+        {an ? (
+          <CheckBoxIcon fontSize="small" />
+        ) : (
+          <CheckBoxOutlineBlankIcon
+            fontSize="small"
+            sx={{ color: "text.disabled" }}
+          />
+        )}
+      </IconButton>
+      {beschriftung}
+    </Box>
+  );
+  return (
+    <Box sx={{ display: "flex", gap: 1.5 }}>
+      {knopf("ja", aktuell === "bezahlt", "bezahlt")}
+      {knopf(
+        "nein",
+        aktuell === "offen" || aktuell === "teilweise offen",
+        "offen",
+      )}
+    </Box>
+  );
+};
+
 export const BrilleKarteikarte = () => {
   const brille = useRecordContext<Datensatz>();
 
@@ -994,10 +1060,10 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Refraktion")}
               />
             </Feld>
-            {/* "Bezahlt" als Häkchen (statt Abholung): setzt den
-                Zahlungsstatus auf "bezahlt" bzw. zurück auf "offen" */}
+            {/* "Bezahlung" ja/nein (statt Abholung): ja = Zahlungsstatus
+                "bezahlt", nein = "offen" */}
             <Beschriftung z={3} s="5 / 6">
-              Bezahlt
+              Bezahlung
             </Beschriftung>
             <Box
               sx={{
@@ -1008,12 +1074,9 @@ export const BrilleKarteikarte = () => {
                 ml: "-4px",
               }}
             >
-              <Haken
-                an={brille.Zahlungsstatus === "bezahlt"}
-                name="Bezahlt"
-                speichere={(neu) =>
-                  auftrag("Zahlungsstatus")(neu ? "bezahlt" : "offen")
-                }
+              <BezahlungJaNein
+                status={text(brille.Zahlungsstatus)}
+                speichere={auftrag("Zahlungsstatus")}
               />
             </Box>
             <Beschriftung z={3} s="7 / 8" rechts>
