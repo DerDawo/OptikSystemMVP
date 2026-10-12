@@ -42,11 +42,6 @@ const ANREDEN = ["Frau", "Herr", "Dr.", "Prof.", "Prof. Dr."].map((a) => ({
   name: a,
 }));
 
-// Bevorzugter Kontaktweg (Spalte kunde."Kontaktweg")
-const KONTAKTWEGE = ["Handy", "SMS", "WhatsApp", "eMail", "Telefon"].map(
-  (k) => ({ id: k, name: k }),
-);
-
 const VERSICHERUNGSARTEN = [
   "Gesetzlich Krankenversichert",
   "Privat Krankenversichert",
@@ -405,23 +400,7 @@ export const KundeKarteikarte = () => {
             eMail
           </PrismaKnopf>,
         )}
-        {zeile(
-          "Geburtsdatum",
-          <Umbruch
-            links={datum("Geburtsdatum", "Geburtsdatum")}
-            beschriftung="bevorzugt"
-            rechts={
-              <Feld>
-                <Auswahl
-                  name="bevorzugter Kontaktweg"
-                  wert={kunde.Kontaktweg}
-                  optionen={KONTAKTWEGE}
-                  speichere={speichere("Kontaktweg")}
-                />
-              </Feld>
-            }
-          />,
-        )}
+        {zeile("Geburtsdatum", datum("Geburtsdatum", "Geburtsdatum"))}
 
         {/* Versichertennummer und "Kasse" (Krankenkasse, Kassen-Nr., Status,
             Versicherungsart im Fenster) */}
