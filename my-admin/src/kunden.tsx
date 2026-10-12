@@ -538,6 +538,28 @@ const Unterteilung = ({ titel }: { titel: string }) => (
   </Box>
 );
 
+// Aus Prisma übernommene, nicht medizinische Angaben klein am Ende
+const PrismaAngabenZeile = () => {
+  const record = useRecordContext();
+  const angaben = String(record?.PrismaAngaben ?? "")
+    .split(/\r?\n/)
+    .map((z) => z.trim())
+    .filter(Boolean);
+  if (angaben.length === 0) return null;
+  return (
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      sx={{ display: "block", px: 0.5, overflowWrap: "anywhere" }}
+    >
+      <Box component="span" sx={{ fontStyle: "italic" }}>
+        Angaben aus Prisma:{" "}
+      </Box>
+      {angaben.join(" · ")}
+    </Typography>
+  );
+};
+
 export const KundeShow = () => {
   const showObject = useShowController();
   const dataProvider = useDataProvider();
@@ -646,21 +668,17 @@ export const KundeShow = () => {
                 <DateField source="VersichertenkarteGueltigBis" />
               </Field>
             </ShowSection>
-            <ShowSection title="Notizen">
+            <ShowSection title="Medizinische Notizen">
               <Field label="Hinweise">
                 <HinweiseChips />
               </Field>
-              <Field label="Notizen">
-                <TextField
-                  source="Notizen"
-                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
-                />
-              </Field>
+              <DirektFeld source="Notizen" label="Medizinische Notizen" />
             </ShowSection>
             <ShowSection title="Merkmale">
               <DirektFeld source="Merkmal1" label="Beruf" />
               <DirektFeld source="Merkmal2" label="Besonderes" />
             </ShowSection>
+            <PrismaAngabenZeile />
             <DatenbankInfo />
           </ShowColumn>
           <ShowColumn>
@@ -722,9 +740,15 @@ export const KundeEdit = () => (
           <DateInput source="VersichertenkarteGueltigBis" />
         </FieldRow>
       </FormSection>
-      <FormSection title="Notizen">
+      <FormSection title="Medizinische Notizen">
         <HinweiseInput />
-        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+        <TextInput
+          source="Notizen"
+          label="Medizinische Notizen"
+          helperText="Nur medizinische Angaben (z. B. Erkrankungen, OPs, Unverträglichkeiten)"
+          multiline
+          fullWidth
+        />
       </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
@@ -813,9 +837,15 @@ export const KundeCreate = () => {
             <DateInput source="VersichertenkarteGueltigBis" />
           </FieldRow>
         </FormSection>
-        <FormSection title="Notizen">
+        <FormSection title="Medizinische Notizen">
           <HinweiseInput />
-          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+          <TextInput
+            source="Notizen"
+            label="Medizinische Notizen"
+            helperText="Nur medizinische Angaben (z. B. Erkrankungen, OPs, Unverträglichkeiten)"
+            multiline
+            fullWidth
+          />
         </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>
