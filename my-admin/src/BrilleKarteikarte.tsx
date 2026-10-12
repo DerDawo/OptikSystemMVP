@@ -160,7 +160,15 @@ export const prismaKnopf = {
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
 const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
 // Achtungsfeld: an wen die Rechnung geht
-const ACHTUNG_AUSWAHL = ["RG für KK", "RG für AG", "RG für ST"].map((a) => ({
+// nur intern auf der Karteikarte, erscheint auf keinem Beleg
+const ACHTUNG_AUSWAHL = [
+  "RG für KK",
+  "RG für AG",
+  "RG für ST",
+  "Sackwalze",
+  "Nöhlsau",
+  "Stänkerfritze",
+].map((a) => ({
   id: a,
   name: a,
 }));
