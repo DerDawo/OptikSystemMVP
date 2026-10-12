@@ -991,7 +991,9 @@ const FormulareDialog = ({
 
 // Button für die Brillenkartei (BrilleShow/BrilleEdit), der den
 // Formulare-Dialog für den aktuellen Auftrag öffnet.
-export const FormulareButton = () => {
+export const FormulareButton = ({
+  label = "Formulare",
+}: { label?: string } = {}) => {
   const record = useRecordContext();
   const [open, setOpen] = useState(false);
 
@@ -1006,7 +1008,7 @@ export const FormulareButton = () => {
         startIcon={<DescriptionIcon />}
         onClick={() => setOpen(true)}
       >
-        Formulare
+        {label}
       </Button>
       {open && (
         <FormulareDialog brille={record} onClose={() => setOpen(false)} />
