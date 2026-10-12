@@ -166,9 +166,9 @@ const ACHTUNG_AUSWAHL = [
   "RG für AG",
   "RG für ST",
   "RG für VS",
-  "SW",
-  "NS",
-  "SF",
+  "SW (Sackwalze)",
+  "NS (Nöhlsau)",
+  "SF (Stänkerfritze)",
 ].map((a) => ({
   id: a,
   name: a,
