@@ -415,3 +415,115 @@ export const berechneKassenanteil = (
   const netto = rund(positionen.reduce((s, p) => s + p.netto, 0));
   return { positionen, netto, brutto: mitMwst(netto), hinweise };
 };
+
+// Beim Übernehmen im KK-Rechner gespeicherte Positionen
+// (brille."KassenPositionen"), Grundlage für die Kostenabrechnung im
+// Berechtigungsschein
+export type GespeichertePosition = {
+  nummer: string;
+  bezeichnung: string;
+  faktor: number;
+  // Nettopreis je Stück
+  netto: number;
+};
+
+export type AbrechnungsZeile = {
+  nummer: string;
+  faktor: number;
+  // netto, Faktor × Stückpreis
+  betrag: number;
+};
+
+const zusammenfassen = (positionen: GespeichertePosition[]) => {
+  const zeilen = new Map<string, AbrechnungsZeile>();
+  for (const p of positionen) {
+    const vorhanden = zeilen.get(p.nummer);
+    if (vorhanden) {
+      vorhanden.faktor += p.faktor;
+      vorhanden.betrag = rund(vorhanden.betrag + p.netto * p.faktor);
+    } else {
+      zeilen.set(p.nummer, {
+        nummer: p.nummer,
+        faktor: p.faktor,
+        betrag: rund(p.netto * p.faktor),
+      });
+    }
+  }
+  return [...zeilen.values()];
+};
+
+export const alsGespeichertePositionen = (
+  positionen: KassenPosition[],
+): GespeichertePosition[] =>
+  positionen.map((p) => ({
+    nummer: p.nummer,
+    bezeichnung: p.bezeichnung,
+    faktor: 1,
+    netto: p.netto,
+  }));
+
+// Zuschläge, deren Summe genau `rest` ergibt - nur wenn eindeutig (z. B.
+// Brillenglasbestimmung 13,44); gleich teure Alternativen wie die beiden
+// Kantenfilter bleiben offen.
+const eindeutigeZusaetze = (
+  rest: number,
+  anzahlAugen: number,
+): GespeichertePosition[] | null => {
+  const kandidaten = ZUSAETZE.map((z) => ({
+    nummer: z.nummer,
+    bezeichnung: z.bezeichnung,
+    faktor: z.jeAuge ? anzahlAugen : 1,
+    netto: z.netto,
+  })).filter((z) => z.faktor > 0);
+  const treffer: GespeichertePosition[][] = [];
+  const suche = (
+    start: number,
+    auswahl: GespeichertePosition[],
+    summe: number,
+  ) => {
+    if (Math.abs(summe - rest) < 0.005) treffer.push(auswahl);
+    if (auswahl.length === 3 || summe > rest) return;
+    for (let i = start; i < kandidaten.length; i++) {
+      const k = kandidaten[i];
+      suche(i + 1, [...auswahl, k], rund(summe + k.netto * k.faktor));
+    }
+  };
+  suche(0, [], 0);
+  const echte = treffer.filter((t) => t.length > 0);
+  return echte.length === 1 ? echte[0] : null;
+};
+
+// Zeilen für die Kostenabrechnung im Berechtigungsschein: gespeicherte
+// Positionen aus dem KK-Rechner; bei älteren Aufträgen ohne gespeicherte
+// Positionen die Glaspositionen aus den Werten, ergänzt um eindeutig aus
+// dem KK-Anteil ableitbare Zuschläge.
+export const abrechnungsZeilen = ({
+  augen,
+  kkAnteil,
+  gespeichert,
+}: {
+  augen: { seite: "R" | "L"; glas: Record<string, unknown> | undefined }[];
+  kkAnteil: number;
+  gespeichert?: unknown;
+}): { zeilen: AbrechnungsZeile[]; netto: number; mwst: number } => {
+  let positionen: GespeichertePosition[];
+  if (Array.isArray(gespeichert) && gespeichert.length > 0) {
+    positionen = (gespeichert as GespeichertePosition[]).filter(
+      (p) => p && typeof p.nummer === "string" && Number.isFinite(p.netto),
+    );
+  } else {
+    const ergebnis = berechneKassenanteil(augen);
+    positionen = alsGespeichertePositionen(ergebnis.positionen);
+    if (kkAnteil > 0) {
+      const rest = rund(rund(kkAnteil / (1 + MWST)) - ergebnis.netto);
+      if (rest > 0.004) {
+        const anzahlAugen = new Set(ergebnis.positionen.map((p) => p.seite))
+          .size;
+        positionen.push(...(eindeutigeZusaetze(rest, anzahlAugen) ?? []));
+      }
+    }
+  }
+  const zeilen = zusammenfassen(positionen);
+  const netto = rund(zeilen.reduce((s, z) => s + z.betrag, 0));
+  return { zeilen, netto, mwst: rund(mitMwst(netto) - netto) };
+};

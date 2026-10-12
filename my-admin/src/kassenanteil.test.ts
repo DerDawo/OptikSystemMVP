@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { berechneKassenanteil, mitMwst, pluszylinder } from "./kassenanteil";
+import {
+  abrechnungsZeilen,
+  berechneKassenanteil,
+  mitMwst,
+  pluszylinder,
+} from "./kassenanteil";
 
 const nummern = (augen: Parameters<typeof berechneKassenanteil>[0]) =>
   berechneKassenanteil(augen).positionen.map((p) => `${p.seite} ${p.nummer}`);
@@ -93,5 +98,55 @@ describe("berechneKassenanteil", () => {
 
   it("Mehrwertsteuer", () => {
     expect(mitMwst(13.44)).toBe(15.99);
+  });
+});
+
+describe("abrechnungsZeilen (Berechtigungsschein)", () => {
+  const augen = [
+    { seite: "R" as const, glas: { Sph: 2.25, Cyl: 0.5 } },
+    { seite: "L" as const, glas: { Sph: 2.5, Cyl: 0.5 } },
+  ];
+
+  it("leitet die Brillenglasbestimmung eindeutig aus dem KK-Anteil ab", () => {
+    expect(abrechnungsZeilen({ augen, kkAnteil: 54.62 })).toEqual({
+      zeilen: [
+        { nummer: "25.21.01.0900", faktor: 2, betrag: 32.46 },
+        { nummer: "25.99.99.0001", faktor: 1, betrag: 13.44 },
+      ],
+      netto: 45.9,
+      mwst: 8.72,
+    });
+  });
+
+  it("ohne passenden Rest nur die Glaspositionen", () => {
+    expect(
+      abrechnungsZeilen({ augen, kkAnteil: 38.63 }).zeilen.map((z) => z.nummer),
+    ).toEqual(["25.21.01.0900"]);
+  });
+
+  it("gleich teure Kantenfilter bleiben offen (nicht eindeutig)", () => {
+    // 32,46 + 2 × 49,90 = 132,26 netto -> 157,39 brutto
+    expect(
+      abrechnungsZeilen({ augen, kkAnteil: 157.39 }).zeilen.map(
+        (z) => z.nummer,
+      ),
+    ).toEqual(["25.21.01.0900"]);
+  });
+
+  it("gespeicherte Positionen aus dem KK-Rechner haben Vorrang", () => {
+    const ergebnis = abrechnungsZeilen({
+      augen,
+      kkAnteil: 157.39,
+      gespeichert: [
+        { nummer: "25.21.01.0900", bezeichnung: "", faktor: 1, netto: 16.23 },
+        { nummer: "25.21.01.0900", bezeichnung: "", faktor: 1, netto: 16.23 },
+        { nummer: "25.21.15.3001", bezeichnung: "", faktor: 2, netto: 49.9 },
+      ],
+    });
+    expect(ergebnis.zeilen).toEqual([
+      { nummer: "25.21.01.0900", faktor: 2, betrag: 32.46 },
+      { nummer: "25.21.15.3001", faktor: 2, betrag: 99.8 },
+    ]);
+    expect(ergebnis.mwst).toBe(25.13);
   });
 });

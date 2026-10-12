@@ -180,6 +180,27 @@ describe("Berechtigungsschein GKV (Original-PDF)", () => {
     });
   });
 
+  it("trägt Hilfsmittelpositionen, Faktor, Betrag und MwSt. ein", () => {
+    const werte = felder({
+      ...entities,
+      brille: { ...entities.brille, BrillenArt: "Fernbrille", KKAnteil: 54.62 },
+      glasRechts: { Sph: 2.25, Cyl: 0.5, A: 50 },
+      glasLinks: { Sph: 2.5, Cyl: 0.5, A: 152 },
+    });
+    expect(werte).toMatchObject({
+      abr1_hmv: "25.21.01.0900",
+      abr1_faktor: "2",
+      abr1_betrag: "32,46",
+      abr2_hmv: "25.99.99.0001",
+      abr2_faktor: "1",
+      abr2_betrag: "13,44",
+      abr3_hmv: "zzgl. 19 % MwSt.",
+      abr3_betrag: "8,72",
+      rechnungsbetrag: "54,62",
+    });
+    expect(werte.abr4_hmv).toBeUndefined();
+  });
+
   it("kreuzt die Sehstärkenänderung nur bei Veränderung an", () => {
     const ohne = felder({
       ...entities,

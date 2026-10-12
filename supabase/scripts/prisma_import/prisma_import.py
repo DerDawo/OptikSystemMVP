@@ -59,6 +59,16 @@ BETRIEB = {
 # aber gekennzeichnet (Notizen bzw. bei Brillen "PrismaAngaben").
 FILIALE_GELOESCHT = "999"
 
+# Kundennotizen: medizinische Zeilen (gleiche Begriffe wie in Migration
+# 20261012020000_kunde_notizen_medizinisch.sql), reine Trenn-/Leerzeilen
+MEDIZINISCH = re.compile(
+    r"(katarakt|grauer star|glaukom|grüner star|diabet|\bop\b|cat-op|operiert|augenarzt|allerg|sicca"
+    r"|trockene? auge|amblyop|schiel|makula|netzhaut|medikament|keratokonus|hornhaut|augentropfen"
+    r"|sehschw|blind|migräne|epilep)",
+    re.IGNORECASE,
+)
+LEERZEILE = re.compile(r'^[\s",*\-]*$')
+
 # Aufträge, die jünger sind, gelten evtl. noch als in Arbeit: Ihr Glas-
 # Auftragsstatus (Pflichtfeld) kommt aus dem Prisma-Bestellkennzeichen
 # glbest/glbest_l statt pauschal "abgeholt".
@@ -217,8 +227,12 @@ def map_kunden(dump):
         geloescht = r["filnr"] == FILIALE_GELOESCHT
         report["geloescht"] += geloescht
 
-        notizen = lines(
-            clean(r["memo"]),
+        # Notizen nur mit medizinischen Memo-Zeilen, alles andere in
+        # "PrismaAngaben" (Migration 20261012020000)
+        memo_zeilen = [z for z in (clean(r["memo"]) or "").splitlines() if not LEERZEILE.match(z)]
+        notizen = lines(*(z for z in memo_zeilen if MEDIZINISCH.search(z)))
+        prisma_angaben = lines(
+            *(z for z in memo_zeilen if not MEDIZINISCH.search(z)),
             None if an_ok else f"Anrede (Prisma): {clean(r['anrede'])}",
             f"Krankenkasse: {kassen_name}" if gesetzlich else None,
             f"Telefon geschäftlich (Prisma): {tel['G']}" if "G" in tel and clean(r["tel_job"]) else None,
@@ -252,6 +266,7 @@ def map_kunden(dump):
             "Merkmal3": clean(r["ku_merkmal3"]),
             "Merkmal4": clean(r["ku_merkmal4"]),
             "Notizen": notizen,
+            "PrismaAngaben": prisma_angaben,
         })
     return result, report
 

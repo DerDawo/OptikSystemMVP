@@ -45,7 +45,17 @@ type BrilleRow = {
   Summe?: number | null;
   Restbetrag?: number | null;
   Mahnstufe?: number | null;
+  Zahlungsstatus?: string | null;
 };
+
+// Zahlungsstatus, bei denen noch Geld vom Kunden aussteht (ohne
+// "Versicherung" - dort zahlt die Versicherung)
+const UNBEZAHLT = ["offen", "teilweise offen", "Ratenzahlung"];
+
+const euro = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
+});
 
 type KontaktlinseRow = {
   id: number | string;
@@ -82,7 +92,11 @@ interface DashboardStats {
     total: number;
   };
   neueKunden: number;
-  mahnstufen: { stufe: number; anzahl: number }[];
+  schuldner: {
+    rows: (BrilleRow & { kundeName: string })[];
+    total: number;
+    summe: number;
+  };
   topZusatzleistungen: {
     id: number | string;
     bezeichnung: string;
@@ -401,7 +415,7 @@ export const Dashboard = () => {
         kontaktlinseRecentRes,
         termineRes,
         neueKundenRes,
-        mahnstufenRes,
+        schuldnerRes,
         zusatzleistungLinksRes,
       ] = await Promise.all([
         dataProvider.getList("brille", {
@@ -430,10 +444,15 @@ export const Dashboard = () => {
             "created_at@lt": startOfNextMonth,
           },
         }),
+        // Unbezahlte Aufträge mit offenem Restbetrag (Restbetrag wird in der
+        // Datenbank aus Summe - Anzahlung - KK-Anteil berechnet)
         dataProvider.getList("brille", {
           pagination: { page: 1, perPage: 500 },
-          sort: { field: "Mahnstufe", order: "DESC" },
-          filter: { "Mahnstufe@gt": 0 },
+          sort: { field: "Datum", order: "ASC" },
+          filter: {
+            "Zahlungsstatus@in": `(${UNBEZAHLT.map((s) => `"${s}"`).join(",")})`,
+            "Restbetrag@gt": 0,
+          },
         }),
         dataProvider.getList("brille_hat_zusatzleistungen", {
           pagination: { page: 1, perPage: 1000 },
@@ -467,15 +486,13 @@ export const Dashboard = () => {
 
       const neueKunden = neueKundenRes.total ?? neueKundenRes.data.length;
 
-      const mahnstufenCounts = new Map<number, number>();
-      (mahnstufenRes.data as BrilleRow[]).forEach((row) => {
-        const stufe = row.Mahnstufe ?? 0;
-        mahnstufenCounts.set(stufe, (mahnstufenCounts.get(stufe) ?? 0) + 1);
-      });
-      const mahnstufen = [1, 2, 3].map((stufe) => ({
-        stufe,
-        anzahl: mahnstufenCounts.get(stufe) ?? 0,
-      }));
+      const schuldnerAll = schuldnerRes.data as BrilleRow[];
+      const schuldnerRows = schuldnerAll.slice(0, 8);
+      const schuldnerSumme =
+        Math.round(
+          schuldnerAll.reduce((s, r) => s + (Number(r.Restbetrag) || 0), 0) *
+            100,
+        ) / 100;
 
       const linkRows = zusatzleistungLinksRes.data as {
         ZusatzleistungID: number | string;
@@ -494,7 +511,7 @@ export const Dashboard = () => {
 
       const kundeIds = Array.from(
         new Set(
-          [...abholbereitRows, ...termineHeuteRows]
+          [...abholbereitRows, ...termineHeuteRows, ...schuldnerRows]
             .map((r) => r.kunde_id)
             .filter((v): v is number | string => v !== undefined && v !== null),
         ),
@@ -552,7 +569,14 @@ export const Dashboard = () => {
           total: abholbereitAll.length,
         },
         neueKunden,
-        mahnstufen,
+        schuldner: {
+          rows: schuldnerRows.map((r) => ({
+            ...r,
+            kundeName: kundeName(r.kunde_id),
+          })),
+          total: schuldnerRes.total ?? schuldnerAll.length,
+          summe: schuldnerSumme,
+        },
         topZusatzleistungen,
       });
       setLastUpdated(new Date());
@@ -569,9 +593,6 @@ export const Dashboard = () => {
   }, [loadDashboard]);
 
   const now = dayjs();
-  const maxMahnstufe = stats
-    ? Math.max(0, ...stats.mahnstufen.map((m) => m.anzahl))
-    : 0;
   const maxZusatzleistung = stats
     ? Math.max(0, ...stats.topZusatzleistungen.map((z) => z.anzahl))
     : 0;
@@ -852,25 +873,101 @@ export const Dashboard = () => {
             </DashboardCard>
 
             <DashboardCard
-              title="Mahnstufen"
+              title="Schuldner – unbezahlt"
               action={
                 <Button size="small" onClick={() => navigate("/mahnungen")}>
                   Mahnungen
                 </Button>
               }
             >
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                {stats.mahnstufen.map(({ stufe, anzahl }) => (
-                  <BarRow
-                    key={stufe}
-                    label={`${stufe}. Mahnung`}
-                    value={anzahl}
-                    max={maxMahnstufe}
-                    tone={stufe >= 3 ? "error" : "warning"}
-                    suffix=" Auftr."
-                  />
-                ))}
-              </Box>
+              {stats.schuldner.rows.length === 0 ? (
+                <EmptyHint>Keine unbezahlten Aufträge.</EmptyHint>
+              ) : (
+                <Box
+                  sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}
+                >
+                  {stats.schuldner.rows.map((row) => (
+                    <ButtonBase
+                      key={row.id}
+                      onClick={() => navigate(`/brille/${row.id}/show`)}
+                      sx={(theme) => ({
+                        ...listRowSx(theme),
+                        flexWrap: "wrap",
+                      })}
+                    >
+                      <Box
+                        aria-hidden="true"
+                        sx={(theme) => ({
+                          flex: "none",
+                          width: 34,
+                          height: 34,
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 12,
+                          fontWeight: 700,
+                          backgroundColor: toneColors(theme, "error").bg,
+                          color: toneColors(theme, "error").fg,
+                        })}
+                      >
+                        {initialen(row.kundeName)}
+                      </Box>
+                      <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                        <Typography
+                          noWrap
+                          sx={{ fontWeight: 600, fontSize: 14 }}
+                        >
+                          {row.kundeName}
+                        </Typography>
+                        <Typography
+                          noWrap
+                          sx={{
+                            fontSize: 12.5,
+                            color: (theme) => tokensFor(theme).text3,
+                          }}
+                        >
+                          Auftrag {row.id}
+                          {row.Datum
+                            ? ` · seit ${dayjs(row.Datum).format("DD.MM.YYYY")}`
+                            : ""}
+                          {row.Zahlungsstatus ? ` · ${row.Zahlungsstatus}` : ""}
+                        </Typography>
+                      </Box>
+                      <Typography
+                        sx={(theme) => ({
+                          minWidth: 90,
+                          textAlign: "right",
+                          fontWeight: 600,
+                          fontVariantNumeric: "tabular-nums",
+                          color: toneColors(theme, "error").fg,
+                        })}
+                      >
+                        {euro.format(Number(row.Restbetrag) || 0)}
+                      </Typography>
+                    </ButtonBase>
+                  ))}
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      px: 1.5,
+                      pt: 0.75,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      color: (theme) => tokensFor(theme).text3,
+                    }}
+                  >
+                    <span>
+                      {stats.schuldner.total} unbezahlte
+                      {stats.schuldner.total === 1 ? "r Auftrag" : " Aufträge"}
+                      {stats.schuldner.total > stats.schuldner.rows.length
+                        ? ` (${stats.schuldner.total - stats.schuldner.rows.length} weitere)`
+                        : ""}
+                    </span>
+                    <strong>{euro.format(stats.schuldner.summe)} offen</strong>
+                  </Typography>
+                </Box>
+              )}
             </DashboardCard>
 
             <DashboardCard title="Top Zusatzleistungen" span>

@@ -35,7 +35,6 @@ import {
   Typography,
   useMediaQuery,
 } from "@mui/material";
-import { AnamnesebogenButton } from "./FormulareDialog";
 import { useTastenkuerzel } from "./tastenkuerzel";
 import { ChangeEvent, useCallback, useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
@@ -451,7 +450,6 @@ const MessageButton = () => {
 const KundeShowActions = () => (
   <ShowActionsBar>
     <MessageButton />
-    <AnamnesebogenButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
@@ -538,6 +536,28 @@ const Unterteilung = ({ titel }: { titel: string }) => (
   </Box>
 );
 
+// Aus Prisma übernommene, nicht medizinische Angaben klein am Ende
+const PrismaAngabenZeile = () => {
+  const record = useRecordContext();
+  const angaben = String(record?.PrismaAngaben ?? "")
+    .split(/\r?\n/)
+    .map((z) => z.trim())
+    .filter(Boolean);
+  if (angaben.length === 0) return null;
+  return (
+    <Typography
+      variant="caption"
+      color="text.secondary"
+      sx={{ display: "block", px: 0.5, overflowWrap: "anywhere" }}
+    >
+      <Box component="span" sx={{ fontStyle: "italic" }}>
+        Angaben aus Prisma:{" "}
+      </Box>
+      {angaben.join(" · ")}
+    </Typography>
+  );
+};
+
 export const KundeShow = () => {
   const showObject = useShowController();
   const dataProvider = useDataProvider();
@@ -564,32 +584,26 @@ export const KundeShow = () => {
         <ShowColumns spalten="minmax(0, 1fr) minmax(0, 1.8fr)">
           <ShowColumn kompakt>
             <ShowSection title="Stammdaten">
-              {/* Kundennummer, Aufnahmedatum und Anrede in einer Reihe */}
+              {/* Anrede, Vorname und Nachname in einer Reihe */}
               <Box
                 sx={{
                   gridColumn: "1 / -1",
                   display: "grid",
-                  gridTemplateColumns: { xs: "1fr", sm: "repeat(3, 1fr)" },
+                  gridTemplateColumns: { xs: "1fr", sm: "0.6fr 1fr 1fr" },
                   gap: "0.25em 2em",
                   "& > *": { minWidth: 0 },
                 }}
               >
                 <Field>
-                  <TextField source="KundenNummer" />
-                </Field>
-                <Field>
-                  <DateField source="Aufnahmedatum" />
-                </Field>
-                <Field>
                   <TextField source="Anrede" />
                 </Field>
+                <Field>
+                  <TextField source="Vorname" />
+                </Field>
+                <Field>
+                  <TextField source="Nachname" />
+                </Field>
               </Box>
-              <Field>
-                <TextField source="Vorname" />
-              </Field>
-              <Field>
-                <TextField source="Nachname" />
-              </Field>
               <Field>
                 <TextField source="Geschlecht" />
               </Field>
@@ -646,21 +660,23 @@ export const KundeShow = () => {
                 <DateField source="VersichertenkarteGueltigBis" />
               </Field>
             </ShowSection>
-            <ShowSection title="Notizen">
+            <ShowSection title="Medizinische Notizen">
               <Field label="Hinweise">
                 <HinweiseChips />
               </Field>
-              <Field label="Notizen">
-                <TextField
-                  source="Notizen"
-                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
-                />
-              </Field>
+              <DirektFeld source="Notizen" label="Medizinische Notizen" />
             </ShowSection>
             <ShowSection title="Merkmale">
               <DirektFeld source="Merkmal1" label="Beruf" />
               <DirektFeld source="Merkmal2" label="Besonderes" />
+              <Field>
+                <TextField source="KundenNummer" />
+              </Field>
+              <Field>
+                <DateField source="Aufnahmedatum" />
+              </Field>
             </ShowSection>
+            <PrismaAngabenZeile />
             <DatenbankInfo />
           </ShowColumn>
           <ShowColumn>
@@ -722,9 +738,15 @@ export const KundeEdit = () => (
           <DateInput source="VersichertenkarteGueltigBis" />
         </FieldRow>
       </FormSection>
-      <FormSection title="Notizen">
+      <FormSection title="Medizinische Notizen">
         <HinweiseInput />
-        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+        <TextInput
+          source="Notizen"
+          label="Medizinische Notizen"
+          helperText="Nur medizinische Angaben (z. B. Erkrankungen, OPs, Unverträglichkeiten)"
+          multiline
+          fullWidth
+        />
       </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
@@ -813,9 +835,15 @@ export const KundeCreate = () => {
             <DateInput source="VersichertenkarteGueltigBis" />
           </FieldRow>
         </FormSection>
-        <FormSection title="Notizen">
+        <FormSection title="Medizinische Notizen">
           <HinweiseInput />
-          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+          <TextInput
+            source="Notizen"
+            label="Medizinische Notizen"
+            helperText="Nur medizinische Angaben (z. B. Erkrankungen, OPs, Unverträglichkeiten)"
+            multiline
+            fullWidth
+          />
         </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>

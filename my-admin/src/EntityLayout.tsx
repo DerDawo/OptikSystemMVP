@@ -1,14 +1,40 @@
 import { Children, ReactNode } from "react";
-import { Box, Card, Divider, Typography } from "@mui/material";
+import { useNavigate } from "react-router-dom";
+import { Box, Button, Card, Divider, Typography } from "@mui/material";
 import {
   EditButton,
   Labeled,
-  ListButton,
   ShowButton,
   TopToolbar,
+  useCreatePath,
   useRecordContext,
+  useResourceContext,
 } from "react-admin";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import { zurueckZiel } from "./seitenVerlauf";
+
+// "Zurück": genau zum letzten Bild (z. B. vom Auftrag zum Kunden oder zur
+// Suche); bereits verlassene Formulare werden übersprungen (seitenVerlauf).
+// Ohne Verlauf (Seite direkt geöffnet) zur Liste.
+export const ZurueckButton = () => {
+  const navigate = useNavigate();
+  const resource = useResourceContext();
+  const createPath = useCreatePath();
+  return (
+    <Button
+      size="small"
+      startIcon={<ArrowBackIcon />}
+      onClick={() => {
+        const ziel = zurueckZiel();
+        if (ziel) navigate(ziel);
+        else if (resource) navigate(createPath({ resource, type: "list" }));
+        else navigate("/");
+      }}
+    >
+      Zurück
+    </Button>
+  );
+};
 
 /*
  * Shared building blocks for grouped, responsive Show/Edit pages.
@@ -166,7 +192,7 @@ export const ShowActionsBar = ({ children }: { children?: ReactNode }) => (
   <TopToolbar sx={{ gap: 1, flexWrap: "wrap" }}>
     {children}
     <EditButton />
-    <ListButton label="Zurück" icon={<ArrowBackIcon />} />
+    <ZurueckButton />
   </TopToolbar>
 );
 
@@ -175,7 +201,7 @@ export const EditActionsBar = ({ children }: { children?: ReactNode }) => (
   <TopToolbar sx={{ gap: 1, flexWrap: "wrap" }}>
     {children}
     <ShowButton />
-    <ListButton label="Zurück" icon={<ArrowBackIcon />} />
+    <ZurueckButton />
   </TopToolbar>
 );
 

@@ -24,6 +24,7 @@ import {
   sehstaerkeVeraendert,
 } from "./formularVorschlaege";
 import { verteileWerte } from "./aokBerechtigungsscheinTemplate";
+import { MWST, abrechnungsZeilen } from "./kassenanteil";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
@@ -234,8 +235,8 @@ const bapFelder = (entities: DocumentMergeEntities) => {
 // (scripts/berechtigungsschein-gkv-felder.mjs). Vorausgefüllt wie bisher
 // beim nachgebauten AOK-Schein: Versichertendaten, IK, Datum,
 // Rechnungsnummer, Werte F/N je Auge, bei Sehstärkenänderung das Kreuz und
-// die Glasanzahl, als Rechnungsbetrag der Kassenanteil. Unfall,
-// Abrechnungspositionen und Unterschriften bleiben frei.
+// die Glasanzahl, die Hilfsmittelpositionen (kassenanteil.ts) und als
+// Rechnungsbetrag der Kassenanteil. Unfall und Unterschriften bleiben frei.
 const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
   const k = kunde(entities);
   const brille: Record<string, unknown> = entities.brille ?? {};
@@ -254,6 +255,39 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
     [`${zeile}_hsa`]: formatWert(w.HSA, "frei"),
   });
   const kassenanteil = Number(brille.KKAnteil) || 0;
+  // Kostenabrechnung: Hilfsmittelpositionen netto, dazu eine Zeile MwSt.,
+  // damit die Spalte den Rechnungsbetrag (KK-Anteil inkl. MwSt.) ergibt
+  const abrechnung = abrechnungsZeilen({
+    augen: [
+      { seite: "R", glas: entities.glasRechts ?? undefined },
+      { seite: "L", glas: entities.glasLinks ?? undefined },
+    ],
+    kkAnteil: kassenanteil,
+    gespeichert: brille.KassenPositionen,
+  });
+  const zeilen = [
+    ...abrechnung.zeilen.map((z) => ({
+      hmv: z.nummer,
+      faktor: String(z.faktor),
+      betrag: formatWert(z.betrag, "zwei"),
+    })),
+    ...(abrechnung.zeilen.length > 0
+      ? [
+          {
+            hmv: `zzgl. ${Math.round(MWST * 100)} % MwSt.`,
+            faktor: "",
+            betrag: formatWert(abrechnung.mwst, "zwei"),
+          },
+        ]
+      : []),
+  ].slice(0, 9);
+  const abrechnungsFelder = Object.fromEntries(
+    zeilen.flatMap((z, i) => [
+      [`abr${i + 1}_hmv`, z.hmv],
+      [`abr${i + 1}_faktor`, z.faktor],
+      [`abr${i + 1}_betrag`, z.betrag],
+    ]),
+  );
   return {
     krankenkasse: text(k.Krankenkasse),
     name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
@@ -277,6 +311,7 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
     ...werte("FL", links.ferne),
     ...werte("NR", rechts.naehe),
     ...werte("NL", links.naehe),
+    ...abrechnungsFelder,
     rechnungsbetrag: kassenanteil > 0 ? formatWert(kassenanteil, "zwei") : "",
   };
 };
