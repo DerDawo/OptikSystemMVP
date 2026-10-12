@@ -169,6 +169,7 @@ const ACHTUNG_AUSWAHL = [
   "SW (Sackwalze)",
   "NS (Nöhlsau)",
   "SF (Stänkerfritze)",
+  "GH (Geizhals)",
 ].map((a) => ({
   id: a,
   name: a,
