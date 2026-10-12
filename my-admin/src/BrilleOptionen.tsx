@@ -108,7 +108,7 @@ export const BrilleOptionenMenu = () => {
           )
         }
       >
-        Verordnung (Arzt, Diagnose, Muster 8)
+        Verordnung (Arzt, Diagnose)
       </Button>
       <KarteikarteKopierenButton nurGlaswerte label="Optische Werte kopieren" />
       <KarteikarteKopierenButton label="Karteiwerte kopieren" />

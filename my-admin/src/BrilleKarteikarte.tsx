@@ -1580,27 +1580,6 @@ export const BrilleKarteikarte = () => {
                 brille.Diagnose,
               )}
             </Box>
-            <Typography variant="body2">Muster 8 liegt vor</Typography>
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-              <Haken
-                an={Boolean(brille.ErstverordnungMuster8Vorhanden)}
-                name="Muster 8 liegt vor"
-                speichere={auftrag("ErstverordnungMuster8Vorhanden")}
-              />
-            </Box>
-            <Typography variant="body2">Muster 8 vom</Typography>
-            <Box className="feld">
-              {textFeld(
-                "ErstverordnungMuster8Datum",
-                "Muster 8 vom",
-                auftrag("ErstverordnungMuster8Datum"),
-                brille.ErstverordnungMuster8Datum,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.ErstverordnungMuster8Datum),
-                },
-              )}
-            </Box>
           </Box>
         </DialogContent>
         <DialogActions>
