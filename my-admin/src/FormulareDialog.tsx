@@ -683,17 +683,26 @@ const FormulareDialog = ({
             ? `Sehr geehrter Herr ${nachname}`
             : "Guten Tag";
       const firma = String(betrieb?.Firmenname ?? "").trim();
-      const ergebnis = await belegVersenden(kanal, datei, {
-        an:
-          kanal === "email"
-            ? String(kunde?.Email ?? "").trim()
-            : choosePhoneNumberForMessaging([
-                kunde?.Handy,
-                kunde?.TelefonnummerPrivat,
-              ]),
-        betreff: `${art}${nummer ? ` ${nummer}` : ""}`,
-        text: `${gruss},\n\nanbei erhalten Sie Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""} als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
-      });
+      const ergebnis = await belegVersenden(
+        kanal,
+        datei,
+        {
+          an:
+            kanal === "email"
+              ? String(kunde?.Email ?? "").trim()
+              : choosePhoneNumberForMessaging([
+                  kunde?.Handy,
+                  kunde?.TelefonnummerPrivat,
+                ]),
+          betreff: `${art}${nummer ? ` ${nummer}` : ""}`,
+          text: `${gruss},\n\nanbei erhalten Sie Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""} als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
+        },
+        (adresse) =>
+          notify(
+            `E-Mail-Adresse ${adresse} kopiert – in Outlook bei „An“ mit Strg+V einfügen.`,
+            { type: "info", autoHideDuration: 15000 },
+          ),
+      );
       if (ergebnis === "heruntergeladen") {
         notify(
           kanal === "email"
