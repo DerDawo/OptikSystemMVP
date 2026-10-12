@@ -169,6 +169,40 @@ const Teile = ({
   </Box>
 );
 
+// Feld | Beschriftung + Feld in einer Zeile; reicht der Platz nicht, rutscht
+// der rechte Teil geschlossen in die nächste Zeile, statt zu schrumpfen
+const Umbruch = ({
+  links,
+  beschriftung,
+  rechts,
+}: {
+  links: ReactNode;
+  beschriftung: string;
+  rechts: ReactNode;
+}) => (
+  <Box
+    sx={{
+      display: "flex",
+      flexWrap: "wrap",
+      gap: "6px 8px",
+      alignItems: "center",
+    }}
+  >
+    <Box sx={{ flex: "1 1 120px", minWidth: 120 }}>{links}</Box>
+    <Box
+      sx={{
+        flex: "1 1 250px",
+        display: "flex",
+        gap: "8px",
+        alignItems: "center",
+      }}
+    >
+      <Beschriftung>{beschriftung}</Beschriftung>
+      <Box sx={{ flex: 1, minWidth: 130 }}>{rechts}</Box>
+    </Box>
+  </Box>
+);
+
 export const KundeKarteikarte = () => {
   const kunde = useRecordContext<Datensatz>();
   const dataProvider = useDataProvider();
@@ -286,8 +320,8 @@ export const KundeKarteikarte = () => {
         sx={{
           display: "grid",
           gridTemplateColumns: {
-            xs: "110px minmax(0, 1fr) 96px",
-            md: "140px minmax(0, 1fr) 140px",
+            xs: "108px minmax(0, 1fr) 84px",
+            md: "120px minmax(0, 1fr) 104px",
           },
           columnGap: "12px",
           rowGap: "6px",
@@ -295,11 +329,11 @@ export const KundeKarteikarte = () => {
       >
         {zeile(
           "Kunden-Nummer",
-          <Teile spalten="minmax(0, 1fr) auto minmax(0, 1fr)">
-            {text("KundenNummer", "Kunden-Nummer", { rechts: true })}
-            <Beschriftung rechts>Aufnahmedatum</Beschriftung>
-            {datum("Aufnahmedatum", "Aufnahmedatum")}
-          </Teile>,
+          <Umbruch
+            links={text("KundenNummer", "Kunden-Nummer")}
+            beschriftung="Aufnahmedatum"
+            rechts={datum("Aufnahmedatum", "Aufnahmedatum")}
+          />,
         )}
         {zeile(
           "Anrede",
@@ -321,14 +355,14 @@ export const KundeKarteikarte = () => {
         {zeile("Nachname", text("Nachname", "Nachname"))}
         {zeile(
           "Strasse",
-          <Teile spalten="minmax(0, 1fr) 90px">
+          <Teile spalten="minmax(0, 1fr) minmax(70px, 90px)">
             {text("Straße", "Straße")}
             {text("Hausnummer", "Hausnummer")}
           </Teile>,
         )}
         {zeile(
           "PLZ/Ort",
-          <Teile spalten="100px minmax(0, 1fr)">
+          <Teile spalten="minmax(80px, 100px) minmax(0, 1fr)">
             {text("Postleitzahl", "Postleitzahl")}
             {text("Stadt", "Ort")}
           </Teile>,
@@ -359,111 +393,102 @@ export const KundeKarteikarte = () => {
         )}
         {zeile(
           "Geburtsdatum",
-          <Teile spalten="minmax(0, 1fr) auto minmax(0, 1fr)">
-            {datum("Geburtsdatum", "Geburtsdatum")}
-            <Beschriftung rechts>bevorzugt</Beschriftung>
-            <Feld>
-              <Auswahl
-                name="bevorzugter Kontaktweg"
-                wert={kunde.Kontaktweg}
-                optionen={KONTAKTWEGE}
-                speichere={speichere("Kontaktweg")}
-              />
-            </Feld>
-          </Teile>,
+          <Umbruch
+            links={datum("Geburtsdatum", "Geburtsdatum")}
+            beschriftung="bevorzugt"
+            rechts={
+              <Feld>
+                <Auswahl
+                  name="bevorzugter Kontaktweg"
+                  wert={kunde.Kontaktweg}
+                  optionen={KONTAKTWEGE}
+                  speichere={speichere("Kontaktweg")}
+                />
+              </Feld>
+            }
+          />,
         )}
 
+        {/* Versichertennummer und "Kasse" (Krankenkasse, Kassen-Nr., Status,
+            Versicherungsart im Fenster) */}
         {zeile(
-          "Krankenkasse",
+          "Versicherten-Nr.",
           <Feld grau>
             <Eingabe
-              name="Krankenkasse"
-              wert={kunde.Krankenkasse}
-              speichere={speichere("Krankenkasse")}
+              name="Versicherten-Nr."
+              wert={kunde.VersichertenNummer}
+              speichere={speichere("VersichertenNummer")}
             />
           </Feld>,
           <PrismaKnopf onClick={() => setKasseOffen(true)}>Kasse</PrismaKnopf>,
           true,
         )}
-        {zeile(
-          "",
-          <Feld grau>
-            <Eingabe
-              name="Versichertenstatus"
-              wert={kunde.Versichertenstatus}
-              speichere={speichere("Versichertenstatus")}
-            />
-          </Feld>,
-        )}
 
-        {zeile("Merkmal 1", text("Merkmal1", "Merkmal 1"), undefined, true)}
-        {zeile("Merkmal 2", text("Merkmal2", "Merkmal 2"))}
-        {zeile("Merkmal 3", text("Merkmal3", "Merkmal 3"))}
-        {zeile("Merkmal 4", text("Merkmal4", "Merkmal 4"))}
+        {zeile("Beruf", text("Merkmal1", "Beruf"), undefined, true)}
 
+        {/* Hinweise (Auswahl) und medizinische Notizen in einem Feld */}
         {zeile(
-          "Hinweise",
-          <Feld>
-            <Select
-              multiple
-              variant="standard"
-              disableUnderline
-              displayEmpty
-              fullWidth
-              value={hinweise}
-              onChange={async (e) => {
-                const neu = e.target.value as string[];
-                try {
-                  await speichere("Hinweise")(neu as never);
-                } catch {
-                  notify("Hinweise konnten nicht gespeichert werden.", {
-                    type: "error",
-                  });
-                }
-              }}
-              renderValue={(werte) =>
-                werte.length === 0 ? (
-                  ""
-                ) : (
-                  <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                    {werte.map((h) => (
-                      <Chip
-                        key={h}
-                        label={h}
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                      />
-                    ))}
-                  </Box>
-                )
-              }
-              inputProps={{ "aria-label": "Hinweise" }}
-              sx={{ "& .MuiSelect-select": { py: "3px" } }}
+          "Med. Hinweise",
+          <Feld mehrzeilig>
+            <Box
+              sx={{ width: "100%", display: "flex", flexDirection: "column" }}
             >
-              {[
-                ...HINWEISE,
-                ...hinweise.filter((h) => !HINWEISE.includes(h)),
-              ].map((h) => (
-                <MenuItem key={h} value={h}>
-                  {h}
-                </MenuItem>
-              ))}
-            </Select>
+              <Select
+                multiple
+                variant="standard"
+                disableUnderline
+                displayEmpty
+                fullWidth
+                value={hinweise}
+                onChange={async (e) => {
+                  const neu = e.target.value as string[];
+                  try {
+                    await speichere("Hinweise")(neu as never);
+                  } catch {
+                    notify("Hinweise konnten nicht gespeichert werden.", {
+                      type: "error",
+                    });
+                  }
+                }}
+                renderValue={(werte) =>
+                  werte.length === 0 ? (
+                    ""
+                  ) : (
+                    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
+                      {werte.map((h) => (
+                        <Chip
+                          key={h}
+                          label={h}
+                          size="small"
+                          color="warning"
+                          variant="outlined"
+                        />
+                      ))}
+                    </Box>
+                  )
+                }
+                inputProps={{ "aria-label": "Hinweise" }}
+                sx={{ "& .MuiSelect-select": { py: "3px" } }}
+              >
+                {[
+                  ...HINWEISE,
+                  ...hinweise.filter((h) => !HINWEISE.includes(h)),
+                ].map((h) => (
+                  <MenuItem key={h} value={h}>
+                    {h}
+                  </MenuItem>
+                ))}
+              </Select>
+              <Eingabe
+                name="Medizinische Notizen"
+                wert={kunde.Notizen}
+                speichere={speichere("Notizen")}
+                mehrzeilig
+              />
+            </Box>
           </Feld>,
           undefined,
           true,
-        )}
-        {zeile(
-          "Med. Notizen",
-          <Feld mehrzeilig>
-            <Eingabe
-              name="Medizinische Notizen"
-              wert={kunde.Notizen}
-              speichere={speichere("Notizen")}
-              mehrzeilig
-            />
-          </Feld>,
         )}
       </Box>
 
@@ -527,8 +552,6 @@ export const KundeKarteikarte = () => {
                 speichere={speichere("KrankenversicherungsTyp")}
               />
             </Feld>
-            <Beschriftung>Karte gültig bis</Beschriftung>
-            {datum("VersichertenkarteGueltigBis", "Karte gültig bis")}
           </Box>
         </DialogContent>
         <DialogActions>
