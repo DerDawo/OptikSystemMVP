@@ -28,7 +28,7 @@ const GEHE_ZU: ({ text: string; to: string; kuerzel?: string } | null)[] = [
   { text: "Fassungen", to: "/fassung" },
   null,
   { text: "Textverarbeitung (Vorlagen)", to: "/dokumentvorlage" },
-  { text: "Statistiken", to: "/" },
+  { text: "Statistiken", to: "/statistiken" },
   { text: "Betriebsdaten", to: "/betrieb/1" },
 ];
 
