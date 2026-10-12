@@ -1298,7 +1298,12 @@ export const BrilleKarteikarte = () => {
                     { seite: "R", glas: augen[0].glas },
                     { seite: "L", glas: augen[1].glas },
                   ]}
-                  speichere={auftrag("KKAnteil")}
+                  speichere={(brutto, positionen) =>
+                    auftrag("KKAnteil", () => ({
+                      KKAnteil: brutto,
+                      KassenPositionen: positionen,
+                    }))(brutto)
+                  }
                   augenaerztlicheVerordnung={Boolean(
                     text(brille.VerordnenderArzt) || brille.Verordnungsdatum,
                   )}
@@ -1309,7 +1314,11 @@ export const BrilleKarteikarte = () => {
               {textFeld(
                 "KKAnteil",
                 "KK-Anteil",
-                auftrag("KKAnteil"),
+                // von Hand eingetragen: gespeicherte Rechner-Positionen passen nicht mehr
+                auftrag("KKAnteil", (neu) => ({
+                  KKAnteil: neu,
+                  KassenPositionen: null,
+                })),
                 brille.KKAnteil,
                 {
                   typ: "zahl",
