@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   abrechnungsZeilen,
+  bruttoZeilenEinzeln,
   berechneKassenanteil,
   mitMwst,
   pluszylinder,
@@ -148,5 +149,52 @@ describe("abrechnungsZeilen (Berechtigungsschein)", () => {
       { nummer: "25.21.15.3001", faktor: 2, betrag: 99.8 },
     ]);
     expect(ergebnis.mwst).toBe(25.13);
+  });
+});
+
+describe("bruttoZeilenEinzeln (Berechtigungsschein brutto, je Glas)", () => {
+  const augen = [
+    { seite: "R" as const, glas: { Sph: 2.25, Cyl: 0.5 } },
+    { seite: "L" as const, glas: { Sph: 2.5, Cyl: 0.5 } },
+  ];
+
+  it("je Glas eine Zeile, zusammen genau der KK-Anteil", () => {
+    expect(bruttoZeilenEinzeln({ augen, kkAnteil: 38.63 })).toEqual({
+      zeilen: [
+        { nummer: "25.21.01.0900", faktor: 1, betrag: 19.32 },
+        { nummer: "25.21.01.0900", faktor: 1, betrag: 19.31 },
+      ],
+      summe: 38.63,
+    });
+  });
+
+  it("teilt gespeicherte Positionen mit Faktor 2 in zwei Zeilen", () => {
+    const { zeilen, summe } = bruttoZeilenEinzeln({
+      augen,
+      kkAnteil: 157.39,
+      gespeichert: [
+        { nummer: "25.21.01.0900", bezeichnung: "", faktor: 1, netto: 16.23 },
+        { nummer: "25.21.01.0900", bezeichnung: "", faktor: 1, netto: 16.23 },
+        { nummer: "25.21.15.3001", bezeichnung: "", faktor: 2, netto: 49.9 },
+      ],
+    });
+    expect(zeilen.map((z) => [z.nummer, z.faktor])).toEqual([
+      ["25.21.01.0900", 1],
+      ["25.21.01.0900", 1],
+      ["25.21.15.3001", 1],
+      ["25.21.15.3001", 1],
+    ]);
+    expect(zeilen.map((z) => z.betrag)).toEqual([19.32, 19.31, 59.38, 59.38]);
+    expect(summe).toBe(157.39);
+    expect(
+      Math.round(zeilen.reduce((s, z) => s + z.betrag, 0) * 100) / 100,
+    ).toBe(157.39);
+  });
+
+  it("ohne Positionen keine Zeilen", () => {
+    expect(bruttoZeilenEinzeln({ augen: [], kkAnteil: 0 })).toEqual({
+      zeilen: [],
+      summe: 0,
+    });
   });
 });
