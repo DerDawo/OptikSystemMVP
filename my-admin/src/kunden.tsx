@@ -64,7 +64,6 @@ import {
   FormSection,
   ShowActionsBar,
   ShowColumn,
-  ShowColumns,
   ShowLayout,
   DatenbankInfo,
 } from "./EntityLayout";
@@ -545,19 +544,30 @@ export const KundeShow = () => {
   return (
     <Show title="Kunde anzeigen" actions={<KundeShowActions />}>
       <ShowLayout>
-        {/* Kundenkartei wie in Prisma, daneben die Aufträge */}
-        <ShowColumns
-          spalten="minmax(0, 1fr) minmax(0, 2fr)"
-          spaltenMittel="minmax(0, 1fr) minmax(0, 1fr)"
+        {/* Kundenkartei wie in Prisma, daneben die Aufträge. Die Kartei
+            behält eine Mindestbreite, damit alle Felder lesbar bleiben; die
+            Aufträge bekommen den Rest (auf breiten Bildschirmen 2/3) und
+            rutschen bei schmalen Fenstern darunter. */}
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1em",
+            alignItems: "flex-start",
+          }}
         >
-          <ShowColumn>
-            <KundeKarteikarte />
-            <DatenbankInfo />
-          </ShowColumn>
-          <ShowColumn>
-            <KundenAuftraege />
-          </ShowColumn>
-        </ShowColumns>
+          <Box sx={{ flex: "1 1 0", minWidth: "min(100%, 460px)" }}>
+            <ShowColumn>
+              <KundeKarteikarte />
+              <DatenbankInfo />
+            </ShowColumn>
+          </Box>
+          <Box sx={{ flex: "2 1 0", minWidth: "min(100%, 400px)" }}>
+            <ShowColumn>
+              <KundenAuftraege />
+            </ShowColumn>
+          </Box>
+        </Box>
       </ShowLayout>
     </Show>
   );
