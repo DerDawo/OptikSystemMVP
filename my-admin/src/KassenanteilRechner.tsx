@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+// Ereignis zum Öffnen des KK-Rechners von außerhalb (Menü "Optionen")
+export const KK_RECHNER_OEFFNEN = "kk-rechner-oeffnen";
 import { useNotify } from "react-admin";
 import {
   Box,
@@ -51,6 +54,13 @@ export const KassenanteilRechner = ({
 }) => {
   const notify = useNotify();
   const [anker, setAnker] = useState<HTMLElement | null>(null);
+  const knopf = useRef<HTMLButtonElement>(null);
+  // "Optionen -> Positionen Krankenkasse" öffnet den Rechner
+  useEffect(() => {
+    const oeffnen = () => setAnker(knopf.current);
+    window.addEventListener(KK_RECHNER_OEFFNEN, oeffnen);
+    return () => window.removeEventListener(KK_RECHNER_OEFFNEN, oeffnen);
+  }, []);
   const [abgewaehlt, setAbgewaehlt] = useState<Set<string>>(new Set());
   const [zusaetze, setZusaetze] = useState<Set<string>>(
     () => new Set(augenaerztlicheVerordnung ? [] : ["glasbestimmung"]),
@@ -125,6 +135,7 @@ export const KassenanteilRechner = ({
     <>
       <Tooltip title="KK-Anteil berechnen">
         <IconButton
+          ref={knopf}
           size="small"
           aria-label="KK-Anteil berechnen"
           onClick={(e) => setAnker(e.currentTarget)}
