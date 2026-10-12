@@ -40,6 +40,7 @@ import {
 import { MITARBEITER, mitarbeiterAnzeige } from "./mitarbeiterNamen";
 import { leseRabattEingabe, rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
+import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 
 /*
  * CL-Kartei wie in Prisma: alle Felder direkt eintippen (speichert beim
@@ -553,9 +554,13 @@ export const KontaktlinseKarteikarte = () => {
             <Beschriftung z={2} s="5 / 6">
               Rech. Nr.
             </Beschriftung>
-            {/* wird über "Rechnung erstellen" fortlaufend vergeben */}
+            {/* fortlaufend vergeben ("vergeben" oder "Rechnung erstellen") */}
             <Feld z={2} s="6 / 7" rechts>
-              {text(cl.Rechnungsnummer)}
+              <RechnungsnummerFeld
+                art="kontaktlinse"
+                id={cl.id}
+                nummer={cl.Rechnungsnummer}
+              />
             </Feld>
             <Beschriftung z={2} s="7 / 8" rechts>
               Abholdatum

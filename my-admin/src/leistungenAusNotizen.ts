@@ -66,3 +66,37 @@ export const weitereLeistungenPositionen = (
     },
   ];
 };
+
+const euroText = (betrag: number) =>
+  new Intl.NumberFormat("de-DE", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(betrag);
+
+// Betrag der n-ten Leistung (Zählung wie leistungenAusNotizen) im Text
+// ändern; liefert den neuen Text oder null, wenn die Zeile fehlt.
+export const setzeNotizLeistungBetrag = (
+  notizen: unknown,
+  index: number,
+  betrag: number,
+): string | null => {
+  const zeilen = String(notizen ?? "").split(/(\r?\n)/);
+  // split mit Gruppe behält die Zeilenumbrüche an ungeraden Positionen
+  const start = zeilen.findIndex((z) => z.trim() === "Leistungen:");
+  if (start < 0) return null;
+  let zaehler = -1;
+  for (let i = start + 2; i < zeilen.length; i += 2) {
+    const text = zeilen[i].trim();
+    if (!text.startsWith("-")) break;
+    const treffer = ZEILE.exec(text);
+    if (!treffer) continue;
+    const alt = Number(treffer[2].replace(/\./g, "").replace(",", "."));
+    if (!Number.isFinite(alt) || alt === 0) continue;
+    zaehler++;
+    if (zaehler === index) {
+      zeilen[i] = zeilen[i].replace(treffer[2], euroText(betrag));
+      return zeilen.join("");
+    }
+  }
+  return null;
+};

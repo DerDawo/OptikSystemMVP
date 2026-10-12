@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   leistungenAusNotizen,
   leistungsText,
+  setzeNotizLeistungBetrag,
   weitereLeistungenPositionen,
 } from "./leistungenAusNotizen";
 import { buildRechnungPositionen } from "./rechnungTemplate";
@@ -90,5 +91,26 @@ describe("leistungsText", () => {
       { bezeichnung: "Glaseinschliff", betrag: 29.5 },
     ]);
     expect(leistungsText({ Notizen: null, PrismaAngaben: undefined })).toBe("");
+  });
+});
+
+describe("setzeNotizLeistungBetrag", () => {
+  const text =
+    "Leistungen:\n- Glaseinschliff: 19,50 €\n- Refraktion: 24,50 €\nSonstiges";
+
+  it("ändert genau den Betrag der gewählten Zeile", () => {
+    const neu = setzeNotizLeistungBetrag(text, 1, 1234.5);
+    expect(neu).toBe(
+      "Leistungen:\n- Glaseinschliff: 19,50 €\n- Refraktion: 1.234,50 €\nSonstiges",
+    );
+    expect(leistungenAusNotizen(neu)).toEqual([
+      { bezeichnung: "Glaseinschliff", betrag: 19.5 },
+      { bezeichnung: "Refraktion", betrag: 1234.5 },
+    ]);
+  });
+
+  it("ohne passende Zeile null", () => {
+    expect(setzeNotizLeistungBetrag(text, 5, 10)).toBeNull();
+    expect(setzeNotizLeistungBetrag("ohne Leistungen", 0, 10)).toBeNull();
   });
 });

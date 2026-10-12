@@ -393,10 +393,32 @@ const FormulareDialog = ({
   const zusatzleistungIds: number[] = (brille.ZusatzleistungIDs ?? []).filter(
     (id: number | null | undefined) => id !== null && id !== undefined,
   );
-  const { data: zusatzleistungen } = useGetMany(
+  const { data: katalogLeistungen } = useGetMany(
     "zusatzleistung",
     { ids: zusatzleistungIds },
     { enabled: zusatzleistungIds.length > 0 },
+  );
+  // Preis je Auftrag (brille_hat_zusatzleistungen.Betrag) statt Katalogpreis
+  const { data: zuordnungen } = useGetList(
+    "brille_hat_zusatzleistungen",
+    {
+      filter: { BrillenID: brille.id },
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "id", order: "ASC" },
+    },
+    { enabled: brille.id != null && zusatzleistungIds.length > 0 },
+  );
+  const zusatzleistungen = useMemo(
+    () =>
+      (katalogLeistungen ?? []).map((leistung) => {
+        const zuordnung = (zuordnungen ?? []).find(
+          (z) => z.ZusatzleistungID === leistung.id,
+        );
+        return zuordnung?.Betrag != null
+          ? { ...leistung, Betrag: zuordnung.Betrag }
+          : leistung;
+      }),
+    [katalogLeistungen, zuordnungen],
   );
 
   const { data: kunde } = useGetOne(
