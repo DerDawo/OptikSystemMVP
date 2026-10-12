@@ -1278,9 +1278,6 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 10 }} />
 
             {/* Fassung */}
-            <Box sx={{ gridRow: 13, gridColumn: "2 / 4" }}>
-              <Spaltentitel>Fassung</Spaltentitel>
-            </Box>
             <Zellen z={13} s="6 / 8" spalten="100fr 165fr">
               <Spaltentitel>Farbe</Spaltentitel>
               <Spaltentitel>Größe</Spaltentitel>
@@ -1288,6 +1285,9 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 13, gridColumn: "8 / 9" }}>
               <Spaltentitel>Betrag</Spaltentitel>
             </Box>
+            <Beschriftung z={14} s="1 / 2">
+              Fassung
+            </Beschriftung>
             <Feld z={14} s="2 / 4">
               {textFeld(
                 "fassung.Bezeichnung",
@@ -1391,9 +1391,10 @@ export const BrilleKarteikarte = () => {
             </Feld>
 
             {/* Zusatzleistungen */}
-            <Box sx={{ gridRow: 16, gridColumn: "2 / 7", pt: 0.75 }}>
-              <Spaltentitel>Zusatzleistungen</Spaltentitel>
-            </Box>
+            <Box sx={{ gridRow: 16, gridColumn: "1 / -1", height: 6 }} />
+            <Beschriftung z={zZusatz} s="1 / 2">
+              Zusatzleistungen
+            </Beschriftung>
             {posten.map((p, i) => [
               p.auswahl ? (
                 <ZusatzleistungAuswahl
