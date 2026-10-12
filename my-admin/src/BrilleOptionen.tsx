@@ -21,7 +21,6 @@ import {
   WerkstattauftragButton,
 } from "./FormulareDialog";
 import { KK_RECHNER_OEFFNEN } from "./KassenanteilRechner";
-import { VERORDNUNG_OEFFNEN } from "./BrilleKarteikarte";
 
 /*
  * "Optionen ▾" der Brillenkartei im Aufbau des Prisma-Menüs. Vorhandene
@@ -99,16 +98,6 @@ export const BrilleOptionenMenu = () => {
         }
       >
         Positionen Krankenkasse
-      </Button>
-      <Button
-        onClick={() =>
-          window.setTimeout(
-            () => window.dispatchEvent(new Event(VERORDNUNG_OEFFNEN)),
-            250,
-          )
-        }
-      >
-        Verordnung (Arzt, Diagnose)
       </Button>
       <KarteikarteKopierenButton nurGlaswerte label="Optische Werte kopieren" />
       <KarteikarteKopierenButton label="Karteiwerte kopieren" />
