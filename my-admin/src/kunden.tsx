@@ -705,8 +705,6 @@ export const KundeEdit = () => (
           <AnredeInput />
           <TextInput source="Vorname" />
           <TextInput source="Nachname" />
-        </FieldRow>
-        <FieldRow>
           <GeschlechtInput />
           <DateInput source="Geburtsdatum" />
           <TextInput source="Tätigkeit" />
@@ -716,8 +714,6 @@ export const KundeEdit = () => (
         <FieldRow>
           <TextInput source="Straße" />
           <TextInput source="Hausnummer" />
-        </FieldRow>
-        <FieldRow>
           <TextInput source="Postleitzahl" />
           <TextInput source="Stadt" />
         </FieldRow>
@@ -732,30 +728,37 @@ export const KundeEdit = () => (
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
-          <TextInput source="KrankenkassenNummer" />
-          <TextInput source="VersichertenNummer" />
-          <TextInput source="KrankenversicherungsTyp" />
-        </FieldRow>
-        <FieldRow>
           <TextInput source="Krankenkasse" />
-          <TextInput source="Versichertenstatus" />
-          <DateInput source="VersichertenkarteGueltigBis" />
+          <TextInput source="KrankenkassenNummer" label="Kassen-Nr." />
+          <TextInput source="VersichertenNummer" label="Versicherten-Nr." />
+          <TextInput source="Versichertenstatus" label="Status" />
+          <TextInput
+            source="KrankenversicherungsTyp"
+            label="Versicherungsart"
+          />
+          <DateInput
+            source="VersichertenkarteGueltigBis"
+            label="Karte gültig bis"
+          />
         </FieldRow>
       </FormSection>
       <FormSection title="Medizinische Notizen">
-        <HinweiseInput />
-        <TextInput
-          source="Notizen"
-          label="Medizinische Notizen"
-          helperText="Nur medizinische Angaben (z. B. Erkrankungen, OPs, Unverträglichkeiten)"
-          multiline
-          fullWidth
-        />
+        <FieldRow>
+          <HinweiseInput />
+          <TextInput
+            source="Notizen"
+            label="Medizinische Notizen (Erkrankungen, OPs, Unverträglichkeiten)"
+            multiline
+            fullWidth
+          />
+        </FieldRow>
       </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
           <TextInput source="Merkmal1" label="Beruf" />
           <TextInput source="Merkmal2" label="Besonderes" />
+          <TextInput source="KundenNummer" label="Kundennummer" />
+          <DateInput source="Aufnahmedatum" />
         </FieldRow>
       </FormSection>
       <KundeVerwaltung />
@@ -790,8 +793,6 @@ export const KundeCreate = () => {
             <AnredeInput />
             <TextInput source="Vorname" />
             <TextInput source="Nachname" />
-          </FieldRow>
-          <FieldRow>
             <GeschlechtInput />
             <DateInput source="Geburtsdatum" />
             <TextInput source="Tätigkeit" />
@@ -801,8 +802,6 @@ export const KundeCreate = () => {
           <FieldRow>
             <TextInput source="Straße" />
             <TextInput source="Hausnummer" />
-          </FieldRow>
-          <FieldRow>
             <TextInput source="Postleitzahl" />
             <TextInput source="Stadt" />
           </FieldRow>
@@ -823,36 +822,37 @@ export const KundeCreate = () => {
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
-            <TextInput
-              source="KrankenkassenNummer"
-              label="Krankenkassennummer"
-            />
-            <TextInput source="VersichertenNummer" label="Versichertennummer" />
+            <TextInput source="Krankenkasse" />
+            <TextInput source="KrankenkassenNummer" label="Kassen-Nr." />
+            <TextInput source="VersichertenNummer" label="Versicherten-Nr." />
+            <TextInput source="Versichertenstatus" label="Status" />
             <TextInput
               source="KrankenversicherungsTyp"
-              label="Krankenversicherungs Typ"
+              label="Versicherungsart"
             />
-          </FieldRow>
-          <FieldRow>
-            <TextInput source="Krankenkasse" />
-            <TextInput source="Versichertenstatus" />
-            <DateInput source="VersichertenkarteGueltigBis" />
+            <DateInput
+              source="VersichertenkarteGueltigBis"
+              label="Karte gültig bis"
+            />
           </FieldRow>
         </FormSection>
         <FormSection title="Medizinische Notizen">
-          <HinweiseInput />
-          <TextInput
-            source="Notizen"
-            label="Medizinische Notizen"
-            helperText="Nur medizinische Angaben (z. B. Erkrankungen, OPs, Unverträglichkeiten)"
-            multiline
-            fullWidth
-          />
+          <FieldRow>
+            <HinweiseInput />
+            <TextInput
+              source="Notizen"
+              label="Medizinische Notizen (Erkrankungen, OPs, Unverträglichkeiten)"
+              multiline
+              fullWidth
+            />
+          </FieldRow>
         </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>
             <TextInput source="Merkmal1" label="Beruf" />
             <TextInput source="Merkmal2" label="Besonderes" />
+            <TextInput source="KundenNummer" label="Kundennummer" />
+            <DateInput source="Aufnahmedatum" />
           </FieldRow>
         </FormSection>
         <KundeVerwaltung />
