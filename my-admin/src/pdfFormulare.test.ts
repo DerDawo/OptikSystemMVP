@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } from "pdf-lib";
+import { formatEuro } from "./werkstattauftragTemplate";
 import {
   PDF_VORLAGEN,
   fuellePdfVorlage,
@@ -87,7 +88,11 @@ describe.each(Object.entries(PDF_VORLAGEN))("PDF-Vorlage %s", (_, vorlage) => {
         feld instanceof PDFTextField ? feld.getMaxLength() : undefined;
       expect(feldwert(pdf, name)).toBe(passeAnFeldlaenge(wert, max));
     }
-    expect(pdf.getForm().getFields().length).toBeGreaterThan(50);
+    // alle Felder bleiben erhalten (nicht flachgerechnet), also ausfüllbar
+    const original = await PDFDocument.load(lade(vorlage.datei));
+    expect(pdf.getForm().getFields().length).toBe(
+      original.getForm().getFields().length,
+    );
   });
 });
 
@@ -211,5 +216,28 @@ describe("Berechtigungsschein GKV (Original-PDF)", () => {
       vorherigesGlasLinks: entities.glasLinks,
     });
     expect(ohne.cb_veraenderung).toBeUndefined();
+  });
+});
+
+describe("Abholbestätigung", () => {
+  it("rechnet den offenen Betrag aus Summe, Kassenanteil und Anzahlung", () => {
+    const felder = PDF_VORLAGEN["Abholbestätigung"].felder({
+      kunde: { Nachname: "Muster", Vorname: "Anja" },
+      brille: {
+        id: 7,
+        Rechnungsnummer: "114999",
+        Summe: 650,
+        KKAnteil: 112.45,
+        Anzahlung: 100,
+      },
+    });
+    expect(felder).toMatchObject({
+      name: "Muster, Anja",
+      auftragsnummer: "7 / 114999",
+      gesamtpreis: formatEuro(650),
+      kassenanteil: formatEuro(112.45),
+      anzahlung: formatEuro(100),
+      offener_betrag: formatEuro(437.55),
+    });
   });
 });
