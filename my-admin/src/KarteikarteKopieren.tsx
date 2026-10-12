@@ -79,11 +79,12 @@ const KarteikarteKopierenDialog = ({
   const notify = useNotify();
   const navigate = useNavigate();
 
+  // Üblich ist das Weiterführen des ganzen Auftrags: alles vorausgewählt
   const [auswahl, setAuswahl] = useState<Auswahl>({
-    glaswerte: false,
-    glasausfuehrung: false,
-    fassung: false,
-    formdaten: false,
+    glaswerte: true,
+    glasausfuehrung: true,
+    fassung: true,
+    formdaten: true,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -168,7 +169,9 @@ const KarteikarteKopierenDialog = ({
 
       notify("Neuer Auftrag aus Karteikarte angelegt.", { type: "success" });
       onClose();
-      navigate(`/brille/${data.id}`);
+      // direkt in die neue Karteikarte (dort lässt sich alles direkt
+      // bearbeiten)
+      navigate(`/brille/${data.id}/show`);
     } catch {
       notify("Karteikarte konnte nicht kopiert werden", { type: "error" });
     } finally {

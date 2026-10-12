@@ -319,8 +319,8 @@ const BrilleShowActions = () => (
   <ShowActionsBar>
     <RechnungErstellenButton />
     <FormulareButton />
+    <KarteikarteKopierenButton />
     <OptionenMenu>
-      <KarteikarteKopierenButton />
       <BerechtigungsscheinErstellenButton />
       <WerkstattauftragButton />
       <MahnungErstellenButton />
