@@ -652,28 +652,42 @@ const FormulareDialog = ({
           buildPrintHtml(selectedVorlage?.Name ?? "", renderedText));
   };
 
-  // Rechnung/Mahnung als PDF per E-Mail oder WhatsApp an den Kunden
-  const versendbar =
-    Boolean(layout) &&
-    (selectedVorlage?.Kategorie === RECHNUNG_KATEGORIE ||
-      selectedVorlage?.Kategorie === MAHNUNG_KATEGORIE);
+  // Jedes Formular als PDF per E-Mail oder WhatsApp an den Kunden;
+  // ausfüllbare PDF-Vorlagen gehen vorausgefüllt raus, alle anderen werden
+  // aus dem Druck-HTML erzeugt
+  const versendbar = Boolean(selectedVorlage);
   const [versendet, setVersendet] = useState<"email" | "whatsapp" | null>(null);
   const versenden = async (kanal: "email" | "whatsapp") => {
     if (!selectedVorlage) return;
+    if (pdfVorlage && !pdfUrl) {
+      notify(
+        "Das PDF wird noch erstellt – bitte gleich noch einmal versuchen.",
+        {
+          type: "warning",
+        },
+      );
+      return;
+    }
     setVersendet(kanal);
     try {
-      const nummer = String(brille.Rechnungsnummer ?? "").trim();
+      const beleg =
+        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE ||
+        selectedVorlage.Kategorie === MAHNUNG_KATEGORIE;
+      const nummer = beleg ? String(brille.Rechnungsnummer ?? "").trim() : "";
       const art =
         selectedVorlage.Kategorie === RECHNUNG_KATEGORIE
           ? "Rechnung"
           : selectedVorlage.Name;
-      const datei = await belegAlsPdf(
-        druckHtml(),
-        `${art}${nummer ? `-${nummer}` : ""}.pdf`.replace(
-          /[^\w.\-äöüÄÖÜß]+/g,
-          "-",
-        ),
+      const dateiname = `${art}${nummer ? `-${nummer}` : ""}.pdf`.replace(
+        /[^\w.\-äöüÄÖÜß]+/g,
+        "-",
       );
+      const datei =
+        pdfVorlage && pdfUrl
+          ? new File([await (await fetch(pdfUrl)).blob()], dateiname, {
+              type: "application/pdf",
+            })
+          : await belegAlsPdf(druckHtml(), dateiname);
       const nachname = String(kunde?.Nachname ?? "").trim();
       const anrede = String(kunde?.Anrede ?? "").trim();
       const gruss =
@@ -695,7 +709,11 @@ const FormulareDialog = ({
                   kunde?.TelefonnummerPrivat,
                 ]),
           betreff: `${art}${nummer ? ` ${nummer}` : ""}`,
-          text: `${gruss},\n\nanbei erhalten Sie Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""} als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
+          text: `${gruss},\n\nanbei erhalten Sie ${
+            beleg
+              ? `Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""}`
+              : `das Formular „${art}“`
+          } als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
         },
         (adresse) =>
           notify(
@@ -905,6 +923,22 @@ const FormulareDialog = ({
                       "PDF konnte nicht erstellt werden (Pop-up blockiert?).",
                     ),
                   aus: !selectedVorlage,
+                },
+                {
+                  text:
+                    versendet === "email"
+                      ? "PDF wird erstellt …"
+                      : "Per E-Mail",
+                  onClick: () => versenden("email"),
+                  aus: !versendbar || versendet !== null,
+                },
+                {
+                  text:
+                    versendet === "whatsapp"
+                      ? "PDF wird erstellt …"
+                      : "Per WhatsApp",
+                  onClick: () => versenden("whatsapp"),
+                  aus: !versendbar || versendet !== null,
                 },
               ].map((knopf) => (
                 <Button
