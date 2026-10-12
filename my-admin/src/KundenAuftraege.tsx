@@ -24,11 +24,11 @@ import { OrderStatusKey, getBrilleOrderStatus } from "./orderStatus";
 
 /*
  * Alle Vorgänge eines Kunden in einer Liste wie in der Prisma-Kundenkartei:
- * Brillen, Kontaktlinsen und Termine nach Datum, mit Status-Symbolen,
+ * Brillen- und Kontaktlinsenaufträge nach Datum, mit Status-Symbolen,
  * "Neu anlegen"-Menü, Filter und Suche.
  */
 
-type Art = "brille" | "kontaktlinse" | "termin";
+type Art = "brille" | "kontaktlinse";
 type Filter = "alle" | Art;
 
 type Zeile = {
@@ -93,11 +93,6 @@ export const KundenAuftraege = () => {
     abfrage("Datum"),
     optionen,
   );
-  const termine = useGetList<Datensatz & { id: number }>(
-    "termin",
-    abfrage("Start"),
-    optionen,
-  );
 
   const neu = (pfad: string) => {
     setMenuAnker(null);
@@ -106,7 +101,6 @@ export const KundenAuftraege = () => {
   useTastenkuerzel({
     b: () => neu("/brille/create"),
     l: () => neu("/kontaktlinse/create"),
-    e: () => neu("/termin/create"),
   });
 
   const glastypIds = useMemo(
@@ -129,7 +123,6 @@ export const KundenAuftraege = () => {
     const glastypName = new Map(
       (glastypen.data ?? []).map((g) => [g.id, text(g.Bezeichnung)]),
     );
-    const heute = new Date();
     const liste: Zeile[] = [];
     for (const b of brillen.data ?? []) {
       const rest = zahl(b.Restbetrag);
@@ -168,33 +161,12 @@ export const KundenAuftraege = () => {
         suchtext: ["Kontaktlinsen", typ, k.id, k.Notizen].join(" "),
       });
     }
-    for (const t of termine.data ?? []) {
-      const start = (t.Start as string) ?? null;
-      liste.push({
-        key: `termin-${t.id}`,
-        art: "termin",
-        id: t.id,
-        datum: start,
-        titel: "Termin",
-        nummer: start
-          ? new Date(start).toLocaleTimeString("de-DE", {
-              hour: "2-digit",
-              minute: "2-digit",
-            }) + " Uhr"
-          : "",
-        typ: [text(t.Terminart), text(t.Notiz)].filter(Boolean).join(" · "),
-        betrag: null,
-        status: start && new Date(start) >= heute ? "termin-kommend" : "termin",
-        offenerBetrag: false,
-        suchtext: ["Termin", t.Terminart, t.Notiz].join(" "),
-      });
-    }
     return liste.sort(
       (a, b) =>
         (b.datum ? new Date(b.datum).getTime() : 0) -
         (a.datum ? new Date(a.datum).getTime() : 0),
     );
-  }, [brillen.data, linsen.data, termine.data, glastypen.data]);
+  }, [brillen.data, linsen.data, glastypen.data]);
 
   const sichtbar = useMemo(() => {
     const begriff = suche.trim().toLowerCase();
@@ -211,10 +183,9 @@ export const KundenAuftraege = () => {
     alle: "Alle",
     brille: "Brillen",
     kontaktlinse: "Kontaktlinsen",
-    termin: "Termine",
   };
 
-  const laedt = brillen.isPending || linsen.isPending || termine.isPending;
+  const laedt = brillen.isPending || linsen.isPending;
 
   return (
     <Card variant="outlined" sx={{ p: "1em", width: "100%", minWidth: 0 }}>
@@ -228,7 +199,7 @@ export const KundenAuftraege = () => {
         }}
       >
         <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1 }}>
-          Aufträge &amp; Termine
+          Aufträge
         </Typography>
         <Button
           variant="contained"
@@ -255,12 +226,6 @@ export const KundenAuftraege = () => {
             Kontaktlinsen
             <Typography variant="caption" color="text.secondary" sx={{ ml: 3 }}>
               Alt + L
-            </Typography>
-          </MenuItem>
-          <MenuItem onClick={() => neu("/termin/create")}>
-            Termin
-            <Typography variant="caption" color="text.secondary" sx={{ ml: 3 }}>
-              Alt + E
             </Typography>
           </MenuItem>
         </Menu>
@@ -404,7 +369,7 @@ export const KundenAuftraege = () => {
       <TextField
         size="small"
         fullWidth
-        placeholder="Suche in Aufträgen und Terminen"
+        placeholder="Suche in Aufträgen"
         value={suche}
         onChange={(e) => setSuche(e.target.value)}
         sx={{ mt: 1.5 }}
