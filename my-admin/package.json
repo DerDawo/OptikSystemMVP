@@ -23,6 +23,7 @@
     "@mui/material": "^7.3.7",
     "@mui/x-date-pickers": "^8.27.2",
     "dayjs": "^1.11.20",
+    "html2canvas": "1.4.1",
     "jszip": "^3.10.1",
     "pdf-lib": "^1.17.1",
     "ra-i18n-polyglot": "^5.13.0",
