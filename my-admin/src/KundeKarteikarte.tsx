@@ -70,7 +70,7 @@ const Beschriftung = ({
     sx={{
       alignSelf: "center",
       fontStyle: "italic",
-      fontSize: "0.85rem",
+      fontSize: "0.75rem",
       color: "text.secondary",
       whiteSpace: "nowrap",
       overflow: "hidden",
@@ -99,13 +99,13 @@ const Feld = ({
           ? "rgba(255,255,255,0.12)"
           : "#e6e6e6"
         : feldFarbe(theme),
-      minHeight: mehrzeilig ? 56 : 34,
+      minHeight: mehrzeilig ? 44 : 26,
       minWidth: 0,
       px: "6px",
       py: mehrzeilig ? "4px" : 0,
       display: "flex",
       alignItems: mehrzeilig ? "flex-start" : "center",
-      fontSize: "1rem",
+      fontSize: "0.85rem",
       borderRadius: "4px",
       whiteSpace: mehrzeilig ? "pre-wrap" : "nowrap",
       overflow: "hidden",
@@ -140,8 +140,9 @@ const PrismaKnopf = ({
       color: "#fff",
       fontWeight: 700,
       borderRadius: "4px",
-      minHeight: 34,
+      minHeight: 26,
       py: 0,
+      fontSize: "0.78rem",
       width: "100%",
     }}
   >
@@ -189,17 +190,17 @@ const Umbruch = ({
       alignItems: "center",
     }}
   >
-    <Box sx={{ flex: "1 1 120px", minWidth: 120 }}>{links}</Box>
+    <Box sx={{ flex: "1 1 100px", minWidth: 100 }}>{links}</Box>
     <Box
       sx={{
-        flex: "1 1 250px",
+        flex: "1 1 200px",
         display: "flex",
         gap: "8px",
         alignItems: "center",
       }}
     >
       <Beschriftung>{beschriftung}</Beschriftung>
-      <Box sx={{ flex: 1, minWidth: 130 }}>{rechts}</Box>
+      <Box sx={{ flex: 1, minWidth: 110 }}>{rechts}</Box>
     </Box>
   </Box>
 );
@@ -272,7 +273,7 @@ export const KundeKarteikarte = () => {
               aria-label={`${name} anrufen`}
               sx={{ p: 0.4, color: "primary.main" }}
             >
-              <PhoneIcon sx={{ fontSize: 18 }} />
+              <PhoneIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
         )}
@@ -284,7 +285,7 @@ export const KundeKarteikarte = () => {
               aria-label="WhatsApp-Nachricht schreiben"
               sx={{ p: 0.4, color: "#25D366" }}
             >
-              <WhatsAppIcon sx={{ fontSize: 18 }} />
+              <WhatsAppIcon sx={{ fontSize: 16 }} />
             </IconButton>
           </Tooltip>
         )}
@@ -309,12 +310,12 @@ export const KundeKarteikarte = () => {
     abstandOben?: boolean,
   ) => (
     <>
-      <Box sx={{ mt: abstandOben ? 2 : 0, display: "contents" }} />
-      <Box sx={{ alignSelf: "center", mt: abstandOben ? 2 : 0 }}>
+      <Box sx={{ mt: abstandOben ? 1 : 0, display: "contents" }} />
+      <Box sx={{ alignSelf: "center", mt: abstandOben ? 1 : 0 }}>
         <Beschriftung>{beschriftung}</Beschriftung>
       </Box>
-      <Box sx={{ minWidth: 0, mt: abstandOben ? 2 : 0 }}>{feld}</Box>
-      <Box sx={{ mt: abstandOben ? 2 : 0 }}>{knopf}</Box>
+      <Box sx={{ minWidth: 0, mt: abstandOben ? 1 : 0 }}>{feld}</Box>
+      <Box sx={{ mt: abstandOben ? 1 : 0 }}>{knopf}</Box>
     </>
   );
 
@@ -322,7 +323,7 @@ export const KundeKarteikarte = () => {
     <Card
       variant="outlined"
       sx={(theme) => ({
-        p: { xs: 1.5, md: 2.5 },
+        p: { xs: 1.25, md: 1.75 },
         background:
           theme.palette.mode === "dark"
             ? undefined
@@ -333,11 +334,11 @@ export const KundeKarteikarte = () => {
         sx={{
           display: "grid",
           gridTemplateColumns: {
-            xs: "108px minmax(0, 1fr) 84px",
-            md: "120px minmax(0, 1fr) 104px",
+            xs: "92px minmax(0, 1fr) 72px",
+            md: "100px minmax(0, 1fr) 84px",
           },
-          columnGap: "12px",
-          rowGap: "6px",
+          columnGap: "10px",
+          rowGap: "4px",
         }}
       >
         {zeile(
