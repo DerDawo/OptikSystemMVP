@@ -57,6 +57,8 @@ type Liste = {
   hinweis: string;
   leer: string;
   zeilen: Zeile[];
+  // reine Übersicht (keine Aufgabe): ohne Anzahl oben rechts
+  ohneZahl?: boolean;
 };
 
 const MAX_ZEILEN = 6;
@@ -93,6 +95,7 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
           {liste.titel}
         </Typography>
         <Typography
+          hidden={liste.ohneZahl}
           sx={(theme) => ({
             fontSize: 13,
             fontWeight: 700,
@@ -223,7 +226,7 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
       const [
         nichtAbgeholt,
         ueberfaellig,
-        kvOffen,
+        neueKunden,
         gleitsicht,
         clKontrolle,
         sehtestFenster,
@@ -240,11 +243,14 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
           "Fertig@is": "null",
           "Abholung@is": "null",
         }),
-        liste("brille", {
-          "KVVersendet@lte": vor(FRISTEN.kvTage),
-          KVGenehmigt: false,
-          "Abholung@is": "null",
-        }),
+        // zuletzt angelegte Kunden (neueste zuerst)
+        dataProvider
+          .getList("kunde", {
+            pagination: { page: 1, perPage: MAX_ZEILEN },
+            sort: { field: "id", order: "DESC" },
+            filter: {},
+          })
+          .then((r) => r.data as Kunde[]),
         liste("brille", {
           "Abholung@gte": vor(FRISTEN.gleitsichtBisTage),
           "Abholung@lte": vor(FRISTEN.gleitsichtVonTage),
@@ -281,7 +287,6 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
       const alleAuftraege = [
         ...nichtAbgeholt,
         ...ueberfaellig,
-        ...kvOffen,
         ...gleitsicht,
         ...clKontrolle,
       ];
@@ -333,16 +338,20 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
             })),
         },
         {
-          titel: "KV / Antrag ohne Antwort",
-          hinweis: `verschickt vor über ${FRISTEN.kvTage} Tagen, nicht genehmigt`,
-          leer: "Keine offenen Kostenvoranschläge.",
-          zeilen: [...kvOffen].sort(nachDatum("KVVersendet")).map((b) => ({
-            key: `k${b.id}`,
-            ziel: `/brille/${b.id}/show`,
-            kunde: k(b.kunde_id),
-            detail: `verschickt ${datum(b.KVVersendet)}${
-              b.Achtung ? ` · ${String(b.Achtung)}` : ""
-            }`,
+          titel: "Zuletzt angelegte Kunden",
+          hinweis: "die neuesten Kunden zuerst",
+          leer: "Noch keine Kunden angelegt.",
+          ohneZahl: true,
+          zeilen: neueKunden.map((kunde) => ({
+            key: `n${kunde.id}`,
+            ziel: `/kunde/${kunde.id}/show`,
+            kunde,
+            detail: [
+              kunde.KundenNummer ? `Kd.-Nr. ${String(kunde.KundenNummer)}` : "",
+              `angelegt ${datum(kunde.Aufnahmedatum ?? kunde.created_at)}`,
+            ]
+              .filter(Boolean)
+              .join(" · "),
           })),
         },
         {

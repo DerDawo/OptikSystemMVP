@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { leseRabattEingabe, rabattDaten, rabattOptionen } from "./rabatte";
+import {
+  leseRabattEingabe,
+  rabattDaten,
+  rabattDatenBrille,
+  rabattEingabeBrille,
+  rabattOptionen,
+} from "./rabatte";
 
 describe("rabattDaten", () => {
   it("setzt den festen Prozentsatz", () => {
@@ -56,5 +62,49 @@ describe("leseRabattEingabe (Sonderrabatt)", () => {
     expect(() => leseRabattEingabe("50 €", 0)).toThrow();
     expect(() => leseRabattEingabe("700 €", 600)).toThrow();
     expect(() => leseRabattEingabe("abc", 600)).toThrow();
+  });
+});
+
+describe("rabattEingabeBrille", () => {
+  it("Betragsfeld: ohne Einheit Euro, mit % Prozent", () => {
+    expect(rabattEingabeBrille("50", "euro")).toEqual({
+      RabattProzent: null,
+      RabattBetrag: 50,
+    });
+    expect(rabattEingabeBrille("-12,50 €", "euro")).toEqual({
+      RabattProzent: null,
+      RabattBetrag: 12.5,
+    });
+    expect(rabattEingabeBrille("10 %", "euro")).toEqual({
+      RabattProzent: 10,
+      RabattBetrag: null,
+    });
+  });
+
+  it("Prozentfeld: ohne Einheit Prozent, mit € Euro; leer löscht", () => {
+    expect(rabattEingabeBrille("7,5", "prozent")).toEqual({
+      RabattProzent: 7.5,
+      RabattBetrag: null,
+    });
+    expect(rabattEingabeBrille("30 EUR", "prozent")).toEqual({
+      RabattProzent: null,
+      RabattBetrag: 30,
+    });
+    expect(rabattEingabeBrille("  ", "euro")).toEqual({
+      RabattProzent: null,
+      RabattBetrag: null,
+    });
+    expect(() => rabattEingabeBrille("120 %", "euro")).toThrow();
+  });
+
+  it("fester Prozent-Rabatt ersetzt den Euro-Rabatt", () => {
+    expect(rabattDatenBrille("Zweitbrille")).toEqual({
+      RabattBezeichnung: "Zweitbrille",
+      RabattProzent: 15,
+      RabattBetrag: null,
+    });
+    expect(rabattDatenBrille("Sonderrabatt")).toEqual({
+      RabattBezeichnung: "Sonderrabatt",
+    });
   });
 });
