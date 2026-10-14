@@ -339,7 +339,10 @@ const WERKSTATTAUFTRAG_STYLES = `
   ${FORMULAR_TABELLEN_STYLES}
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 8.5pt; line-height: 1.3; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .blatt { width: 210mm; height: 297mm; padding: 8mm 11mm; display: grid; grid-template-rows: 1fr auto 1fr; overflow: hidden; background: #fff; }
+  /* links 4 mm, rechts 18 mm: die linke Spalte (Werkstattauftrag) endet
+     vor der senkrechten Falz bei 105 mm - 2x gefaltet ergibt das obere
+     linke Viertel genau eine A6-Karte */
+  .blatt { width: 210mm; height: 297mm; padding: 8mm 18mm 8mm 4mm; display: grid; grid-template-rows: 1fr auto 1fr; overflow: hidden; background: #fff; }
   .haelfte { display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 7mm; min-height: 0; overflow: hidden; }
   .spalte { min-width: 0; }
   .titelzeile { display: flex; justify-content: space-between; font-weight: bold; font-size: 10.5pt; margin-bottom: 1.5mm; }
