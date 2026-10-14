@@ -14,6 +14,7 @@ export const BRILLENARTEN = [
   "Hobbybrille",
   "Sonnenbrille",
   "Kantenfilterbrille",
+  "Optometrische Refraktion",
 ];
 
 // Auswahlliste inkl. eines abweichenden vorhandenen Werts
