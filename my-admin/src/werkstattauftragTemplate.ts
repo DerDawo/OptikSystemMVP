@@ -361,7 +361,7 @@ const WERKSTATTAUFTRAG_STYLES = `
   /* links 4 mm, rechts 18 mm: die linke Spalte (Werkstattauftrag) endet
      vor der senkrechten Falz bei 105 mm - 2x gefaltet ergibt das obere
      linke Viertel genau eine A6-Karte */
-  .blatt { width: 210mm; height: 297mm; padding: 8mm 18mm 8mm 4mm; display: grid; grid-template-rows: 1fr auto 1fr; overflow: hidden; background: #fff; }
+  .blatt { width: 210mm; height: 297mm; padding: 8mm 18mm 8mm 4mm; display: grid; grid-template-rows: minmax(0, 1fr) auto minmax(0, 1fr); overflow: hidden; background: #fff; }
   .haelfte { display: grid; grid-template-columns: 1.08fr 0.92fr; gap: 7mm; min-height: 0; overflow: hidden; }
   .spalte { min-width: 0; }
   .titelzeile { display: flex; justify-content: space-between; font-weight: bold; font-size: 10.5pt; margin-bottom: 1.5mm; }
@@ -375,9 +375,9 @@ const WERKSTATTAUFTRAG_STYLES = `
   .angaben.zweispaltig td { width: 30%; padding-right: 2mm; }
   .notizen { white-space: pre-wrap; min-height: 4mm; }
   .schreiblinie { border-bottom: 1px solid #999; height: 5mm; }
-  .auftragserteilung { margin-top: 3mm; font-size: 7.5pt; line-height: 1.35; }
-  .auftragserteilung p { margin: 0 0 8mm; text-align: justify; }
-  .auftragserteilung b { font-size: 8.5pt; }
+  .auftragserteilung { margin-top: 2.5mm; font-size: 7pt; line-height: 1.3; }
+  .auftragserteilung p { margin: 0 0 6mm; text-align: justify; }
+  .auftragserteilung b { font-size: 8pt; }
   .unterschriften { display: flex; gap: 5mm; }
   .unterschrift { flex: 1; border-top: 1px solid #111; padding-top: 0.8mm; font-size: 7.5pt; }
   .schnitt { border-top: 1px dashed #888; margin: 3mm 0; height: 0; text-align: center; }
@@ -387,6 +387,26 @@ const WERKSTATTAUFTRAG_STYLES = `
   .kontakt { margin-top: 4mm; font-size: 7.5pt; color: #444; }
   p { margin: 0 0 1.5mm; }
 `;
+
+// Passt eine Spalte nicht in ihre Hälfte (viele Positionen, lange
+// Bemerkungen), wird sie stufenweise verkleinert statt an der Falz
+// abgeschnitten (transform statt zoom, damit auch das PDF stimmt).
+const EINPASSEN = `<script>
+(function () {
+  document.querySelectorAll(".haelfte").forEach(function (haelfte) {
+    var hoehe = haelfte.clientHeight;
+    haelfte.querySelectorAll(":scope > .spalte").forEach(function (spalte) {
+      var faktor = 1;
+      while (spalte.offsetHeight * faktor > hoehe + 1 && faktor > 0.7) {
+        faktor = Math.round((faktor - 0.02) * 100) / 100;
+        spalte.style.transformOrigin = "top left";
+        spalte.style.transform = "scale(" + faktor + ")";
+        spalte.style.width = 100 / faktor + "%";
+      }
+    });
+  });
+})();
+</script>`;
 
 export const buildWerkstattauftragPrintHtml = (
   daten: WerkstattauftragDaten,
@@ -402,6 +422,7 @@ export const buildWerkstattauftragPrintHtml = (
 </head>
 <body>
 ${buildWerkstattauftragBodyHtml(daten)}
+${EINPASSEN}
 </body>
 </html>`;
 
@@ -420,5 +441,6 @@ export const buildWerkstattauftragPreviewHtml = (
 </head>
 <body>
 ${buildWerkstattauftragBodyHtml(daten)}
+${EINPASSEN}
 </body>
 </html>`;
