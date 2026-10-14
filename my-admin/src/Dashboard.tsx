@@ -711,8 +711,6 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
             </Box>
           )}
 
-          {!statistik && <DashboardAufgaben stand={lastUpdated} />}
-
           <Box
             sx={{
               display: "grid",
@@ -1044,6 +1042,9 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
               </>
             )}
           </Box>
+
+          {/* "Heute zu tun" unter den heutigen Terminen */}
+          {!statistik && <DashboardAufgaben stand={lastUpdated} />}
         </>
       ) : null}
     </Box>
