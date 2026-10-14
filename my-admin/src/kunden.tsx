@@ -727,7 +727,12 @@ export const KundeCreate = () => {
           <FieldRow>
             <TextInput source="Merkmal1" label="Beruf" />
             <TextInput source="Merkmal2" label="Besonderes" />
-            <TextInput source="KundenNummer" label="Kundennummer" />
+            <TextInput
+              source="KundenNummer"
+              label="Kundennummer"
+              placeholder="automatisch"
+              helperText="Leer lassen: wird beim Speichern automatisch vergeben"
+            />
             <DateInput source="Aufnahmedatum" />
           </FieldRow>
         </FormSection>
