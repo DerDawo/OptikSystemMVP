@@ -22,6 +22,7 @@ import {
   WerkstattauftragButton,
 } from "./FormulareDialog";
 import { KK_RECHNER_OEFFNEN } from "./KassenanteilRechner";
+import { BrillenpassButton } from "./BrillenpassButton";
 import { zurueckZiel } from "./seitenVerlauf";
 
 /*
@@ -103,6 +104,7 @@ export const BrilleSymbolleiste = () => {
         <VisibilityOutlinedIcon />
       </Symbol>
       <FormulareButton symbol />
+      <BrillenpassButton />
       <Symbol
         titel="KK-Anteil berechnen"
         onClick={() => window.dispatchEvent(new Event(KK_RECHNER_OEFFNEN))}
