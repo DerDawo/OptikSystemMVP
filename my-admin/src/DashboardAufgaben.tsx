@@ -19,6 +19,8 @@ import {
   istFertigungsauftrag,
   istGleitsicht,
   sehtestFaellig,
+  wannText,
+  zuletztBenutzt,
 } from "./aufgabenRegeln";
 import {
   buildExternalMessageUrl,
@@ -59,9 +61,12 @@ type Liste = {
   zeilen: Zeile[];
   // reine Übersicht (keine Aufgabe): ohne Anzahl oben rechts
   ohneZahl?: boolean;
+  // abweichende Zeilenzahl (sonst MAX_ZEILEN)
+  max?: number;
 };
 
 const MAX_ZEILEN = 6;
+const ZULETZT_ANZAHL = 10;
 
 const datum = (wert: unknown) =>
   wert ? dayjs(String(wert)).format("DD.MM.YYYY") : "—";
@@ -124,7 +129,7 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
         </Typography>
       ) : (
         <Box sx={{ display: "flex", flexDirection: "column" }}>
-          {liste.zeilen.slice(0, MAX_ZEILEN).map((zeile) => {
+          {liste.zeilen.slice(0, liste.max ?? MAX_ZEILEN).map((zeile) => {
             const nummer = choosePhoneNumberForMessaging([
               zeile.kunde?.Handy,
               zeile.kunde?.TelefonnummerPrivat,
@@ -186,13 +191,13 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
               </Box>
             );
           })}
-          {liste.zeilen.length > MAX_ZEILEN && (
+          {liste.zeilen.length > (liste.max ?? MAX_ZEILEN) && (
             <Typography
               variant="caption"
               color="text.secondary"
               sx={{ px: 1.5, pt: 0.5 }}
             >
-              + {liste.zeilen.length - MAX_ZEILEN} weitere
+              + {liste.zeilen.length - (liste.max ?? MAX_ZEILEN)} weitere
             </Typography>
           )}
         </Box>
@@ -243,14 +248,25 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
           "Fertig@is": "null",
           "Abholung@is": "null",
         }),
-        // zuletzt angelegte Kunden (neueste zuerst)
-        dataProvider
-          .getList("kunde", {
-            pagination: { page: 1, perPage: MAX_ZEILEN },
+        // zuletzt angelegte und zuletzt angesehene Kunden
+        Promise.all([
+          dataProvider.getList("kunde", {
+            pagination: { page: 1, perPage: ZULETZT_ANZAHL },
             sort: { field: "id", order: "DESC" },
             filter: {},
-          })
-          .then((r) => r.data as Kunde[]),
+          }),
+          dataProvider.getList("kunde", {
+            pagination: { page: 1, perPage: ZULETZT_ANZAHL },
+            sort: { field: "last_viewed_at", order: "DESC" },
+            filter: { "last_viewed_at@not.is": "null" },
+          }),
+        ]).then(([angelegt, angesehen]) =>
+          zuletztBenutzt(
+            angelegt.data as Kunde[],
+            angesehen.data as Kunde[],
+            ZULETZT_ANZAHL,
+          ),
+        ),
         liste("brille", {
           "Abholung@gte": vor(FRISTEN.gleitsichtBisTage),
           "Abholung@lte": vor(FRISTEN.gleitsichtVonTage),
@@ -338,17 +354,18 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
             })),
         },
         {
-          titel: "Zuletzt angelegte Kunden",
-          hinweis: "die neuesten Kunden zuerst",
-          leer: "Noch keine Kunden angelegt.",
+          titel: "Zuletzt angelegt oder angesehen",
+          hinweis: "die neuesten zuerst",
+          leer: "Noch keine Kunden angelegt oder angesehen.",
           ohneZahl: true,
-          zeilen: neueKunden.map((kunde) => ({
+          max: ZULETZT_ANZAHL,
+          zeilen: neueKunden.map(({ kunde, art, zeit }) => ({
             key: `n${kunde.id}`,
             ziel: `/kunde/${kunde.id}/show`,
             kunde,
             detail: [
               kunde.KundenNummer ? `Kd.-Nr. ${String(kunde.KundenNummer)}` : "",
-              `angelegt ${datum(kunde.Aufnahmedatum ?? kunde.created_at)}`,
+              `${art} ${wannText(zeit)}`,
             ]
               .filter(Boolean)
               .join(" · "),
