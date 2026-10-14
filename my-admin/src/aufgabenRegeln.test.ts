@@ -14,6 +14,7 @@ describe("istFertigungsauftrag", () => {
     expect(istFertigungsauftrag("Sehüberprüfung")).toBe(false);
     expect(istFertigungsauftrag("sehtest nach ISo 9712")).toBe(false);
     expect(istFertigungsauftrag("Gutschein")).toBe(false);
+    expect(istFertigungsauftrag("Optometrische Refraktion")).toBe(false);
     expect(istFertigungsauftrag("Kontaktlinsenanpassung")).toBe(false);
     expect(istFertigungsauftrag("CL - KK")).toBe(false);
   });
