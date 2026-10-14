@@ -28,7 +28,8 @@ describe("berechneKassenanteil", () => {
       "25.21.01.0900",
     ]);
     expect(ergebnis.netto).toBe(32.46);
-    expect(ergebnis.brutto).toBe(38.63);
+    // je Glas 19,31 brutto (Kasse rechnet je Position), nicht 38,63
+    expect(ergebnis.brutto).toBe(38.62);
     expect(ergebnis.hinweise).toEqual([]);
   });
 
@@ -109,14 +110,17 @@ describe("abrechnungsZeilen (Berechtigungsschein)", () => {
   ];
 
   it("leitet die Brillenglasbestimmung eindeutig aus dem KK-Anteil ab", () => {
-    expect(abrechnungsZeilen({ augen, kkAnteil: 54.62 })).toEqual({
+    // 2 × 19,31 + 15,99 = 54,61 (je Position); ältere Anteile: 54,62
+    const erwartet = {
       zeilen: [
         { nummer: "25.21.01.0900", faktor: 2, betrag: 32.46 },
         { nummer: "25.99.99.0001", faktor: 1, betrag: 13.44 },
       ],
       netto: 45.9,
-      mwst: 8.72,
-    });
+      mwst: 8.71,
+    };
+    expect(abrechnungsZeilen({ augen, kkAnteil: 54.61 })).toEqual(erwartet);
+    expect(abrechnungsZeilen({ augen, kkAnteil: 54.62 })).toEqual(erwartet);
   });
 
   it("ohne passenden Rest nur die Glaspositionen", () => {
@@ -148,7 +152,7 @@ describe("abrechnungsZeilen (Berechtigungsschein)", () => {
       { nummer: "25.21.01.0900", faktor: 2, betrag: 32.46 },
       { nummer: "25.21.15.3001", faktor: 2, betrag: 99.8 },
     ]);
-    expect(ergebnis.mwst).toBe(25.13);
+    expect(ergebnis.mwst).toBe(25.12);
   });
 });
 
@@ -158,14 +162,17 @@ describe("bruttoZeilenEinzeln (Berechtigungsschein brutto, je Glas)", () => {
     { seite: "L" as const, glas: { Sph: 2.5, Cyl: 0.5 } },
   ];
 
-  it("je Glas eine Zeile, zusammen genau der KK-Anteil", () => {
-    expect(bruttoZeilenEinzeln({ augen, kkAnteil: 38.63 })).toEqual({
+  it("je Glas eine Zeile mit gleichem Bruttobetrag (19,31)", () => {
+    const erwartet = {
       zeilen: [
-        { nummer: "25.21.01.0900", faktor: 1, betrag: 19.32 },
+        { nummer: "25.21.01.0900", faktor: 1, betrag: 19.31 },
         { nummer: "25.21.01.0900", faktor: 1, betrag: 19.31 },
       ],
-      summe: 38.63,
-    });
+      summe: 38.62,
+    };
+    expect(bruttoZeilenEinzeln({ augen, kkAnteil: 38.62 })).toEqual(erwartet);
+    // auch bei älterem, auf die Summe gerundetem KK-Anteil
+    expect(bruttoZeilenEinzeln({ augen, kkAnteil: 38.63 })).toEqual(erwartet);
   });
 
   it("teilt gespeicherte Positionen mit Faktor 2 in zwei Zeilen", () => {
@@ -184,11 +191,8 @@ describe("bruttoZeilenEinzeln (Berechtigungsschein brutto, je Glas)", () => {
       ["25.21.15.3001", 1],
       ["25.21.15.3001", 1],
     ]);
-    expect(zeilen.map((z) => z.betrag)).toEqual([19.32, 19.31, 59.38, 59.38]);
-    expect(summe).toBe(157.39);
-    expect(
-      Math.round(zeilen.reduce((s, z) => s + z.betrag, 0) * 100) / 100,
-    ).toBe(157.39);
+    expect(zeilen.map((z) => z.betrag)).toEqual([19.31, 19.31, 59.38, 59.38]);
+    expect(summe).toBe(157.38);
   });
 
   it("ohne Positionen keine Zeilen", () => {
