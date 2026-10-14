@@ -659,8 +659,11 @@ export const KundeCreate = () => {
   };
 
   return (
+    // Nach dem Speichern direkt die Karteikarte des neuen Kunden öffnen
+    // (statt "Kunde bearbeiten" und danach erneut suchen)
     <Create
       title="Neuen Kunden anlegen"
+      redirect="show"
       transform={(data) => ({ ...data, created_at: new Date().toISOString() })}
     >
       <SimpleForm defaultValues={defaultValues}>
