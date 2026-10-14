@@ -41,7 +41,7 @@ import AddIcon from "@mui/icons-material/Add";
 import { KundeInput } from "./KundeInput";
 import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { brillenartOptionen } from "./brillenarten";
-import { rabattDaten, rabattOptionen } from "./rabatte";
+import { rabattDatenBrille, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { useFormContext, useWatch } from "react-hook-form";
@@ -95,17 +95,24 @@ const RabattInputs = () => {
         emptyText="–"
         helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
         onChange={(e) => {
-          const daten = rabattDaten(e?.target?.value || null);
-          if ("RabattProzent" in daten)
+          const daten = rabattDatenBrille(e?.target?.value || null);
+          if ("RabattProzent" in daten) {
             setValue("RabattProzent", daten.RabattProzent, {
               shouldDirty: true,
             });
+            setValue("RabattBetrag", daten.RabattBetrag, { shouldDirty: true });
+          }
         }}
       />
       <NumberInput
         source="RabattProzent"
         label="Rabatt in %"
         helperText="Neukunden 10 / Zweitbrille 15 / Sonderrabatt individuell"
+      />
+      <NumberInput
+        source="RabattBetrag"
+        label="Rabatt in €"
+        helperText="Fester Betrag, wird von der Summe abgezogen"
       />
     </FieldRow>
   );
@@ -116,7 +123,7 @@ const zahlungsstatusChoices = ZAHLUNGSSTATUS;
 // Live-Vorschau der "Summe" (Issue #52): spiegelt im Formular dieselbe Formel,
 // die serverseitig per Trigger berechnet wird -
 //   (GlasLinks.Betrag + GlasRechts.Betrag + Fassung.Betrag) * (1 - Rabatt%)
-//   + Summe(Zusatzleistung.Betrag) + WeitereLeistungen (#131)
+//   + Summe(Zusatzleistung.Betrag) + WeitereLeistungen (#131) - RabattBetrag
 // - damit Nutzer den Betrag schon vor dem Speichern sehen. Der eigentliche
 // Wert bleibt serverseitig maßgeblich (Trigger überschreibt ihn beim
 // Speichern ohnehin), die Vorschau schreibt ihn zusätzlich ins Formular, damit
@@ -142,6 +149,7 @@ const SummeUndRestbetragVorschau = () => {
     anzahlung,
     kkAnteil,
     weitereLeistungen,
+    rabattEuro,
   ] = useWatch({
     name: [
       "GlasLinks",
@@ -151,6 +159,7 @@ const SummeUndRestbetragVorschau = () => {
       "Anzahlung",
       "KKAnteil",
       "WeitereLeistungen",
+      "RabattBetrag",
     ],
   });
   const zusatzleistungIds: number[] = (
@@ -184,7 +193,8 @@ const SummeUndRestbetragVorschau = () => {
     Math.round(
       ((glasLinksBetrag + glasRechtsBetrag + fassungBetrag) * rabattFaktor +
         zusatzleistungenSumme +
-        (Number(weitereLeistungen) || 0)) *
+        (Number(weitereLeistungen) || 0) -
+        (Number(rabattEuro) || 0)) *
         100,
     ) / 100;
   const restbetrag =

@@ -60,7 +60,11 @@ import {
   setzeNotizLeistungBetrag,
   weitereLeistungenPositionen,
 } from "./leistungenAusNotizen";
-import { leseRabattEingabe, rabattDaten, rabattOptionen } from "./rabatte";
+import {
+  rabattDatenBrille,
+  rabattEingabeBrille,
+  rabattOptionen,
+} from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
@@ -1056,6 +1060,12 @@ export const BrilleKarteikarte = () => {
     (zahl(fassung?.Betrag) ?? 0);
   const rabattBetrag =
     rabattProzent && rabattBasis ? -(rabattBasis * rabattProzent) / 100 : null;
+  // fester Euro-Rabatt (von der Summe) und angezeigter Rabatt gesamt
+  const rabattEuro = zahl(brille.RabattBetrag);
+  const rabattGesamt =
+    rabattBetrag === null && !rabattEuro
+      ? null
+      : (rabattBetrag ?? 0) - (rabattEuro ?? 0);
 
   const summe = zahl(brille.Summe);
   const kkAnteil = zahl(brille.KKAnteil);
@@ -1685,28 +1695,29 @@ export const BrilleKarteikarte = () => {
                   optionen={rabattOptionen(brille.RabattBezeichnung)}
                   speichere={async (neu) => {
                     await auftrag("RabattBezeichnung", (wert) =>
-                      rabattDaten(wert == null ? null : String(wert)),
+                      rabattDatenBrille(wert == null ? null : String(wert)),
                     )(neu);
                     // Sonderrabatt: gleich den Betrag eintragen lassen
                     if (neu === "Sonderrabatt") fokussiereRabattfeld();
                   }}
                 />
               </Wert>
-              {/* Prozent ("5") oder Euro ("50 €", wird in Prozent der
-                  Rabattbasis umgerechnet) */}
+              {/* Prozent ("5") auf Gläser + Fassung oder Euro ("50 €",
+                  fester Betrag von der Summe) */}
               <Wert rechts>
                 {textFeld(
                   "RabattProzent",
                   "Rabatt in %",
-                  (eingabe) =>
-                    auftrag("RabattProzent")(
-                      leseRabattEingabe(String(eingabe ?? ""), rabattBasis),
-                    ),
+                  auftrag("RabattProzent", (eingabe) =>
+                    rabattEingabeBrille(String(eingabe ?? ""), "prozent"),
+                  ),
                   brille.RabattProzent,
                   {
                     rechts: true,
                     anzeige: rabattProzent ? (
                       `${dezimal.format(rabattProzent)} %`
+                    ) : rabattEuro ? (
+                      ""
                     ) : text(brille.RabattBezeichnung) ? (
                       <Box
                         component="span"
@@ -1721,37 +1732,34 @@ export const BrilleKarteikarte = () => {
                 )}
               </Wert>
             </Zellen>
-            {/* Rabatt in Euro direkt eintragen ("50" = 50,00 € Rabatt); wird
-                in den genauen Prozentsatz umgerechnet, ohne gewählten Rabatt
-                als Sonderrabatt */}
+            {/* Rabatt in Euro direkt eintragen ("50" = 50,00 € Rabatt, fester
+                Betrag von der Summe - auch ohne Glas-/Fassungspreise); ohne
+                gewählten Rabatt als Sonderrabatt. "10 %" geht hier auch. */}
             <Feld z={zRabatt} s="8 / 9" rechts>
               {textFeld(
                 "RabattBetrag",
                 "Rabatt in Euro",
-                auftrag("RabattProzent", (eingabe) => {
-                  const roh = String(eingabe ?? "")
-                    .replace("-", "")
-                    .trim();
-                  const prozent = roh
-                    ? leseRabattEingabe(
-                        /%|€|eur/i.test(roh) ? roh : `${roh} €`,
-                        rabattBasis,
-                      )
-                    : null;
+                auftrag("RabattBetrag", (eingabe) => {
+                  const daten = rabattEingabeBrille(
+                    String(eingabe ?? ""),
+                    "euro",
+                  );
+                  const gesetzt =
+                    daten.RabattProzent !== null || daten.RabattBetrag !== null;
                   return {
-                    RabattProzent: prozent,
-                    ...(prozent && !text(brille.RabattBezeichnung)
+                    ...daten,
+                    ...(gesetzt && !text(brille.RabattBezeichnung)
                       ? { RabattBezeichnung: "Sonderrabatt" }
                       : {}),
                   };
                 }),
-                rabattBetrag === null
+                rabattGesamt === null
                   ? null
-                  : Math.round(Math.abs(rabattBetrag) * 100) / 100,
+                  : Math.round(Math.abs(rabattGesamt) * 100) / 100,
                 {
                   rechts: true,
                   anzeige:
-                    rabattBetrag === null ? "" : betrag.format(rabattBetrag),
+                    rabattGesamt === null ? "" : betrag.format(rabattGesamt),
                 },
               )}
             </Feld>
