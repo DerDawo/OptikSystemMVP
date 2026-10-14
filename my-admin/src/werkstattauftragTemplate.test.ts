@@ -81,6 +81,8 @@ describe("werkstattauftragTemplate", () => {
     expect(html).toContain("zum Endpreis von 653,90 € inkl. MwSt.");
     expect(html).toContain("§ 648 BGB");
     expect(html).toContain("Unterschrift Kunde/Kundin");
+    // zu lange Spalten werden eingepasst statt an der Falz abgeschnitten
+    expect(html).toContain('spalte.style.transform = "scale("');
     // nur auf dem Abschnitt fürs Geschäft, nicht auf dem Kundenabschnitt
     expect(html.match(/Auftragserteilung/g)).toHaveLength(1);
     expect(html).toContain("Kundenabschnitt");
