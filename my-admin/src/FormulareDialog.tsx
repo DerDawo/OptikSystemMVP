@@ -201,6 +201,7 @@ const LAYOUTS: Record<string, Layout> = {
   },
   "Antrag Zuschuss": antragLayout("zuschuss"),
   "Antrag Sozialamt": antragLayout("sozialamt"),
+  "Antrag Jugendamt": antragLayout("jugendamt"),
   [VERORDNUNG_KATEGORIE]: {
     ausVorschau: true,
     title: "Verordnung-Vorschau",
@@ -249,6 +250,7 @@ export const KV_KATEGORIEN = [
   "Antrag BAP",
   "Antrag Zuschuss",
   "Antrag Sozialamt",
+  "Antrag Jugendamt",
   "Berechtigungsschein",
   "Berechtigungsschein AOK",
   "Berechtigungsschein GKV",
@@ -536,6 +538,9 @@ const FormulareDialog = ({
   const kiFormular = selectedVorlage
     ? KI_FORMULARE[selectedVorlage.Kategorie]
     : undefined;
+  // Formulare mit Begründungsfeld ohne KI-Vorschlag
+  const mitBegruendung =
+    Boolean(kiFormular) || selectedVorlage?.Kategorie === "Antrag Jugendamt";
   const [begruendung, setBegruendung] = useState("");
   const [kiLaeuft, setKiLaeuft] = useState(false);
   useEffect(() => {
@@ -1087,7 +1092,7 @@ const FormulareDialog = ({
               )
             ) : layout ? (
               <>
-                {kiFormular && (
+                {mitBegruendung && (
                   <Box sx={{ mb: 1.5 }}>
                     <TextField
                       label="Begründung (erscheint im Formular)"
@@ -1097,34 +1102,37 @@ const FormulareDialog = ({
                       minRows={3}
                       fullWidth
                     />
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1.5,
-                        mt: 0.5,
-                      }}
-                    >
-                      <Button
-                        size="small"
-                        startIcon={
-                          kiLaeuft ? (
-                            <CircularProgress size={14} />
-                          ) : (
-                            <AutoAwesomeIcon />
-                          )
-                        }
-                        onClick={kiVorschlagHolen}
-                        disabled={kiLaeuft}
+                    {kiFormular && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          mt: 0.5,
+                        }}
                       >
-                        Mit KI vorschlagen
-                      </Button>
-                      <Typography variant="caption" color="text.secondary">
-                        Übertragen werden nur Alter, Brillenart, Messwerte,
-                        Diagnose und Beruf – keine Namen, Adressen, Geburtsdaten
-                        oder Versichertennummern. Text vor dem Druck prüfen.
-                      </Typography>
-                    </Box>
+                        <Button
+                          size="small"
+                          startIcon={
+                            kiLaeuft ? (
+                              <CircularProgress size={14} />
+                            ) : (
+                              <AutoAwesomeIcon />
+                            )
+                          }
+                          onClick={kiVorschlagHolen}
+                          disabled={kiLaeuft}
+                        >
+                          Mit KI vorschlagen
+                        </Button>
+                        <Typography variant="caption" color="text.secondary">
+                          Übertragen werden nur Alter, Brillenart, Messwerte,
+                          Diagnose und Beruf – keine Namen, Adressen,
+                          Geburtsdaten oder Versichertennummern. Text vor dem
+                          Druck prüfen.
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
                 )}
                 {layoutDef?.ausVorschau && (
