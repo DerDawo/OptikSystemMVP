@@ -77,7 +77,12 @@ describe("werkstattauftragTemplate", () => {
     expect(html).toContain("22.09.2026 17:00");
     expect(html).toContain("Matrix Pro 1.50");
     expect(html).toContain("Offen: 553,90 €");
-    expect(html).toContain("Hiermit erteile ich den Auftrag");
+    expect(html).toContain("Auftragserteilung");
+    expect(html).toContain("zum Endpreis von 653,90 € inkl. MwSt.");
+    expect(html).toContain("§ 648 BGB");
+    expect(html).toContain("Unterschrift Kunde/Kundin");
+    // nur auf dem Abschnitt fürs Geschäft, nicht auf dem Kundenabschnitt
+    expect(html.match(/Auftragserteilung/g)).toHaveLength(1);
     expect(html).toContain("Kundenabschnitt");
     // Eingaben werden als Text eingesetzt, nicht als HTML
     expect(html).toContain("Bügel &lt;kürzen&gt;");
