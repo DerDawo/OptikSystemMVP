@@ -251,6 +251,18 @@ export const buildRechnungPositionen = (
     });
   }
 
+  // fester Euro-Rabatt (wird in der Datenbank von der Summe abgezogen)
+  const rabattEuro = Number(entities.brille?.RabattBetrag) || 0;
+  if (rabattEuro > 0) {
+    const rabattBezeichnung = entities.brille?.RabattBezeichnung
+      ? String(entities.brille.RabattBezeichnung)
+      : "";
+    positionen.push({
+      label: `Rabatt${rabattBezeichnung ? `: ${rabattBezeichnung}` : ""}`,
+      betrag: -Math.round(rabattEuro * 100) / 100,
+    });
+  }
+
   return positionen;
 };
 

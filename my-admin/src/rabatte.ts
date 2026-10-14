@@ -59,3 +59,42 @@ export const leseRabattEingabe = (
     throw new EingabeFehler("Der Rabatt ist höher als der Betrag.");
   return Math.round((wert / basis) * 100 * 1e6) / 1e6;
 };
+
+// Brillen haben zusätzlich einen festen Euro-Rabatt ("RabattBetrag"): ein
+// fester Prozent-Rabatt oder "kein Rabatt" ersetzt ihn, beim Sonderrabatt
+// bleibt er stehen.
+export const rabattDatenBrille = (bezeichnung: string | null) => {
+  const daten = rabattDaten(bezeichnung);
+  return "RabattProzent" in daten ? { ...daten, RabattBetrag: null } : daten;
+};
+
+/*
+ * Eingabe in einem Rabattfeld der Brillenkartei: "10 %" = Prozent auf Gläser
+ * und Fassung, "50 €" = fester Euro-Betrag von der Summe. Ohne Einheit gilt
+ * `standard` (Feld "%" -> Prozent, Feld "Betrag" -> Euro). Es gilt immer nur
+ * eine Art; leer löscht beide.
+ */
+export const rabattEingabeBrille = (
+  eingabe: string,
+  standard: "prozent" | "euro",
+): { RabattProzent: number | null; RabattBetrag: number | null } => {
+  const roh = eingabe.replace("-", "").trim();
+  if (!roh) return { RabattProzent: null, RabattBetrag: null };
+  const einheit = /%/.test(roh)
+    ? "prozent"
+    : /€|eur/i.test(roh)
+      ? "euro"
+      : standard;
+  const zahl = leseZahl(roh.replace(/€|eur|%/gi, "").trim());
+  if (zahl === null) throw new EingabeFehler("Bitte eine Zahl eingeben.");
+  const wert = Math.abs(zahl);
+  if (einheit === "prozent") {
+    if (wert > 100)
+      throw new EingabeFehler("Rabatt in % darf höchstens 100 sein.");
+    return { RabattProzent: wert || null, RabattBetrag: null };
+  }
+  return {
+    RabattProzent: null,
+    RabattBetrag: wert ? Math.round(wert * 100) / 100 : null,
+  };
+};

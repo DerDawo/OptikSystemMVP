@@ -83,6 +83,19 @@ describe("buildRechnungPositionen", () => {
     expect(rabatt.betrag).toBeCloseTo(-31.98, 2);
   });
 
+  it("zeigt einen festen Euro-Rabatt als eigene negative Position", () => {
+    const positionen = buildRechnungPositionen({
+      ...ENTITIES,
+      brille: {
+        ...ENTITIES.brille,
+        RabattBetrag: 25,
+        RabattBezeichnung: "Sonderrabatt",
+      },
+    });
+    const rabatt = positionen[positionen.length - 1];
+    expect(rabatt).toEqual({ label: "Rabatt: Sonderrabatt", betrag: -25 });
+  });
+
   it("zeigt weitere Leistungen bzw. Nachlass als eigene Position (#131)", () => {
     const mit = buildRechnungPositionen({
       ...ENTITIES,
