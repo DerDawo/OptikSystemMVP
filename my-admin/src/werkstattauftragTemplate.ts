@@ -212,6 +212,26 @@ export type WerkstattauftragDaten = {
   entities: DocumentMergeEntities;
 };
 
+// Auftragserteilung zum Unterschreiben (nur auf dem Abschnitt fürs
+// Geschäft): Maßanfertigung zum Endpreis, Fälligkeit, Eigentumsvorbehalt
+// (§ 449 BGB), Anteil des Kostenträgers, Kündigung vor Fertigstellung
+// (§ 648 BGB), Gewährleistung bleibt.
+const auftragserteilung = (endpreis: number) => {
+  const firma = escapeHtml(RECHNUNG_ABSENDER.firma);
+  return `<div class="auftragserteilung">
+      <p><b>Auftragserteilung</b><br />
+      Ich beauftrage ${firma} mit der Anfertigung der oben beschriebenen Brille nach meinen individuellen Werten zum Endpreis von ${escapeHtml(formatEuro(endpreis))} € inkl. MwSt.
+      Der Betrag ist bei Abholung fällig; bis zur vollständigen Bezahlung bleibt die Brille Eigentum von ${firma}.
+      Übernimmt ein Kostenträger (z. B. Krankenkasse, Arbeitgeber, Sozialamt) seinen Anteil nicht, zahle ich diesen selbst.
+      Kündige ich den Auftrag vor Fertigstellung, kann ${firma} die vereinbarte Vergütung abzüglich ersparter Aufwendungen verlangen (§ 648 BGB).
+      Meine gesetzlichen Gewährleistungsrechte bleiben unberührt.</p>
+      <div class="unterschriften">
+        <div class="unterschrift">${escapeHtml(RECHNUNG_ABSENDER.ort)}, Datum</div>
+        <div class="unterschrift">Unterschrift Kunde/Kundin</div>
+      </div>
+    </div>`;
+};
+
 export const buildWerkstattauftragBodyHtml = ({
   entities,
 }: WerkstattauftragDaten): string => {
@@ -290,8 +310,7 @@ export const buildWerkstattauftragBodyHtml = ({
     <div class="spalte">
       ${angaben(kundeninfo)}
       ${preisTabelle(summen, false)}
-      <p class="zustimmung">Hiermit erteile ich den Auftrag zur Fertigung der Brille und bin mit dem Endpreis einverstanden.</p>
-      <div class="unterschrift">Datum, Unterschrift</div>
+      ${auftragserteilung(summen.endpreis)}
     </div>
   </section>
 
@@ -356,8 +375,11 @@ const WERKSTATTAUFTRAG_STYLES = `
   .angaben.zweispaltig td { width: 30%; padding-right: 2mm; }
   .notizen { white-space: pre-wrap; min-height: 4mm; }
   .schreiblinie { border-bottom: 1px solid #999; height: 5mm; }
-  .zustimmung { margin: 4mm 0 9mm; }
-  .unterschrift { border-top: 1px solid #111; padding-top: 0.8mm; font-size: 7.5pt; width: 70%; }
+  .auftragserteilung { margin-top: 3mm; font-size: 7.5pt; line-height: 1.35; }
+  .auftragserteilung p { margin: 0 0 8mm; text-align: justify; }
+  .auftragserteilung b { font-size: 8.5pt; }
+  .unterschriften { display: flex; gap: 5mm; }
+  .unterschrift { flex: 1; border-top: 1px solid #111; padding-top: 0.8mm; font-size: 7.5pt; }
   .schnitt { border-top: 1px dashed #888; margin: 3mm 0; height: 0; text-align: center; }
   .schnitt span { position: relative; top: -2.2mm; background: #fff; padding: 0 2mm; font-size: 7pt; color: #666; }
   .tipps { margin: 1mm 0 2mm; padding-left: 4mm; }
