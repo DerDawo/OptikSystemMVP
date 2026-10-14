@@ -339,6 +339,19 @@ export const ZUSAETZE: Zusatz[] = [
 // Netto-Summe -> Kassenanteil inkl. MwSt.
 export const mitMwst = (netto: number) => rund(netto * (1 + MWST));
 
+// Die Kasse rechnet jede Hilfsmittelposition einzeln: Netto + 19 % MwSt.,
+// je Stück auf den Cent gerundet (2 × 16,23 netto = 2 × 19,31 = 38,62,
+// nicht 32,46 × 1,19 = 38,63).
+export const bruttoJeStueck = (netto: number) => rund(netto * (1 + MWST));
+
+export const bruttoSumme = (positionen: { netto: number; faktor?: number }[]) =>
+  rund(
+    positionen.reduce(
+      (s, p) => s + bruttoJeStueck(p.netto) * (p.faktor ?? 1),
+      0,
+    ),
+  );
+
 // Rechenungenauigkeiten (z. B. -2,25 + 0,25) nicht über eine Grenze kippen
 const EPS = 1e-9;
 
@@ -413,7 +426,7 @@ export const berechneKassenanteil = (
   }
 
   const netto = rund(positionen.reduce((s, p) => s + p.netto, 0));
-  return { positionen, netto, brutto: mitMwst(netto), hinweise };
+  return { positionen, netto, brutto: bruttoSumme(positionen), hinweise };
 };
 
 // Beim Übernehmen im KK-Rechner gespeicherte Positionen
@@ -462,11 +475,12 @@ export const alsGespeichertePositionen = (
     netto: p.netto,
   }));
 
-// Zuschläge, deren Summe genau `rest` ergibt - nur wenn eindeutig (z. B.
-// Brillenglasbestimmung 13,44); gleich teure Alternativen wie die beiden
-// Kantenfilter bleiben offen.
+// Zuschläge, deren Bruttosumme dem Rest des KK-Anteils entspricht - nur
+// wenn eindeutig (z. B. Brillenglasbestimmung 15,99); gleich teure
+// Alternativen wie die beiden Kantenfilter bleiben offen. Ein Cent
+// Abweichung ist erlaubt (ältere KK-Anteile mit Rundung auf die Summe).
 const eindeutigeZusaetze = (
-  rest: number,
+  restBrutto: number,
   anzahlAugen: number,
 ): GespeichertePosition[] | null => {
   const kandidaten = ZUSAETZE.map((z) => ({
@@ -481,11 +495,15 @@ const eindeutigeZusaetze = (
     auswahl: GespeichertePosition[],
     summe: number,
   ) => {
-    if (Math.abs(summe - rest) < 0.005) treffer.push(auswahl);
-    if (auswahl.length === 3 || summe > rest) return;
+    if (Math.abs(summe - restBrutto) < 0.015) treffer.push(auswahl);
+    if (auswahl.length === 3 || summe > restBrutto + 0.015) return;
     for (let i = start; i < kandidaten.length; i++) {
       const k = kandidaten[i];
-      suche(i + 1, [...auswahl, k], rund(summe + k.netto * k.faktor));
+      suche(
+        i + 1,
+        [...auswahl, k],
+        rund(summe + bruttoJeStueck(k.netto) * k.faktor),
+      );
     }
   };
   suche(0, [], 0);
@@ -517,8 +535,8 @@ const abrechnungsPositionen = ({
     const ergebnis = berechneKassenanteil(augen);
     positionen = alsGespeichertePositionen(ergebnis.positionen);
     if (kkAnteil > 0) {
-      const rest = rund(rund(kkAnteil / (1 + MWST)) - ergebnis.netto);
-      if (rest > 0.004) {
+      const rest = rund(kkAnteil - ergebnis.brutto);
+      if (rest > 0.014) {
         const anzahlAugen = new Set(ergebnis.positionen.map((p) => p.seite))
           .size;
         positionen.push(...(eindeutigeZusaetze(rest, anzahlAugen) ?? []));
@@ -531,46 +549,27 @@ const abrechnungsPositionen = ({
 export const abrechnungsZeilen = (
   eingabe: AbrechnungsEingabe,
 ): { zeilen: AbrechnungsZeile[]; netto: number; mwst: number } => {
-  const zeilen = zusammenfassen(abrechnungsPositionen(eingabe));
+  const positionen = abrechnungsPositionen(eingabe);
+  const zeilen = zusammenfassen(positionen);
   const netto = rund(zeilen.reduce((s, z) => s + z.betrag, 0));
-  return { zeilen, netto, mwst: rund(mitMwst(netto) - netto) };
+  return { zeilen, netto, mwst: rund(bruttoSumme(positionen) - netto) };
 };
 
 // Berechtigungsschein: jedes Glas (jede Position) in einer eigenen Zeile
-// mit Faktor 1 und Bruttobetrag. Die Zeilen ergeben zusammen genau den
-// Rechnungsbetrag (KK-Anteil); Rundungscents gehen an die Zeilen mit dem
-// größten Rest (z. B. 2 × 16,23 netto = 38,63 brutto -> 19,32 + 19,31).
+// mit Faktor 1 und Bruttobetrag je Stück (16,23 netto -> 19,31); die
+// Zeilen ergeben zusammen den Rechnungsbetrag.
 export const bruttoZeilenEinzeln = (
   eingabe: AbrechnungsEingabe,
 ): { zeilen: AbrechnungsZeile[]; summe: number } => {
-  const einzeln = abrechnungsPositionen(eingabe).flatMap((p) =>
+  const zeilen = abrechnungsPositionen(eingabe).flatMap((p) =>
     Array.from({ length: Math.max(0, Math.round(p.faktor)) }, () => ({
       nummer: p.nummer,
-      genau: p.netto * (1 + MWST) * 100,
+      faktor: 1,
+      betrag: bruttoJeStueck(p.netto),
     })),
   );
-  if (einzeln.length === 0) return { zeilen: [], summe: 0 };
-  const genauSumme = einzeln.reduce((s, z) => s + z.genau, 0);
-  const kk = Math.round(eingabe.kkAnteil * 100);
-  // Ziel in Cent: der KK-Anteil, wenn er zur Summe passt, sonst die Summe
-  const ziel =
-    kk > 0 && Math.abs(kk - Math.round(genauSumme)) <= 5
-      ? kk
-      : Math.round(genauSumme);
-  const cents = einzeln.map((z) => Math.floor(z.genau + 1e-6));
-  let fehlend = ziel - cents.reduce((s, c) => s + c, 0);
-  const reihenfolge = einzeln
-    .map((z, i) => ({ i, rest: z.genau - Math.floor(z.genau + 1e-6) }))
-    .sort((a, b) => b.rest - a.rest || a.i - b.i);
-  for (let k = 0; fehlend !== 0 && reihenfolge.length > 0; k++) {
-    const { i } = reihenfolge[k % reihenfolge.length];
-    cents[i] += fehlend > 0 ? 1 : -1;
-    fehlend += fehlend > 0 ? -1 : 1;
-  }
-  const zeilen = einzeln.map((z, i) => ({
-    nummer: z.nummer,
-    faktor: 1,
-    betrag: cents[i] / 100,
-  }));
-  return { zeilen, summe: ziel / 100 };
+  return {
+    zeilen,
+    summe: rund(zeilen.reduce((s, z) => s + z.betrag, 0)),
+  };
 };

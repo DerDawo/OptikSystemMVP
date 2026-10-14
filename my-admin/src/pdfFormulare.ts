@@ -304,7 +304,16 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
     ...werte("NR", rechts.naehe),
     ...werte("NL", links.naehe),
     ...abrechnungsFelder,
-    rechnungsbetrag: kassenanteil > 0 ? formatWert(kassenanteil, "zwei") : "",
+    // Summe der Zeilen (je Position gerundet), wenn sie bis auf Rundungscents
+    // zum KK-Anteil passt; sonst (Zeilen unvollständig) der KK-Anteil
+    rechnungsbetrag: formatWert(
+      abrechnung.zeilen.length > 0 &&
+        (kassenanteil === 0 ||
+          Math.abs(abrechnung.summe - kassenanteil) <= 0.025)
+        ? abrechnung.summe
+        : kassenanteil || "",
+      "zwei",
+    ),
   };
 };
 
