@@ -20,7 +20,7 @@ import {
   MWST,
   ZUSAETZE,
   berechneKassenanteil,
-  mitMwst,
+  bruttoSumme,
 } from "./kassenanteil";
 
 type Glas = Record<string, unknown> | undefined;
@@ -114,7 +114,8 @@ export const KassenanteilRechner = ({
     Math.round(
       zeilen.filter((z) => z.an).reduce((s, z) => s + z.netto, 0) * 100,
     ) / 100;
-  const brutto = mitMwst(netto);
+  // je Position gerundet, wie die Kasse abrechnet (2 × 19,31 = 38,62)
+  const brutto = bruttoSumme(zeilen.filter((z) => z.an).map((z) => z.position));
 
   const uebernehmen = async () => {
     setSpeichert(true);
