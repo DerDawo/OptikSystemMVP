@@ -80,3 +80,48 @@ export const NACHRICHTEN = {
   sehtest: (kunde: Kunde | null | undefined, firma: string) =>
     `${anredeGruss(kunde)},\n\nIhre letzte Brille ist jetzt zwei Jahre alt. Wir empfehlen, Ihre Sehwerte überprüfen zu lassen – gern vereinbaren wir einen Termin mit Ihnen.\n\nMit freundlichen Grüßen\n${firma}`,
 };
+
+type KundeMitZeit = {
+  id: number | string;
+  created_at?: string | null;
+  last_viewed_at?: string | null;
+};
+
+/*
+ * "Zuletzt angelegt oder angesehen": beide Listen zusammen, je Kunde das
+ * jüngste Ereignis, neueste zuerst.
+ */
+export const zuletztBenutzt = <K extends KundeMitZeit>(
+  angelegt: K[],
+  angesehen: K[],
+  max: number,
+) => {
+  const je = new Map<
+    string,
+    { kunde: K; art: "angelegt" | "angesehen"; zeit: string }
+  >();
+  const merke = (
+    kunde: K,
+    art: "angelegt" | "angesehen",
+    zeit?: string | null,
+  ) => {
+    if (!zeit) return;
+    const id = String(kunde.id);
+    const bisher = je.get(id);
+    if (!bisher || zeit > bisher.zeit) je.set(id, { kunde, art, zeit });
+  };
+  angelegt.forEach((k) => merke(k, "angelegt", k.created_at));
+  angesehen.forEach((k) => merke(k, "angesehen", k.last_viewed_at));
+  return [...je.values()]
+    .sort((a, b) => b.zeit.localeCompare(a.zeit))
+    .slice(0, max);
+};
+
+// "heute 14:32", "gestern 09:10", sonst "13.10.2026"
+export const wannText = (zeit: string, jetzt = dayjs()) => {
+  const t = dayjs(zeit);
+  if (t.isSame(jetzt, "day")) return `heute ${t.format("HH:mm")}`;
+  if (t.isSame(jetzt.subtract(1, "day"), "day"))
+    return `gestern ${t.format("HH:mm")}`;
+  return t.format("DD.MM.YYYY");
+};

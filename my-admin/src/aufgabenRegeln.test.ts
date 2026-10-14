@@ -5,7 +5,10 @@ import {
   istFertigungsauftrag,
   istGleitsicht,
   sehtestFaellig,
+  wannText,
+  zuletztBenutzt,
 } from "./aufgabenRegeln";
+import dayjs from "dayjs";
 
 describe("istFertigungsauftrag", () => {
   it("Brillen ja, Sehtest/Gutschein/Kontaktlinsen nein", () => {
@@ -56,5 +59,44 @@ describe("Nachrichten", () => {
       "Guten Tag",
     );
     expect(NACHRICHTEN.abholen(null, "Optik")).toContain("zur Abholung bereit");
+  });
+});
+
+describe("zuletztBenutzt", () => {
+  it("angelegt und angesehen gemischt, je Kunde das jüngste, neueste zuerst", () => {
+    const angelegt = [
+      {
+        id: 5,
+        created_at: "2026-10-14T09:00:00Z",
+        last_viewed_at: "2026-10-14T12:00:00Z",
+      },
+      { id: 4, created_at: "2026-10-14T08:00:00Z" },
+    ];
+    const angesehen = [
+      {
+        id: 5,
+        created_at: "2026-10-14T09:00:00Z",
+        last_viewed_at: "2026-10-14T12:00:00Z",
+      },
+      {
+        id: 1,
+        created_at: "2026-10-10T08:00:00Z",
+        last_viewed_at: "2026-10-14T10:00:00Z",
+      },
+    ];
+    const ergebnis = zuletztBenutzt(angelegt, angesehen, 10);
+    expect(ergebnis.map((e) => [e.kunde.id, e.art])).toEqual([
+      [5, "angesehen"],
+      [1, "angesehen"],
+      [4, "angelegt"],
+    ]);
+    expect(zuletztBenutzt(angelegt, angesehen, 2)).toHaveLength(2);
+  });
+
+  it("Zeitangabe", () => {
+    const jetzt = dayjs("2026-10-14T15:00:00");
+    expect(wannText("2026-10-14T14:32:00", jetzt)).toBe("heute 14:32");
+    expect(wannText("2026-10-13T09:10:00", jetzt)).toBe("gestern 09:10");
+    expect(wannText("2026-10-01T09:10:00", jetzt)).toBe("01.10.2026");
   });
 });
