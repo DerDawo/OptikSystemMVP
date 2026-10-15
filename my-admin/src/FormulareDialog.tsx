@@ -317,6 +317,31 @@ const openDocumentWindow = (html: string, autoPrint: boolean): boolean => {
   return true;
 };
 
+// Druck ohne Vorschau (Werkstattauftrag): ein unsichtbarer Rahmen nimmt das
+// Druck-HTML auf und öffnet sofort den Druckdialog des Browsers - ohne
+// zusätzliches Fenster, daher auch ohne Pop-up-Freigabe
+const druckeDirekt = (html: string) => {
+  document
+    .querySelectorAll("iframe[data-direktdruck]")
+    .forEach((alt) => alt.remove());
+  const rahmen = document.createElement("iframe");
+  rahmen.dataset.direktdruck = "";
+  rahmen.setAttribute("aria-hidden", "true");
+  rahmen.style.cssText =
+    "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;";
+  rahmen.onload = () => {
+    const fenster = rahmen.contentWindow;
+    if (!fenster || fenster.location.href !== "about:srcdoc") return;
+    fenster.addEventListener("afterprint", () =>
+      setTimeout(() => rahmen.remove(), 1000),
+    );
+    fenster.focus();
+    fenster.print();
+  };
+  rahmen.srcdoc = html;
+  document.body.appendChild(rahmen);
+};
+
 interface FormulareDialogProps {
   brille: RaRecord;
   onClose: () => void;
@@ -327,6 +352,10 @@ interface FormulareDialogProps {
   // Namen aus, falls es dort mehrere aktive Vorlagen gibt (Mahnung
   // erstellen, #57: eine Vorlage je Mahnstufe).
   initialVorlageName?: string;
+  // Ohne Vorschau sofort drucken, sobald alle Daten geladen sind; gibt es
+  // keine eindeutige Vorlage mit eigenem Layout, erscheint der Dialog wie
+  // gewohnt
+  direktDrucken?: boolean;
 }
 
 const FormulareDialog = ({
@@ -334,8 +363,10 @@ const FormulareDialog = ({
   onClose,
   initialKategorie,
   initialVorlageName,
+  direktDrucken = false,
 }: FormulareDialogProps) => {
   const notify = useNotify();
+  const [direkt, setDirekt] = useState(direktDrucken);
   const [selectedVorlage, setSelectedVorlage] =
     useState<Dokumentvorlage | null>(null);
   // "liste" = Auswahlfenster wie in Prisma, "vorschau" = Seitenansicht
@@ -409,13 +440,13 @@ const FormulareDialog = ({
   const zusatzleistungIds: number[] = (brille.ZusatzleistungIDs ?? []).filter(
     (id: number | null | undefined) => id !== null && id !== undefined,
   );
-  const { data: katalogLeistungen } = useGetMany(
+  const { data: katalogLeistungen, isLoading: katalogLaedt } = useGetMany(
     "zusatzleistung",
     { ids: zusatzleistungIds },
     { enabled: zusatzleistungIds.length > 0 },
   );
   // Preis je Auftrag (brille_hat_zusatzleistungen.Betrag) statt Katalogpreis
-  const { data: zuordnungen } = useGetList(
+  const { data: zuordnungen, isLoading: zuordnungenLaden } = useGetList(
     "brille_hat_zusatzleistungen",
     {
       filter: { BrillenID: brille.id },
@@ -437,36 +468,38 @@ const FormulareDialog = ({
     [katalogLeistungen, zuordnungen],
   );
 
-  const { data: kunde } = useGetOne(
+  const { data: kunde, isLoading: kundeLaedt } = useGetOne(
     "kunde",
     { id: brille.kunde_id },
     { enabled: Boolean(brille.kunde_id) },
   );
-  const { data: glasLinks } = useGetOne(
+  const { data: glasLinks, isLoading: glasLinksLaedt } = useGetOne(
     "glass",
     { id: brille.GlasLinks },
     { enabled: Boolean(brille.GlasLinks) },
   );
-  const { data: glasRechts } = useGetOne(
+  const { data: glasRechts, isLoading: glasRechtsLaedt } = useGetOne(
     "glass",
     { id: brille.GlasRechts },
     { enabled: Boolean(brille.GlasRechts) },
   );
-  const { data: fassung } = useGetOne(
+  const { data: fassung, isLoading: fassungLaedt } = useGetOne(
     "fassung",
     { id: brille.Fassung },
     { enabled: Boolean(brille.Fassung) },
   );
-  const { data: glastyp } = useGetOne(
+  const { data: glastyp, isLoading: glastypLaedt } = useGetOne(
     "glastyp",
     { id: brille.Glastyp },
     { enabled: Boolean(brille.Glastyp) },
   );
-  const { data: betrieb } = useGetOne("betrieb", { id: 1 });
+  const { data: betrieb, isLoading: betriebLaedt } = useGetOne("betrieb", {
+    id: 1,
+  });
 
   // Vorherige Brille desselben Kunden (bisherige Werte, Veränderung der
   // Sehstärke): der jüngste Auftrag vor diesem
-  const { data: vorherigeBrillen } = useGetList(
+  const { data: vorherigeBrillen, isLoading: vorherigeLaden } = useGetList(
     "brille",
     {
       pagination: { page: 1, perPage: 1 },
@@ -482,16 +515,18 @@ const FormulareDialog = ({
     { enabled: Boolean(brille.kunde_id) && brille.id != null },
   );
   const vorherigeBrille = vorherigeBrillen?.[0];
-  const { data: vorherigesGlasRechts } = useGetOne(
-    "glass",
-    { id: vorherigeBrille?.GlasRechts },
-    { enabled: Boolean(vorherigeBrille?.GlasRechts) },
-  );
-  const { data: vorherigesGlasLinks } = useGetOne(
-    "glass",
-    { id: vorherigeBrille?.GlasLinks },
-    { enabled: Boolean(vorherigeBrille?.GlasLinks) },
-  );
+  const { data: vorherigesGlasRechts, isLoading: vorherigesGlasRechtsLaedt } =
+    useGetOne(
+      "glass",
+      { id: vorherigeBrille?.GlasRechts },
+      { enabled: Boolean(vorherigeBrille?.GlasRechts) },
+    );
+  const { data: vorherigesGlasLinks, isLoading: vorherigesGlasLinksLaedt } =
+    useGetOne(
+      "glass",
+      { id: vorherigeBrille?.GlasLinks },
+      { enabled: Boolean(vorherigeBrille?.GlasLinks) },
+    );
 
   const mergeEntities: DocumentMergeEntities = useMemo(
     () => ({
@@ -662,6 +697,45 @@ const FormulareDialog = ({
   );
   const textAenderbar = Boolean(selectedVorlage) && !layout && !pdfVorlage;
 
+  const datenLaden = [
+    vorlagenLoading,
+    katalogLaedt,
+    zuordnungenLaden,
+    kundeLaedt,
+    glasLinksLaedt,
+    glasRechtsLaedt,
+    fassungLaedt,
+    glastypLaedt,
+    betriebLaedt,
+    vorherigeLaden,
+    vorherigesGlasRechtsLaedt,
+    vorherigesGlasLinksLaedt,
+  ].some(Boolean);
+  const direktGedruckt = useRef(false);
+  useEffect(() => {
+    if (!direkt || datenLaden || direktGedruckt.current) return;
+    if (!selectedVorlage) {
+      // keine oder mehrere passende Vorlagen: Auswahl anzeigen
+      if (auswahlVorlagen.length !== 1) setDirekt(false);
+      return;
+    }
+    if (!layoutDef) {
+      setDirekt(false);
+      return;
+    }
+    direktGedruckt.current = true;
+    druckeDirekt(layoutDef.print(layoutDaten));
+    onClose();
+  }, [
+    direkt,
+    datenLaden,
+    selectedVorlage,
+    auswahlVorlagen,
+    layoutDef,
+    layoutDaten,
+    onClose,
+  ]);
+
   // HTML für Druck und PDF (bei Anträgen samt angeklickter Kästchen)
   const druckHtml = () => {
     const vorschau = vorschauRef.current?.contentDocument;
@@ -803,6 +877,10 @@ const FormulareDialog = ({
       type: opened ? "success" : "warning",
     });
   };
+
+  if (direkt) {
+    return null;
+  }
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="md">
@@ -1488,8 +1566,9 @@ export const BerechtigungsscheinErstellenButton = () => {
   );
 };
 
-// "Werkstattauftrag"-Button für die Brillenkartei: öffnet den Formulare-Dialog
-// direkt mit dem Werkstattauftrag (Kategorie "Werkstattkarte") zum Drucken.
+// "Werkstattauftrag"-Button für die Brillenkartei: druckt den Werkstattauftrag
+// (Kategorie "Werkstattkarte") ohne Vorschau; Seitenansicht, PDF und Versand
+// gibt es weiter über "Formulare".
 export const WerkstattauftragButton = ({
   symbol,
 }: { symbol?: boolean } = {}) => {
@@ -1513,6 +1592,7 @@ export const WerkstattauftragButton = ({
         <FormulareDialog
           brille={record}
           initialKategorie={WERKSTATTKARTE_KATEGORIE}
+          direktDrucken
           onClose={() => setOpen(false)}
         />
       )}
