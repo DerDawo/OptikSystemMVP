@@ -197,16 +197,7 @@ const wertText = (
     : dezimal.format(n);
 };
 
-// Visus als Ausklappliste (Werte des Betriebs), alle anderen Werte zum
-// Eintippen
-const VIS_WERTE = [
-  0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5,
-];
-const VIS_OPTIONEN = VIS_WERTE.map((v) => ({
-  id: String(v),
-  name: betrag.format(v),
-}));
-
+// Alle Werte einschließlich Visus zum Eintippen
 const WertEingabe = ({
   w,
   seite,
@@ -217,30 +208,16 @@ const WertEingabe = ({
   seite: string;
   glas: Datensatz | undefined;
   speichere: Speichern;
-}) => {
-  if (w.feld === "Vis") {
-    const vis = zahl(glas?.Vis);
-    return (
-      <Auswahl
-        rechts
-        name={`Vis ${seite}`}
-        wert={vis === null ? null : String(vis)}
-        optionen={VIS_OPTIONEN}
-        speichere={(neu) => speichere(neu == null ? null : Number(neu))}
-      />
-    );
-  }
-  return (
-    <Eingabe
-      typ="zahl"
-      rechts
-      name={`${w.titel} ${seite}`}
-      wert={glas?.[w.feld]}
-      anzeige={wertText(glas, w.feld, w.stellen)}
-      speichere={speichere}
-    />
-  );
-};
+}) => (
+  <Eingabe
+    typ="zahl"
+    rechts
+    name={`${w.titel} ${seite}`}
+    wert={glas?.[w.feld]}
+    anzeige={wertText(glas, w.feld, w.stellen)}
+    speichere={speichere}
+  />
+);
 
 const betragText = (wert: unknown) => {
   const n = zahl(wert);
