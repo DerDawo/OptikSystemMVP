@@ -18,6 +18,7 @@ const entities = {
     Geburtsdatum: "1980-05-17",
     KrankenversicherungsTyp: "Privat",
     Handy: "0170 1234567",
+    Notizen: "Grauer Star links",
   },
   brille: {
     id: 42,
@@ -36,6 +37,8 @@ const entities = {
   glastyp: { Hersteller: "POL Optic", Bezeichnung: "Matrix Pro 1.50" },
   fassung: {
     Bezeichnung: "44324",
+    Lagernummer: "L-778",
+    Linie: "Classic",
     Farbe: "2",
     Groesse: "53-17",
     Betrag: 149.9,
@@ -88,5 +91,28 @@ describe("werkstattauftragTemplate", () => {
     expect(html).toContain("Kundenabschnitt");
     // Eingaben werden als Text eingesetzt, nicht als HTML
     expect(html).toContain("Bügel &lt;kürzen&gt;");
+    // Notizen des Kunden stehen unter den Bemerkungen
+    expect(html).toContain("<b>Kunde:</b> Grauer Star links");
+  });
+
+  it("hat Felder zum Abhaken neben den Kontaktdaten", () => {
+    const html = buildWerkstattauftragPrintHtml({ entities });
+    const haken = html.slice(
+      html.indexOf('<div class="haken">'),
+      html.indexOf('<div class="balken">'),
+    );
+    expect(haken.match(/class="kasten"/g)).toHaveLength(3);
+    expect(haken).toContain("Hotstegs");
+    expect(haken).toContain("Fassung bestellt");
+    expect(haken).toContain("Sonstiges");
+    expect(haken.match(/class="datum"/g)).toHaveLength(2);
+  });
+
+  it("zeigt bei der Fassung nur Hersteller, Modell, Farbe und Größe", () => {
+    const html = buildWerkstattauftragPrintHtml({ entities });
+    expect(html).toContain("53-17");
+    expect(html).not.toContain("Lager-Nr.");
+    expect(html).not.toContain("L-778");
+    expect(html).not.toContain("Classic");
   });
 });

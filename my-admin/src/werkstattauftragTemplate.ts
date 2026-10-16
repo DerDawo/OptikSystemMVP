@@ -232,6 +232,13 @@ const auftragserteilung = (endpreis: number) => {
     </div>`;
 };
 
+// Zum Abhaken in der Werkstatt, neben den Kontaktdaten
+const WERKSTATT_HAKEN = `<div class="haken">
+  <span class="kasten"></span><span>Hotstegs</span><span class="datum">Datum</span><span class="linie"></span>
+  <span class="kasten"></span><span>Fassung bestellt</span><span class="datum">Datum</span><span class="linie"></span>
+  <span class="kasten"></span><span>Sonstiges</span><span class="linie lang"></span>
+</div>`;
+
 export const buildWerkstattauftragBodyHtml = ({
   entities,
 }: WerkstattauftragDaten): string => {
@@ -277,11 +284,14 @@ export const buildWerkstattauftragBodyHtml = ({
           <div>Fertig bis <b>${escapeHtml(fertigBis)}</b></div>
         </div>
       </div>
-      ${angaben([
-        ["Telefon", text(kunde.TelefonnummerPrivat)],
-        ["Mobil", text(kunde.Handy)],
-        ["E-Mail", text(kunde.Email)],
-      ])}
+      <div class="kontaktzeile">
+        ${angaben([
+          ["Telefon", text(kunde.TelefonnummerPrivat)],
+          ["Mobil", text(kunde.Handy)],
+          ["E-Mail", text(kunde.Email)],
+        ])}
+        ${WERKSTATT_HAKEN}
+      </div>
       <div class="balken">${escapeHtml(text(brille.BrillenArt) || "Brille")}</div>
       ${werteTabelle(entities.glasRechts, entities.glasLinks)}
       <div class="balken">Glasbezeichnung</div>
@@ -299,11 +309,10 @@ export const buildWerkstattauftragBodyHtml = ({
         ["Modell", text(fassung.Bezeichnung)],
         ["Farbe", text(fassung.Farbe)],
         ["Größe", text(fassung.Groesse)],
-        ["Lager-Nr.", text(fassung.Lagernummer)],
-        ["Linie", text(fassung.Linie)],
       ])}
       <div class="balken"><span>Bemerkungen</span><span>Offen: ${escapeHtml(formatEuro(summen.offen))} €</span></div>
       <div class="notizen">${escapeHtml(text(brille.Notizen))}</div>
+      ${text(kunde.Notizen) ? `<div class="notizen"><b>Kunde:</b> ${escapeHtml(text(kunde.Notizen))}</div>` : ""}
       <div class="schreiblinie"></div>
       <div class="schreiblinie"></div>
     </div>
@@ -373,6 +382,16 @@ const WERKSTATTAUFTRAG_STYLES = `
   .angaben td { padding: 0.2mm 0; vertical-align: top; }
   .angaben.zweispaltig th { width: 14mm; }
   .angaben.zweispaltig td { width: 30%; padding-right: 2mm; }
+  .kontaktzeile { display: flex; gap: 3mm; align-items: flex-start; }
+  .kontaktzeile .angaben { flex: 1; min-width: 0; }
+  .kontaktzeile .angaben th { width: 14mm; }
+  .kontaktzeile .angaben td { overflow-wrap: anywhere; }
+  .haken { display: grid; grid-template-columns: 2.8mm auto auto 13mm; column-gap: 1.6mm; align-items: end; font-size: 8pt; line-height: 1.3; padding-top: 0.2mm; }
+  .haken > span { padding: 0.2mm 0; }
+  .haken .kasten { width: 2.8mm; height: 2.8mm; border: 1px solid #111; padding: 0; align-self: center; }
+  .haken .datum { font-size: 7pt; color: #444; }
+  .haken .linie { border-bottom: 1px solid #777; height: 3.4mm; }
+  .haken .linie.lang { grid-column: span 2; }
   .notizen { white-space: pre-wrap; min-height: 4mm; }
   .schreiblinie { border-bottom: 1px solid #999; height: 5mm; }
   .auftragserteilung { margin-top: 2.5mm; font-size: 7pt; line-height: 1.3; }
