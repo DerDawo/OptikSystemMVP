@@ -8,6 +8,7 @@ import {
   useRecordContext,
   Title,
   RaRecord,
+  useNotify,
 } from "react-admin";
 import { DateField, Show, FunctionField } from "react-admin";
 import { DateInput, Edit, SimpleForm, TextInput } from "react-admin";
@@ -55,8 +56,12 @@ import {
 import {
   buildExternalMessageUrl,
   choosePhoneNumberForMessaging,
+  isDirectSendEnabled,
   MessageChannel,
+  messageChannelLabels,
   openExternalMessage,
+  sendMessagesInBackground,
+  summarizeDeliveryResults,
 } from "./messaging";
 import {
   EditActionsBar,
@@ -83,12 +88,6 @@ const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
   whatsapp: WhatsAppIcon,
   email: EmailIcon,
-};
-
-const messageChannelLabels: Record<MessageChannel, string> = {
-  sms: "SMS",
-  whatsapp: "Whatsapp",
-  email: "Email",
 };
 
 type NachrichtRecord = Record<string, unknown> & {
@@ -755,6 +754,7 @@ export const KundeMessage = () => {
   const recordId = useParams().id ?? "";
   const location = useLocation();
   const navigate = useNavigate();
+  const notify = useNotify();
   const routeState = (location.state as KundeMessageRouteState | null) ?? null;
   const [messages, setMessages] = useState<NachrichtRecord[]>([]);
   const [selectedMessageKey, setSelectedMessageKey] = useState<string | null>(
@@ -779,6 +779,8 @@ export const KundeMessage = () => {
     email: false,
   });
   const [sendFormError, setSendFormError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const directSend = isDirectSendEnabled();
   const [externalLinks, setExternalLinks] = useState<
     { channel: MessageChannel; url: string }[]
   >([]);
@@ -996,12 +998,13 @@ export const KundeMessage = () => {
       }));
     };
 
-  // Öffnet die passende App (Mail-Programm, SMS, WhatsApp) mit
-  // vorausgefüllter Nachricht, statt über die Edge Functions zu versenden -
-  // so geht es ohne API-Keys. Bei mehreren Kanälen wird der erste direkt
+  // Standard: Öffnet die passende App (Mail-Programm, SMS, WhatsApp) mit
+  // vorausgefüllter Nachricht - so geht es ohne API-Keys. Mit
+  // VITE_DIRECT_MESSAGING=true wird stattdessen im Hintergrund über die Edge
+  // Functions gesendet. Bei mehreren Kanälen wird der erste direkt
   // geöffnet, die übrigen stehen als Links bereit (Browser blockieren sonst
   // weitere Fenster).
-  const handleSend = () => {
+  const handleSend = async () => {
     setSendFormError(null);
     setExternalLinks([]);
 
@@ -1018,6 +1021,34 @@ export const KundeMessage = () => {
 
     if (channelsToSend.length === 0) {
       setSendFormError("Bitte wähle mindestens einen Nachrichtenkanal aus.");
+      return;
+    }
+
+    // Direktversand: im Hintergrund über die Edge Functions, mit Rückmeldung
+    // über Erfolg oder Misserfolg - ohne dass eine andere App aufgeht.
+    if (directSend) {
+      setIsSending(true);
+      const results = await sendMessagesInBackground(
+        channelsToSend.map((channel) => ({
+          channel,
+          payload: {
+            to: deliveryTargets[channel],
+            message: nachrichtText,
+            subject: nachrichtBetreff,
+          },
+        })),
+      );
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setIsSending(false);
+      const summary = summarizeDeliveryResults(results);
+      notify(summary.message, { type: summary.type, multiLine: true });
+      if (summary.type === "success") {
+        navigate(`/kunde/${recordId}/show`);
+      }
       return;
     }
 
@@ -1501,9 +1532,14 @@ export const KundeMessage = () => {
           <Button
             variant="contained"
             startIcon={<SendIcon />}
-            onClick={handleSend}
+            onClick={() => void handleSend()}
+            disabled={isSending}
           >
-            In App öffnen
+            {directSend
+              ? isSending
+                ? "Wird gesendet..."
+                : "Senden"
+              : "In App öffnen"}
           </Button>
         </Box>
       </Box>
