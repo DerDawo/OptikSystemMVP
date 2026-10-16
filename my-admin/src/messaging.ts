@@ -43,10 +43,101 @@ export const sendMessage = async (
   );
 
   if (error) {
-    return { channel, success: false, error: error.message };
+    return { channel, success: false, error: await readFunctionError(error) };
   }
 
   return { channel, success: true };
+};
+
+// functions.invoke meldet bei einem Fehlerstatus nur "Edge Function returned a
+// non-2xx status code". Die verständliche Meldung der Function steht im Body
+// ({ error: "..." }) der Antwort.
+const readFunctionError = async (error: {
+  message: string;
+  context?: unknown;
+}): Promise<string> => {
+  const context = error.context;
+  if (context instanceof Response) {
+    try {
+      const body = (await context.clone().json()) as { error?: unknown };
+      if (typeof body.error === "string" && body.error) return body.error;
+    } catch {
+      // Body war kein JSON - dann bleibt die allgemeine Meldung.
+    }
+  }
+  return error.message;
+};
+
+// Direktversand über die Edge Functions im Hintergrund statt Öffnen der
+// externen App. Wird erst aktiv, wenn die Functions deployt und die Secrets
+// (Twilio, Resend, Meta) gesetzt sind: VITE_DIRECT_MESSAGING=true.
+export const isDirectSendEnabled = (): boolean =>
+  import.meta.env.VITE_DIRECT_MESSAGING === "true";
+
+export type DirectSendRequest = {
+  channel: MessageChannel;
+  payload: SendMessagePayload;
+};
+
+// Versendet alle Kanäle parallel. Ein fehlgeschlagener Kanal bricht die
+// übrigen nicht ab; auch unerwartete Ausnahmen werden zu einem Ergebnis.
+export const sendMessagesInBackground = (
+  requests: DirectSendRequest[],
+): Promise<MessageDeliveryResult[]> =>
+  Promise.all(
+    requests.map(async ({ channel, payload }) => {
+      try {
+        return await sendMessage(channel, payload);
+      } catch (error) {
+        return {
+          channel,
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+        };
+      }
+    }),
+  );
+
+export const messageChannelLabels: Record<MessageChannel, string> = {
+  sms: "SMS",
+  whatsapp: "Whatsapp",
+  email: "Email",
+};
+
+export type DeliverySummary = {
+  type: "success" | "warning" | "error";
+  message: string;
+};
+
+// Fasst die Ergebnisse für die Rückmeldung an den Nutzer zusammen:
+// alles gesendet, teilweise gesendet oder gar nichts gesendet.
+export const summarizeDeliveryResults = (
+  results: MessageDeliveryResult[],
+): DeliverySummary => {
+  const sent = results.filter((result) => result.success);
+  const failed = results.filter((result) => !result.success);
+  const names = (list: MessageDeliveryResult[]) =>
+    list.map((result) => messageChannelLabels[result.channel]).join(", ");
+  const failures = failed
+    .map(
+      (result) =>
+        `${messageChannelLabels[result.channel]}: ${result.error ?? "Unbekannter Fehler"}`,
+    )
+    .join(" · ");
+
+  if (failed.length === 0) {
+    return { type: "success", message: `Nachricht gesendet (${names(sent)}).` };
+  }
+  if (sent.length === 0) {
+    return {
+      type: "error",
+      message: `Nachricht nicht gesendet. ${failures}`,
+    };
+  }
+  return {
+    type: "warning",
+    message: `Nur teilweise gesendet (${names(sent)}). Fehlgeschlagen: ${failures}`,
+  };
 };
 
 // Erste Telefonnummer in einem Freitextfeld, z. B. "Sohn: 0365/12 34 56"
