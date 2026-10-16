@@ -70,10 +70,10 @@ https://optik-system-mvp.vercel.app (die frühere URL
 **Stand 2026-10-16:** Vercel deployt Production seit ca. 2026-10-12 aus
 dem Fork `ulmrobert/OptikSystemMVP` (Branch `main`), nicht aus
 `DerDawo/OptikSystemMVP`. Ein Merge nach `main` in `DerDawo/OptikSystemMVP`
-allein deployt deshalb **nichts**. Ein Release geht so live:
+deployt deshalb **nicht sofort**. Ein Release geht so live:
 
 1. Release-PR `dev` → `main` in `DerDawo/OptikSystemMVP` mergen.
-2. `main` des Forks synchronisieren:
+2. `main` des Forks direkt danach von Hand synchronisieren:
 
    ```sh
    gh api -X POST repos/ulmrobert/OptikSystemMVP/merge-upstream -f branch=main
@@ -81,6 +81,12 @@ allein deployt deshalb **nichts**. Ein Release geht so live:
 
    (alternativ im Fork auf GitHub der Button "Sync fork").
 3. Vercel deployt nach ca. 20-60 s automatisch.
+
+Im Fork gibt es zusätzlich einen automatischen Sync (Workflow
+"Upstream-Sync (main)", alle 15 Minuten eingeplant). GitHub startet ihn
+aber oft erst Stunden später, und bei Änderungen unter
+`.github/workflows/` schlägt er fehl. Deshalb Schritt 2 nicht auslassen
+(Details in `CONTRIBUTING.md`).
 
 Ob `dev` bzw. PRs derzeit noch eigene Preview-Deployments erhalten, ist
 ungeklärt (offener Punkt in `CONTRIBUTING.md`).
