@@ -122,9 +122,9 @@ export const BrillenpassButton = () => {
       );
       if (ergebnis === "heruntergeladen") {
         notify(
-          `Bild „${datei.name}“ gespeichert und ${
-            kanal === "email" ? "E-Mail" : "WhatsApp"
-          } geöffnet – bitte das Bild dort anhängen.`,
+          kanal === "email"
+            ? `Bild „${datei.name}“ gespeichert und E-Mail geöffnet – bitte das Bild dort anhängen.`
+            : `Bild „${datei.name}“ im Ordner „Downloads“ gespeichert und WhatsApp-Chat des Kunden geöffnet – bitte das Bild in den Chat ziehen.`,
           { type: "info", autoHideDuration: 15000 },
         );
       }

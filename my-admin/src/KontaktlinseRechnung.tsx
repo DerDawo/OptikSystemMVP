@@ -136,10 +136,10 @@ export const KontaktlinseRechnungButton = () => {
       );
       if (ergebnis === "heruntergeladen") {
         notify(
-          `PDF „${datei.name}“ gespeichert und ${
-            kanal === "email" ? "E-Mail" : "WhatsApp"
-          } geöffnet – bitte das PDF dort anhängen.`,
-          { type: "info" },
+          kanal === "email"
+            ? `PDF „${datei.name}“ gespeichert und E-Mail geöffnet – bitte das PDF dort anhängen.`
+            : `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und WhatsApp-Chat des Kunden geöffnet – bitte das PDF in den Chat ziehen.`,
+          { type: "info", autoHideDuration: 15000 },
         );
       }
     } catch {

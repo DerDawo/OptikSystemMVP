@@ -1,6 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 import {
   buildExternalMessageUrl,
+  istHandy,
   openExternalMessage,
   type MessageChannel,
 } from "./messaging";
@@ -176,12 +177,12 @@ export type VersandErgebnis = "geteilt" | "abgebrochen" | "heruntergeladen";
 /*
  * Beleg verschicken: wo der Rechner das Teilen von Dateien kann (Windows,
  * macOS, Handy), öffnet sich das Teilen-Fenster mit angehängtem PDF (dort
- * Mail/Outlook oder WhatsApp wählen). Das Teilen-Fenster kann keinen
+ * Mail/Outlook wählen, am Handy/iPad auch WhatsApp). Das Teilen-Fenster kann keinen
  * Empfänger übergeben, deshalb liegt die E-Mail-Adresse des Kunden vorher in
  * der Zwischenablage (in Outlook bei „An" mit Strg+V einfügen;
- * `beiAdresseKopiert` meldet das). Sonst wird das PDF gespeichert und das
- * E-Mail-Programm bzw. WhatsApp mit vorbereitetem Text an den Kunden
- * geöffnet - das PDF dort anhängen.
+ * `beiAdresseKopiert` meldet das). Sonst - und bei WhatsApp am Computer -
+ * wird das PDF gespeichert und das E-Mail-Programm bzw. der WhatsApp-Chat
+ * des Kunden mit vorbereitetem Text geöffnet - das PDF dort anhängen.
  */
 export const belegVersenden = async (
   kanal: Extract<MessageChannel, "email" | "whatsapp">,
@@ -189,7 +190,12 @@ export const belegVersenden = async (
   nachricht: { an: string; betreff: string; text: string },
   beiAdresseKopiert?: (adresse: string) => void,
 ): Promise<VersandErgebnis> => {
+  // WhatsApp am Computer: im Teilen-Menü fehlt WhatsApp dort (z. B. die
+  // Mac-App bietet sich nicht an), daher gleich den Chat des Kunden öffnen
+  // und die Datei speichern. Am Handy/iPad bleibt das Teilen-Menü, dort
+  // lässt sich WhatsApp samt Anhang direkt wählen.
   const teilbar =
+    (kanal !== "whatsapp" || istHandy()) &&
     typeof navigator.canShare === "function" &&
     navigator.canShare({ files: [datei] });
   if (teilbar) {

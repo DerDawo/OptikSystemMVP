@@ -220,9 +220,12 @@ export const whatsappWebUrl = (url: string): string | null => {
   return `https://web.whatsapp.com/send?phone=${treffer[1]}${text ? `&text=${text}` : ""}`;
 };
 
-const istHandy = () =>
+// Handy oder Tablet; iPads melden sich in Safari als Mac, haben aber einen
+// Touchscreen
+export const istHandy = () =>
   typeof navigator !== "undefined" &&
-  /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ||
+    (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
 
 /*
  * Öffnet die passende App. Bei WhatsApp kommt der Text zusätzlich in die
