@@ -51,7 +51,7 @@ afterEach(() => {
 
 describe("belegVersenden", () => {
   it("kopiert die E-Mail-Adresse vor dem Teilen in die Zwischenablage", async () => {
-    const { writeText, share } = teilenMoeglich();
+    const { writeText, share } = teilenMoeglich(IPHONE);
     const kopiert = vi.fn();
     const ergebnis = await belegVersenden("email", datei, nachricht, kopiert);
     expect(ergebnis).toBe("geteilt");
@@ -72,7 +72,7 @@ describe("belegVersenden", () => {
   });
 
   it("teilt auch, wenn die Zwischenablage gesperrt ist", async () => {
-    const { writeText, share } = teilenMoeglich();
+    const { writeText, share } = teilenMoeglich(IPHONE);
     writeText.mockRejectedValue(new Error("NotAllowedError"));
     const kopiert = vi.fn();
     const ergebnis = await belegVersenden("email", datei, nachricht, kopiert);
@@ -108,8 +108,24 @@ describe("belegVersenden", () => {
     expect(openExternalMessage).not.toHaveBeenCalled();
   });
 
-  it("teilt E-Mails am Computer weiter über das Teilen-Menü", async () => {
-    const { share } = teilenMoeglich(MAC);
+  it("öffnet bei E-Mail am Computer gleich die E-Mail an den Kunden", async () => {
+    const { share, writeText } = teilenMoeglich(MAC);
+    const link = herunterladenMoeglich();
+    const kopiert = vi.fn();
+    const ergebnis = await belegVersenden("email", datei, nachricht, kopiert);
+    expect(ergebnis).toBe("heruntergeladen");
+    expect(share).not.toHaveBeenCalled();
+    expect(writeText).not.toHaveBeenCalled();
+    expect(kopiert).not.toHaveBeenCalled();
+    expect(link.download).toBe("Rechnung-1.pdf");
+    // openExternalMessage öffnet daraus am Computer Gmail
+    expect(openExternalMessage).toHaveBeenCalledWith(
+      "mailto:kunde@example.org?subject=Rechnung%201&body=Guten%20Tag",
+    );
+  });
+
+  it("teilt E-Mails am Handy weiter über das Teilen-Menü", async () => {
+    const { share } = teilenMoeglich(IPHONE);
     expect(await belegVersenden("email", datei, nachricht)).toBe("geteilt");
     expect(share).toHaveBeenCalled();
   });

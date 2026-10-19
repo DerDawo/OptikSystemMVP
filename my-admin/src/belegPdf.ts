@@ -175,14 +175,13 @@ export const inZwischenablage = async (text: string) => {
 export type VersandErgebnis = "geteilt" | "abgebrochen" | "heruntergeladen";
 
 /*
- * Beleg verschicken: wo der Rechner das Teilen von Dateien kann (Windows,
- * macOS, Handy), öffnet sich das Teilen-Fenster mit angehängtem PDF (dort
- * Mail/Outlook wählen, am Handy/iPad auch WhatsApp). Das Teilen-Fenster kann keinen
- * Empfänger übergeben, deshalb liegt die E-Mail-Adresse des Kunden vorher in
- * der Zwischenablage (in Outlook bei „An" mit Strg+V einfügen;
- * `beiAdresseKopiert` meldet das). Sonst - und bei WhatsApp am Computer -
- * wird das PDF gespeichert und das E-Mail-Programm bzw. der WhatsApp-Chat
- * des Kunden mit vorbereitetem Text geöffnet - das PDF dort anhängen.
+ * Beleg verschicken: am Handy/iPad öffnet sich das Teilen-Fenster mit
+ * angehängtem PDF (dort Mail-App oder WhatsApp wählen). Das Teilen-Fenster
+ * kann keinen Empfänger übergeben, deshalb liegt die E-Mail-Adresse des
+ * Kunden vorher in der Zwischenablage (`beiAdresseKopiert` meldet das). Am
+ * Computer wird das PDF gespeichert und gleich Gmail mit Empfänger, Betreff
+ * und Text bzw. der WhatsApp-Chat des Kunden geöffnet - das PDF dort
+ * hineinziehen.
  */
 export const belegVersenden = async (
   kanal: Extract<MessageChannel, "email" | "whatsapp">,
@@ -190,12 +189,12 @@ export const belegVersenden = async (
   nachricht: { an: string; betreff: string; text: string },
   beiAdresseKopiert?: (adresse: string) => void,
 ): Promise<VersandErgebnis> => {
-  // WhatsApp am Computer: im Teilen-Menü fehlt WhatsApp dort (z. B. die
-  // Mac-App bietet sich nicht an), daher gleich den Chat des Kunden öffnen
-  // und die Datei speichern. Am Handy/iPad bleibt das Teilen-Menü, dort
-  // lässt sich WhatsApp samt Anhang direkt wählen.
+  // Am Computer bietet das Teilen-Menü weder Gmail noch WhatsApp an (die
+  // Mac-App von WhatsApp fehlt dort), daher gleich Gmail bzw. den Chat des
+  // Kunden öffnen und die Datei speichern. Am Handy/iPad bleibt das
+  // Teilen-Menü, dort lassen sich Mail-App und WhatsApp samt Anhang wählen.
   const teilbar =
-    (kanal !== "whatsapp" || istHandy()) &&
+    istHandy() &&
     typeof navigator.canShare === "function" &&
     navigator.canShare({ files: [datei] });
   if (teilbar) {
