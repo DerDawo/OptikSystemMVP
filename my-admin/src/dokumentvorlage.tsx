@@ -55,7 +55,7 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
 ];
 
 const PLATZHALTER_HINWEIS =
-  "Platzhalter im Format {{entität.feld}}, z. B. {{kunde.vorname}}, {{brille.summe}} oder {{heute.datum}}, werden beim Öffnen des Formulare-Dialogs in der Brillenkartei automatisch durch die Daten des Auftrags/Kunden ersetzt.";
+  "Platzhalter im Format {{entität.feld}}, z. B. {{kunde.vorname}}, {{brille.summe}} oder {{heute.datum}}, werden beim Öffnen des Formulare-Dialogs in der Brillenkartei automatisch durch die Daten des Auftrags/Kunden ersetzt. Mahnungen: Die erste Zeile ist die Überschrift im grauen Balken; zusätzlich gibt es {{kunde.briefanrede}}, {{rechnung.nummer}}, {{rechnung.datum}}, {{rechnung.faellig}}, {{mahnung.betrag}}, {{mahnung.frist}}, {{betrieb.name}}, {{betrieb.kontakt}} und {{betrieb.bank}}.";
 
 export const DokumentvorlageList = () => (
   <List title="Dokumentvorlagen" sort={{ field: "Kategorie", order: "ASC" }}>

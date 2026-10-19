@@ -100,6 +100,10 @@ import {
   buildRezeptanfragePrintHtml,
 } from "./rezeptanfrageTemplate";
 import {
+  buildMahnungPreviewHtml,
+  buildMahnungPrintHtml,
+} from "./mahnungTemplate";
+import {
   buildAuftragszettelPreviewHtml,
   buildAuftragszettelPrintHtml,
 } from "./auftragszettelTemplate";
@@ -114,6 +118,10 @@ import {
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
 // Seed-Migration 20260831020100_seed_dokumentvorlage_rechnung.sql).
 const RECHNUNG_KATEGORIE = "Rechnung";
+
+// Mahnungen (Zahlungserinnerung und Mahnstufen) im Briefkopf der Rechnung
+// (mahnungTemplate.ts); der Brieftext kommt aus der jeweiligen Vorlage
+const MAHNUNG_KATEGORIE = "Mahnung";
 
 // Kategorie, die "Berechtigungsschein erstellen" öffnet: das Original des
 // ZVA (AOK-Vertrag Sehhilfen, Anlage 4) als ausfüllbares PDF (pdfFormulare.ts)
@@ -158,6 +166,8 @@ type LayoutDaten = {
   begruendung?: string;
   // leer drucken (zum Ausfüllen von Hand), nur bei `leerMoeglich`
   leer?: boolean;
+  // Text der gewählten Vorlage, nur bei `mitVorlagentext`
+  vorlagentext?: string;
 };
 
 type Layout = {
@@ -169,6 +179,8 @@ type Layout = {
   ausVorschau?: boolean;
   // wahlweise leer oder mit den Daten des Auftrags ausgefüllt
   leerMoeglich?: boolean;
+  // Layout aus dem Code, Text aus der Vorlage ("Text ändern" möglich)
+  mitVorlagentext?: boolean;
   // Seitenformat für den Versand als PDF (ohne Angabe A4) und die Blätter,
   // die dabei je eine eigene Seite werden (CSS-Selektor)
   format?: Seitenformat;
@@ -219,6 +231,12 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Rechnungsvorschau",
     preview: buildRechnungPreviewHtml,
     print: buildRechnungPrintHtml,
+  },
+  [MAHNUNG_KATEGORIE]: {
+    title: "Mahnung-Vorschau",
+    mitVorlagentext: true,
+    preview: buildMahnungPreviewHtml,
+    print: buildMahnungPrintHtml,
   },
   [KOSTENVORANSCHLAG_KATEGORIE]: {
     title: "Kostenvoranschlag-Vorschau",
@@ -285,13 +303,13 @@ const LAYOUTS: Record<string, Layout> = {
   },
 };
 
-// Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
-// (#57, Seed-Migration 20260831030100_seed_dokumentvorlage_mahnung.sql). Es
+// Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen (#57, Namen seit
+// 20261019100000_mahnung_briefkopf_texte.sql: Zahlungserinnerung,
+// 1. Mahnung, 2. Mahnung (Inkasso-Ankündigung)). Es
 // gibt mehrere aktive Vorlagen der Kategorie "Mahnung" (eine je Stufe), daher
 // reicht die generische "genau ein Treffer"-Auswahl unten nicht aus - der
 // Name der zur aktuellen Mahnstufe passenden Vorlage wird explizit über
 // `initialVorlageName` vorgegeben.
-const MAHNUNG_KATEGORIE = "Mahnung";
 
 // Formulare, auf die eine Genehmigung des Kostenträgers folgt: Drucken, PDF
 // oder Versand merkt sich das Datum am Auftrag ("KVVersendet"); ohne Haken
@@ -319,8 +337,8 @@ const UNVERZICHTBARE_KATEGORIEN = [
 ];
 const MAHNUNG_VORLAGE_NACH_STUFE: Record<number, string> = {
   1: "Zahlungserinnerung",
-  2: "2. Mahnung",
-  3: "3. Mahnung (Inkasso-Ankündigung)",
+  2: "1. Mahnung",
+  3: "2. Mahnung (Inkasso-Ankündigung)",
 };
 
 type Dokumentvorlage = RaRecord & {
@@ -656,8 +674,16 @@ const FormulareDialog = ({
       rechnungsnummer: brille.Rechnungsnummer ?? "",
       begruendung,
       leer,
+      vorlagentext: selectedVorlage?.Vorlagentext ?? "",
     }),
-    [mergeEntities, betrieb, brille.Rechnungsnummer, begruendung, leer],
+    [
+      mergeEntities,
+      betrieb,
+      brille.Rechnungsnummer,
+      begruendung,
+      leer,
+      selectedVorlage?.Vorlagentext,
+    ],
   );
   const layoutDef = selectedVorlage
     ? LAYOUTS[selectedVorlage.Kategorie]
@@ -750,7 +776,9 @@ const FormulareDialog = ({
         .sort((x, y) => x.Name.localeCompare(y.Name, "de")),
     [auswahlVorlagen, typ],
   );
-  const textAenderbar = Boolean(selectedVorlage) && !layout && !pdfVorlage;
+  const textAenderbar =
+    Boolean(selectedVorlage) &&
+    ((!layout && !pdfVorlage) || Boolean(layoutDef?.mitVorlagentext));
 
   const datenLaden = [
     vorlagenLoading,
@@ -818,9 +846,8 @@ const FormulareDialog = ({
     }
     setVersendet(kanal);
     try {
-      const beleg =
-        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE ||
-        selectedVorlage.Kategorie === MAHNUNG_KATEGORIE;
+      const mahnung = selectedVorlage.Kategorie === MAHNUNG_KATEGORIE;
+      const beleg = selectedVorlage.Kategorie === RECHNUNG_KATEGORIE || mahnung;
       const nummer = beleg ? String(brille.Rechnungsnummer ?? "").trim() : "";
       const art =
         selectedVorlage.Kategorie === RECHNUNG_KATEGORIE
@@ -861,11 +888,15 @@ const FormulareDialog = ({
                   kunde?.Handy,
                   kunde?.TelefonnummerPrivat,
                 ]),
-          betreff: `${art}${nummer ? ` ${nummer}` : ""}`,
+          betreff: mahnung
+            ? `${art}${nummer ? ` zur Rechnung ${nummer}` : ""}`
+            : `${art}${nummer ? ` ${nummer}` : ""}`,
           text: `${gruss},\n\nanbei erhalten Sie ${
-            beleg
-              ? `Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""}`
-              : `das Formular „${art}“`
+            mahnung
+              ? `unser Schreiben „${art}“${nummer ? ` zur Rechnung Nr. ${nummer}` : ""}`
+              : beleg
+                ? `Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""}`
+                : `das Formular „${art}“`
           } als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
         },
         (adresse) =>
@@ -1200,7 +1231,7 @@ const FormulareDialog = ({
                   {selectedVorlage.Kategorie}
                 </Typography>
               </Box>
-              {!layout && !pdfVorlage && (
+              {textAenderbar && (
                 <Button
                   size="small"
                   startIcon={<EditNoteIcon />}
