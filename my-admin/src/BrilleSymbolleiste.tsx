@@ -17,6 +17,7 @@ import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import { GlassesIcon } from "./icons";
 import {
+  AuftragszettelButton,
   FormulareButton,
   RechnungErstellenButton,
   WerkstattauftragButton,
@@ -121,6 +122,7 @@ export const BrilleSymbolleiste = () => {
         <SearchIcon />
       </Symbol>
       <WerkstattauftragButton symbol />
+      <AuftragszettelButton symbol />
       <Symbol
         titel="Zurück"
         onClick={() => {
