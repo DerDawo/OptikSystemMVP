@@ -23,6 +23,8 @@ import {
   TextField,
   CircularProgress,
   MenuItem,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import CloseIcon from "@mui/icons-material/Close";
@@ -37,6 +39,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import BuildIcon from "@mui/icons-material/Build";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import EmailIcon from "@mui/icons-material/Email";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import {
@@ -81,7 +84,7 @@ import {
 } from "./aokBerechtigungsscheinTemplate";
 import { heuteIso } from "./AuftragsstatusLeiste";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
-import { belegAlsPdf, belegVersenden } from "./belegPdf";
+import { belegAlsPdf, belegVersenden, type Seitenformat } from "./belegPdf";
 import { choosePhoneNumberForMessaging } from "./messaging";
 import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
@@ -96,6 +99,10 @@ import {
   buildRezeptanfragePreviewHtml,
   buildRezeptanfragePrintHtml,
 } from "./rezeptanfrageTemplate";
+import {
+  buildAuftragszettelPreviewHtml,
+  buildAuftragszettelPrintHtml,
+} from "./auftragszettelTemplate";
 import {
   buildOptometrischeVerordnungPreviewHtml,
   buildOptometrischeVerordnungPrintHtml,
@@ -128,6 +135,10 @@ const VERORDNUNG_GKV_KATEGORIE = "Optometrische Verordnung GKV";
 // Kostenvoranschlag im Rechnungsdesign (rechnungTemplate.ts)
 const KOSTENVORANSCHLAG_KATEGORIE = "Kostenvoranschlag";
 
+// Auftragszettel in A5 mit Anamnesebogen auf der Rückseite
+// (auftragszettelTemplate.ts), leer oder ausgefüllt
+const AUFTRAGSZETTEL_KATEGORIE = "Auftragszettel";
+
 // Knöpfe im Auswahlfenster wie in Prisma: dunkelblau, weiße fette Schrift
 const PRISMA_KNOPF = {
   bgcolor: "#1d4e8f",
@@ -145,6 +156,8 @@ type LayoutDaten = {
   betrieb?: RaRecord;
   rechnungsnummer: string;
   begruendung?: string;
+  // leer drucken (zum Ausfüllen von Hand), nur bei `leerMoeglich`
+  leer?: boolean;
 };
 
 type Layout = {
@@ -154,6 +167,12 @@ type Layout = {
   // Formulare mit anklickbaren Kästchen: gedruckt wird der Stand der
   // Vorschau (vorgeschlagene Kreuze lassen sich dort noch ändern)
   ausVorschau?: boolean;
+  // wahlweise leer oder mit den Daten des Auftrags ausgefüllt
+  leerMoeglich?: boolean;
+  // Seitenformat für den Versand als PDF (ohne Angabe A4) und die Blätter,
+  // die dabei je eine eigene Seite werden (CSS-Selektor)
+  format?: Seitenformat;
+  blatt?: string;
 };
 
 // Vorschau samt angeklickter Kästchen als eigenständiges HTML
@@ -163,6 +182,29 @@ const vorschauAlsHtml = (doc: Document) => {
     .forEach((box) => box.toggleAttribute("checked", box.checked));
   return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 };
+
+// Auswahl "ausgefüllt" oder "leer" für Formulare mit `leerMoeglich`
+const LeerOderAusgefuellt = ({
+  leer,
+  onChange,
+}: {
+  leer: boolean;
+  onChange: (leer: boolean) => void;
+}) => (
+  <ToggleButtonGroup
+    exclusive
+    size="small"
+    fullWidth
+    color="primary"
+    value={leer ? "leer" : "ausgefuellt"}
+    onChange={(_, wert) => wert && onChange(wert === "leer")}
+    aria-label="Ausgefüllt oder leer drucken"
+    sx={{ "& .MuiToggleButton-root": { textTransform: "none" } }}
+  >
+    <ToggleButton value="ausgefuellt">Ausgefüllt mit Kundendaten</ToggleButton>
+    <ToggleButton value="leer">Leer zum Ausfüllen von Hand</ToggleButton>
+  </ToggleButtonGroup>
+);
 
 const antragLayout = (art: AntragArt): Layout => ({
   title: "Antrag-Vorschau",
@@ -232,6 +274,15 @@ const LAYOUTS: Record<string, Layout> = {
     preview: buildRezeptanfragePreviewHtml,
     print: buildRezeptanfragePrintHtml,
   },
+  [AUFTRAGSZETTEL_KATEGORIE]: {
+    ausVorschau: true,
+    leerMoeglich: true,
+    format: "A5",
+    blatt: ".blatt",
+    title: "Auftragszettel-Vorschau",
+    preview: buildAuftragszettelPreviewHtml,
+    print: buildAuftragszettelPrintHtml,
+  },
 };
 
 // Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
@@ -257,13 +308,14 @@ export const KV_KATEGORIEN = [
 ];
 
 // Formulararten, die eigene Knöpfe öffnen (Rechnung, Mahnung,
-// Berechtigungsschein, Werkstattauftrag): die letzte aktive Vorlage einer
-// solchen Art lässt sich nicht ausblenden
+// Berechtigungsschein, Werkstattauftrag, Auftragszettel): die letzte aktive
+// Vorlage einer solchen Art lässt sich nicht ausblenden
 const UNVERZICHTBARE_KATEGORIEN = [
   RECHNUNG_KATEGORIE,
   MAHNUNG_KATEGORIE,
   BERECHTIGUNGSSCHEIN_KATEGORIE,
   WERKSTATTKARTE_KATEGORIE,
+  AUFTRAGSZETTEL_KATEGORIE,
 ];
 const MAHNUNG_VORLAGE_NACH_STUFE: Record<number, string> = {
   1: "Zahlungserinnerung",
@@ -581,6 +633,8 @@ const FormulareDialog = ({
   useEffect(() => {
     setBegruendung("");
   }, [selectedVorlage?.id]);
+  // Auftragszettel: leer zum Ausfüllen von Hand statt mit den Daten
+  const [leer, setLeer] = useState(false);
   const kiVorschlagHolen = async () => {
     if (!kiFormular) return;
     setKiLaeuft(true);
@@ -601,8 +655,9 @@ const FormulareDialog = ({
       betrieb,
       rechnungsnummer: brille.Rechnungsnummer ?? "",
       begruendung,
+      leer,
     }),
-    [mergeEntities, betrieb, brille.Rechnungsnummer, begruendung],
+    [mergeEntities, betrieb, brille.Rechnungsnummer, begruendung, leer],
   );
   const layoutDef = selectedVorlage
     ? LAYOUTS[selectedVorlage.Kategorie]
@@ -626,7 +681,7 @@ const FormulareDialog = ({
   const kaestchenStand = useRef<boolean[] | null>(null);
   useEffect(() => {
     kaestchenStand.current = null;
-  }, [selectedVorlage?.id]);
+  }, [selectedVorlage?.id, leer]);
   const vorschauGeladen = () => {
     const doc = vorschauRef.current?.contentDocument;
     if (!doc) return;
@@ -780,7 +835,12 @@ const FormulareDialog = ({
           ? new File([await (await fetch(pdfUrl)).blob()], dateiname, {
               type: "application/pdf",
             })
-          : await belegAlsPdf(druckHtml(), dateiname);
+          : await belegAlsPdf(
+              druckHtml(),
+              dateiname,
+              layoutDef?.format,
+              layoutDef?.blatt,
+            );
       const nachname = String(kunde?.Nachname ?? "").trim();
       const anrede = String(kunde?.Anrede ?? "").trim();
       const gruss =
@@ -1007,6 +1067,11 @@ const FormulareDialog = ({
                   </MenuItem>
                 ))}
               </TextField>
+              {layoutDef?.leerMoeglich && (
+                <Box sx={{ mt: 2 }}>
+                  <LeerOderAusgefuellt leer={leer} onChange={setLeer} />
+                </Box>
+              )}
             </Box>
             <Box
               sx={{
@@ -1170,6 +1235,11 @@ const FormulareDialog = ({
               )
             ) : layout ? (
               <>
+                {layoutDef?.leerMoeglich && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <LeerOderAusgefuellt leer={leer} onChange={setLeer} />
+                  </Box>
+                )}
                 {mitBegruendung && (
                   <Box sx={{ mb: 1.5 }}>
                     <TextField
@@ -1213,18 +1283,19 @@ const FormulareDialog = ({
                     )}
                   </Box>
                 )}
-                {layoutDef?.ausVorschau && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    component="p"
-                    sx={{ mb: 0.5 }}
-                  >
-                    Kreuze sind Vorschläge aus den gespeicherten Daten –
-                    Kästchen in der Vorschau anklicken, um sie vor dem Druck zu
-                    ändern.
-                  </Typography>
-                )}
+                {layoutDef?.ausVorschau &&
+                  !(layoutDef.leerMoeglich && leer) && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      component="p"
+                      sx={{ mb: 0.5 }}
+                    >
+                      Kreuze sind Vorschläge aus den gespeicherten Daten –
+                      Kästchen in der Vorschau anklicken, um sie vor dem Druck
+                      zu ändern.
+                    </Typography>
+                  )}
                 <Box
                   component="iframe"
                   ref={vorschauRef}
@@ -1593,6 +1664,37 @@ export const WerkstattauftragButton = ({
           brille={record}
           initialKategorie={WERKSTATTKARTE_KATEGORIE}
           direktDrucken
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// "Auftragszettel"-Knopf für die Brillenkartei: öffnet die Vorschau des
+// A5-Auftragszettels (Kategorie "Auftragszettel"), dort wahlweise leer zum
+// Ausfüllen von Hand oder mit den Daten des Auftrags
+export const AuftragszettelButton = ({ symbol }: { symbol?: boolean } = {}) => {
+  const record = useRecordContext();
+  const [open, setOpen] = useState(false);
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <>
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel="Auftragszettel"
+        icon={<AssignmentOutlinedIcon />}
+        onClick={() => setOpen(true)}
+        variant="outlined"
+      />
+      {open && (
+        <FormulareDialog
+          brille={record}
+          initialKategorie={AUFTRAGSZETTEL_KATEGORIE}
           onClose={() => setOpen(false)}
         />
       )}

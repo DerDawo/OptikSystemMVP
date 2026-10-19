@@ -51,6 +51,7 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Rezeptanfrage Augenarzt", name: "Rezeptanfrage Augenarzt" },
   { id: "Anamnesebogen", name: "Anamnesebogen" },
   { id: "Berechtigungsschein GKV", name: "Berechtigungsschein GKV" },
+  { id: "Auftragszettel", name: "Auftragszettel" },
 ];
 
 const PLATZHALTER_HINWEIS =
