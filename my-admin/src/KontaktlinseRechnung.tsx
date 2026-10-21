@@ -119,14 +119,14 @@ export const KontaktlinseRechnungButton = () => {
         },
         (adresse) =>
           notify(
-            `E-Mail-Adresse ${adresse} kopiert – in Outlook bei „An“ mit Strg+V einfügen.`,
+            `E-Mail-Adresse ${adresse} kopiert – in der E-Mail beim Empfänger einfügen.`,
             { type: "info", autoHideDuration: 15000 },
           ),
       );
       if (ergebnis === "heruntergeladen") {
         notify(
           kanal === "email"
-            ? `PDF „${datei.name}“ gespeichert und E-Mail geöffnet – bitte das PDF dort anhängen.`
+            ? `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und Gmail geöffnet – bitte das PDF in die E-Mail ziehen.`
             : `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und WhatsApp-Chat des Kunden geöffnet – bitte das PDF in den Chat ziehen.`,
           { type: "info", autoHideDuration: 15000 },
         );
