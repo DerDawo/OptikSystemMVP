@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useRefresh } from "react-admin";
 import {
   Dialog,
   DialogContent,
@@ -48,17 +49,22 @@ const UEBERSICHT: [string, string][] = [
   ["Alt + B", "Neue Brille für den geöffneten Kunden"],
   ["Alt + L", "Neue Kontaktlinsen für den geöffneten Kunden"],
   ["Alt + E", "Neuer Termin für den geöffneten Kunden"],
+  ["Alt + R", "Daten neu laden (wie der Knopf ⟳ oben rechts)"],
   ["Alt + H", "Diese Übersicht"],
 ];
 
 // Kürzel, die überall gelten, und die Übersicht (Alt + H)
 export const GlobaleTastenkuerzel = () => {
   const navigate = useNavigate();
+  const refresh = useRefresh();
   const [hilfeOffen, setHilfeOffen] = useState(false);
   useTastenkuerzel({
     k: () => navigate("/search"),
     n: () => navigate("/kunde/create"),
     t: () => navigate("/kalender"),
+    // Lädt die angezeigten Daten neu, ohne die Seite neu zu laden
+    // (Eingaben in offenen Formularen bleiben erhalten).
+    r: () => refresh(),
     h: () => setHilfeOffen((offen) => !offen),
   });
   return (
