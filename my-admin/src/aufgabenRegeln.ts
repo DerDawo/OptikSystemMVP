@@ -25,10 +25,10 @@ export const FRISTEN = {
 
 export const isoTag = (d: dayjs.Dayjs) => d.format("YYYY-MM-DD");
 
-// Aufträge ohne Brille (Sehtest, Refraktion, Gutschein ...) brauchen keinen
+// Aufträge ohne Brille (Sehtest, Refraktion, Beratung, Gutschein ...) brauchen keinen
 // Status "Fertig" und gelten nie als überfällig
 const KEIN_FERTIGUNGSAUFTRAG =
-  /seh(ü|ue)berpr(ü|ue)fung|sehtest|refraktion|gutschein|gutachten|gesundheitstag|kontaktlinse|^cl\b/i;
+  /seh(ü|ue)berpr(ü|ue)fung|sehtest|refraktion|beratung|gutschein|gutachten|gesundheitstag|kontaktlinse|^cl\b/i;
 
 export const istFertigungsauftrag = (brillenArt: unknown) =>
   !KEIN_FERTIGUNGSAUFTRAG.test(String(brillenArt ?? "").trim());
