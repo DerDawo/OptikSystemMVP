@@ -26,6 +26,7 @@ import {
   buildKontaktlinsenRechnungPrintHtml,
 } from "./rechnungTemplate";
 import { belegAlsPdf, belegVersenden } from "./belegPdf";
+import { druckfensterOeffnen } from "./druckfenster";
 import { choosePhoneNumberForMessaging } from "./messaging";
 
 /*
@@ -34,18 +35,6 @@ import { choosePhoneNumberForMessaging } from "./messaging";
  * `assign_rechnungsnummer_kontaktlinse`) und zeigt die Rechnung im
  * Briefpapier - mit Drucken, PDF, E-Mail und WhatsApp.
  */
-
-// Druckfenster mit dem Beleg; der Druckdialog druckt oder speichert als PDF
-const druckfenster = (html: string) => {
-  const fenster = window.open("", "_blank", "width=850,height=1100");
-  if (!fenster) return false;
-  fenster.document.open();
-  fenster.document.write(html);
-  fenster.document.close();
-  fenster.focus();
-  fenster.print();
-  return true;
-};
 
 export const KontaktlinseRechnungButton = () => {
   const cl = useRecordContext();
@@ -151,7 +140,11 @@ export const KontaktlinseRechnungButton = () => {
 
   const drucken = (alsPdf: boolean) => {
     if (!daten) return;
-    const ok = druckfenster(buildKontaktlinsenRechnungPrintHtml(daten));
+    // der Druckdialog druckt oder speichert als PDF
+    const ok = druckfensterOeffnen(
+      buildKontaktlinsenRechnungPrintHtml(daten),
+      true,
+    );
     notify(
       ok
         ? alsPdf

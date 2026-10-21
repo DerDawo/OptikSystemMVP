@@ -85,6 +85,7 @@ import {
 import { heuteIso } from "./AuftragsstatusLeiste";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
 import { belegAlsPdf, belegVersenden, type Seitenformat } from "./belegPdf";
+import { druckfensterOeffnen } from "./druckfenster";
 import { choosePhoneNumberForMessaging } from "./messaging";
 import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
@@ -368,24 +369,6 @@ const buildPrintHtml = (title: string, body: string) => `<!DOCTYPE html>
 <pre>${escapeHtml(body)}</pre>
 </body>
 </html>`;
-
-// Leichte, im Browser lauffähige "PDF"-Lösung ohne zusätzliche Bibliothek:
-// ein separates Fenster mit druckoptimiertem CSS, dessen Druckdialog der
-// Nutzer entweder an einen Drucker schickt oder als PDF speichert.
-const openDocumentWindow = (html: string, autoPrint: boolean): boolean => {
-  const documentWindow = window.open("", "_blank", "width=850,height=1100");
-  if (!documentWindow) {
-    return false;
-  }
-  documentWindow.document.open();
-  documentWindow.document.write(html);
-  documentWindow.document.close();
-  documentWindow.focus();
-  if (autoPrint) {
-    documentWindow.print();
-  }
-  return true;
-};
 
 // Druck ohne Vorschau (Werkstattauftrag): ein unsichtbarer Rahmen nimmt das
 // Druck-HTML auf und öffnet sofort den Druckdialog des Browsers - ohne
@@ -963,7 +946,7 @@ const FormulareDialog = ({
       );
       return;
     }
-    const opened = openDocumentWindow(druckHtml(), autoPrint);
+    const opened = druckfensterOeffnen(druckHtml(), autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
     });
