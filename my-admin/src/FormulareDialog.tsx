@@ -101,6 +101,10 @@ import {
   buildRezeptanfragePrintHtml,
 } from "./rezeptanfrageTemplate";
 import {
+  buildGutachtenKinderoptometriePreviewHtml,
+  buildGutachtenKinderoptometriePrintHtml,
+} from "./gutachtenKinderoptometrieTemplate";
+import {
   buildMahnungPreviewHtml,
   buildMahnungPrintHtml,
 } from "./mahnungTemplate";
@@ -292,6 +296,15 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Rezeptanfrage-Vorschau",
     preview: buildRezeptanfragePreviewHtml,
     print: buildRezeptanfragePrintHtml,
+  },
+  // Gutachten Kinderoptometrie: Name, Alter und Refraktionswerte aus dem
+  // Auftrag, alles andere in der Vorschau eintippen
+  "Gutachten Kinderoptometrie": {
+    ausVorschau: true,
+    blatt: ".seite",
+    title: "Gutachten-Vorschau",
+    preview: buildGutachtenKinderoptometriePreviewHtml,
+    print: buildGutachtenKinderoptometriePrintHtml,
   },
   [AUFTRAGSZETTEL_KATEGORIE]: {
     ausVorschau: true,
