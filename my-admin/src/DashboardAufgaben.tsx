@@ -28,6 +28,7 @@ import {
   openExternalMessage,
 } from "./messaging";
 import { RECHNUNG_ABSENDER } from "./rechnungTemplate";
+import { ErinnerungenKarte } from "./ErinnerungenKarte";
 
 /*
  * "Heute zu tun" im Dashboard: fünf Listen aus den Daten der Kartei
@@ -453,6 +454,7 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
           gap: 1.75,
         }}
       >
+        <ErinnerungenKarte stand={stand} />
         {listen.map((liste) => (
           <AufgabenKarte key={liste.titel} liste={liste} />
         ))}
