@@ -14,6 +14,10 @@ export const BRILLENARTEN = [
   "Hobbybrille",
   "Sonnenbrille",
   "Kantenfilterbrille",
+  "Ersatzbrille",
+  "Umschliff",
+  "Reparatur",
+  "Beratung",
   "Optometrische Refraktion",
 ];
 

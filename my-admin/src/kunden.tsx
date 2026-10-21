@@ -53,6 +53,7 @@ import {
   type NachrichtTermin,
   renderMessageTemplate,
 } from "./nachrichtenPlatzhalter";
+import { ErinnerungButton } from "./ErinnerungenKarte";
 import {
   buildExternalMessageUrl,
   choosePhoneNumberForMessaging,
@@ -445,6 +446,7 @@ const MessageButton = () => {
 const KundeShowActions = () => (
   <ShowActionsBar>
     <MessageButton />
+    <ErinnerungButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
