@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 // messaging.ts importiert den Supabase-Client, der ohne Env-Variablen beim
 // Laden abbricht (#98). Für die reinen Link-Funktionen wird er nicht gebraucht.
@@ -7,7 +7,9 @@ vi.mock("./utils", () => ({ supabase: {} }));
 import {
   buildExternalMessageUrl,
   choosePhoneNumberForMessaging,
+  gmailUrl,
   normalizePhoneNumberForSms,
+  openExternalMessage,
   whatsappWebUrl,
 } from "./messaging";
 
@@ -92,5 +94,61 @@ describe("whatsappWebUrl", () => {
   it("lässt andere Links in Ruhe", () => {
     expect(whatsappWebUrl("mailto:a@b.de?body=x")).toBeNull();
     expect(whatsappWebUrl("https://example.org")).toBeNull();
+  });
+});
+
+describe("E-Mail über Gmail", () => {
+  const MAC =
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36";
+  const IPHONE =
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1";
+  const mailto = buildExternalMessageUrl("email", {
+    to: "kunde@example.de",
+    subject: "Rechnung 114 & Co",
+    message: "Guten Tag,\nanbei die Rechnung.",
+  });
+
+  const umgebung = (userAgent: string, fenster: object | null) => {
+    const open = vi.fn(() => fenster);
+    const ort = { href: "" };
+    vi.stubGlobal("navigator", { userAgent, maxTouchPoints: 0 });
+    vi.stubGlobal("window", { open, location: ort });
+    return { open, ort };
+  };
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("übernimmt Empfänger, Betreff und Text in den Gmail-Link", () => {
+    const url = new URL(gmailUrl(mailto) ?? "");
+    expect(url.origin + url.pathname).toBe("https://mail.google.com/mail/");
+    expect(url.searchParams.get("view")).toBe("cm");
+    expect(url.searchParams.get("to")).toBe("kunde@example.de");
+    expect(url.searchParams.get("su")).toBe("Rechnung 114 & Co");
+    expect(url.searchParams.get("body")).toBe(
+      "Guten Tag,\nanbei die Rechnung.",
+    );
+    expect(gmailUrl("https://wa.me/491701234567")).toBeNull();
+  });
+
+  it("öffnet am Computer Gmail statt des Mail-Programms", () => {
+    const { open, ort } = umgebung(MAC, {});
+    expect(openExternalMessage(mailto)).toBe(false);
+    expect(open).toHaveBeenCalledWith(gmailUrl(mailto), "unicorn-gmail");
+    expect(ort.href).toBe("");
+  });
+
+  it("nimmt das Mail-Programm, wenn das Gmail-Fenster blockiert ist", () => {
+    const { ort } = umgebung(MAC, null);
+    openExternalMessage(mailto);
+    expect(ort.href).toBe(mailto);
+  });
+
+  it("bleibt am Handy beim mailto-Link", () => {
+    const { open, ort } = umgebung(IPHONE, {});
+    openExternalMessage(mailto);
+    expect(open).not.toHaveBeenCalled();
+    expect(ort.href).toBe(mailto);
   });
 });

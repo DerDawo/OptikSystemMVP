@@ -23,6 +23,8 @@ import {
   TextField,
   CircularProgress,
   MenuItem,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import CloseIcon from "@mui/icons-material/Close";
@@ -37,6 +39,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
 import BuildIcon from "@mui/icons-material/Build";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import EmailIcon from "@mui/icons-material/Email";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import {
@@ -81,7 +84,8 @@ import {
 } from "./aokBerechtigungsscheinTemplate";
 import { heuteIso } from "./AuftragsstatusLeiste";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
-import { belegAlsPdf, belegVersenden } from "./belegPdf";
+import { belegAlsPdf, belegVersenden, type Seitenformat } from "./belegPdf";
+import { druckfensterOeffnen } from "./druckfenster";
 import { choosePhoneNumberForMessaging } from "./messaging";
 import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
@@ -97,6 +101,14 @@ import {
   buildRezeptanfragePrintHtml,
 } from "./rezeptanfrageTemplate";
 import {
+  buildMahnungPreviewHtml,
+  buildMahnungPrintHtml,
+} from "./mahnungTemplate";
+import {
+  buildAuftragszettelPreviewHtml,
+  buildAuftragszettelPrintHtml,
+} from "./auftragszettelTemplate";
+import {
   buildOptometrischeVerordnungPreviewHtml,
   buildOptometrischeVerordnungPrintHtml,
   buildVerordnungKurzPreviewHtml,
@@ -107,6 +119,10 @@ import {
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
 // Seed-Migration 20260831020100_seed_dokumentvorlage_rechnung.sql).
 const RECHNUNG_KATEGORIE = "Rechnung";
+
+// Mahnungen (Zahlungserinnerung und Mahnstufen) im Briefkopf der Rechnung
+// (mahnungTemplate.ts); der Brieftext kommt aus der jeweiligen Vorlage
+const MAHNUNG_KATEGORIE = "Mahnung";
 
 // Kategorie, die "Berechtigungsschein erstellen" öffnet: das Original des
 // ZVA (AOK-Vertrag Sehhilfen, Anlage 4) als ausfüllbares PDF (pdfFormulare.ts)
@@ -128,6 +144,10 @@ const VERORDNUNG_GKV_KATEGORIE = "Optometrische Verordnung GKV";
 // Kostenvoranschlag im Rechnungsdesign (rechnungTemplate.ts)
 const KOSTENVORANSCHLAG_KATEGORIE = "Kostenvoranschlag";
 
+// Auftragszettel in A5 mit Anamnesebogen auf der Rückseite
+// (auftragszettelTemplate.ts), leer oder ausgefüllt
+const AUFTRAGSZETTEL_KATEGORIE = "Auftragszettel";
+
 // Knöpfe im Auswahlfenster wie in Prisma: dunkelblau, weiße fette Schrift
 const PRISMA_KNOPF = {
   bgcolor: "#1d4e8f",
@@ -145,6 +165,10 @@ type LayoutDaten = {
   betrieb?: RaRecord;
   rechnungsnummer: string;
   begruendung?: string;
+  // leer drucken (zum Ausfüllen von Hand), nur bei `leerMoeglich`
+  leer?: boolean;
+  // Text der gewählten Vorlage, nur bei `mitVorlagentext`
+  vorlagentext?: string;
 };
 
 type Layout = {
@@ -154,6 +178,14 @@ type Layout = {
   // Formulare mit anklickbaren Kästchen: gedruckt wird der Stand der
   // Vorschau (vorgeschlagene Kreuze lassen sich dort noch ändern)
   ausVorschau?: boolean;
+  // wahlweise leer oder mit den Daten des Auftrags ausgefüllt
+  leerMoeglich?: boolean;
+  // Layout aus dem Code, Text aus der Vorlage ("Text ändern" möglich)
+  mitVorlagentext?: boolean;
+  // Seitenformat für den Versand als PDF (ohne Angabe A4) und die Blätter,
+  // die dabei je eine eigene Seite werden (CSS-Selektor)
+  format?: Seitenformat;
+  blatt?: string;
 };
 
 // Vorschau samt angeklickter Kästchen als eigenständiges HTML
@@ -163,6 +195,29 @@ const vorschauAlsHtml = (doc: Document) => {
     .forEach((box) => box.toggleAttribute("checked", box.checked));
   return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
 };
+
+// Auswahl "ausgefüllt" oder "leer" für Formulare mit `leerMoeglich`
+const LeerOderAusgefuellt = ({
+  leer,
+  onChange,
+}: {
+  leer: boolean;
+  onChange: (leer: boolean) => void;
+}) => (
+  <ToggleButtonGroup
+    exclusive
+    size="small"
+    fullWidth
+    color="primary"
+    value={leer ? "leer" : "ausgefuellt"}
+    onChange={(_, wert) => wert && onChange(wert === "leer")}
+    aria-label="Ausgefüllt oder leer drucken"
+    sx={{ "& .MuiToggleButton-root": { textTransform: "none" } }}
+  >
+    <ToggleButton value="ausgefuellt">Ausgefüllt mit Kundendaten</ToggleButton>
+    <ToggleButton value="leer">Leer zum Ausfüllen von Hand</ToggleButton>
+  </ToggleButtonGroup>
+);
 
 const antragLayout = (art: AntragArt): Layout => ({
   title: "Antrag-Vorschau",
@@ -177,6 +232,12 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Rechnungsvorschau",
     preview: buildRechnungPreviewHtml,
     print: buildRechnungPrintHtml,
+  },
+  [MAHNUNG_KATEGORIE]: {
+    title: "Mahnung-Vorschau",
+    mitVorlagentext: true,
+    preview: buildMahnungPreviewHtml,
+    print: buildMahnungPrintHtml,
   },
   [KOSTENVORANSCHLAG_KATEGORIE]: {
     title: "Kostenvoranschlag-Vorschau",
@@ -232,15 +293,24 @@ const LAYOUTS: Record<string, Layout> = {
     preview: buildRezeptanfragePreviewHtml,
     print: buildRezeptanfragePrintHtml,
   },
+  [AUFTRAGSZETTEL_KATEGORIE]: {
+    ausVorschau: true,
+    leerMoeglich: true,
+    format: "A5",
+    blatt: ".blatt",
+    title: "Auftragszettel-Vorschau",
+    preview: buildAuftragszettelPreviewHtml,
+    print: buildAuftragszettelPrintHtml,
+  },
 };
 
-// Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
-// (#57, Seed-Migration 20260831030100_seed_dokumentvorlage_mahnung.sql). Es
+// Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen (#57, Namen seit
+// 20261019100000_mahnung_briefkopf_texte.sql: Zahlungserinnerung,
+// 1. Mahnung, 2. Mahnung (Inkasso-Ankündigung)). Es
 // gibt mehrere aktive Vorlagen der Kategorie "Mahnung" (eine je Stufe), daher
 // reicht die generische "genau ein Treffer"-Auswahl unten nicht aus - der
 // Name der zur aktuellen Mahnstufe passenden Vorlage wird explizit über
 // `initialVorlageName` vorgegeben.
-const MAHNUNG_KATEGORIE = "Mahnung";
 
 // Formulare, auf die eine Genehmigung des Kostenträgers folgt: Drucken, PDF
 // oder Versand merkt sich das Datum am Auftrag ("KVVersendet"); ohne Haken
@@ -257,18 +327,19 @@ export const KV_KATEGORIEN = [
 ];
 
 // Formulararten, die eigene Knöpfe öffnen (Rechnung, Mahnung,
-// Berechtigungsschein, Werkstattauftrag): die letzte aktive Vorlage einer
-// solchen Art lässt sich nicht ausblenden
+// Berechtigungsschein, Werkstattauftrag, Auftragszettel): die letzte aktive
+// Vorlage einer solchen Art lässt sich nicht ausblenden
 const UNVERZICHTBARE_KATEGORIEN = [
   RECHNUNG_KATEGORIE,
   MAHNUNG_KATEGORIE,
   BERECHTIGUNGSSCHEIN_KATEGORIE,
   WERKSTATTKARTE_KATEGORIE,
+  AUFTRAGSZETTEL_KATEGORIE,
 ];
 const MAHNUNG_VORLAGE_NACH_STUFE: Record<number, string> = {
   1: "Zahlungserinnerung",
-  2: "2. Mahnung",
-  3: "3. Mahnung (Inkasso-Ankündigung)",
+  2: "1. Mahnung",
+  3: "2. Mahnung (Inkasso-Ankündigung)",
 };
 
 type Dokumentvorlage = RaRecord & {
@@ -298,24 +369,6 @@ const buildPrintHtml = (title: string, body: string) => `<!DOCTYPE html>
 <pre>${escapeHtml(body)}</pre>
 </body>
 </html>`;
-
-// Leichte, im Browser lauffähige "PDF"-Lösung ohne zusätzliche Bibliothek:
-// ein separates Fenster mit druckoptimiertem CSS, dessen Druckdialog der
-// Nutzer entweder an einen Drucker schickt oder als PDF speichert.
-const openDocumentWindow = (html: string, autoPrint: boolean): boolean => {
-  const documentWindow = window.open("", "_blank", "width=850,height=1100");
-  if (!documentWindow) {
-    return false;
-  }
-  documentWindow.document.open();
-  documentWindow.document.write(html);
-  documentWindow.document.close();
-  documentWindow.focus();
-  if (autoPrint) {
-    documentWindow.print();
-  }
-  return true;
-};
 
 // Druck ohne Vorschau (Werkstattauftrag): ein unsichtbarer Rahmen nimmt das
 // Druck-HTML auf und öffnet sofort den Druckdialog des Browsers - ohne
@@ -581,6 +634,8 @@ const FormulareDialog = ({
   useEffect(() => {
     setBegruendung("");
   }, [selectedVorlage?.id]);
+  // Auftragszettel: leer zum Ausfüllen von Hand statt mit den Daten
+  const [leer, setLeer] = useState(false);
   const kiVorschlagHolen = async () => {
     if (!kiFormular) return;
     setKiLaeuft(true);
@@ -601,8 +656,17 @@ const FormulareDialog = ({
       betrieb,
       rechnungsnummer: brille.Rechnungsnummer ?? "",
       begruendung,
+      leer,
+      vorlagentext: selectedVorlage?.Vorlagentext ?? "",
     }),
-    [mergeEntities, betrieb, brille.Rechnungsnummer, begruendung],
+    [
+      mergeEntities,
+      betrieb,
+      brille.Rechnungsnummer,
+      begruendung,
+      leer,
+      selectedVorlage?.Vorlagentext,
+    ],
   );
   const layoutDef = selectedVorlage
     ? LAYOUTS[selectedVorlage.Kategorie]
@@ -626,7 +690,7 @@ const FormulareDialog = ({
   const kaestchenStand = useRef<boolean[] | null>(null);
   useEffect(() => {
     kaestchenStand.current = null;
-  }, [selectedVorlage?.id]);
+  }, [selectedVorlage?.id, leer]);
   const vorschauGeladen = () => {
     const doc = vorschauRef.current?.contentDocument;
     if (!doc) return;
@@ -695,7 +759,9 @@ const FormulareDialog = ({
         .sort((x, y) => x.Name.localeCompare(y.Name, "de")),
     [auswahlVorlagen, typ],
   );
-  const textAenderbar = Boolean(selectedVorlage) && !layout && !pdfVorlage;
+  const textAenderbar =
+    Boolean(selectedVorlage) &&
+    ((!layout && !pdfVorlage) || Boolean(layoutDef?.mitVorlagentext));
 
   const datenLaden = [
     vorlagenLoading,
@@ -763,9 +829,8 @@ const FormulareDialog = ({
     }
     setVersendet(kanal);
     try {
-      const beleg =
-        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE ||
-        selectedVorlage.Kategorie === MAHNUNG_KATEGORIE;
+      const mahnung = selectedVorlage.Kategorie === MAHNUNG_KATEGORIE;
+      const beleg = selectedVorlage.Kategorie === RECHNUNG_KATEGORIE || mahnung;
       const nummer = beleg ? String(brille.Rechnungsnummer ?? "").trim() : "";
       const art =
         selectedVorlage.Kategorie === RECHNUNG_KATEGORIE
@@ -780,7 +845,12 @@ const FormulareDialog = ({
           ? new File([await (await fetch(pdfUrl)).blob()], dateiname, {
               type: "application/pdf",
             })
-          : await belegAlsPdf(druckHtml(), dateiname);
+          : await belegAlsPdf(
+              druckHtml(),
+              dateiname,
+              layoutDef?.format,
+              layoutDef?.blatt,
+            );
       const nachname = String(kunde?.Nachname ?? "").trim();
       const anrede = String(kunde?.Anrede ?? "").trim();
       const gruss =
@@ -801,16 +871,20 @@ const FormulareDialog = ({
                   kunde?.Handy,
                   kunde?.TelefonnummerPrivat,
                 ]),
-          betreff: `${art}${nummer ? ` ${nummer}` : ""}`,
+          betreff: mahnung
+            ? `${art}${nummer ? ` zur Rechnung ${nummer}` : ""}`
+            : `${art}${nummer ? ` ${nummer}` : ""}`,
           text: `${gruss},\n\nanbei erhalten Sie ${
-            beleg
-              ? `Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""}`
-              : `das Formular „${art}“`
+            mahnung
+              ? `unser Schreiben „${art}“${nummer ? ` zur Rechnung Nr. ${nummer}` : ""}`
+              : beleg
+                ? `Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""}`
+                : `das Formular „${art}“`
           } als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
         },
         (adresse) =>
           notify(
-            `E-Mail-Adresse ${adresse} kopiert – in Outlook bei „An“ mit Strg+V einfügen.`,
+            `E-Mail-Adresse ${adresse} kopiert – in der E-Mail beim Empfänger einfügen.`,
             { type: "info", autoHideDuration: 15000 },
           ),
       );
@@ -818,9 +892,9 @@ const FormulareDialog = ({
       if (ergebnis === "heruntergeladen") {
         notify(
           kanal === "email"
-            ? `PDF „${datei.name}“ gespeichert und E-Mail geöffnet – bitte das PDF dort anhängen.`
-            : `PDF „${datei.name}“ gespeichert und WhatsApp geöffnet – bitte das PDF dort anhängen.`,
-          { type: "info" },
+            ? `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und Gmail geöffnet – bitte das PDF in die E-Mail ziehen.`
+            : `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und WhatsApp-Chat des Kunden geöffnet – bitte das PDF in den Chat ziehen.`,
+          { type: "info", autoHideDuration: 15000 },
         );
       }
     } catch {
@@ -872,7 +946,7 @@ const FormulareDialog = ({
       );
       return;
     }
-    const opened = openDocumentWindow(druckHtml(), autoPrint);
+    const opened = druckfensterOeffnen(druckHtml(), autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
     });
@@ -1007,6 +1081,11 @@ const FormulareDialog = ({
                   </MenuItem>
                 ))}
               </TextField>
+              {layoutDef?.leerMoeglich && (
+                <Box sx={{ mt: 2 }}>
+                  <LeerOderAusgefuellt leer={leer} onChange={setLeer} />
+                </Box>
+              )}
             </Box>
             <Box
               sx={{
@@ -1135,7 +1214,7 @@ const FormulareDialog = ({
                   {selectedVorlage.Kategorie}
                 </Typography>
               </Box>
-              {!layout && !pdfVorlage && (
+              {textAenderbar && (
                 <Button
                   size="small"
                   startIcon={<EditNoteIcon />}
@@ -1170,6 +1249,11 @@ const FormulareDialog = ({
               )
             ) : layout ? (
               <>
+                {layoutDef?.leerMoeglich && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <LeerOderAusgefuellt leer={leer} onChange={setLeer} />
+                  </Box>
+                )}
                 {mitBegruendung && (
                   <Box sx={{ mb: 1.5 }}>
                     <TextField
@@ -1213,18 +1297,19 @@ const FormulareDialog = ({
                     )}
                   </Box>
                 )}
-                {layoutDef?.ausVorschau && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    component="p"
-                    sx={{ mb: 0.5 }}
-                  >
-                    Kreuze sind Vorschläge aus den gespeicherten Daten –
-                    Kästchen in der Vorschau anklicken, um sie vor dem Druck zu
-                    ändern.
-                  </Typography>
-                )}
+                {layoutDef?.ausVorschau &&
+                  !(layoutDef.leerMoeglich && leer) && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      component="p"
+                      sx={{ mb: 0.5 }}
+                    >
+                      Kreuze sind Vorschläge aus den gespeicherten Daten –
+                      Kästchen in der Vorschau anklicken, um sie vor dem Druck
+                      zu ändern.
+                    </Typography>
+                  )}
                 <Box
                   component="iframe"
                   ref={vorschauRef}
@@ -1593,6 +1678,37 @@ export const WerkstattauftragButton = ({
           brille={record}
           initialKategorie={WERKSTATTKARTE_KATEGORIE}
           direktDrucken
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// "Auftragszettel"-Knopf für die Brillenkartei: öffnet die Vorschau des
+// A5-Auftragszettels (Kategorie "Auftragszettel"), dort wahlweise leer zum
+// Ausfüllen von Hand oder mit den Daten des Auftrags
+export const AuftragszettelButton = ({ symbol }: { symbol?: boolean } = {}) => {
+  const record = useRecordContext();
+  const [open, setOpen] = useState(false);
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <>
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel="Auftragszettel"
+        icon={<AssignmentOutlinedIcon />}
+        onClick={() => setOpen(true)}
+        variant="outlined"
+      />
+      {open && (
+        <FormulareDialog
+          brille={record}
+          initialKategorie={AUFTRAGSZETTEL_KATEGORIE}
           onClose={() => setOpen(false)}
         />
       )}

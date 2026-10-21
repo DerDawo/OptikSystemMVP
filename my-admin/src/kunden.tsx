@@ -53,6 +53,7 @@ import {
   type NachrichtTermin,
   renderMessageTemplate,
 } from "./nachrichtenPlatzhalter";
+import { ErinnerungButton } from "./ErinnerungenKarte";
 import {
   buildExternalMessageUrl,
   choosePhoneNumberForMessaging,
@@ -445,6 +446,7 @@ const MessageButton = () => {
 const KundeShowActions = () => (
   <ShowActionsBar>
     <MessageButton />
+    <ErinnerungButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
@@ -998,7 +1000,7 @@ export const KundeMessage = () => {
       }));
     };
 
-  // Standard: Öffnet die passende App (Mail-Programm, SMS, WhatsApp) mit
+  // Standard: Öffnet die passende App (Gmail bzw. Mail-Programm, SMS, WhatsApp) mit
   // vorausgefüllter Nachricht - so geht es ohne API-Keys. Mit
   // VITE_DIRECT_MESSAGING=true wird stattdessen im Hintergrund über die Edge
   // Functions gesendet. Bei mehreren Kanälen wird der erste direkt

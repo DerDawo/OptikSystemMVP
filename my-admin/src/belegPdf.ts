@@ -1,27 +1,33 @@
 import { PDFDocument } from "pdf-lib";
 import {
   buildExternalMessageUrl,
+  istHandy,
   openExternalMessage,
   type MessageChannel,
 } from "./messaging";
 
-// A4 in PDF-Punkten und bei 96 dpi in Bildschirmpixeln
-const A4_PT = { breite: 595.28, hoehe: 841.89 };
-const A4_PX_BREITE = 794;
+// Seitenformate in PDF-Punkten und die Breite bei 96 dpi in Bildschirmpixeln
+const SEITENFORMATE = {
+  A4: { breite: 595.28, hoehe: 841.89, px: 794 },
+  A5: { breite: 419.53, hoehe: 595.28, px: 559 },
+};
+export type Seitenformat = keyof typeof SEITENFORMATE;
 
 /*
  * Erzeugt aus dem Druck-HTML eines Belegs (Rechnung, Mahnung) eine echte
- * PDF-Datei: das HTML wird unsichtbar in A4-Breite dargestellt, mit
- * html2canvas abfotografiert und seitenweise in ein PDF gelegt (pdf-lib).
+ * PDF-Datei: das HTML wird unsichtbar in Seitenbreite (A4, Formulare auch
+ * A5) dargestellt, mit html2canvas abfotografiert und seitenweise in ein PDF
+ * gelegt (pdf-lib).
  */
 // Stellt HTML unsichtbar in der angegebenen Breite dar und fotografiert es
 // mit html2canvas ab (doppelte Auflösung). Das iframe wird danach entfernt.
 const htmlAlsCanvas = async (
   html: string,
   breitePx: number,
-  // nur dieses Element abfotografieren (z. B. die Karte ohne Leerraum)
+  // nur diese Elemente einzeln abfotografieren (z. B. die Karte ohne
+  // Leerraum oder jedes Blatt eines A5-Formulars)
   auswahl?: string,
-): Promise<HTMLCanvasElement> => {
+): Promise<HTMLCanvasElement[]> => {
   const rahmen = document.createElement("iframe");
   rahmen.setAttribute("aria-hidden", "true");
   Object.assign(rahmen.style, {
@@ -44,13 +50,30 @@ const htmlAlsCanvas = async (
       [...doc.images].map((bild) => bild.decode().catch(() => undefined)),
     );
     const { default: html2canvas } = await import("html2canvas");
-    const ziel = auswahl ? doc.querySelector<HTMLElement>(auswahl) : null;
-    return await html2canvas(ziel ?? doc.body, {
-      scale: 2,
-      backgroundColor: "#ffffff",
-      windowWidth: breitePx,
-      ...(ziel ? {} : { width: breitePx }),
-    });
+    const ziele = auswahl
+      ? [...doc.querySelectorAll<HTMLElement>(auswahl)]
+      : [];
+    if (!ziele.length) {
+      return [
+        await html2canvas(doc.body, {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          windowWidth: breitePx,
+          width: breitePx,
+        }),
+      ];
+    }
+    const bilder: HTMLCanvasElement[] = [];
+    for (const ziel of ziele) {
+      bilder.push(
+        await html2canvas(ziel, {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          windowWidth: breitePx,
+        }),
+      );
+    }
+    return bilder;
   } finally {
     rahmen.remove();
   }
@@ -66,7 +89,7 @@ export const htmlAlsBild = async (
   dateiname: string,
   auswahl?: string,
 ): Promise<File> => {
-  const bild = await htmlAlsCanvas(html, breitePx, auswahl);
+  const [bild] = await htmlAlsCanvas(html, breitePx, auswahl);
   const blob = await new Promise<Blob | null>((fertig) =>
     bild.toBlob(fertig, "image/png"),
   );
@@ -74,14 +97,13 @@ export const htmlAlsBild = async (
   return new File([blob], dateiname, { type: "image/png" });
 };
 
-export const belegAlsPdf = async (
-  html: string,
-  dateiname: string,
-): Promise<File> => {
-  const bild = await htmlAlsCanvas(html, A4_PX_BREITE);
-  const pdf = await PDFDocument.create();
-  // Höhe einer A4-Seite im Bildmaßstab; längere Belege werden aufgeteilt
-  const seitenHoehe = Math.round((bild.width * A4_PT.hoehe) / A4_PT.breite);
+// Langes Bild in Seiten der angegebenen Höhe aufteilen
+const inSeitenAufteilen = (
+  bild: HTMLCanvasElement,
+  format: (typeof SEITENFORMATE)[Seitenformat],
+): HTMLCanvasElement[] => {
+  const seiten: HTMLCanvasElement[] = [];
+  const seitenHoehe = Math.round((bild.width * format.hoehe) / format.breite);
   for (let y = 0; y < bild.height; y += seitenHoehe) {
     const hoehe = Math.min(seitenHoehe, bild.height - y);
     // fast leere Reste (Rundung) keine eigene Seite
@@ -94,13 +116,32 @@ export const belegAlsPdf = async (
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, teil.width, teil.height);
     ctx.drawImage(bild, 0, y, bild.width, hoehe, 0, 0, bild.width, hoehe);
+    seiten.push(teil);
+  }
+  return seiten;
+};
+
+export const belegAlsPdf = async (
+  html: string,
+  dateiname: string,
+  // Formulare mit festen Blättern (Auftragszettel in A5): jedes Element zum
+  // CSS-Selektor `blatt` wird eine eigene Seite
+  formatName: Seitenformat = "A4",
+  blatt?: string,
+): Promise<File> => {
+  const format = SEITENFORMATE[formatName];
+  const bilder = await htmlAlsCanvas(html, format.px, blatt);
+  // ein Blatt ergibt genau eine Seite, das ganze Dokument wird aufgeteilt
+  const seiten = bilder.flatMap((bild) => inSeitenAufteilen(bild, format));
+  const pdf = await PDFDocument.create();
+  for (const teil of seiten) {
     const jpg = await pdf.embedJpg(teil.toDataURL("image/jpeg", 0.9));
-    const seite = pdf.addPage([A4_PT.breite, A4_PT.hoehe]);
+    const seite = pdf.addPage([format.breite, format.hoehe]);
     seite.drawImage(jpg, {
       x: 0,
       y: 0,
-      width: A4_PT.breite,
-      height: A4_PT.hoehe,
+      width: format.breite,
+      height: format.hoehe,
     });
   }
   const bytes = await pdf.save();
@@ -134,14 +175,13 @@ export const inZwischenablage = async (text: string) => {
 export type VersandErgebnis = "geteilt" | "abgebrochen" | "heruntergeladen";
 
 /*
- * Beleg verschicken: wo der Rechner das Teilen von Dateien kann (Windows,
- * macOS, Handy), öffnet sich das Teilen-Fenster mit angehängtem PDF (dort
- * Mail/Outlook oder WhatsApp wählen). Das Teilen-Fenster kann keinen
- * Empfänger übergeben, deshalb liegt die E-Mail-Adresse des Kunden vorher in
- * der Zwischenablage (in Outlook bei „An" mit Strg+V einfügen;
- * `beiAdresseKopiert` meldet das). Sonst wird das PDF gespeichert und das
- * E-Mail-Programm bzw. WhatsApp mit vorbereitetem Text an den Kunden
- * geöffnet - das PDF dort anhängen.
+ * Beleg verschicken: am Handy/iPad öffnet sich das Teilen-Fenster mit
+ * angehängtem PDF (dort Mail-App oder WhatsApp wählen). Das Teilen-Fenster
+ * kann keinen Empfänger übergeben, deshalb liegt die E-Mail-Adresse des
+ * Kunden vorher in der Zwischenablage (`beiAdresseKopiert` meldet das). Am
+ * Computer wird das PDF gespeichert und gleich Gmail mit Empfänger, Betreff
+ * und Text bzw. der WhatsApp-Chat des Kunden geöffnet - das PDF dort
+ * hineinziehen.
  */
 export const belegVersenden = async (
   kanal: Extract<MessageChannel, "email" | "whatsapp">,
@@ -149,7 +189,12 @@ export const belegVersenden = async (
   nachricht: { an: string; betreff: string; text: string },
   beiAdresseKopiert?: (adresse: string) => void,
 ): Promise<VersandErgebnis> => {
+  // Am Computer bietet das Teilen-Menü weder Gmail noch WhatsApp an (die
+  // Mac-App von WhatsApp fehlt dort), daher gleich Gmail bzw. den Chat des
+  // Kunden öffnen und die Datei speichern. Am Handy/iPad bleibt das
+  // Teilen-Menü, dort lassen sich Mail-App und WhatsApp samt Anhang wählen.
   const teilbar =
+    istHandy() &&
     typeof navigator.canShare === "function" &&
     navigator.canShare({ files: [datei] });
   if (teilbar) {

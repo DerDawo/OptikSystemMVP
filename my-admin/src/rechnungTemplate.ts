@@ -295,6 +295,36 @@ type BelegDaten = {
 const a = RECHNUNG_ABSENDER;
 const e = escapeHtml;
 
+// Briefkopf der Belege: Absenderzeile, Logo, Anschrift, Datenbox und grauer
+// Titelbalken (auch für Mahnungen, mahnungTemplate.ts)
+export const briefkopfHtml = (
+  kunde: DocumentMergeEntities["kunde"],
+  datenbox: [string, string][],
+  titel: string,
+): string => `
+  <div class="absenderzeile">${e(`${a.marke} - ${a.strasseKurz} - ${a.plz} ${a.ort}`)}</div>
+  <img class="logo" src="${logoSehzentrum}" alt="" />
+  <div class="anschrift">
+    ${buildAnschriftZeilen(kunde)
+      .map((z) => `<div>${e(z)}</div>`)
+      .join("")}
+  </div>
+  <table class="datenbox">
+    ${datenbox.map(([l, w]) => `<tr><td>${e(l)}</td><td>${e(w)}</td></tr>`).join("")}
+  </table>
+  <div class="titelbalken">${e(titel)}</div>`;
+
+// Fußzeile mit Firma, Bank und Kontakt; der Dank nicht auf Mahnungen
+export const fusszeileHtml = (mitDank = true): string => `
+  <div class="fusszeile">
+    ${mitDank ? `<p class="dank">Vielen Dank für Ihr Vertrauen, das Sie uns entgegengebracht haben. Unser Service endet aber nicht mit der Bezahlung!<br />Gern stehen wir Ihnen jederzeit mit unserem Wissen, Können und unserer fachlichen Kompetenz zur Seite!</p>` : ""}
+    <div class="spalten">
+      <div>${e(a.firma)}<br />Inh. : ${e(a.inhaber)}<br />${e(a.strasseKurz)}<br />${e(`${a.plz} ${a.ort}`)}</div>
+      <div>Bankverbindung:<br />${e(a.bankName)}<br />${e(a.bic)}<br />${e(a.iban)}</div>
+      <div>Tel: ${e(a.telefon)}<br />Fax: ${e(a.fax)}<br />Mail: ${e(a.email)}<br />${e(a.web)}</div>
+    </div>
+  </div>`;
+
 const belegHtml = ({
   art,
   entities,
@@ -366,17 +396,7 @@ const belegHtml = ({
 
   return `
 <div class="beleg">
-  <div class="absenderzeile">${e(`${a.marke} - ${a.strasseKurz} - ${a.plz} ${a.ort}`)}</div>
-  <img class="logo" src="${logoSehzentrum}" alt="" />
-  <div class="anschrift">
-    ${buildAnschriftZeilen(kunde)
-      .map((z) => `<div>${e(z)}</div>`)
-      .join("")}
-  </div>
-  <table class="datenbox">
-    ${datenbox.map(([l, w]) => `<tr><td>${e(l)}</td><td>${e(w)}</td></tr>`).join("")}
-  </table>
-  <div class="titelbalken">${istRechnung ? "RECHNUNG" : "KOSTENVORANSCHLAG"}</div>
+  ${briefkopfHtml(kunde, datenbox, istRechnung ? "RECHNUNG" : "KOSTENVORANSCHLAG")}
   <div class="inhalt">
    <div class="inhalt-block">
     <p class="zweck">${zweck ? e(zweck) : `für eine neue ${e(brillenArt)}&nbsp; lt. optometr. Verordnung`}</p>
@@ -406,14 +426,7 @@ const belegHtml = ({
    </div>
     ${istRechnung ? BEWERTUNG_HTML : ""}
   </div>
-  <div class="fusszeile">
-    <p class="dank">Vielen Dank für Ihr Vertrauen, das Sie uns entgegengebracht haben. Unser Service endet aber nicht mit der Bezahlung!<br />Gern stehen wir Ihnen jederzeit mit unserem Wissen, Können und unserer fachlichen Kompetenz zur Seite!</p>
-    <div class="spalten">
-      <div>${e(a.firma)}<br />Inh. : ${e(a.inhaber)}<br />${e(a.strasseKurz)}<br />${e(`${a.plz} ${a.ort}`)}</div>
-      <div>Bankverbindung:<br />${e(a.bankName)}<br />${e(a.bic)}<br />${e(a.iban)}</div>
-      <div>Tel: ${e(a.telefon)}<br />Fax: ${e(a.fax)}<br />Mail: ${e(a.email)}<br />${e(a.web)}</div>
-    </div>
-  </div>
+  ${fusszeileHtml()}
 </div>`;
 };
 
@@ -540,7 +553,8 @@ export const BELEG_STYLES = `
   .beleg .spalten > div:nth-child(3) { text-align: right; }
 `;
 
-const seite = (
+// Seitenrahmen der Belege (A4, Vorschau mit grauem Hintergrund)
+export const belegSeite = (
   titel: string,
   body: string,
   vorschau: boolean,
@@ -573,14 +587,14 @@ export const buildRechnungBodyHtml = ({
   belegHtml({ art: "rechnung", entities, nummer: rechnungsnummer });
 
 export const buildRechnungPrintHtml = (daten: RechnungDaten): string =>
-  seite(
+  belegSeite(
     `Rechnung ${daten.rechnungsnummer}`,
     buildRechnungBodyHtml(daten),
     false,
   );
 
 export const buildRechnungPreviewHtml = (daten: RechnungDaten): string =>
-  seite(
+  belegSeite(
     `Rechnung ${daten.rechnungsnummer}`,
     buildRechnungBodyHtml(daten),
     true,
@@ -601,12 +615,12 @@ export const buildKostenvoranschlagBodyHtml = ({
 export const buildKostenvoranschlagPrintHtml = (
   daten: KostenvoranschlagDaten,
 ): string =>
-  seite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), false);
+  belegSeite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), false);
 
 export const buildKostenvoranschlagPreviewHtml = (
   daten: KostenvoranschlagDaten,
 ): string =>
-  seite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), true);
+  belegSeite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), true);
 
 // Rechnung für einen Kontaktlinsenauftrag im selben Design: Kontaktlinse
 // rechts/links mit Werten, Zusatzleistungen, Rabatt; Summe, KK-Anteil und
@@ -716,9 +730,17 @@ const kontaktlinsenBeleg = ({
 export const buildKontaktlinsenRechnungPrintHtml = (
   daten: KontaktlinsenRechnungDaten,
 ): string =>
-  seite(`Rechnung ${daten.rechnungsnummer}`, kontaktlinsenBeleg(daten), false);
+  belegSeite(
+    `Rechnung ${daten.rechnungsnummer}`,
+    kontaktlinsenBeleg(daten),
+    false,
+  );
 
 export const buildKontaktlinsenRechnungPreviewHtml = (
   daten: KontaktlinsenRechnungDaten,
 ): string =>
-  seite(`Rechnung ${daten.rechnungsnummer}`, kontaktlinsenBeleg(daten), true);
+  belegSeite(
+    `Rechnung ${daten.rechnungsnummer}`,
+    kontaktlinsenBeleg(daten),
+    true,
+  );

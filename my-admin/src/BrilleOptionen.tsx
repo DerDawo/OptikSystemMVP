@@ -15,6 +15,7 @@ import PrintIcon from "@mui/icons-material/Print";
 import { OptionenMenu } from "./PrismaMenues";
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
 import {
+  AuftragszettelButton,
   BerechtigungsscheinErstellenButton,
   FormulareButton,
   MahnungErstellenButton,
@@ -130,6 +131,7 @@ export const BrilleOptionenMenu = () => {
       <Divider />
       <BerechtigungsscheinErstellenButton />
       <WerkstattauftragButton />
+      <AuftragszettelButton />
       <MahnungErstellenButton />
       <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
         Drucken

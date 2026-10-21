@@ -29,7 +29,7 @@ export const implementedMessageChannels: MessageChannel[] = [
 // Versand über die Edge Functions (Twilio/Resend/WhatsApp Cloud API). Braucht
 // API-Keys als Function-Secrets und wird aktuell nicht aus der Oberfläche
 // genutzt: Dort öffnet buildExternalMessageUrl() die passende App
-// (Mail-Programm, SMS, WhatsApp) mit vorausgefüllter Nachricht. Bleibt für
+// (Gmail bzw. Mail-Programm, SMS, WhatsApp) mit vorausgefüllter Nachricht. Bleibt für
 // einen späteren Versand ohne Medienbruch erhalten.
 export const sendMessage = async (
   channel: MessageChannel,
@@ -220,16 +220,36 @@ export const whatsappWebUrl = (url: string): string | null => {
   return `https://web.whatsapp.com/send?phone=${treffer[1]}${text ? `&text=${text}` : ""}`;
 };
 
-const istHandy = () =>
+// E-Mail am PC über Gmail im Browser statt des Mail-Programms (Outlook,
+// Apple Mail): Empfänger, Betreff und Text wie im mailto-Link. Liefert null
+// für andere Links.
+export const gmailUrl = (url: string): string | null => {
+  if (!url.startsWith("mailto:")) return null;
+  const [adresse, abfrage = ""] = url.slice("mailto:".length).split("?");
+  const mailto = new URLSearchParams(abfrage);
+  const gmail = new URLSearchParams({ view: "cm", fs: "1" });
+  if (adresse) gmail.set("to", decodeURIComponent(adresse));
+  const betreff = mailto.get("subject");
+  if (betreff) gmail.set("su", betreff);
+  const text = mailto.get("body");
+  if (text) gmail.set("body", text);
+  return `https://mail.google.com/mail/?${gmail.toString()}`;
+};
+
+// Handy oder Tablet; iPads melden sich in Safari als Mac, haben aber einen
+// Touchscreen
+export const istHandy = () =>
   typeof navigator !== "undefined" &&
-  /Android|iPhone|iPad|Mobile/i.test(navigator.userAgent);
+  (/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent) ||
+    (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1));
 
 /*
  * Öffnet die passende App. Bei WhatsApp kommt der Text zusätzlich in die
  * Zwischenablage: die installierte WhatsApp-Web-App öffnet zwar den Chat,
  * verwirft aber oft den mitgeschickten Text - dann reicht Strg+V. Am PC
- * nutzt WhatsApp immer denselben Browser-Tab, statt jedes Mal einen neuen
- * zu öffnen. Rückgabe: true, wenn es ein WhatsApp-Link war.
+ * nutzen WhatsApp und Gmail (E-Mails) immer denselben Browser-Tab, statt
+ * jedes Mal einen neuen zu öffnen. Rückgabe: true, wenn es ein
+ * WhatsApp-Link war.
  */
 export const openExternalMessage = (url: string): boolean => {
   const webUrl = whatsappWebUrl(url);
@@ -243,6 +263,16 @@ export const openExternalMessage = (url: string): boolean => {
       if (fenster) fenster.opener = null;
     }
     return true;
+  }
+
+  const gmail = istHandy() ? null : gmailUrl(url);
+  if (gmail) {
+    const fenster = window.open(gmail, "unicorn-gmail");
+    if (fenster) {
+      fenster.opener = null;
+      return false;
+    }
+    // Pop-up blockiert: dann wie bisher das Mail-Programm
   }
 
   if (url.startsWith("https://")) {

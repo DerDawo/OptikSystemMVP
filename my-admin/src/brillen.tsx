@@ -60,6 +60,7 @@ import {
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
+  AuftragszettelButton,
   BerechtigungsscheinErstellenButton,
   FormulareButton,
   MahnungErstellenButton,
@@ -412,6 +413,7 @@ export const BrilleEdit = () => (
         <MahnungErstellenButton />
         <BerechtigungsscheinErstellenButton />
         <WerkstattauftragButton />
+        <AuftragszettelButton />
         <FormulareButton />
         <KarteikarteKopierenButton />
       </EditActionsBar>
