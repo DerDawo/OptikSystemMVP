@@ -54,6 +54,7 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Auftragszettel", name: "Auftragszettel" },
   { id: "Gutachten Kinderoptometrie", name: "Gutachten Kinderoptometrie" },
   { id: "Glasbestellung POL", name: "Glasbestellung POL" },
+  { id: "Patientenanfrage", name: "Patientenanfrage" },
 ];
 
 const PLATZHALTER_HINWEIS =

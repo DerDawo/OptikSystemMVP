@@ -109,6 +109,10 @@ import {
   buildPolGlasbestellungPrintHtml,
 } from "./polGlasbestellungTemplate";
 import {
+  buildPatientenanfragePreviewHtml,
+  buildPatientenanfragePrintHtml,
+} from "./patientenanfrageTemplate";
+import {
   buildMahnungPreviewHtml,
   buildMahnungPrintHtml,
 } from "./mahnungTemplate";
@@ -317,6 +321,13 @@ const LAYOUTS: Record<string, Layout> = {
     title: "POL-Glasbestellung-Vorschau",
     preview: buildPolGlasbestellungPreviewHtml,
     print: buildPolGlasbestellungPrintHtml,
+  },
+  // Brief des Kunden an eine Augenarztpraxis (Aufnahme, Termin)
+  Patientenanfrage: {
+    ausVorschau: true,
+    title: "Patientenanfrage-Vorschau",
+    preview: buildPatientenanfragePreviewHtml,
+    print: buildPatientenanfragePrintHtml,
   },
   [AUFTRAGSZETTEL_KATEGORIE]: {
     ausVorschau: true,
