@@ -53,6 +53,7 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Berechtigungsschein GKV", name: "Berechtigungsschein GKV" },
   { id: "Auftragszettel", name: "Auftragszettel" },
   { id: "Gutachten Kinderoptometrie", name: "Gutachten Kinderoptometrie" },
+  { id: "Glasbestellung POL", name: "Glasbestellung POL" },
 ];
 
 const PLATZHALTER_HINWEIS =

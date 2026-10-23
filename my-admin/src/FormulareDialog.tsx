@@ -105,6 +105,10 @@ import {
   buildGutachtenKinderoptometriePrintHtml,
 } from "./gutachtenKinderoptometrieTemplate";
 import {
+  buildPolGlasbestellungPreviewHtml,
+  buildPolGlasbestellungPrintHtml,
+} from "./polGlasbestellungTemplate";
+import {
   buildMahnungPreviewHtml,
   buildMahnungPrintHtml,
 } from "./mahnungTemplate";
@@ -305,6 +309,14 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Gutachten-Vorschau",
     preview: buildGutachtenKinderoptometriePreviewHtml,
     print: buildGutachtenKinderoptometriePrintHtml,
+  },
+  // Glasbestellung bei POL: Refraktions- und Zentrierdaten aus dem Auftrag,
+  // Kästchen und Felder in der Vorschau ergänzen
+  "Glasbestellung POL": {
+    ausVorschau: true,
+    title: "POL-Glasbestellung-Vorschau",
+    preview: buildPolGlasbestellungPreviewHtml,
+    print: buildPolGlasbestellungPrintHtml,
   },
   [AUFTRAGSZETTEL_KATEGORIE]: {
     ausVorschau: true,
