@@ -13,6 +13,8 @@ import {
   DialogActions,
   DialogContent,
   DialogTitle,
+  IconButton,
+  Tooltip,
 } from "@mui/material";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import PrintIcon from "@mui/icons-material/Print";
@@ -36,7 +38,9 @@ import { choosePhoneNumberForMessaging } from "./messaging";
  * Briefpapier - mit Drucken, PDF, E-Mail und WhatsApp.
  */
 
-export const KontaktlinseRechnungButton = () => {
+export const KontaktlinseRechnungButton = ({
+  symbol,
+}: { symbol?: boolean } = {}) => {
   const cl = useRecordContext();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -157,14 +161,30 @@ export const KontaktlinseRechnungButton = () => {
 
   return (
     <>
-      <Button
-        variant="contained"
-        startIcon={<ReceiptIcon />}
-        onClick={oeffnen}
-        disabled={vergibt}
-      >
-        Rechnung erstellen
-      </Button>
+      {symbol ? (
+        // Als Symbol in der Symbolleiste der Karteikarte
+        <Tooltip title="Rechnung erstellen" placement="left">
+          <span>
+            <IconButton
+              onClick={oeffnen}
+              disabled={vergibt}
+              aria-label="Rechnung erstellen"
+              sx={{ color: "inherit" }}
+            >
+              <ReceiptIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+      ) : (
+        <Button
+          variant="contained"
+          startIcon={<ReceiptIcon />}
+          onClick={oeffnen}
+          disabled={vergibt}
+        >
+          Rechnung erstellen
+        </Button>
+      )}
       <Dialog
         open={offen && Boolean(daten)}
         onClose={() => setOffen(false)}

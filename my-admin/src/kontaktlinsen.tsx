@@ -31,6 +31,7 @@ import {
   KontaktlinseKarteikarte,
 } from "./KontaktlinseKarteikarte";
 import { KontaktlinseRechnungButton } from "./KontaktlinseRechnung";
+import { KontaktlinseSymbolleiste } from "./KontaktlinseSymbolleiste";
 import { KundeInput } from "./KundeInput";
 import { MitarbeiterField, MitarbeiterInput } from "./mitarbeiter";
 import { CurrencyField } from "./CurrencyField";
@@ -101,7 +102,23 @@ const KontaktlinseShowActions = () => {
 export const KontaktlinseShow = () => (
   <Show actions={<KontaktlinseShowActions />}>
     <ShowLayout>
-      <KontaktlinseKarteikarte />
+      {/* Karteikarte mit der Symbolleiste am rechten Rand wie bei den Brillen */}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 1,
+          alignItems: "flex-start",
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <KontaktlinseKarteikarte />
+        </Box>
+        <Box sx={{ display: { xs: "none", md: "block" } }}>
+          <KontaktlinseSymbolleiste />
+        </Box>
+      </Box>
     </ShowLayout>
   </Show>
 );
