@@ -31,7 +31,7 @@ import { zurueckZiel } from "./seitenVerlauf";
  * Jedes Symbol führt eine vorhandene Funktion aus (Tooltip beim Zeigen).
  */
 
-const Symbol = ({
+export const Symbol = ({
   titel,
   onClick,
   children,
@@ -45,6 +45,30 @@ const Symbol = ({
       {children}
     </IconButton>
   </Tooltip>
+);
+
+// Dunkler Rahmen der Leiste; auch für die Kontaktlinsenkartei genutzt
+export const SymbolleistenRahmen = ({ children }: { children: ReactNode }) => (
+  <Box
+    sx={{
+      position: "sticky",
+      top: 72,
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 0.25,
+      py: 0.5,
+      width: 44,
+      borderRadius: "8px",
+      bgcolor: "#2b3440",
+      color: "#e8eef6",
+      "& .MuiIconButton-root": { p: "7px" },
+      "& .MuiIconButton-root:hover": { bgcolor: "rgba(255,255,255,0.12)" },
+      "& .MuiSvgIcon-root, & svg": { fontSize: 22, width: 22, height: 22 },
+    }}
+  >
+    {children}
+  </Box>
 );
 
 export const BrilleSymbolleiste = () => {
@@ -74,24 +98,7 @@ export const BrilleSymbolleiste = () => {
   };
 
   return (
-    <Box
-      sx={{
-        position: "sticky",
-        top: 72,
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        gap: 0.25,
-        py: 0.5,
-        width: 44,
-        borderRadius: "8px",
-        bgcolor: "#2b3440",
-        color: "#e8eef6",
-        "& .MuiIconButton-root": { p: "7px" },
-        "& .MuiIconButton-root:hover": { bgcolor: "rgba(255,255,255,0.12)" },
-        "& .MuiSvgIcon-root, & svg": { fontSize: 22, width: 22, height: 22 },
-      }}
-    >
+    <SymbolleistenRahmen>
       <Symbol
         titel="Neuer Brillenauftrag"
         onClick={() => neu("/brille/create")}
@@ -144,6 +151,6 @@ export const BrilleSymbolleiste = () => {
           <PersonOutlineIcon />
         </Symbol>
       )}
-    </Box>
+    </SymbolleistenRahmen>
   );
 };
