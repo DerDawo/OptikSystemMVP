@@ -105,6 +105,14 @@ import {
   buildGutachtenKinderoptometriePrintHtml,
 } from "./gutachtenKinderoptometrieTemplate";
 import {
+  buildPolGlasbestellungPreviewHtml,
+  buildPolGlasbestellungPrintHtml,
+} from "./polGlasbestellungTemplate";
+import {
+  buildPatientenanfragePreviewHtml,
+  buildPatientenanfragePrintHtml,
+} from "./patientenanfrageTemplate";
+import {
   buildMahnungPreviewHtml,
   buildMahnungPrintHtml,
 } from "./mahnungTemplate";
@@ -305,6 +313,21 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Gutachten-Vorschau",
     preview: buildGutachtenKinderoptometriePreviewHtml,
     print: buildGutachtenKinderoptometriePrintHtml,
+  },
+  // Glasbestellung bei POL: Refraktions- und Zentrierdaten aus dem Auftrag,
+  // Kästchen und Felder in der Vorschau ergänzen
+  "Glasbestellung POL": {
+    ausVorschau: true,
+    title: "POL-Glasbestellung-Vorschau",
+    preview: buildPolGlasbestellungPreviewHtml,
+    print: buildPolGlasbestellungPrintHtml,
+  },
+  // Brief des Kunden an eine Augenarztpraxis (Aufnahme, Termin)
+  Patientenanfrage: {
+    ausVorschau: true,
+    title: "Patientenanfrage-Vorschau",
+    preview: buildPatientenanfragePreviewHtml,
+    print: buildPatientenanfragePrintHtml,
   },
   [AUFTRAGSZETTEL_KATEGORIE]: {
     ausVorschau: true,
