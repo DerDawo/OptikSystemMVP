@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ARBEITGEBER_RECHNUNG_KATEGORIEN,
+  arbeitgeberGlasZeile,
   arbeitgeberPositionen,
   buildArbeitgeberRechnungPreviewHtml,
   buildArbeitgeberRechnungPrintHtml,
@@ -15,14 +16,23 @@ const entities = {
 };
 
 describe("Rechnungen an den Arbeitgeber", () => {
-  it("fasst die Gläser zu einem Paar ohne Sehwerte zusammen", () => {
+  it("zeigt die Gläser einzeln mit Werten unter der Überschrift", () => {
     const pos = arbeitgeberPositionen(entities);
     expect(pos.map((p) => p.label)).toEqual([
       "Fassung :",
-      "Brillengläser (1 Paar) :",
+      "Brillengläser:",
+      "",
+      "",
     ]);
-    expect(pos[1].betrag).toBe(166.6);
-    expect(pos[1].werte).toBeUndefined();
+    expect(pos[2].betrag).toBe(83.3);
+    expect(pos[2].werte).toBe("RA: sph + 1,25 cyl - 0,50 A 10");
+    expect(pos[3].werte).toBe("LA: sph + 1,00 cyl - 0,75 A 170");
+  });
+
+  it("nennt die Nahstärke mit der Degression", () => {
+    expect(
+      arbeitgeberGlasZeile("RA", { Sph: 1, Cyl: 0, Add: 0.75, Vis: 1 }),
+    ).toBe("RA: sph + 1,75 Degression 0,75 Vcc 1,00");
   });
 
   it("zeigt Summe, enthaltene Mwst, Rechnungsnummer und Zweck", () => {
@@ -39,8 +49,8 @@ describe("Rechnungen an den Arbeitgeber", () => {
     expect(html).toContain("ArbMedVV");
     expect(html).toContain("Max Beispiel");
     expect(html).toContain("DE299317258");
-    expect(html).not.toContain("sph:");
-    expect(html).not.toContain("1,25");
+    expect(html).toContain("RA: sph + 1,25");
+    expect(html).toContain("nach optometrischer Verordnung vom");
   });
 
   it("nennt bei der Schutzbrille die DIN EN 166", () => {
@@ -85,5 +95,27 @@ describe("Stempel und Unterschrift auf der Arbeitgeber-Rechnung", () => {
     });
     expect(mit).toContain('class="stempel"');
     expect(mit).toContain('class="unterschrift"');
+  });
+});
+
+describe("Gespeicherter Arbeitgeber", () => {
+  it("trägt Anschrift und E-Mail aus dem Kunden in die Vorschau ein", () => {
+    const html = buildArbeitgeberRechnungPreviewHtml("bildschirm", {
+      entities: {
+        ...entities,
+        kunde: {
+          ...entities.kunde,
+          Arbeitgeber: {
+            firma: "Muster GmbH",
+            strasse: "Hauptstr. 1",
+            ort: "07545 Gera",
+            email: "rechnung@muster.de",
+          },
+        },
+      },
+      rechnungsnummer: "2026-0042",
+    });
+    expect(html).toContain('data-ag="firma">Muster GmbH<');
+    expect(html).toContain('data-ag="email">rechnung@muster.de<');
   });
 });

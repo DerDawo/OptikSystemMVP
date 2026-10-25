@@ -999,6 +999,29 @@ const FormulareDialog = ({
   // ausfüllbare PDF-Vorlagen gehen vorausgefüllt raus, alle anderen werden
   // aus dem Druck-HTML erzeugt
   const versendbar = Boolean(selectedVorlage);
+  // Arbeitgeber aus der Vorschau beim Kunden merken, damit er beim nächsten
+  // Mal schon eingetragen ist (Fehler hier stören Versand und Druck nicht)
+  const arbeitgeberMerken = () => {
+    const kundeId = kunde?.id;
+    const dok = vorschauRef.current?.contentDocument;
+    if (!dok || typeof kundeId !== "number") return;
+    const neu: Record<string, string> = {};
+    dok.querySelectorAll<HTMLElement>("[data-ag]").forEach((el) => {
+      const feld = el.dataset.ag;
+      const wert = (el.textContent ?? "").trim();
+      if (feld && wert) neu[feld] = wert;
+    });
+    if (!Object.keys(neu).length) return;
+    if (JSON.stringify(neu) === JSON.stringify(kunde?.Arbeitgeber ?? {}))
+      return;
+    dataProvider
+      .update("kunde", {
+        id: kundeId,
+        data: { Arbeitgeber: neu },
+        previousData: kunde,
+      })
+      .catch(() => undefined);
+  };
   const [versendet, setVersendet] = useState<"email" | "whatsapp" | null>(null);
   const versenden = async (kanal: "email" | "whatsapp") => {
     if (!selectedVorlage) return;
@@ -1066,6 +1089,7 @@ const FormulareDialog = ({
             ? `Sehr geehrter Herr ${nachname}`
             : "Guten Tag";
       const firma = String(betrieb?.Firmenname ?? "").trim();
+      if (agRechnung) arbeitgeberMerken();
       const ergebnis = await belegVersenden(
         kanal,
         datei,
@@ -1140,6 +1164,11 @@ const FormulareDialog = ({
       return;
     }
     if (autoPrint) kvMerken();
+    if (
+      selectedVorlage &&
+      AG_RECHNUNG_KATEGORIEN.includes(selectedVorlage.Kategorie)
+    )
+      arbeitgeberMerken();
     if (pdfVorlage) {
       // Druck und Speichern übernimmt der PDF-Viewer des Browsers
       const opened = pdfUrl ? window.open(pdfUrl, "_blank") : null;

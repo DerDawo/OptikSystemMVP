@@ -3,7 +3,7 @@
 //     Abs. 2 Nr. 1, Angebotsvorsorge)
 //   - "Rechnung Arbeitsschutzbrille" (Korrektionsschutzbrille, DIN EN 166)
 // Fassung, Gläser, Zusatzleistungen, Rabatt und Rechnungsbetrag kommen aus
-// dem Auftrag. Auf der Rechnung stehen bewusst keine Sehwerte. Empfänger
+// dem Auftrag. Gläser einzeln mit Werten (RA/LA). Empfänger
 // (Arbeitgeber), Mitarbeiter/in, Vorgangsnummer und Lieferdatum werden in
 // der Vorschau eingetippt; die E-Mail-Adresse des Arbeitgebers dient nur dem
 // Versand und wird nicht mitgedruckt.
@@ -24,7 +24,7 @@ import {
   betriebBilder,
   bildUrl,
 } from "./betriebBilderCache";
-import { text } from "./werkstattauftragTemplate";
+import { formatDatum, text } from "./werkstattauftragTemplate";
 
 export type ArbeitgeberRechnungArt = "bildschirm" | "schutz";
 
@@ -40,9 +40,11 @@ export const ARBEITGEBER_RECHNUNG_KATEGORIEN = {
   schutz: "Rechnung Arbeitsschutzbrille",
 } as const;
 
+// Einleitung der Rechnung; der Zusatz "nach optometrischer Verordnung vom ..."
+// wird in buildArbeitgeberRechnungBodyHtml angehängt
 const ZWECK: Record<ArbeitgeberRechnungArt, string> = {
   bildschirm:
-    "für eine Bildschirmarbeitsplatzbrille auf Veranlassung des Arbeitgebers (ArbMedVV, Anhang Teil 4 Abs. 2 Nr. 1)",
+    "für eine Bildschirmarbeitsplatzbrille (ArbMedVV, Anhang Teil 4 Abs. 2 Nr. 1)",
   schutz:
     "für eine Arbeitsschutzbrille mit Sehstärke (Korrektionsschutzbrille nach DIN EN 166) als persönliche Schutzausrüstung",
 };
@@ -55,34 +57,89 @@ const zahl2 = new Intl.NumberFormat("de-DE", {
   maximumFractionDigits: 2,
 });
 
-const eingabe = (wert = "", hinweis = "", klasse = "") =>
-  `<span class="eingabe ${klasse}" contenteditable="true" data-hinweis="${e(hinweis)}">${e(wert)}</span>`;
+const eingabe = (wert = "", hinweis = "", klasse = "", feld = "") =>
+  `<span class="eingabe ${klasse}" contenteditable="true" data-hinweis="${e(hinweis)}" data-ag="${feld}">${e(wert)}</span>`;
 
-const eingabeZeile = (wert = "", hinweis = "") =>
-  `<div class="eingabe" contenteditable="true" data-hinweis="${e(hinweis)}">${e(wert)}</div>`;
+const eingabeZeile = (wert = "", hinweis = "", feld = "") =>
+  `<div class="eingabe" contenteditable="true" data-hinweis="${e(hinweis)}" data-ag="${feld}">${e(wert)}</div>`;
+
+// Arbeitgeber, der beim Kunden gespeichert ist (Spalte "Arbeitgeber", jsonb)
+export type ArbeitgeberAnschrift = {
+  firma?: string;
+  abteilung?: string;
+  strasse?: string;
+  ort?: string;
+  email?: string;
+};
+
+const dez = (wert: unknown): number | null => {
+  if (wert === null || wert === undefined || wert === "") return null;
+  const n = Number(wert);
+  return Number.isFinite(n) ? n : null;
+};
+
+/** "RA: sph + 1,75 cyl - 0,50 A 10 Degression 0,75 Vcc 1,00" (Nahstärke) */
+export const arbeitgeberGlasZeile = (
+  seite: "RA" | "LA",
+  glas: DocumentMergeEntities["glasRechts"],
+): string => {
+  if (!glas) return "";
+  const teile: string[] = [];
+  // Nahstärke (Sph + Addition) mit der dazugehörigen Degression (Addition)
+  const add = dez(glas.Add);
+  const fern = dez(glas.Sph);
+  const sph = fern === null ? null : fern + (add !== null && add > 0 ? add : 0);
+  if (sph !== null)
+    teile.push(`sph ${sph < 0 ? "-" : "+"} ${zahl2.format(Math.abs(sph))}`);
+  const cyl = dez(glas.Cyl);
+  if (cyl !== null && cyl !== 0) {
+    teile.push(`cyl ${cyl < 0 ? "-" : "+"} ${zahl2.format(Math.abs(cyl))}`);
+    const achse = dez(glas.A);
+    if (achse !== null) teile.push(`A ${Math.round(achse)}`);
+  }
+  if (add !== null && add > 0) teile.push(`Degression ${zahl2.format(add)}`);
+  const vis = dez(glas.Vis);
+  if (vis !== null && vis > 0) teile.push(`Vcc ${zahl2.format(vis)}`);
+  return `${seite}: ${teile.join(" ")}`;
+};
 
 /**
- * Positionen der Rechnung an den Arbeitgeber: wie die Kundenrechnung, aber die
- * beiden Gläser werden zu einer Position "(1 Paar)" ohne Glaswerte
- * zusammengefasst (Datensparsamkeit gegenüber dem Arbeitgeber).
+ * Positionen der Rechnung an den Arbeitgeber: Fassung, Überschrift
+ * "Brillengläser:", dann jedes Glas einzeln (RA/LA mit Werten und
+ * Glasbezeichnung), danach Zusatzleistungen wie die Refraktion und Rabatt.
  */
 export const arbeitgeberPositionen = (
   entities: DocumentMergeEntities,
 ): RechnungPosition[] => {
   const alle = buildRechnungPositionen(entities);
-  const glaeser = alle.filter((p) => /^Glas (rechts|links)/.test(p.label));
-  const ohneGlas = alle.filter((p) => !glaeser.includes(p));
-  if (!glaeser.length) return alle;
-  const paar: RechnungPosition = {
-    label: "Brillengläser (1 Paar) :",
-    betrag: rund(glaeser.reduce((s, p) => s + (p.betrag ?? 0), 0)),
-    details: glaeser[0].details,
-  };
-  // Reihenfolge: Fassung, Gläser, dann Rest
-  const fassungen = ohneGlas.filter((p) => p.label.startsWith("Fassung"));
-  const rest = ohneGlas.filter((p) => !fassungen.includes(p));
-  return [...fassungen, paar, ...rest];
+  const seiten = { "Glas rechts :": "RA", "Glas links :": "LA" } as const;
+  const ergebnis: RechnungPosition[] = [];
+  let ueberschrift = false;
+  for (const p of alle) {
+    const seite = seiten[p.label as keyof typeof seiten];
+    if (!seite) {
+      ergebnis.push(p);
+      continue;
+    }
+    if (!ueberschrift) {
+      ergebnis.push({ label: "Brillengläser:", betrag: null });
+      ueberschrift = true;
+    }
+    ergebnis.push({
+      ...p,
+      label: "",
+      werte: arbeitgeberGlasZeile(
+        seite,
+        seite === "RA" ? entities.glasRechts : entities.glasLinks,
+      ),
+    });
+  }
+  return ergebnis;
 };
+
+// Briefkopf und Fußzeile mit ausgeschriebener Straße ("Werdauer Straße 38")
+const langeStrasse = (html: string) =>
+  html.split(e(a.strasseKurz)).join(e(a.strasseLang));
 
 const stempelBlock = (bilder: BetriebBilder): string => {
   const stempel = bildUrl(bilder.stempel);
@@ -126,19 +183,29 @@ export const buildArbeitgeberRechnungBodyHtml = (
     ["Rech.-Nr.", rechnungsnummer],
     ["USt.ID.", a.ustId],
   ];
+  const ag: ArbeitgeberAnschrift =
+    typeof k.Arbeitgeber === "object" && k.Arbeitgeber !== null
+      ? (k.Arbeitgeber as ArbeitgeberAnschrift)
+      : {};
   const anschrift = [
-    eingabeZeile("", "Arbeitgeber / Firma"),
-    eingabeZeile("", "Abteilung / zuständige Stelle"),
-    eingabeZeile("", "Straße Hausnummer"),
-    eingabeZeile("", "PLZ Ort"),
-    `<div class="nur-vorschau" data-nur-vorschau>E-Mail für den Versand: ${eingabe("", "E-Mail-Adresse des Arbeitgebers", "versand-email")}</div>`,
+    eingabeZeile(ag.firma, "Arbeitgeber / Firma", "firma"),
+    eingabeZeile(ag.abteilung, "Abteilung / zuständige Stelle", "abteilung"),
+    eingabeZeile(ag.strasse, "Straße Hausnummer", "strasse"),
+    eingabeZeile(ag.ort, "PLZ Ort", "ort"),
+    `<div class="nur-vorschau" data-nur-vorschau>E-Mail für den Versand: ${eingabe(ag.email, "E-Mail-Adresse des Arbeitgebers", "versand-email", "email")}</div>`,
   ].join("");
 
   const positionenHtml = positionen
-    .map(
-      (p) => `
-    <div class="position">
+    .map((p) =>
+      p.label
+        ? `
+    <div class="position${p.betrag === null && !p.details?.length ? " ueberschrift" : ""}">
       <div class="zeile"><span>${e(p.label)}</span><span>${p.betrag === null ? "" : e(formatEuro(p.betrag))}</span></div>
+      ${(p.details ?? []).map((d) => `<div class="detail">${e(d)}</div>`).join("")}
+    </div>`
+        : `
+    <div class="position glas">
+      <div class="zeile"><span class="glaswerte">${e(p.werte ?? "")}</span><span>${p.betrag === null ? "" : e(formatEuro(p.betrag))}</span></div>
       ${(p.details ?? []).map((d) => `<div class="detail">${e(d)}</div>`).join("")}
     </div>`,
     )
@@ -148,10 +215,15 @@ export const buildArbeitgeberRechnungBodyHtml = (
 
   return `
 <div class="beleg">
-  ${briefkopfHtml(k, datenbox, "RECHNUNG", anschrift)}
+  ${langeStrasse(briefkopfHtml(k, datenbox, "RECHNUNG", anschrift))}
   <div class="inhalt">
    <div class="inhalt-block">
-    <p class="zweck">${e(ZWECK[art])}<br />Mitarbeiter/in: ${eingabe(mitarbeiter, "Name")} · Vorgangsnummer des Arbeitgebers: ${eingabe("", "falls vorhanden")}</p>
+    <p class="zweck">${e(ZWECK[art])}${
+      art === "bildschirm"
+        ? ` nach optometrischer Verordnung vom ${eingabe(formatDatum(brille.Datum), "TT.MM.JJJJ")}.`
+        : ""
+    }</p>
+    <div class="mitarbeiterzeile"><span>Mitarbeiter/in: ${eingabe(mitarbeiter, "Name", "kursiv")}</span><span>Vorgangsnummer des Arbeitgebers: ${eingabe("", "falls vorhanden")}</span></div>
     ${positionenHtml}
     <div class="summenbalken"><span>Rechnungsbetrag</span><span>${e(formatEuro(summe))}</span></div>
     <p class="mwst">Im obigen Betrag sind ${a.mwstSatz}% Mwst = ${e(formatEuro(mwst))} enthalten. (Nettopreis: ${e(zahl2.format(netto))} €)</p>
@@ -163,7 +235,7 @@ export const buildArbeitgeberRechnungBodyHtml = (
     ${stempelBlock(bilder)}
    </div>
   </div>
-  ${fusszeileHtml()}
+  ${langeStrasse(fusszeileHtml())}
 </div>`;
 };
 
@@ -189,7 +261,13 @@ const seite = (
   body { margin: 0; }
   ${BELEG_STYLES}
   .beleg .zweck { line-height: 1.5; }
-  .beleg .stempelblock { position: relative; height: 26mm; margin-top: 7mm; }
+  .beleg .mitarbeiterzeile { display: flex; justify-content: space-between; margin-bottom: 5mm; }
+  .beleg .kursiv { font-style: italic; }
+  .beleg .position { margin-bottom: 3.2mm; }
+  .beleg .position.glas { margin-bottom: 2.6mm; }
+  .beleg .position.ueberschrift { margin-bottom: 1.2mm; }
+  .beleg .position .glaswerte { font-size: 8.5pt; }
+  .beleg .stempelblock { position: relative; height: 24mm; margin-top: 3mm; }
   .beleg .stempel { position: absolute; right: 0; top: 0; width: 46mm; }
   .beleg .unterschrift { position: absolute; right: 52mm; top: 4mm; width: 34mm; }
   .nur-vorschau { display: none; }
