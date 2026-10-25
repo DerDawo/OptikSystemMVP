@@ -55,6 +55,11 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Gutachten Kinderoptometrie", name: "Gutachten Kinderoptometrie" },
   { id: "Glasbestellung POL", name: "Glasbestellung POL" },
   { id: "Patientenanfrage", name: "Patientenanfrage" },
+  {
+    id: "Rechnung Bildschirmarbeitsplatzbrille",
+    name: "Rechnung Bildschirmarbeitsplatzbrille",
+  },
+  { id: "Rechnung Arbeitsschutzbrille", name: "Rechnung Arbeitsschutzbrille" },
 ];
 
 const PLATZHALTER_HINWEIS =

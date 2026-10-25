@@ -126,6 +126,11 @@ import {
   buildMahnungPrintHtml,
 } from "./mahnungTemplate";
 import {
+  ARBEITGEBER_RECHNUNG_KATEGORIEN,
+  buildArbeitgeberRechnungPreviewHtml,
+  buildArbeitgeberRechnungPrintHtml,
+} from "./arbeitgeberRechnungTemplate";
+import {
   buildAuftragszettelPreviewHtml,
   buildAuftragszettelPrintHtml,
 } from "./auftragszettelTemplate";
@@ -164,6 +169,17 @@ const VERORDNUNG_KATEGORIE = "Optometrische Verordnung";
 const VERORDNUNG_GKV_KATEGORIE = "Optometrische Verordnung GKV";
 // Kostenvoranschlag im Rechnungsdesign (rechnungTemplate.ts)
 const KOSTENVORANSCHLAG_KATEGORIE = "Kostenvoranschlag";
+
+// Rechnungen an den Arbeitgeber im Rechnungsdesign (arbeitgeberRechnungTemplate.ts):
+// Empfänger wird in der Vorschau eingetippt, der Versand geht per E-Mail an die
+// dort eingetragene Adresse des Arbeitgebers
+const AG_RECHNUNG_BILDSCHIRM_KATEGORIE =
+  ARBEITGEBER_RECHNUNG_KATEGORIEN.bildschirm;
+const AG_RECHNUNG_SCHUTZ_KATEGORIE = ARBEITGEBER_RECHNUNG_KATEGORIEN.schutz;
+const AG_RECHNUNG_KATEGORIEN: string[] = [
+  AG_RECHNUNG_BILDSCHIRM_KATEGORIE,
+  AG_RECHNUNG_SCHUTZ_KATEGORIE,
+];
 
 // Auftragszettel in A5 mit Anamnesebogen auf der Rückseite
 // (auftragszettelTemplate.ts), leer oder ausgefüllt
@@ -214,7 +230,13 @@ const vorschauAlsHtml = (doc: Document) => {
   doc
     .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
     .forEach((box) => box.toggleAttribute("checked", box.checked));
-  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+  // Nur für die Vorschau gedachte Teile (Eingabehilfen, Versandadresse) nicht
+  // mitdrucken: sie stehen in einer Kopie
+  const kopie = doc.documentElement.cloneNode(true) as HTMLElement;
+  kopie
+    .querySelectorAll("[data-nur-vorschau], style[data-bildschirm]")
+    .forEach((teil) => teil.remove());
+  return `<!DOCTYPE html>\n${kopie.outerHTML}`;
 };
 
 // Auswahl "ausgefüllt" oder "leer" für Formulare mit `leerMoeglich`
@@ -280,6 +302,18 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Werkstattauftrag-Vorschau",
     preview: buildWerkstattauftragPreviewHtml,
     print: buildWerkstattauftragPrintHtml,
+  },
+  [AG_RECHNUNG_BILDSCHIRM_KATEGORIE]: {
+    ausVorschau: true,
+    title: "Rechnung-Vorschau",
+    preview: (d) => buildArbeitgeberRechnungPreviewHtml("bildschirm", d),
+    print: (d) => buildArbeitgeberRechnungPrintHtml("bildschirm", d),
+  },
+  [AG_RECHNUNG_SCHUTZ_KATEGORIE]: {
+    ausVorschau: true,
+    title: "Rechnung-Vorschau",
+    preview: (d) => buildArbeitgeberRechnungPreviewHtml("schutz", d),
+    print: (d) => buildArbeitgeberRechnungPrintHtml("schutz", d),
   },
   "Antrag Zuschuss": antragLayout("zuschuss"),
   "Antrag Sozialamt": antragLayout("sozialamt"),
@@ -696,11 +730,43 @@ const FormulareDialog = ({
     }
   };
 
+  // Rechnungen an den Arbeitgeber: fehlt am Auftrag noch die Rechnungsnummer,
+  // wird beim Öffnen der Vorlage die nächste fortlaufende vergeben
+  const refresh = useRefresh();
+  const [vergebeneNummer, setVergebeneNummer] = useState("");
+  const rechnungsnummer = String(
+    brille.Rechnungsnummer || vergebeneNummer || "",
+  );
+  const braucheNummer =
+    Boolean(selectedVorlage) &&
+    AG_RECHNUNG_KATEGORIEN.includes(selectedVorlage?.Kategorie ?? "") &&
+    !rechnungsnummer &&
+    typeof brille.id === "number";
+  const nummerAngefragt = useRef(false);
+  useEffect(() => {
+    if (!braucheNummer || nummerAngefragt.current) return;
+    nummerAngefragt.current = true;
+    supabase
+      .rpc("assign_rechnungsnummer", { p_brille_id: brille.id })
+      .then(({ data, error }) => {
+        if (error || !data) {
+          nummerAngefragt.current = false;
+          notify("Rechnungsnummer konnte nicht vergeben werden.", {
+            type: "error",
+          });
+          return;
+        }
+        setVergebeneNummer(String(data));
+        notify(`Rechnungsnummer ${data} vergeben.`, { type: "success" });
+        refresh();
+      });
+  }, [braucheNummer, brille.id, notify, refresh]);
+
   const layoutDaten: LayoutDaten = useMemo(
     () => ({
       entities: mergeEntities,
       betrieb,
-      rechnungsnummer: brille.Rechnungsnummer ?? "",
+      rechnungsnummer,
       begruendung,
       leer,
       vorlagentext: selectedVorlage?.Vorlagentext ?? "",
@@ -708,7 +774,7 @@ const FormulareDialog = ({
     [
       mergeEntities,
       betrieb,
-      brille.Rechnungsnummer,
+      rechnungsnummer,
       begruendung,
       leer,
       selectedVorlage?.Vorlagentext,
@@ -925,12 +991,33 @@ const FormulareDialog = ({
     setVersendet(kanal);
     try {
       const mahnung = selectedVorlage.Kategorie === MAHNUNG_KATEGORIE;
-      const beleg = selectedVorlage.Kategorie === RECHNUNG_KATEGORIE || mahnung;
-      const nummer = beleg ? String(brille.Rechnungsnummer ?? "").trim() : "";
+      const agRechnung = AG_RECHNUNG_KATEGORIEN.includes(
+        selectedVorlage.Kategorie,
+      );
+      const beleg =
+        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE ||
+        mahnung ||
+        agRechnung;
+      const nummer = beleg ? rechnungsnummer.trim() : "";
       const art =
-        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE
+        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE || agRechnung
           ? "Rechnung"
           : selectedVorlage.Name;
+      // Rechnung an den Arbeitgeber: Empfänger ist die in der Vorschau
+      // eingetragene Adresse, nicht der Kunde
+      const agEmail = agRechnung
+        ? (
+            vorschauRef.current?.contentDocument?.querySelector(
+              ".versand-email",
+            )?.textContent ?? ""
+          ).trim()
+        : "";
+      if (agRechnung && kanal === "whatsapp") {
+        notify("Rechnungen an den Arbeitgeber gehen per E-Mail.", {
+          type: "warning",
+        });
+        return;
+      }
       const dateiname = `${art}${nummer ? `-${nummer}` : ""}.pdf`.replace(
         /[^\w.\-äöüÄÖÜß]+/g,
         "-",
@@ -948,8 +1035,9 @@ const FormulareDialog = ({
             );
       const nachname = String(kunde?.Nachname ?? "").trim();
       const anrede = String(kunde?.Anrede ?? "").trim();
-      const gruss =
-        anrede === "Frau" && nachname
+      const gruss = agRechnung
+        ? "Sehr geehrte Damen und Herren"
+        : anrede === "Frau" && nachname
           ? `Sehr geehrte Frau ${nachname}`
           : anrede === "Herr" && nachname
             ? `Sehr geehrter Herr ${nachname}`
@@ -961,7 +1049,9 @@ const FormulareDialog = ({
         {
           an:
             kanal === "email"
-              ? String(kunde?.Email ?? "").trim()
+              ? agRechnung
+                ? agEmail
+                : String(kunde?.Email ?? "").trim()
               : choosePhoneNumberForMessaging([
                   kunde?.Handy,
                   kunde?.TelefonnummerPrivat,
@@ -1001,7 +1091,6 @@ const FormulareDialog = ({
 
   // Kostenvoranschlag/Antrag gedruckt oder verschickt: Datum am Auftrag
   // merken (nur Brillenaufträge; Fehler hier stören den Druck nicht)
-  const refresh = useRefresh();
   const kvMerken = () => {
     if (
       !selectedVorlage ||
