@@ -11,7 +11,13 @@
 // Koordinaten in pt, gemessen vom oberen Rand (x, oben, Breite, Höhe); die
 // Umrechnung in den PDF-Ursprung unten links macht `oben()`.
 import { readFileSync, writeFileSync } from "node:fs";
-import { PDFDocument, PDFName, StandardFonts, TextAlignment } from "pdf-lib";
+import {
+  PDFDocument,
+  PDFName,
+  StandardFonts,
+  TextAlignment,
+  rgb,
+} from "pdf-lib";
 
 const [quelle] = process.argv.slice(2);
 if (!quelle) throw new Error("Pfad zur Vorlage angeben");
@@ -22,6 +28,8 @@ const H = seite.getHeight();
 const form = pdf.getForm();
 const schrift = await pdf.embedFont(StandardFonts.Courier);
 const oben = (top, hoehe) => H - top - hoehe;
+// Alle Eintragungen in Courier, dunkelgrau (nicht schwarz)
+const GRAU = rgb(0.25, 0.25, 0.25);
 
 const text = (name, x, top, breite, hoehe, groesse = 9) => {
   const feld = form.createTextField(name);
@@ -34,6 +42,7 @@ const text = (name, x, top, breite, hoehe, groesse = 9) => {
     font: schrift,
   });
   feld.setFontSize(groesse);
+  feld.acroField.setDefaultAppearance(`/${schrift.name} ${groesse} Tf 0.25 g`);
   for (const widget of feld.acroField.getWidgets()) {
     const mk = widget.getAppearanceCharacteristics();
     mk?.dict.delete(PDFName.of("BG"));
@@ -50,6 +59,7 @@ const haken = (name, mitteX, mitteTop, groesse = 7) => {
     width: groesse,
     height: groesse,
     borderWidth: 0,
+    textColor: GRAU,
   });
 };
 
@@ -70,6 +80,9 @@ for (const [name, von, bis] of kassen) {
   );
 }
 
+// Text ganz links in der Kassenzeile (z. B. "PRIVAT")
+text("kasse_text", 112, 162, 150, 11, 9);
+
 // Versicherter
 text("name", 113, 187, 175, 26, 9);
 text("geburtsdatum", 283, 201, 57, 10, 8);
@@ -79,14 +92,20 @@ text("status", 274, 246, 65, 10, 8);
 text("vk_gueltig", 194, 270, 70, 10, 8);
 text("datum", 267, 270, 72, 10, 8);
 text("ausgestellt_am", 408, 191.5, 92, 9.5, 9);
+// Adressfeld (Kasten rechts): Name, Straße, PLZ Ort
+text("adresse", 362, 221, 136, 48, 8).enableMultiline();
 
 // 1. Erklärung des Optometristen
 haken("cb_veraenderung", 116.7, 323.3);
-haken("cb_verbesserung", 116.7, 333.3);
+// "X" in Courier statt Haken (wie im Muster)
+text("verbesserung_x", 113.5, 328.5, 7, 9, 8).setAlignment(
+  TextAlignment.Center,
+);
 haken("cb_keine", 116.7, 342.7);
 text("anzahl_glaeser", 251, 345, 18, 9, 9);
 
 // Begründung
+text("begruendung", 113, 436, 372, 11, 7);
 haken("cb_bildschirm", 175.5, 424.5, 6);
 haken("cb_gsb", 268.5, 424.5, 6);
 haken("cb_kantenfilter", 301, 424.5, 6);
