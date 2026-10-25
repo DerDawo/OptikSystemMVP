@@ -136,6 +136,23 @@ describe("Rezeptanfrage an den Augenarzt", () => {
     expect(html).toContain("Hornhautverkrümmung");
     expect(html).not.toContain("Hornhautverkruemmung");
   });
+
+  it("bettet Stempel und Unterschrift nur als Bild-data-URL ein", () => {
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    const mit = buildRezeptanfragePrintHtml({
+      entities,
+      bilder: { stempel: png, unterschrift: png },
+    });
+    expect(mit).toContain(`class="stempel" src="${png}"`);
+    expect(mit).toContain(`class="unterschrift" src="${png}"`);
+    const ohne = buildRezeptanfragePrintHtml({ entities, bilder: {} });
+    expect(ohne).not.toContain('<img class="stempel"');
+    const boese = buildRezeptanfragePrintHtml({
+      entities,
+      bilder: { stempel: 'javascript:alert(1)" onerror="x' },
+    });
+    expect(boese).not.toContain("javascript:");
+  });
 });
 
 describe("Vorgeschlagene Kreuze", () => {

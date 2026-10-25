@@ -18,8 +18,17 @@ import {
   versorgungVorschlaege,
 } from "./formularVorschlaege";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import {
+  type BetriebBilder,
+  betriebBilder,
+  bildUrl,
+} from "./betriebBilderCache";
 
-export type RezeptanfrageDaten = { entities: DocumentMergeEntities };
+export type RezeptanfrageDaten = {
+  entities: DocumentMergeEntities;
+  // Stempel/Unterschrift; ohne Angabe die privat gespeicherten Bilder
+  bilder?: BetriebBilder;
+};
 
 const e = escapeHtml;
 const a = RECHNUNG_ABSENDER;
@@ -80,7 +89,20 @@ const werteZeile = (auge: string, glas: MergeSource) =>
 
 export const buildRezeptanfrageBodyHtml = ({
   entities,
+  bilder = betriebBilder(),
 }: RezeptanfrageDaten): string => {
+  const stempel = bildUrl(bilder.stempel);
+  const unterschrift = bildUrl(bilder.unterschrift);
+  const optikerBilder =
+    stempel || unterschrift
+      ? `<div class="ortdatum stempelfeld">${
+          stempel ? `<img class="stempel" src="${stempel}" alt="" />` : ""
+        }${
+          unterschrift
+            ? `<img class="unterschrift" src="${unterschrift}" alt="" />`
+            : ""
+        }</div>`
+      : '<div class="ortdatum"></div>';
   const k: Record<string, unknown> = entities.kunde ?? {};
   const brille: Record<string, unknown> = entities.brille ?? {};
   const { glasRechts: r, glasLinks: l } = entities;
@@ -105,7 +127,7 @@ export const buildRezeptanfrageBodyHtml = ({
 <div class="anfrage">
   <div class="titelzeile">
     <h1>Rezeptanfrage an den Augenarzt</h1>
-    <div class="meta">Datum: ${e(heute)}<br />Bearbeiter: ${e(text(mitarbeiterAnzeige(brille.Berater)))}</div>
+    <div class="meta">Datum: <span class="eintrag">${e(heute)}</span><br />Bearbeiter: <span class="eintrag">${e(text(mitarbeiterAnzeige(brille.Berater)))}</span></div>
   </div>
 
   <h2>1 Patientendaten</h2>
@@ -135,16 +157,15 @@ export const buildRezeptanfrageBodyHtml = ({
   <h2>5 Anfrage an die augenärztliche Praxis</h2>
   <div class="reihe">${feld("Zuweisender Optiker / Betrieb", `${a.firma} · ${a.marke}`)}${feld("Telefon / E-Mail Optiker", `${a.telefon} · ${a.email}`)}${feld("Anfragedatum", heute, "0.6")}</div>
   <div class="reihe">${feld("Letzte augenärztl. Untersuchung (ca.)")}<div class="feld" style="flex:1.4"><div class="label">Aktuelle Brillenglasstärke bekannt</div><div class="wert">${box("Ja")}${box("Nein")}${box("Unbekannt")}</div></div></div>
-  <div class="zeile">Dringlichkeit: ${box("Normal")}${box("Dringend")} (Begründung: ______________________________)</div>
-  <div class="reihe">${feld("Anliegen / Freitext an den Augenarzt")}</div>
+  <div class="zeile dringlich"><span>Dringlichkeit: ${box("Normal")}${box("Dringend")}</span><span>(Begründung:</span><span class="linie"></span><span>)</span></div>
+  <div class="reihe freitext">${feld("Anliegen / Freitext an den Augenarzt")}</div>
 
   <h2>6 Datenschutz, Einwilligung &amp; Unterschrift</h2>
-  <div class="zeile">${box("Patient hat der Weitergabe seiner Daten an den behandelnden Augenarzt zugestimmt (gemäß DSGVO Art. 9).")}</div>
-  <div class="zeile">${box("Kopie der Refraktionswerte wurde dem Patienten ausgehändigt.")}</div>
+  <div class="datenschutz">(Datenschutz: Die Gesundheitsdaten werden nur zur Rezeptanfrage an den behandelnden Augenarzt verwendet; Weitergabe nur mit Einwilligung des Patienten gemäß DSGVO Art. 9.)</div>
   <div class="unterschriften">
-    <div><div class="strich"></div>Ort, Datum</div>
-    <div><div class="strich"></div>Unterschrift Patient / gesetzl. Vertreter</div>
-    <div><div class="strich"></div>Stempel &amp; Unterschrift Optiker</div>
+    <div><div class="ortdatum eintrag">Gera, ${e(heute)}</div><div class="strich"></div>Ort, Datum</div>
+    <div><div class="ortdatum"></div><div class="strich"></div>Unterschrift Patient / gesetzl. Vertreter</div>
+    <div>${optikerBilder}<div class="strich"></div>Stempel &amp; Unterschrift Optiker</div>
   </div>
 </div>`;
 };
@@ -160,7 +181,8 @@ const STYLES = `
   h2 { color: #111; font-size: 9pt; margin: 2.2mm 0 0.9mm; padding-bottom: 0.5mm; border-bottom: 0.25mm solid #888; }
   .reihe { display: flex; gap: 6mm; border-bottom: 0.2mm solid #ccc; padding-bottom: 0.5mm; margin-bottom: 0.6mm; }
   .feld .label { font-size: 7.4pt; color: #777; }
-  .feld .wert { min-height: 3.8mm; font-size: 9pt; color: #111; }
+  .eintrag, .feld .wert, .werte td { font-family: "Courier New", Courier, monospace; color: #404040; }
+  .feld .wert { min-height: 4.3mm; font-size: 8.5pt; }
   .werte { width: 100%; border-collapse: collapse; margin-bottom: 1.4mm; }
   .werte th, .werte td { border: 0.2mm solid #bbb; padding: 0.6mm 1.2mm; text-align: left; height: 5mm; }
   .werte tr:first-child th { background: #f0f0f0; font-weight: normal; color: #666; font-size: 7.6pt; }
@@ -175,6 +197,15 @@ const STYLES = `
   .kaestchen { display: inline-block; width: 2.8mm; height: 2.8mm; border: 0.25mm solid #444; margin-right: 1.2mm; vertical-align: -0.3mm; }
   .unterschriften { display: flex; gap: 10mm; margin-top: auto; padding-top: 11mm; }
   .unterschriften > div { flex: 1; color: #555; }
+  .ortdatum { height: 8mm; display: flex; align-items: flex-end; font-size: 8.5pt; }
+  .dringlich { display: flex; align-items: flex-end; gap: 1.2mm; }
+  .dringlich .linie { flex: 1; border-bottom: 0.25mm solid #444; height: 3.6mm; }
+  .freitext .wert { min-height: 11mm; font-size: 9pt; font-weight: bold; }
+  .datenschutz { font-size: 6.5pt; color: #777; margin: 0.8mm 0 0; max-width: 115mm; }
+  .stempelfeld { position: relative; }
+  .stempelfeld img { position: absolute; bottom: 0.4mm; mix-blend-mode: multiply; }
+  .stempelfeld .stempel { left: 0; max-width: 42mm; max-height: 17mm; }
+  .stempelfeld .unterschrift { left: 26mm; max-width: 36mm; max-height: 11mm; }
   .strich { border-top: 0.25mm solid #999; margin-bottom: 0.8mm; }
 `;
 
