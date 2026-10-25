@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } from "pdf-lib";
+import {
+  PDFCheckBox,
+  PDFDict,
+  PDFDocument,
+  PDFDropdown,
+  PDFName,
+  PDFTextField,
+} from "pdf-lib";
 import { formatEuro } from "./werkstattauftragTemplate";
 import {
   PDF_VORLAGEN,
@@ -236,5 +243,21 @@ describe("Abholbestätigung", () => {
       anzahlung: formatEuro(100),
       offener_betrag: formatEuro(437.55),
     });
+  });
+});
+
+describe("vorbelegte Vorlage", () => {
+  it("Antrag BAP zeigt gespeicherte Feldwerte (NeedAppearances aus) und behält sie", async () => {
+    const vorlage = PDF_VORLAGEN["Antrag BAP"];
+    const bytes = await fuellePdfVorlage(
+      vorlage,
+      lade(vorlage.datei),
+      entities,
+    );
+    const pdf = await PDFDocument.load(bytes);
+    const af = pdf.catalog.lookup(PDFName.of("AcroForm"), PDFDict);
+    expect(af.get(PDFName.of("NeedAppearances"))?.toString()).toBe("false");
+    expect(feldwert(pdf, "g_185")).toBe("oB");
+    expect(feldwert(pdf, "f_180")).toBe("Ishihara (21 Tafeln)");
   });
 });

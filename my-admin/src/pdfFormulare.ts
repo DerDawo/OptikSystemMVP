@@ -28,6 +28,10 @@ export type PdfVorlage = {
   datei: string;
   titel: string;
   felder: (entities: DocumentMergeEntities) => PdfFeldwerte;
+  // Vorlage ist vorausgefüllt: Viewer sollen die gespeicherten Darstellungen
+  // der Felder zeigen und nicht neu berechnen (sonst erscheinen
+  // vorbelegte Felder in manchen Viewern leer)
+  vorbelegt?: boolean;
 };
 
 // Auswahllisten im Beobachtungsbogen schreiben positive Werte ohne "+"
@@ -320,6 +324,7 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "antrag-bap.pdf",
     titel: "Antrag Bildschirmarbeitsplatzbrille",
     felder: bapFelder,
+    vorbelegt: true,
   },
   "Berechtigungsschein GKV": {
     datei: "berechtigungsschein-gkv.pdf",
@@ -422,6 +427,12 @@ export const fuellePdfVorlage = async (
     } catch (error) {
       console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
     }
+  }
+  if (vorlage.vorbelegt) {
+    const { PDFBool, PDFDict, PDFName } = await import("pdf-lib");
+    pdf.catalog
+      .lookup(PDFName.of("AcroForm"), PDFDict)
+      .set(PDFName.of("NeedAppearances"), PDFBool.False);
   }
   return pdf.save();
 };
