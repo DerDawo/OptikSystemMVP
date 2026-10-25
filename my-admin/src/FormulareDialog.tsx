@@ -94,6 +94,7 @@ import {
 } from "./aokBerechtigungsscheinTemplate";
 import { heuteIso } from "./AuftragsstatusLeiste";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
+import { versandDateiname, versandNachricht } from "./versandText";
 import {
   belegAlsPdf,
   belegVersenden,
@@ -1073,10 +1074,7 @@ const FormulareDialog = ({
         });
         return;
       }
-      const dateiname = `${art}${nummer ? `-${nummer}` : ""}.pdf`.replace(
-        /[^\w.\-äöüÄÖÜß]+/g,
-        "-",
-      );
+      const dateiname = versandDateiname(art, nummer, kunde);
       const datei =
         pdfVorlage && pdfUrl
           ? new File([await (await fetch(pdfUrl)).blob()], dateiname, {
@@ -1088,16 +1086,18 @@ const FormulareDialog = ({
               layoutDef?.format,
               layoutDef?.blatt,
             );
-      const nachname = String(kunde?.Nachname ?? "").trim();
-      const anrede = String(kunde?.Anrede ?? "").trim();
-      const gruss = agRechnung
-        ? "Sehr geehrte Damen und Herren"
-        : anrede === "Frau" && nachname
-          ? `Sehr geehrte Frau ${nachname}`
-          : anrede === "Herr" && nachname
-            ? `Sehr geehrter Herr ${nachname}`
-            : "Guten Tag";
-      const firma = String(betrieb?.Firmenname ?? "").trim();
+      const nachricht = versandNachricht({
+        art: agRechnung
+          ? "arbeitgeberRechnung"
+          : mahnung
+            ? "mahnung"
+            : selectedVorlage.Kategorie === RECHNUNG_KATEGORIE
+              ? "rechnung"
+              : "formular",
+        titel: art,
+        nummer,
+        kunde,
+      });
       if (agRechnung) arbeitgeberMerken();
       const ergebnis = await belegVersenden(
         kanal,
@@ -1112,16 +1112,7 @@ const FormulareDialog = ({
                   kunde?.Handy,
                   kunde?.TelefonnummerPrivat,
                 ]),
-          betreff: mahnung
-            ? `${art}${nummer ? ` zur Rechnung ${nummer}` : ""}`
-            : `${art}${nummer ? ` ${nummer}` : ""}`,
-          text: `${gruss},\n\nanbei erhalten Sie ${
-            mahnung
-              ? `unser Schreiben „${art}“${nummer ? ` zur Rechnung Nr. ${nummer}` : ""}`
-              : beleg
-                ? `Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""}`
-                : `das Formular „${art}“`
-          } als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
+          ...nachricht,
         },
         (adresse) =>
           notify(
