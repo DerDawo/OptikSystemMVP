@@ -24,9 +24,18 @@ import {
 import { verteileWerte } from "./aokBerechtigungsscheinTemplate";
 import { bruttoZeilenEinzeln } from "./kassenanteil";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import { betriebBilder, bildUrl } from "./betriebBilderCache";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
 export type PdfFeldwerte = Record<string, string | boolean>;
+
+export type BildKasten = {
+  seite: number; // 1-basiert, -1 = letzte
+  x: number;
+  oben: number;
+  breite: number;
+  hoehe: number;
+};
 
 export type PdfVorlage = {
   datei: string;
@@ -36,6 +45,12 @@ export type PdfVorlage = {
   // der Felder zeigen und nicht neu berechnen (sonst erscheinen
   // vorbelegte Felder in manchen Viewern leer)
   vorbelegt?: boolean;
+  // Betriebsstempel und Unterschrift (privat gespeichert, Einstellungen) in
+  // diese Kästen (pt, Abstand vom oberen Rand) setzen; Bild passt sich ein
+  stempelUnterschrift?: {
+    stempel: BildKasten;
+    unterschrift: BildKasten;
+  };
   // Eintragungen (Felder und Ort/Datum) in Courier schreiben
   courier?: boolean;
   // Text "Ort, Datum" und Stellen (Seite 1-basiert, -1 = letzte; Abstand der
@@ -150,8 +165,8 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     [`pr_${start + 7}`]: formatWert(glas?.Add, "dioptrie"),
   });
 
-  // Die Vorlage (public/formulare/antrag-bap.pdf) ist komplett vorbelegt,
-  // auch mit Stempel und Unterschrift. Das Programm trägt nur die
+  // Die Vorlage (public/formulare/antrag-bap.pdf) ist komplett vorbelegt;
+  // Stempel und Unterschrift kommen aus den Einstellungen (nicht im PDF). Das Programm trägt nur die
   // Personendaten (Name, Geburtsdatum, Telefon/E-Mail, Kunden-Nr.), das
   // Messdatum und die Dioptrienwerte ein; alle Texte bleiben wie in der Vorlage.
   return {
@@ -396,6 +411,13 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     felder: bapFelder,
     vorbelegt: true,
     courier: true,
+    // Stempel und Unterschrift (Einstellungen) im Untersuchungsprotokoll
+    // (letzte Seite): Stempel im gestrichelten Kasten, Unterschrift auf der
+    // Unterschriftszeile
+    stempelUnterschrift: {
+      stempel: { seite: -1, x: 358, oben: 727, breite: 184, hoehe: 48 },
+      unterschrift: { seite: -1, x: 150, oben: 724, breite: 110, hoehe: 40 },
+    },
     // "Ort, Datum" der Bescheinigung (Seite 2, Abschnitt 6) und des
     // Untersuchungsprotokolls (letzte Seite); Ort ist immer Gera
     ortDatum: {
@@ -411,6 +433,11 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "verordnung-optometrist.pdf",
     titel: "Optometrische Verordnung (Vordruck)",
     felder: verordnungOptometristFelder,
+    // Kasten "Firmenstempel": Stempel links, Unterschrift rechts daneben
+    stempelUnterschrift: {
+      stempel: { seite: 1, x: 122, oben: 650, breite: 92, hoehe: 50 },
+      unterschrift: { seite: 1, x: 222, oben: 664, breite: 68, hoehe: 33 },
+    },
   },
   "Berechtigungsschein GKV": {
     datei: "berechtigungsschein-gkv.pdf",
@@ -519,6 +546,44 @@ export const fuellePdfVorlage = async (
     } catch (error) {
       console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
     }
+  }
+  if (vorlage.stempelUnterschrift) {
+    const bilder = betriebBilder();
+    const seiten = pdf.getPages();
+    const zeichne = async (url: string | undefined, kasten: BildKasten) => {
+      const daten = bildUrl(url);
+      if (!daten) return;
+      const [kopf, base64] = daten.split(",");
+      const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
+      // pdf-lib kann PNG und JPEG; WebP wird übersprungen
+      const bild = kopf.includes("png")
+        ? await pdf.embedPng(bytes)
+        : kopf.includes("jpeg")
+          ? await pdf.embedJpg(bytes)
+          : null;
+      if (!bild) return;
+      const s =
+        seiten[
+          kasten.seite < 0 ? seiten.length + kasten.seite : kasten.seite - 1
+        ];
+      const faktor = Math.min(
+        kasten.breite / bild.width,
+        kasten.hoehe / bild.height,
+      );
+      const breite = bild.width * faktor;
+      const hoehe = bild.height * faktor;
+      s.drawImage(bild, {
+        x: kasten.x + (kasten.breite - breite) / 2,
+        y: s.getHeight() - kasten.oben - hoehe - (kasten.hoehe - hoehe) / 2,
+        width: breite,
+        height: hoehe,
+      });
+    };
+    await zeichne(bilder.stempel, vorlage.stempelUnterschrift.stempel);
+    await zeichne(
+      bilder.unterschrift,
+      vorlage.stempelUnterschrift.unterschrift,
+    );
   }
   if (vorlage.ortDatum && courier) {
     const seiten = pdf.getPages();

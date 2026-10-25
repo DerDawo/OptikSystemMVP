@@ -845,7 +845,10 @@ const FormulareDialog = ({
     }
     let abgebrochen = false;
     let url: string | null = null;
-    ladePdfVorlage(pdfVorlage)
+    // Stempel/Unterschrift zuerst laden, damit sie ins PDF kommen
+    ladeBetriebBilder()
+      .catch(() => undefined)
+      .then(() => ladePdfVorlage(pdfVorlage))
       .then((bytes) => fuellePdfVorlage(pdfVorlage, bytes, mergeEntities))
       .then((pdf) => {
         if (abgebrochen) return;

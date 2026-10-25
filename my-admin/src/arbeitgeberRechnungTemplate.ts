@@ -19,8 +19,11 @@ import {
   fusszeileHtml,
   type RechnungPosition,
 } from "./rechnungTemplate";
-import stempel from "./assets/stempel-ulm.png?inline";
-import unterschrift from "./assets/unterschrift-ulm.png?inline";
+import {
+  type BetriebBilder,
+  betriebBilder,
+  bildUrl,
+} from "./betriebBilderCache";
 import { text } from "./werkstattauftragTemplate";
 
 export type ArbeitgeberRechnungArt = "bildschirm" | "schutz";
@@ -28,6 +31,8 @@ export type ArbeitgeberRechnungArt = "bildschirm" | "schutz";
 export type ArbeitgeberRechnungDaten = {
   entities: DocumentMergeEntities;
   rechnungsnummer: string;
+  // Stempel/Unterschrift; ohne Angabe die privat gespeicherten Bilder
+  bilder?: BetriebBilder;
 };
 
 export const ARBEITGEBER_RECHNUNG_KATEGORIEN = {
@@ -79,9 +84,26 @@ export const arbeitgeberPositionen = (
   return [...fassungen, paar, ...rest];
 };
 
+const stempelBlock = (bilder: BetriebBilder): string => {
+  const stempel = bildUrl(bilder.stempel);
+  const unterschrift = bildUrl(bilder.unterschrift);
+  if (!stempel && !unterschrift) return "";
+  return `<div class="stempelblock">${
+    stempel ? `<img class="stempel" src="${stempel}" alt="" />` : ""
+  }${
+    unterschrift
+      ? `<img class="unterschrift" src="${unterschrift}" alt="" />`
+      : ""
+  }</div>`;
+};
+
 export const buildArbeitgeberRechnungBodyHtml = (
   art: ArbeitgeberRechnungArt,
-  { entities, rechnungsnummer }: ArbeitgeberRechnungDaten,
+  {
+    entities,
+    rechnungsnummer,
+    bilder = betriebBilder(),
+  }: ArbeitgeberRechnungDaten,
 ): string => {
   const k: Record<string, unknown> = entities.kunde ?? {};
   const brille: Record<string, unknown> = entities.brille ?? {};
@@ -138,10 +160,7 @@ export const buildArbeitgeberRechnungBodyHtml = (
       <div>Bitte überweisen Sie den Rechnungsbetrag bis zum ${e(zahlbarBis)} auf unser unten genanntes Konto.</div>
       <div>Verwendungszweck: Rechnungsnummer ${e(rechnungsnummer)}</div>
     </div>
-    <div class="stempelblock">
-      <img class="stempel" src="${stempel}" alt="" />
-      <img class="unterschrift" src="${unterschrift}" alt="" />
-    </div>
+    ${stempelBlock(bilder)}
    </div>
   </div>
   ${fusszeileHtml()}

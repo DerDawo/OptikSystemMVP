@@ -1,9 +1,10 @@
 // Erzeugt public/formulare/verordnung-optometrist.pdf: das Vordruck-Formular
 // "Optometrische Verordnung" (A4, Blatt mit Kassenzeile, Erklärung des
 // Optometristen, Refraktionstabelle F/N und Kostenrechnung) mit
-// Formularfeldern über den Kästchen und Zeilen sowie Firmenstempel und
-// Unterschrift im Feld "Firmenstempel". pdfFormulare.ts füllt die Felder vor,
-// alle bleiben im PDF-Viewer änderbar.
+// Formularfeldern über den Kästchen und Zeilen. Stempel und Unterschrift sind
+// NICHT im PDF: pdfFormulare.ts setzt die privat gespeicherten Bilder
+// (Einstellungen) beim Öffnen in den Kasten "Firmenstempel". Alle Felder
+// bleiben im PDF-Viewer änderbar.
 //
 //   node scripts/verordnung-optometrist-felder.mjs <vorlage.pdf>
 //
@@ -120,26 +121,6 @@ zeilen.forEach(([, top], i) => {
   text(`pos${i + 1}_betrag`, 450, top + 5, 48, 10, 8);
 });
 text("rechnungsbetrag", 450, 570, 48, 10, 8);
-
-// Firmenstempel und Unterschrift im Feld "Firmenstempel"
-const bild = async (datei) =>
-  pdf.embedPng(
-    readFileSync(new URL(`../src/assets/${datei}`, import.meta.url)),
-  );
-const stempel = await bild("stempel-sehzentrum.png");
-const unterschrift = await bild("unterschrift-ulm.png");
-seite.drawImage(stempel, {
-  x: 122,
-  y: oben(650, 50),
-  width: 92,
-  height: 50,
-});
-seite.drawImage(unterschrift, {
-  x: 222,
-  y: oben(664, 33),
-  width: 68,
-  height: 33,
-});
 
 form.updateFieldAppearances(schrift);
 const ziel = new URL(
