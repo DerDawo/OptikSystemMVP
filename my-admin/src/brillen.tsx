@@ -363,7 +363,7 @@ export const BrilleShow = () => (
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <BrilleKarteikarte />
         </Box>
-        <Box sx={{ display: { xs: "none", md: "block" } }}>
+        <Box sx={{ flex: "none" }}>
           <BrilleSymbolleiste />
         </Box>
       </Box>

@@ -46,6 +46,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PrintIcon from "@mui/icons-material/Print";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
+import PrintOutlinedIcon from "@mui/icons-material/PrintOutlined";
 import BuildIcon from "@mui/icons-material/Build";
 import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
 import EmailIcon from "@mui/icons-material/Email";
@@ -1828,7 +1829,8 @@ export const BerechtigungsscheinErstellenButton = () => {
 // gibt es weiter über "Formulare".
 export const WerkstattauftragButton = ({
   symbol,
-}: { symbol?: boolean } = {}) => {
+  drucker,
+}: { symbol?: boolean; drucker?: boolean } = {}) => {
   const record = useRecordContext();
   const [open, setOpen] = useState(false);
 
@@ -1840,8 +1842,8 @@ export const WerkstattauftragButton = ({
     <>
       <KnopfOderSymbol
         symbol={symbol}
-        titel="Werkstattauftrag"
-        icon={<BuildIcon />}
+        titel={drucker ? "Werkstattauftrag drucken" : "Werkstattauftrag"}
+        icon={drucker ? <PrintOutlinedIcon /> : <BuildIcon />}
         onClick={() => setOpen(true)}
         variant="outlined"
       />
