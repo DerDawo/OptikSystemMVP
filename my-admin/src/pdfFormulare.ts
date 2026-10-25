@@ -84,9 +84,7 @@ const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
 // die Zuordnung stammt aus der Lage der Felder unter den Beschriftungen.
 const bapFelder = (entities: DocumentMergeEntities) => {
   const k = kunde(entities);
-  const brille: Record<string, unknown> = entities.brille ?? {};
   const { glasRechts: r, glasLinks: l } = entities;
-  const messdatum = formatDatum(brille.Datum) || dayjs().format("DD.MM.YYYY");
 
   // Abschnitt 6 (Seite 2): Sphäre, Zylinder, Achse, Addition, Prisma/Basis, PD
   const bescheinigung = (glas: MergeSource, start: number) => {
@@ -135,23 +133,15 @@ const bapFelder = (entities: DocumentMergeEntities) => {
   });
 
   // Die Vorlage (public/formulare/antrag-bap.pdf) ist komplett vorbelegt,
-  // auch mit Stempel und Unterschrift. Das Programm ändert nur Name
-  // (mit Geburtsdatum und Kunden-Nr.), Datum und Dioptrienwerte.
+  // auch mit Stempel und Unterschrift. Das Programm trägt nur den
+  // Namen und die Dioptrienwerte ein; Datum, Geburtsdatum, Nummern und alle
+  // Texte bleiben wie in der Vorlage.
   return {
     f_4: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
-    f_5: formatDatum(k.Geburtsdatum),
-    f_30: messdatum,
     ...bescheinigung(r, 31),
     ...bescheinigung(l, 37),
-    hd_62: messdatum,
-    hd_130: messdatum,
-    hd_208: messdatum,
-    hd_65: text(k.KundenNummer),
-    hd_133: text(k.KundenNummer),
-    hd_211: text(k.KundenNummer),
     f_66: text(k.Nachname),
     f_67: text(k.Vorname),
-    f_68: formatDatum(k.Geburtsdatum),
     ...messung(r, 110),
     ...messung(l, 118),
     ...neueBrille(r, 225),
