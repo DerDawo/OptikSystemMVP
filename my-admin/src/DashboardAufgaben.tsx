@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useDataProvider, useNotify } from "react-admin";
 import { useNavigate } from "react-router-dom";
@@ -210,16 +210,14 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
 
 const ZULETZT_TITEL = "Zuletzt angelegt oder angesehen";
 
-// obenSlot/ersatzKarte: "Zuletzt angelegt oder angesehen" wird in den oberen
-// Kartenbereich (obenSlot) verschoben, an seiner Stelle erscheint ersatzKarte.
+// obenSlot: "Zuletzt angelegt oder angesehen" erscheint im oberen
+// Kartenbereich (obenSlot) statt in "Heute zu tun".
 export const DashboardAufgaben = ({
   stand,
   obenSlot,
-  ersatzKarte,
 }: {
   stand: Date | null;
   obenSlot?: HTMLElement | null;
-  ersatzKarte?: ReactNode;
 }) => {
   const dataProvider = useDataProvider();
   const [listen, setListen] = useState<Liste[] | null>(null);
@@ -470,13 +468,9 @@ export const DashboardAufgaben = ({
         <ErinnerungenKarte stand={stand} />
         {listen.map((liste) => {
           const karte = <AufgabenKarte key={liste.titel} liste={liste} />;
-          if (liste.titel !== ZULETZT_TITEL || !ersatzKarte) return karte;
-          return (
-            <Box key={liste.titel} sx={{ display: "contents" }}>
-              {ersatzKarte}
-              {obenSlot ? createPortal(karte, obenSlot) : null}
-            </Box>
-          );
+          if (liste.titel !== ZULETZT_TITEL || obenSlot === undefined)
+            return karte;
+          return obenSlot ? createPortal(karte, obenSlot) : null;
         })}
       </Box>
     </Box>

@@ -728,15 +728,22 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
             {!statistik && (
               <>
                 <DashboardCard
-                  title="Heutige Termine"
+                  title="Abholbereite Brillen"
+                  span
                   action={
-                    <Button size="small" onClick={() => navigate("/kalender")}>
-                      Kalender
-                    </Button>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: (theme) => tokensFor(theme).text3,
+                        fontVariantNumeric: "tabular-nums",
+                      }}
+                    >
+                      {stats.abholbereit.total} gesamt
+                    </Typography>
                   }
                 >
-                  {stats.termine.heute.length === 0 ? (
-                    <EmptyHint>Keine Termine heute.</EmptyHint>
+                  {stats.abholbereit.rows.length === 0 ? (
+                    <EmptyHint>Aktuell keine abholbereiten Brillen.</EmptyHint>
                   ) : (
                     <Box
                       sx={{
@@ -745,53 +752,85 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
                         gap: 0.25,
                       }}
                     >
-                      {stats.termine.heute.slice(0, 6).map((termin) => (
-                        <ButtonBase
-                          key={termin.id}
-                          onClick={() => navigate(`/termin/${termin.id}/show`)}
-                          sx={listRowSx}
-                        >
-                          <Typography
-                            sx={{
-                              width: 44,
-                              flex: "none",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "text.secondary",
-                              fontVariantNumeric: "tabular-nums",
-                            }}
+                      {stats.abholbereit.rows.map((row) => (
+                        <RecordContextProvider key={row.id} value={row}>
+                          <ButtonBase
+                            onClick={() => navigate(`/brille/${row.id}/show`)}
+                            sx={(theme) => ({
+                              ...listRowSx(theme),
+                              flexWrap: "wrap",
+                            })}
                           >
-                            {dayjs(termin.Start).format("HH:mm")}
-                          </Typography>
-                          <Box
-                            aria-hidden="true"
-                            sx={{
-                              width: 3,
-                              alignSelf: "stretch",
-                              borderRadius: 3,
-                              bgcolor: "primary.main",
-                              flex: "none",
-                            }}
-                          />
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography
-                              noWrap
-                              sx={{ fontWeight: 600, fontSize: 14 }}
+                            <Box
+                              aria-hidden="true"
+                              sx={(theme) => ({
+                                flex: "none",
+                                width: 34,
+                                height: 34,
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                backgroundColor: toneColors(theme, "success")
+                                  .bg,
+                                color: toneColors(theme, "success").fg,
+                              })}
                             >
-                              {termin.kundeName}
-                            </Typography>
-                            <Typography
-                              noWrap
+                              {initialen(row.kundeName)}
+                            </Box>
+                            <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                              <Typography
+                                noWrap
+                                sx={{ fontWeight: 600, fontSize: 14 }}
+                              >
+                                {row.kundeName}
+                              </Typography>
+                              <Typography
+                                noWrap
+                                sx={{
+                                  fontSize: 12.5,
+                                  color: (theme) => tokensFor(theme).text3,
+                                }}
+                              >
+                                {row.Fertig
+                                  ? `fertig seit ${dayjs(row.Fertig).format("DD.MM.YYYY")}`
+                                  : `Abholung: ${
+                                      row.Abholung
+                                        ? dayjs(row.Abholung).format(
+                                            "DD.MM.YYYY",
+                                          )
+                                        : "—"
+                                    }`}
+                              </Typography>
+                            </Box>
+                            <BrilleStatusChip record={row} />
+                            <Box
                               sx={{
-                                fontSize: 12.5,
-                                color: (theme) => tokensFor(theme).text3,
+                                minWidth: 90,
+                                textAlign: "right",
+                                fontVariantNumeric: "tabular-nums",
                               }}
                             >
-                              {termin.Terminart || "Termin"}
-                            </Typography>
-                          </Box>
-                        </ButtonBase>
+                              <CurrencyField source="Restbetrag" />
+                            </Box>
+                          </ButtonBase>
+                        </RecordContextProvider>
                       ))}
+                      {stats.abholbereit.total >
+                        stats.abholbereit.rows.length && (
+                        <Typography
+                          variant="caption"
+                          color="text.secondary"
+                          sx={{ px: 1.5, pt: 0.5 }}
+                        >
+                          +
+                          {stats.abholbereit.total -
+                            stats.abholbereit.rows.length}{" "}
+                          weitere
+                        </Typography>
+                      )}
                     </Box>
                   )}
                 </DashboardCard>
@@ -940,119 +979,7 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
 
           {/* "Heute zu tun" unter den heutigen Terminen */}
           {!statistik && (
-            <DashboardAufgaben
-              stand={lastUpdated}
-              obenSlot={obenSlot}
-              ersatzKarte={
-                <DashboardCard
-                  title="Abholbereite Brillen"
-                  span
-                  action={
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        color: (theme) => tokensFor(theme).text3,
-                        fontVariantNumeric: "tabular-nums",
-                      }}
-                    >
-                      {stats.abholbereit.total} gesamt
-                    </Typography>
-                  }
-                >
-                  {stats.abholbereit.rows.length === 0 ? (
-                    <EmptyHint>Aktuell keine abholbereiten Brillen.</EmptyHint>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 0.25,
-                      }}
-                    >
-                      {stats.abholbereit.rows.map((row) => (
-                        <RecordContextProvider key={row.id} value={row}>
-                          <ButtonBase
-                            onClick={() => navigate(`/brille/${row.id}/show`)}
-                            sx={(theme) => ({
-                              ...listRowSx(theme),
-                              flexWrap: "wrap",
-                            })}
-                          >
-                            <Box
-                              aria-hidden="true"
-                              sx={(theme) => ({
-                                flex: "none",
-                                width: 34,
-                                height: 34,
-                                borderRadius: "50%",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: 12,
-                                fontWeight: 700,
-                                backgroundColor: toneColors(theme, "success")
-                                  .bg,
-                                color: toneColors(theme, "success").fg,
-                              })}
-                            >
-                              {initialen(row.kundeName)}
-                            </Box>
-                            <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
-                              <Typography
-                                noWrap
-                                sx={{ fontWeight: 600, fontSize: 14 }}
-                              >
-                                {row.kundeName}
-                              </Typography>
-                              <Typography
-                                noWrap
-                                sx={{
-                                  fontSize: 12.5,
-                                  color: (theme) => tokensFor(theme).text3,
-                                }}
-                              >
-                                {row.Fertig
-                                  ? `fertig seit ${dayjs(row.Fertig).format("DD.MM.YYYY")}`
-                                  : `Abholung: ${
-                                      row.Abholung
-                                        ? dayjs(row.Abholung).format(
-                                            "DD.MM.YYYY",
-                                          )
-                                        : "—"
-                                    }`}
-                              </Typography>
-                            </Box>
-                            <BrilleStatusChip record={row} />
-                            <Box
-                              sx={{
-                                minWidth: 90,
-                                textAlign: "right",
-                                fontVariantNumeric: "tabular-nums",
-                              }}
-                            >
-                              <CurrencyField source="Restbetrag" />
-                            </Box>
-                          </ButtonBase>
-                        </RecordContextProvider>
-                      ))}
-                      {stats.abholbereit.total >
-                        stats.abholbereit.rows.length && (
-                        <Typography
-                          variant="caption"
-                          color="text.secondary"
-                          sx={{ px: 1.5, pt: 0.5 }}
-                        >
-                          +
-                          {stats.abholbereit.total -
-                            stats.abholbereit.rows.length}{" "}
-                          weitere
-                        </Typography>
-                      )}
-                    </Box>
-                  )}
-                </DashboardCard>
-              }
-            />
+            <DashboardAufgaben stand={lastUpdated} obenSlot={obenSlot} />
           )}
         </>
       ) : null}
