@@ -1,4 +1,5 @@
 // in src/App.tsx
+import { SerienbriefSeite } from "./SerienbriefSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
 import { dataProvider } from "./dataProvider";
@@ -64,6 +65,11 @@ import {
   ZusatzleistungCreate,
 } from "./zusatzleistung";
 import { TerminList, TerminShow, TerminEdit, TerminCreate } from "./termin";
+import {
+  KrankenkasseList,
+  KrankenkasseEdit,
+  KrankenkasseCreate,
+} from "./krankenkassen";
 import { TerminKalender } from "./TerminKalender";
 import {
   DokumentvorlageList,
@@ -82,7 +88,8 @@ import {
 import { GlaskatalogImportPage } from "./glaskatalog/GlaskatalogImportPage";
 import { RechnungenList } from "./Rechnungen";
 import { MahnungenList } from "./Mahnungen";
-import { Dashboard } from "./Dashboard";
+import { KassenrezepteSeite } from "./Kassenrezepte";
+import { Dashboard, StatistikSeite } from "./Dashboard";
 import { BetriebEdit } from "./betrieb";
 
 import PersonIcon from "@mui/icons-material/Person";
@@ -130,6 +137,13 @@ export const App = () => {
         edit={KontaktlinseEdit}
         create={KontaktlinseCreate}
         icon={VisibilityIcon}
+      />
+      <Resource
+        name="krankenkasse"
+        recordRepresentation={byField("Name")}
+        list={KrankenkasseList}
+        edit={KrankenkasseEdit}
+        create={KrankenkasseCreate}
       />
       <Resource
         name="brillenart"
@@ -232,6 +246,9 @@ export const App = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/rechnungen" element={<RechnungenList />} />
         <Route path="/mahnungen" element={<MahnungenList />} />
+        <Route path="/rezepte" element={<KassenrezepteSeite />} />
+        <Route path="/statistiken" element={<StatistikSeite />} />
+        <Route path="/serienbrief" element={<SerienbriefSeite />} />
         <Route path="/kalender" element={<TerminKalender />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />
         <Route path="/glaskatalog-import" element={<GlaskatalogImportPage />} />

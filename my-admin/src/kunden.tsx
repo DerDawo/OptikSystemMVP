@@ -8,8 +8,9 @@ import {
   useRecordContext,
   Title,
   RaRecord,
+  useNotify,
 } from "react-admin";
-import { DateField, Show, TextField, FunctionField } from "react-admin";
+import { DateField, Show, FunctionField } from "react-admin";
 import { DateInput, Edit, SimpleForm, TextInput } from "react-admin";
 import { Create } from "react-admin";
 import {
@@ -52,47 +53,45 @@ import {
   type NachrichtTermin,
   renderMessageTemplate,
 } from "./nachrichtenPlatzhalter";
+import { ErinnerungButton } from "./ErinnerungenKarte";
 import {
   buildExternalMessageUrl,
   choosePhoneNumberForMessaging,
+  isDirectSendEnabled,
   MessageChannel,
+  messageChannelLabels,
   openExternalMessage,
+  sendMessagesInBackground,
+  summarizeDeliveryResults,
 } from "./messaging";
 import {
   EditActionsBar,
-  Field,
   FieldRow,
   FormSection,
   ShowActionsBar,
   ShowColumn,
-  ShowColumns,
   ShowLayout,
-  ShowSection,
   DatenbankInfo,
 } from "./EntityLayout";
 import {
   AnredeInput,
   GeschlechtAusAnrede,
   GeschlechtInput,
-  HinweiseChips,
   HinweiseInput,
   KundeVerwaltung,
 } from "./KundeFelder";
 import { KundenAuftraege } from "./KundenAuftraege";
+import { KundeDokumente } from "./KundeDokumente";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
-import { KontaktFeld } from "./KontaktFeld";
-import { DirektFeld } from "./DirektFeld";
+import { KundeKarteikarte } from "./KundeKarteikarte";
+import { KrankenkasseInput } from "./krankenkassen";
+import { KundeBrillenversicherungen } from "./KundeBrillenversicherungen";
+import { KundeKassenrezepte } from "./KundeKassenrezepte";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
   whatsapp: WhatsAppIcon,
   email: EmailIcon,
-};
-
-const messageChannelLabels: Record<MessageChannel, string> = {
-  sms: "SMS",
-  whatsapp: "Whatsapp",
-  email: "Email",
 };
 
 type NachrichtRecord = Record<string, unknown> & {
@@ -450,6 +449,7 @@ const MessageButton = () => {
 const KundeShowActions = () => (
   <ShowActionsBar>
     <MessageButton />
+    <ErinnerungButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
@@ -525,17 +525,6 @@ export const KundenList = () => {
   );
 };
 
-// Zwischenüberschrift innerhalb einer Kachel (Stammdaten | Adresse | Kontakt)
-const Unterteilung = ({ titel }: { titel: string }) => (
-  <Box sx={{ gridColumn: "1 / -1", mt: 1 }}>
-    <Divider textAlign="left">
-      <Typography variant="caption" color="text.secondary">
-        {titel}
-      </Typography>
-    </Divider>
-  </Box>
-);
-
 export const KundeShow = () => {
   const showObject = useShowController();
   const dataProvider = useDataProvider();
@@ -559,112 +548,36 @@ export const KundeShow = () => {
   return (
     <Show title="Kunde anzeigen" actions={<KundeShowActions />}>
       <ShowLayout>
-        <ShowColumns spalten="minmax(0, 1fr) minmax(0, 1.8fr)">
-          <ShowColumn kompakt>
-            <ShowSection title="Stammdaten">
-              {/* Anrede, Vorname und Nachname in einer Reihe */}
-              <Box
-                sx={{
-                  gridColumn: "1 / -1",
-                  display: "grid",
-                  gridTemplateColumns: { xs: "1fr", sm: "0.6fr 1fr 1fr" },
-                  gap: "0.25em 2em",
-                  "& > *": { minWidth: 0 },
-                }}
-              >
-                <Field>
-                  <TextField source="Anrede" />
-                </Field>
-                <Field>
-                  <TextField source="Vorname" />
-                </Field>
-                <Field>
-                  <TextField source="Nachname" />
-                </Field>
-              </Box>
-              <Field>
-                <TextField source="Geschlecht" />
-              </Field>
-              <Field>
-                <DateField source="Geburtsdatum" />
-              </Field>
-              <Field>
-                <TextField source="Tätigkeit" />
-              </Field>
-              <Unterteilung titel="Adresse" />
-              <Field>
-                <TextField source="Straße" />
-              </Field>
-              <Field>
-                <TextField source="Hausnummer" />
-              </Field>
-              <Field>
-                <TextField source="Postleitzahl" />
-              </Field>
-              <Field>
-                <TextField source="Stadt" />
-              </Field>
-              <Unterteilung titel="Kontakt" />
-              <Field>
-                <KontaktFeld source="TelefonnummerPrivat" />
-              </Field>
-              <Field>
-                <KontaktFeld source="TelefonnummerGeschaeftlich" />
-              </Field>
-              <Field>
-                <KontaktFeld source="Handy" />
-              </Field>
-              <Field>
-                <KontaktFeld source="Email" />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Versicherung">
-              <Field>
-                <TextField source="KrankenkassenNummer" />
-              </Field>
-              <Field>
-                <TextField source="VersichertenNummer" />
-              </Field>
-              <Field>
-                <TextField source="KrankenversicherungsTyp" />
-              </Field>
-              <Field>
-                <TextField source="Krankenkasse" />
-              </Field>
-              <Field>
-                <TextField source="Versichertenstatus" />
-              </Field>
-              <Field>
-                <DateField source="VersichertenkarteGueltigBis" />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Notizen">
-              <Field label="Hinweise">
-                <HinweiseChips />
-              </Field>
-              <Field label="Notizen">
-                <TextField
-                  source="Notizen"
-                  sx={{ whiteSpace: "pre-wrap", overflowWrap: "break-word" }}
-                />
-              </Field>
-            </ShowSection>
-            <ShowSection title="Merkmale">
-              <DirektFeld source="Merkmal1" label="Beruf" />
-              <DirektFeld source="Merkmal2" label="Besonderes" />
-              <Field>
-                <TextField source="KundenNummer" />
-              </Field>
-              <Field>
-                <DateField source="Aufnahmedatum" />
-              </Field>
-            </ShowSection>
-            <DatenbankInfo />
-          </ShowColumn>
-          <ShowColumn>
-            <KundenAuftraege />
-          </ShowColumn>
-        </ShowColumns>
+        {/* Kundenkartei wie in Prisma, daneben die Aufträge. Die Kartei
+            behält eine Mindestbreite, damit alle Felder lesbar bleiben; die
+            Aufträge bekommen den Rest (auf breiten Bildschirmen 2/3) und
+            rutschen bei schmalen Fenstern darunter. */}
+        <Box
+          sx={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "1em",
+            alignItems: "flex-start",
+          }}
+        >
+          <Box sx={{ flex: "1 1 0", minWidth: "min(100%, 460px)" }}>
+            <ShowColumn>
+              <KundeKarteikarte />
+              {/* Eigener Bereich für die vermittelten Brillenversicherungen */}
+              <KundeBrillenversicherungen />
+              {/* Über die Sammelabrechnung abgerechnete Kassenrezepte */}
+              <KundeKassenrezepte />
+              <DatenbankInfo />
+            </ShowColumn>
+          </Box>
+          <Box sx={{ flex: "2 1 0", minWidth: "min(100%, 400px)" }}>
+            <ShowColumn>
+              <KundenAuftraege />
+            </ShowColumn>
+          </Box>
+        </Box>
+        {/* Eigener Bereich für Befunde, Fundusaufnahmen, Rezepte usw. */}
+        <KundeDokumente />
       </ShowLayout>
     </Show>
   );
@@ -683,8 +596,6 @@ export const KundeEdit = () => (
           <AnredeInput />
           <TextInput source="Vorname" />
           <TextInput source="Nachname" />
-        </FieldRow>
-        <FieldRow>
           <GeschlechtInput />
           <DateInput source="Geburtsdatum" />
           <TextInput source="Tätigkeit" />
@@ -694,8 +605,6 @@ export const KundeEdit = () => (
         <FieldRow>
           <TextInput source="Straße" />
           <TextInput source="Hausnummer" />
-        </FieldRow>
-        <FieldRow>
           <TextInput source="Postleitzahl" />
           <TextInput source="Stadt" />
         </FieldRow>
@@ -710,24 +619,33 @@ export const KundeEdit = () => (
       </FormSection>
       <FormSection title="Versicherung">
         <FieldRow>
-          <TextInput source="KrankenkassenNummer" />
-          <TextInput source="VersichertenNummer" />
-          <TextInput source="KrankenversicherungsTyp" />
-        </FieldRow>
-        <FieldRow>
-          <TextInput source="Krankenkasse" />
-          <TextInput source="Versichertenstatus" />
-          <DateInput source="VersichertenkarteGueltigBis" />
+          <KrankenkasseInput />
+          <TextInput source="KrankenkassenNummer" label="Kassen-Nr." />
+          <TextInput source="VersichertenNummer" label="Versicherten-Nr." />
+          <TextInput source="Versichertenstatus" label="Status" />
+          <TextInput
+            source="KrankenversicherungsTyp"
+            label="Versicherungsart"
+          />
         </FieldRow>
       </FormSection>
-      <FormSection title="Notizen">
-        <HinweiseInput />
-        <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+      <FormSection title="Medizinische Notizen">
+        <FieldRow>
+          <HinweiseInput />
+          <TextInput
+            source="Notizen"
+            label="Medizinische Notizen (Erkrankungen, OPs, Unverträglichkeiten)"
+            multiline
+            fullWidth
+          />
+        </FieldRow>
       </FormSection>
       <FormSection title="Merkmale">
         <FieldRow>
           <TextInput source="Merkmal1" label="Beruf" />
           <TextInput source="Merkmal2" label="Besonderes" />
+          <TextInput source="KundenNummer" label="Kundennummer" />
+          <DateInput source="Aufnahmedatum" />
         </FieldRow>
       </FormSection>
       <KundeVerwaltung />
@@ -751,8 +669,11 @@ export const KundeCreate = () => {
   };
 
   return (
+    // Nach dem Speichern direkt die Karteikarte des neuen Kunden öffnen
+    // (statt "Kunde bearbeiten" und danach erneut suchen)
     <Create
       title="Neuen Kunden anlegen"
+      redirect="show"
       transform={(data) => ({ ...data, created_at: new Date().toISOString() })}
     >
       <SimpleForm defaultValues={defaultValues}>
@@ -762,8 +683,6 @@ export const KundeCreate = () => {
             <AnredeInput />
             <TextInput source="Vorname" />
             <TextInput source="Nachname" />
-          </FieldRow>
-          <FieldRow>
             <GeschlechtInput />
             <DateInput source="Geburtsdatum" />
             <TextInput source="Tätigkeit" />
@@ -773,8 +692,6 @@ export const KundeCreate = () => {
           <FieldRow>
             <TextInput source="Straße" />
             <TextInput source="Hausnummer" />
-          </FieldRow>
-          <FieldRow>
             <TextInput source="Postleitzahl" />
             <TextInput source="Stadt" />
           </FieldRow>
@@ -795,30 +712,38 @@ export const KundeCreate = () => {
         </FormSection>
         <FormSection title="Versicherung">
           <FieldRow>
-            <TextInput
-              source="KrankenkassenNummer"
-              label="Krankenkassennummer"
-            />
-            <TextInput source="VersichertenNummer" label="Versichertennummer" />
+            <KrankenkasseInput />
+            <TextInput source="KrankenkassenNummer" label="Kassen-Nr." />
+            <TextInput source="VersichertenNummer" label="Versicherten-Nr." />
+            <TextInput source="Versichertenstatus" label="Status" />
             <TextInput
               source="KrankenversicherungsTyp"
-              label="Krankenversicherungs Typ"
+              label="Versicherungsart"
             />
           </FieldRow>
-          <FieldRow>
-            <TextInput source="Krankenkasse" />
-            <TextInput source="Versichertenstatus" />
-            <DateInput source="VersichertenkarteGueltigBis" />
-          </FieldRow>
         </FormSection>
-        <FormSection title="Notizen">
-          <HinweiseInput />
-          <TextInput source="Notizen" label="Notizen" multiline fullWidth />
+        <FormSection title="Medizinische Notizen">
+          <FieldRow>
+            <HinweiseInput />
+            <TextInput
+              source="Notizen"
+              label="Medizinische Notizen (Erkrankungen, OPs, Unverträglichkeiten)"
+              multiline
+              fullWidth
+            />
+          </FieldRow>
         </FormSection>
         <FormSection title="Merkmale">
           <FieldRow>
             <TextInput source="Merkmal1" label="Beruf" />
             <TextInput source="Merkmal2" label="Besonderes" />
+            <TextInput
+              source="KundenNummer"
+              label="Kundennummer"
+              placeholder="automatisch"
+              helperText="Leer lassen: wird beim Speichern automatisch vergeben"
+            />
+            <DateInput source="Aufnahmedatum" />
           </FieldRow>
         </FormSection>
         <KundeVerwaltung />
@@ -840,6 +765,7 @@ export const KundeMessage = () => {
   const recordId = useParams().id ?? "";
   const location = useLocation();
   const navigate = useNavigate();
+  const notify = useNotify();
   const routeState = (location.state as KundeMessageRouteState | null) ?? null;
   const [messages, setMessages] = useState<NachrichtRecord[]>([]);
   const [selectedMessageKey, setSelectedMessageKey] = useState<string | null>(
@@ -864,6 +790,8 @@ export const KundeMessage = () => {
     email: false,
   });
   const [sendFormError, setSendFormError] = useState<string | null>(null);
+  const [isSending, setIsSending] = useState(false);
+  const directSend = isDirectSendEnabled();
   const [externalLinks, setExternalLinks] = useState<
     { channel: MessageChannel; url: string }[]
   >([]);
@@ -1081,12 +1009,13 @@ export const KundeMessage = () => {
       }));
     };
 
-  // Öffnet die passende App (Mail-Programm, SMS, WhatsApp) mit
-  // vorausgefüllter Nachricht, statt über die Edge Functions zu versenden -
-  // so geht es ohne API-Keys. Bei mehreren Kanälen wird der erste direkt
+  // Standard: Öffnet die passende App (Gmail bzw. Mail-Programm, SMS, WhatsApp) mit
+  // vorausgefüllter Nachricht - so geht es ohne API-Keys. Mit
+  // VITE_DIRECT_MESSAGING=true wird stattdessen im Hintergrund über die Edge
+  // Functions gesendet. Bei mehreren Kanälen wird der erste direkt
   // geöffnet, die übrigen stehen als Links bereit (Browser blockieren sonst
   // weitere Fenster).
-  const handleSend = () => {
+  const handleSend = async () => {
     setSendFormError(null);
     setExternalLinks([]);
 
@@ -1103,6 +1032,34 @@ export const KundeMessage = () => {
 
     if (channelsToSend.length === 0) {
       setSendFormError("Bitte wähle mindestens einen Nachrichtenkanal aus.");
+      return;
+    }
+
+    // Direktversand: im Hintergrund über die Edge Functions, mit Rückmeldung
+    // über Erfolg oder Misserfolg - ohne dass eine andere App aufgeht.
+    if (directSend) {
+      setIsSending(true);
+      const results = await sendMessagesInBackground(
+        channelsToSend.map((channel) => ({
+          channel,
+          payload: {
+            to: deliveryTargets[channel],
+            message: nachrichtText,
+            subject: nachrichtBetreff,
+          },
+        })),
+      );
+
+      if (!isMountedRef.current) {
+        return;
+      }
+
+      setIsSending(false);
+      const summary = summarizeDeliveryResults(results);
+      notify(summary.message, { type: summary.type, multiLine: true });
+      if (summary.type === "success") {
+        navigate(`/kunde/${recordId}/show`);
+      }
       return;
     }
 
@@ -1552,7 +1509,11 @@ export const KundeMessage = () => {
             }}
           >
             <Typography variant="body2" color="text.secondary">
-              Bitte in der geöffneten App absenden. Erneut öffnen:
+              Bitte in der geöffneten App absenden.
+              {externalLinks.some((link) => link.channel === "whatsapp")
+                ? " WhatsApp: Der Text ist kopiert – ist das Feld leer, Strg+V drücken."
+                : ""}{" "}
+              Erneut öffnen:
             </Typography>
             {externalLinks.map((link) => (
               <Button
@@ -1582,9 +1543,14 @@ export const KundeMessage = () => {
           <Button
             variant="contained"
             startIcon={<SendIcon />}
-            onClick={handleSend}
+            onClick={() => void handleSend()}
+            disabled={isSending}
           >
-            In App öffnen
+            {directSend
+              ? isSending
+                ? "Wird gesendet..."
+                : "Senden"
+              : "In App öffnen"}
           </Button>
         </Box>
       </Box>

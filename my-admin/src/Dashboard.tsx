@@ -17,6 +17,7 @@ import {
   type ReactElement,
   type ReactNode,
 } from "react";
+import { createPortal } from "react-dom";
 import { useDataProvider, RecordContextProvider, Title } from "react-admin";
 import { useNavigate } from "react-router-dom";
 import {
@@ -33,6 +34,8 @@ import { alpha, type Theme } from "@mui/material/styles";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import dayjs from "dayjs";
 import { CurrencyField } from "./CurrencyField";
+import { DashboardAufgaben } from "./DashboardAufgaben";
+import { SchuldnerlisteKarte } from "./SchuldnerlisteKarte";
 import { BrilleStatusChip, getBrilleOrderStatus } from "./orderStatus";
 import { tokensFor } from "./designTokens";
 import { CalendarIcon, CheckIcon, GlassesIcon, UserPlusIcon } from "./icons";
@@ -42,10 +45,31 @@ type BrilleRow = {
   kunde_id?: number | string | null;
   Datum?: string | null;
   Abholung?: string | null;
+  Fertig?: string | null;
   Summe?: number | null;
   Restbetrag?: number | null;
   Mahnstufe?: number | null;
+  Zahlungsstatus?: string | null;
 };
+
+// Zahlungsstatus, bei denen noch Geld vom Kunden aussteht (ohne
+// "Versicherung" - dort zahlt die Versicherung)
+const UNBEZAHLT = ["offen", "teilweise offen", "Ratenzahlung"];
+
+// Listen-Kacheln zeigen bis zu so viele Einträge; sichtbar sind etwa acht,
+// der Rest erscheint durch Scrollen in der Kachel.
+const SCROLL_ZEILEN = 100;
+const scrollListeSx = {
+  maxHeight: 440,
+  overflowY: "auto",
+  overscrollBehavior: "contain",
+  scrollbarGutter: "stable",
+} as const;
+
+const euro = new Intl.NumberFormat("de-DE", {
+  style: "currency",
+  currency: "EUR",
+});
 
 type KontaktlinseRow = {
   id: number | string;
@@ -82,7 +106,11 @@ interface DashboardStats {
     total: number;
   };
   neueKunden: number;
-  mahnstufen: { stufe: number; anzahl: number }[];
+  schuldner: {
+    rows: (BrilleRow & { kundeName: string })[];
+    total: number;
+    summe: number;
+  };
   topZusatzleistungen: {
     id: number | string;
     bezeichnung: string;
@@ -370,11 +398,15 @@ const EmptyHint = ({ children }: { children: ReactNode }) => (
   </Typography>
 );
 
-export const Dashboard = () => {
+// Startseite; mit `statistik` die Seite "Statistiken" (Gehe zu): Schuldner
+// und Top-Zusatzleistungen erscheinen nur dort, nicht auf der Startseite
+const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
   const dataProvider = useDataProvider();
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [obenSlot, setObenSlot] = useState<HTMLElement | null>(null);
+  const [untenSlot, setUntenSlot] = useState<HTMLElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -401,7 +433,7 @@ export const Dashboard = () => {
         kontaktlinseRecentRes,
         termineRes,
         neueKundenRes,
-        mahnstufenRes,
+        schuldnerRes,
         zusatzleistungLinksRes,
       ] = await Promise.all([
         dataProvider.getList("brille", {
@@ -425,15 +457,22 @@ export const Dashboard = () => {
         dataProvider.getList("kunde", {
           pagination: { page: 1, perPage: 1 },
           sort: { field: "id", order: "ASC" },
+          // Aufnahmedatum statt created_at: beim Prisma-Import bekamen alle
+          // übernommenen Kunden das Importdatum als created_at
           filter: {
-            "created_at@gte": startOfMonth,
-            "created_at@lt": startOfNextMonth,
+            "Aufnahmedatum@gte": startOfMonth,
+            "Aufnahmedatum@lt": startOfNextMonth,
           },
         }),
+        // Unbezahlte Aufträge mit offenem Restbetrag (Restbetrag wird in der
+        // Datenbank aus Summe - Anzahlung - KK-Anteil berechnet)
         dataProvider.getList("brille", {
           pagination: { page: 1, perPage: 500 },
-          sort: { field: "Mahnstufe", order: "DESC" },
-          filter: { "Mahnstufe@gt": 0 },
+          sort: { field: "Datum", order: "ASC" },
+          filter: {
+            "Zahlungsstatus@in": `(${UNBEZAHLT.map((s) => `"${s}"`).join(",")})`,
+            "Restbetrag@gt": 0,
+          },
         }),
         dataProvider.getList("brille_hat_zusatzleistungen", {
           pagination: { page: 1, perPage: 1000 },
@@ -462,20 +501,22 @@ export const Dashboard = () => {
         (row) => getBrilleOrderStatus(row).key === "bereit",
       );
       const abholbereitRows = [...abholbereitAll]
-        .sort((a, b) => (a.Abholung ?? "").localeCompare(b.Abholung ?? ""))
-        .slice(0, 8);
+        .sort((a, b) =>
+          (a.Fertig ?? a.Abholung ?? "").localeCompare(
+            b.Fertig ?? b.Abholung ?? "",
+          ),
+        )
+        .slice(0, SCROLL_ZEILEN);
 
       const neueKunden = neueKundenRes.total ?? neueKundenRes.data.length;
 
-      const mahnstufenCounts = new Map<number, number>();
-      (mahnstufenRes.data as BrilleRow[]).forEach((row) => {
-        const stufe = row.Mahnstufe ?? 0;
-        mahnstufenCounts.set(stufe, (mahnstufenCounts.get(stufe) ?? 0) + 1);
-      });
-      const mahnstufen = [1, 2, 3].map((stufe) => ({
-        stufe,
-        anzahl: mahnstufenCounts.get(stufe) ?? 0,
-      }));
+      const schuldnerAll = schuldnerRes.data as BrilleRow[];
+      const schuldnerRows = schuldnerAll.slice(0, SCROLL_ZEILEN);
+      const schuldnerSumme =
+        Math.round(
+          schuldnerAll.reduce((s, r) => s + (Number(r.Restbetrag) || 0), 0) *
+            100,
+        ) / 100;
 
       const linkRows = zusatzleistungLinksRes.data as {
         ZusatzleistungID: number | string;
@@ -494,7 +535,7 @@ export const Dashboard = () => {
 
       const kundeIds = Array.from(
         new Set(
-          [...abholbereitRows, ...termineHeuteRows]
+          [...abholbereitRows, ...termineHeuteRows, ...schuldnerRows]
             .map((r) => r.kunde_id)
             .filter((v): v is number | string => v !== undefined && v !== null),
         ),
@@ -552,7 +593,14 @@ export const Dashboard = () => {
           total: abholbereitAll.length,
         },
         neueKunden,
-        mahnstufen,
+        schuldner: {
+          rows: schuldnerRows.map((r) => ({
+            ...r,
+            kundeName: kundeName(r.kunde_id),
+          })),
+          total: schuldnerRes.total ?? schuldnerAll.length,
+          summe: schuldnerSumme,
+        },
         topZusatzleistungen,
       });
       setLastUpdated(new Date());
@@ -569,9 +617,6 @@ export const Dashboard = () => {
   }, [loadDashboard]);
 
   const now = dayjs();
-  const maxMahnstufe = stats
-    ? Math.max(0, ...stats.mahnstufen.map((m) => m.anzahl))
-    : 0;
   const maxZusatzleistung = stats
     ? Math.max(0, ...stats.topZusatzleistungen.map((z) => z.anzahl))
     : 0;
@@ -588,7 +633,7 @@ export const Dashboard = () => {
         padding: { xs: 1, md: 2 },
       }}
     >
-      <Title title="Dashboard" />
+      <Title title={statistik ? "Statistiken" : "Dashboard"} />
       <Box
         sx={{
           display: "flex",
@@ -607,7 +652,7 @@ export const Dashboard = () => {
               letterSpacing: "-0.02em",
             }}
           >
-            {begruessung(now)}
+            {statistik ? "Statistiken" : begruessung(now)}
           </Typography>
           <Typography variant="body2" color="text.secondary">
             {`${WOCHENTAGE[now.day()]}, ${now.date()}. ${MONATE[now.month()]}`}
@@ -633,50 +678,52 @@ export const Dashboard = () => {
         </Box>
       ) : stats ? (
         <>
-          <Box
-            sx={{
-              display: "grid",
-              // 4 Kacheln: 1, 2 oder 4 pro Zeile, damit keine allein umbricht
-              gridTemplateColumns: {
-                xs: "1fr",
-                sm: "repeat(2, minmax(0, 1fr))",
-                lg: "repeat(4, minmax(0, 1fr))",
-              },
-              gap: 1.75,
-            }}
-          >
-            <KpiTile
-              label="Termine heute"
-              value={stats.termine.anzahlHeute}
-              hint={`${stats.termine.anzahlWoche} in den nächsten 7 Tagen`}
-              icon={<CalendarIcon />}
-              tone="primary"
-              onClick={() => navigate("/kalender")}
-            />
-            <KpiTile
-              label="Offene Aufträge"
-              value={stats.offeneAuftraege.inBearbeitung}
-              hint="in Bearbeitung"
-              icon={<GlassesIcon />}
-              tone="warning"
-              onClick={() => navigate("/brille")}
-            />
-            <KpiTile
-              label="Abholbereit"
-              value={stats.offeneAuftraege.bereit}
-              hint="Brillen und Kontaktlinsen"
-              icon={<CheckIcon />}
-              tone="success"
-            />
-            <KpiTile
-              label="Neue Kunden"
-              value={stats.neueKunden}
-              hint="diesen Monat"
-              icon={<UserPlusIcon />}
-              tone="primary"
-              onClick={() => navigate("/kunde")}
-            />
-          </Box>
+          {!statistik && (
+            <Box
+              sx={{
+                display: "grid",
+                // 4 Kacheln: 1, 2 oder 4 pro Zeile, damit keine allein umbricht
+                gridTemplateColumns: {
+                  xs: "1fr",
+                  sm: "repeat(2, minmax(0, 1fr))",
+                  lg: "repeat(4, minmax(0, 1fr))",
+                },
+                gap: 1.75,
+              }}
+            >
+              <KpiTile
+                label="Termine heute"
+                value={stats.termine.anzahlHeute}
+                hint={`${stats.termine.anzahlWoche} in den nächsten 7 Tagen`}
+                icon={<CalendarIcon />}
+                tone="primary"
+                onClick={() => navigate("/kalender")}
+              />
+              <KpiTile
+                label="Offene Aufträge"
+                value={stats.offeneAuftraege.inBearbeitung}
+                hint="in Bearbeitung"
+                icon={<GlassesIcon />}
+                tone="warning"
+                onClick={() => navigate("/brille")}
+              />
+              <KpiTile
+                label="Abholbereit"
+                value={stats.offeneAuftraege.bereit}
+                hint="Brillen und Kontaktlinsen"
+                icon={<CheckIcon />}
+                tone="success"
+              />
+              <KpiTile
+                label="Neue Kunden"
+                value={stats.neueKunden}
+                hint="diesen Monat"
+                icon={<UserPlusIcon />}
+                tone="primary"
+                onClick={() => navigate("/kunde")}
+              />
+            </Box>
+          )}
 
           <Box
             sx={{
@@ -691,211 +738,297 @@ export const Dashboard = () => {
               minWidth: 0,
             }}
           >
-            <DashboardCard
-              title="Heutige Termine"
-              action={
-                <Button size="small" onClick={() => navigate("/kalender")}>
-                  Kalender
-                </Button>
-              }
-            >
-              {stats.termine.heute.length === 0 ? (
-                <EmptyHint>Keine Termine heute.</EmptyHint>
-              ) : (
-                <Box
-                  sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}
-                >
-                  {stats.termine.heute.slice(0, 6).map((termin) => (
-                    <ButtonBase
-                      key={termin.id}
-                      onClick={() => navigate(`/termin/${termin.id}/show`)}
-                      sx={listRowSx}
-                    >
-                      <Typography
-                        sx={{
-                          width: 44,
-                          flex: "none",
-                          fontSize: 13,
-                          fontWeight: 600,
-                          color: "text.secondary",
-                          fontVariantNumeric: "tabular-nums",
-                        }}
-                      >
-                        {dayjs(termin.Start).format("HH:mm")}
-                      </Typography>
-                      <Box
-                        aria-hidden="true"
-                        sx={{
-                          width: 3,
-                          alignSelf: "stretch",
-                          borderRadius: 3,
-                          bgcolor: "primary.main",
-                          flex: "none",
-                        }}
-                      />
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
+            {!statistik && (
+              <>
+                {untenSlot &&
+                  createPortal(
+                    <DashboardCard
+                      title="Abholbereite Brillen"
+                      action={
                         <Typography
-                          noWrap
-                          sx={{ fontWeight: 600, fontSize: 14 }}
-                        >
-                          {termin.kundeName}
-                        </Typography>
-                        <Typography
-                          noWrap
+                          variant="body2"
                           sx={{
-                            fontSize: 12.5,
                             color: (theme) => tokensFor(theme).text3,
-                          }}
-                        >
-                          {termin.Terminart || "Termin"}
-                        </Typography>
-                      </Box>
-                    </ButtonBase>
-                  ))}
-                </Box>
-              )}
-            </DashboardCard>
-
-            <DashboardCard
-              title="Abholbereite Brillen"
-              span
-              action={
-                <Typography
-                  variant="body2"
-                  sx={{
-                    color: (theme) => tokensFor(theme).text3,
-                    fontVariantNumeric: "tabular-nums",
-                  }}
-                >
-                  {stats.abholbereit.total} gesamt
-                </Typography>
-              }
-            >
-              {stats.abholbereit.rows.length === 0 ? (
-                <EmptyHint>Aktuell keine abholbereiten Brillen.</EmptyHint>
-              ) : (
-                <Box
-                  sx={{ display: "flex", flexDirection: "column", gap: 0.25 }}
-                >
-                  {stats.abholbereit.rows.map((row) => (
-                    <RecordContextProvider key={row.id} value={row}>
-                      <ButtonBase
-                        onClick={() => navigate(`/brille/${row.id}/show`)}
-                        sx={(theme) => ({
-                          ...listRowSx(theme),
-                          flexWrap: "wrap",
-                        })}
-                      >
-                        <Box
-                          aria-hidden="true"
-                          sx={(theme) => ({
-                            flex: "none",
-                            width: 34,
-                            height: 34,
-                            borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            fontSize: 12,
-                            fontWeight: 700,
-                            backgroundColor: toneColors(theme, "success").bg,
-                            color: toneColors(theme, "success").fg,
-                          })}
-                        >
-                          {initialen(row.kundeName)}
-                        </Box>
-                        <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
-                          <Typography
-                            noWrap
-                            sx={{ fontWeight: 600, fontSize: 14 }}
-                          >
-                            {row.kundeName}
-                          </Typography>
-                          <Typography
-                            noWrap
-                            sx={{
-                              fontSize: 12.5,
-                              color: (theme) => tokensFor(theme).text3,
-                            }}
-                          >
-                            Abholung:{" "}
-                            {row.Abholung
-                              ? dayjs(row.Abholung).format("DD.MM.YYYY")
-                              : "—"}
-                          </Typography>
-                        </Box>
-                        <BrilleStatusChip record={row} />
-                        <Box
-                          sx={{
-                            minWidth: 90,
-                            textAlign: "right",
                             fontVariantNumeric: "tabular-nums",
                           }}
                         >
-                          <CurrencyField source="Restbetrag" />
-                        </Box>
-                      </ButtonBase>
-                    </RecordContextProvider>
-                  ))}
-                  {stats.abholbereit.total > stats.abholbereit.rows.length && (
-                    <Typography
-                      variant="caption"
-                      color="text.secondary"
-                      sx={{ px: 1.5, pt: 0.5 }}
+                          {stats.abholbereit.total} gesamt
+                        </Typography>
+                      }
                     >
-                      +{stats.abholbereit.total - stats.abholbereit.rows.length}{" "}
-                      weitere
-                    </Typography>
+                      {stats.abholbereit.rows.length === 0 ? (
+                        <EmptyHint>
+                          Aktuell keine abholbereiten Brillen.
+                        </EmptyHint>
+                      ) : (
+                        <Box
+                          tabIndex={0}
+                          aria-label="Abholbereite Brillen, scrollbar"
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: 0.25,
+                            ...scrollListeSx,
+                          }}
+                        >
+                          {stats.abholbereit.rows.map((row) => (
+                            <RecordContextProvider key={row.id} value={row}>
+                              <ButtonBase
+                                onClick={() =>
+                                  navigate(`/brille/${row.id}/show`)
+                                }
+                                sx={(theme) => ({
+                                  ...listRowSx(theme),
+                                  flexWrap: "wrap",
+                                })}
+                              >
+                                <Box
+                                  aria-hidden="true"
+                                  sx={(theme) => ({
+                                    flex: "none",
+                                    width: 34,
+                                    height: 34,
+                                    borderRadius: "50%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: 12,
+                                    fontWeight: 700,
+                                    backgroundColor: toneColors(
+                                      theme,
+                                      "success",
+                                    ).bg,
+                                    color: toneColors(theme, "success").fg,
+                                  })}
+                                >
+                                  {initialen(row.kundeName)}
+                                </Box>
+                                <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                                  <Typography
+                                    noWrap
+                                    sx={{ fontWeight: 600, fontSize: 14 }}
+                                  >
+                                    {row.kundeName}
+                                  </Typography>
+                                  <Typography
+                                    noWrap
+                                    sx={{
+                                      fontSize: 12.5,
+                                      color: (theme) => tokensFor(theme).text3,
+                                    }}
+                                  >
+                                    {row.Fertig
+                                      ? `fertig seit ${dayjs(row.Fertig).format("DD.MM.YYYY")}`
+                                      : `Abholung: ${
+                                          row.Abholung
+                                            ? dayjs(row.Abholung).format(
+                                                "DD.MM.YYYY",
+                                              )
+                                            : "—"
+                                        }`}
+                                  </Typography>
+                                </Box>
+                                <BrilleStatusChip record={row} />
+                                <Box
+                                  sx={{
+                                    minWidth: 90,
+                                    textAlign: "right",
+                                    fontVariantNumeric: "tabular-nums",
+                                  }}
+                                >
+                                  <CurrencyField source="Restbetrag" />
+                                </Box>
+                              </ButtonBase>
+                            </RecordContextProvider>
+                          ))}
+                          {stats.abholbereit.total >
+                            stats.abholbereit.rows.length && (
+                            <Typography
+                              variant="caption"
+                              color="text.secondary"
+                              sx={{ px: 1.5, pt: 0.5 }}
+                            >
+                              +
+                              {stats.abholbereit.total -
+                                stats.abholbereit.rows.length}{" "}
+                              weitere
+                            </Typography>
+                          )}
+                        </Box>
+                      )}
+                    </DashboardCard>,
+                    untenSlot,
                   )}
-                </Box>
-              )}
-            </DashboardCard>
 
-            <DashboardCard
-              title="Mahnstufen"
-              action={
-                <Button size="small" onClick={() => navigate("/mahnungen")}>
-                  Mahnungen
-                </Button>
-              }
-            >
-              <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
-                {stats.mahnstufen.map(({ stufe, anzahl }) => (
-                  <BarRow
-                    key={stufe}
-                    label={`${stufe}. Mahnung`}
-                    value={anzahl}
-                    max={maxMahnstufe}
-                    tone={stufe >= 3 ? "error" : "warning"}
-                    suffix=" Auftr."
-                  />
-                ))}
-              </Box>
-            </DashboardCard>
+                <Box ref={setObenSlot} sx={{ display: "contents" }} />
+              </>
+            )}
 
-            <DashboardCard title="Top Zusatzleistungen" span>
-              {stats.topZusatzleistungen.length === 0 ? (
-                <EmptyHint>Noch keine Zusatzleistungen verkauft.</EmptyHint>
-              ) : (
-                <Box
-                  sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}
+            {statistik && (
+              <>
+                <DashboardCard
+                  title="Schuldner – unbezahlt"
+                  action={
+                    <Button size="small" onClick={() => navigate("/mahnungen")}>
+                      Mahnungen
+                    </Button>
+                  }
                 >
-                  {stats.topZusatzleistungen.map((zl) => (
-                    <BarRow
-                      key={zl.id}
-                      label={zl.bezeichnung}
-                      value={zl.anzahl}
-                      max={maxZusatzleistung}
-                      tone="primary"
-                      suffix="×"
-                    />
-                  ))}
-                </Box>
-              )}
-            </DashboardCard>
+                  {stats.schuldner.rows.length === 0 ? (
+                    <EmptyHint>Keine unbezahlten Aufträge.</EmptyHint>
+                  ) : (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.25,
+                      }}
+                    >
+                      <Box
+                        tabIndex={0}
+                        aria-label="Unbezahlte Aufträge, scrollbar"
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          gap: 0.25,
+                          ...scrollListeSx,
+                        }}
+                      >
+                        {stats.schuldner.rows.map((row) => (
+                          <ButtonBase
+                            key={row.id}
+                            onClick={() => navigate(`/brille/${row.id}/show`)}
+                            sx={(theme) => ({
+                              ...listRowSx(theme),
+                              flexWrap: "wrap",
+                            })}
+                          >
+                            <Box
+                              aria-hidden="true"
+                              sx={(theme) => ({
+                                flex: "none",
+                                width: 34,
+                                height: 34,
+                                borderRadius: "50%",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                fontSize: 12,
+                                fontWeight: 700,
+                                backgroundColor: toneColors(theme, "error").bg,
+                                color: toneColors(theme, "error").fg,
+                              })}
+                            >
+                              {initialen(row.kundeName)}
+                            </Box>
+                            <Box sx={{ flex: "1 1 160px", minWidth: 0 }}>
+                              <Typography
+                                noWrap
+                                sx={{ fontWeight: 600, fontSize: 14 }}
+                              >
+                                {row.kundeName}
+                              </Typography>
+                              <Typography
+                                noWrap
+                                sx={{
+                                  fontSize: 12.5,
+                                  color: (theme) => tokensFor(theme).text3,
+                                }}
+                              >
+                                Auftrag {row.id}
+                                {row.Datum
+                                  ? ` · seit ${dayjs(row.Datum).format("DD.MM.YYYY")}`
+                                  : ""}
+                                {row.Zahlungsstatus
+                                  ? ` · ${row.Zahlungsstatus}`
+                                  : ""}
+                              </Typography>
+                            </Box>
+                            <Typography
+                              sx={(theme) => ({
+                                minWidth: 90,
+                                textAlign: "right",
+                                fontWeight: 600,
+                                fontVariantNumeric: "tabular-nums",
+                                color: toneColors(theme, "error").fg,
+                              })}
+                            >
+                              {euro.format(Number(row.Restbetrag) || 0)}
+                            </Typography>
+                          </ButtonBase>
+                        ))}
+                      </Box>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          px: 1.5,
+                          pt: 0.75,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          color: (theme) => tokensFor(theme).text3,
+                        }}
+                      >
+                        <span>
+                          {stats.schuldner.total} unbezahlte
+                          {stats.schuldner.total === 1
+                            ? "r Auftrag"
+                            : " Aufträge"}
+                          {stats.schuldner.total > stats.schuldner.rows.length
+                            ? ` (${stats.schuldner.total - stats.schuldner.rows.length} weitere)`
+                            : ""}
+                        </span>
+                        <strong>
+                          {euro.format(stats.schuldner.summe)} offen
+                        </strong>
+                      </Typography>
+                    </Box>
+                  )}
+                </DashboardCard>
+
+                <DashboardCard title="Top Zusatzleistungen" span>
+                  {stats.topZusatzleistungen.length === 0 ? (
+                    <EmptyHint>Noch keine Zusatzleistungen verkauft.</EmptyHint>
+                  ) : (
+                    <Box
+                      sx={{
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: 0.5,
+                      }}
+                    >
+                      {stats.topZusatzleistungen.map((zl) => (
+                        <BarRow
+                          key={zl.id}
+                          label={zl.bezeichnung}
+                          value={zl.anzahl}
+                          max={maxZusatzleistung}
+                          tone="primary"
+                          suffix="×"
+                        />
+                      ))}
+                    </Box>
+                  )}
+                </DashboardCard>
+              </>
+            )}
           </Box>
+
+          {/* "Heute zu tun" unter den heutigen Terminen */}
+          {!statistik && (
+            <DashboardAufgaben
+              stand={lastUpdated}
+              obenSlot={obenSlot}
+              untenRef={setUntenSlot}
+            />
+          )}
+          {!statistik && <SchuldnerlisteKarte />}
         </>
       ) : null}
     </Box>
   );
 };
+
+export const Dashboard = () => <DashboardInhalt statistik={false} />;
+
+// Gehe zu -> Statistiken
+export const StatistikSeite = () => <DashboardInhalt statistik />;

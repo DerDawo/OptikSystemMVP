@@ -19,65 +19,71 @@ import { importSf6Katalog, Sf6ImportSummary } from "./sf6Import";
 
 type ImportStatus = "idle" | "running" | "done" | "error";
 
-export const GlaskatalogImportPage = () => {
+/*
+ * SF6-Herstellerkataloge (ZIP) hochladen - als eigene Seite und als Fenster
+ * auf der Glaskatalog-Liste. Mehrere ZIP-Dateien werden nacheinander
+ * importiert.
+ */
+export const Sf6Import = ({ nachImport }: { nachImport?: () => void }) => {
   const [status, setStatus] = useState<ImportStatus>("idle");
   const [log, setLog] = useState<string[]>([]);
-  const [summary, setSummary] = useState<Sf6ImportSummary | null>(null);
+  const [summaries, setSummaries] = useState<Sf6ImportSummary[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const handleFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+    const dateien = [...(event.target.files ?? [])];
     event.target.value = "";
-    if (!file) return;
+    if (dateien.length === 0) return;
 
     setStatus("running");
-    setSummary(null);
+    setSummaries([]);
     setError(null);
-    setLog([`Lese "${file.name}" ...`]);
+    setLog([]);
 
-    try {
-      const files = await readSf6Zip(file);
-      setLog((prev) => [...prev, "Parse SF6-Dateien ..."]);
-      const katalog = parseSf6Katalog(files);
-      setLog((prev) => [
-        ...prev,
-        `Hersteller: ${katalog.hersteller.name} (${katalog.hersteller.code})`,
-        `${katalog.produkte.length} Grundgläser, ${katalog.optionen.length} Optionen gefunden.`,
-      ]);
+    const fehler: string[] = [];
+    for (const file of dateien) {
+      setLog((prev) => [...prev, `Lese "${file.name}" ...`]);
+      try {
+        const files = await readSf6Zip(file);
+        setLog((prev) => [...prev, "Parse SF6-Dateien ..."]);
+        const katalog = parseSf6Katalog(files);
+        setLog((prev) => [
+          ...prev,
+          `Hersteller: ${katalog.hersteller.name} (${katalog.hersteller.code})`,
+          `${katalog.produkte.length} Grundgläser, ${katalog.optionen.length} Optionen gefunden.`,
+        ]);
 
-      const result = await importSf6Katalog(supabase, katalog, (message) => {
-        setLog((prev) => [...prev, message]);
-      });
-
-      setSummary(result);
-      setStatus("done");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-      setStatus("error");
+        const result = await importSf6Katalog(supabase, katalog, (message) => {
+          setLog((prev) => [...prev, message]);
+        });
+        setSummaries((prev) => [...prev, result]);
+      } catch (err) {
+        fehler.push(
+          `${file.name}: ${err instanceof Error ? err.message : String(err)}`,
+        );
+      }
     }
+    if (fehler.length > 0) {
+      setError(fehler.join("\n"));
+      setStatus("error");
+    } else {
+      setStatus("done");
+    }
+    nachImport?.();
   };
 
   return (
-    <Box
-      sx={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "1em",
-        width: "100%",
-        maxWidth: 800,
-        padding: { xs: "0.5em", md: "1em" },
-      }}
-    >
-      <Title title="Glaskatalog-Import" />
+    <Box sx={{ display: "flex", flexDirection: "column", gap: "1em" }}>
       <Card variant="outlined" sx={{ padding: "1.5em" }}>
         <Typography variant="h6" sx={{ mb: 1 }}>
           SF6-Herstellerkatalog importieren
         </Typography>
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-          Lädt eine SF6-Preisliste (ZIP-Datei eines Glasherstellers, z. B.
-          „POL-POL--DE-...ZIP“) hoch und befüllt daraus den Glaskatalog. Ein
-          erneuter Import mit einer neueren Preisliste aktualisiert bestehende
-          Katalogeinträge, ohne bereits erstellte Aufträge zu verändern.
+          Lädt SF6-Preislisten (ZIP-Dateien der Glashersteller, z. B.
+          „POL-POL--DE-...ZIP“, auch mehrere auf einmal) hoch und befüllt daraus
+          den Glaskatalog. Ein erneuter Import mit einer neueren Preisliste
+          aktualisiert bestehende Katalogeinträge, ohne bereits erstellte
+          Aufträge zu verändern.
         </Typography>
         <Button
           variant="contained"
@@ -85,8 +91,14 @@ export const GlaskatalogImportPage = () => {
           startIcon={<UploadFileIcon />}
           disabled={status === "running"}
         >
-          SF6-ZIP auswählen
-          <input type="file" accept=".zip" hidden onChange={handleFileChange} />
+          SF6-ZIP-Dateien auswählen
+          <input
+            type="file"
+            accept=".zip"
+            multiple
+            hidden
+            onChange={handleFileChange}
+          />
         </Button>
       </Card>
 
@@ -107,10 +119,14 @@ export const GlaskatalogImportPage = () => {
         </Card>
       )}
 
-      {error && <Alert severity="error">{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ whiteSpace: "pre-line" }}>
+          {error}
+        </Alert>
+      )}
 
-      {summary && (
-        <Alert severity="success">
+      {summaries.map((summary) => (
+        <Alert severity="success" key={summary.herstellerName}>
           Import von „{summary.herstellerName}“ abgeschlossen:{" "}
           {summary.produkteGesamt} Grundgläser und {summary.optionenGesamt}{" "}
           Optionen importiert/aktualisiert
@@ -118,9 +134,22 @@ export const GlaskatalogImportPage = () => {
             ? `, ${summary.produkteDeaktiviert} nicht mehr gelieferte Grundgläser deaktiviert`
             : ""}
           , {summary.verknuepfungenGesamt} Verfügbarkeits-Verknüpfungen
-          aufgebaut. Die Gläser stehen ab sofort unter „Glastyp“ zur Auswahl.
+          aufgebaut. Die Gläser stehen ab sofort im Glasassistenten zur Auswahl.
         </Alert>
-      )}
+      ))}
     </Box>
   );
 };
+
+export const GlaskatalogImportPage = () => (
+  <Box
+    sx={{
+      width: "100%",
+      maxWidth: 800,
+      padding: { xs: "0.5em", md: "1em" },
+    }}
+  >
+    <Title title="Glaskatalog-Import" />
+    <Sf6Import />
+  </Box>
+);

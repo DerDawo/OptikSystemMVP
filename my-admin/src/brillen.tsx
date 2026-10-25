@@ -8,7 +8,6 @@ import {
 } from "react-admin";
 import { Show, TextField } from "react-admin";
 import {
-  BooleanInput,
   DateInput,
   Edit,
   Create,
@@ -27,21 +26,32 @@ import {
   SingleFieldList,
   ChipField,
 } from "react-admin";
-import { useGetMany, useGetOne } from "react-admin";
-import { useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import {
+  SaveButton,
+  Toolbar,
+  useDataProvider,
+  useGetMany,
+  useGetOne,
+  useNotify,
+  useRecordContext,
+} from "react-admin";
+import { useEffect, useRef } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import AddIcon from "@mui/icons-material/Add";
 import { KundeInput } from "./KundeInput";
-import { OptionenMenu } from "./PrismaMenues";
 import { BrilleKarteikarte, WerteTabelle } from "./BrilleKarteikarte";
 import { brillenartOptionen } from "./brillenarten";
-import { rabattDaten, rabattOptionen } from "./rabatte";
+import { rabattDatenBrille, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { useFormContext, useWatch } from "react-hook-form";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faArrowUpRightFromSquare } from "@fortawesome/free-solid-svg-icons";
-import PrintIcon from "@mui/icons-material/Print";
-import { Box, Button, TextField as MuiTextField } from "@mui/material";
+import {
+  Box,
+  CircularProgress,
+  TextField as MuiTextField,
+} from "@mui/material";
 import {
   MitarbeiterField,
   MitarbeiterInput,
@@ -50,6 +60,7 @@ import {
 import { CurrencyField, formatCurrency } from "./CurrencyField";
 import { GlasassistentButton } from "./glaskatalog/Glasassistent";
 import {
+  AuftragszettelButton,
   BerechtigungsscheinErstellenButton,
   FormulareButton,
   MahnungErstellenButton,
@@ -57,6 +68,8 @@ import {
   WerkstattauftragButton,
 } from "./FormulareDialog";
 import { KarteikarteKopierenButton } from "./KarteikarteKopieren";
+import { BrilleOptionenMenu } from "./BrilleOptionen";
+import { BrilleSymbolleiste } from "./BrilleSymbolleiste";
 import {
   EditActionsBar,
   FieldRow,
@@ -83,17 +96,24 @@ const RabattInputs = () => {
         emptyText="–"
         helperText="Wirkt auf Glas rechts + Glas links + Fassung, nicht auf Zusatzleistungen."
         onChange={(e) => {
-          const daten = rabattDaten(e?.target?.value || null);
-          if ("RabattProzent" in daten)
+          const daten = rabattDatenBrille(e?.target?.value || null);
+          if ("RabattProzent" in daten) {
             setValue("RabattProzent", daten.RabattProzent, {
               shouldDirty: true,
             });
+            setValue("RabattBetrag", daten.RabattBetrag, { shouldDirty: true });
+          }
         }}
       />
       <NumberInput
         source="RabattProzent"
         label="Rabatt in %"
         helperText="Neukunden 10 / Zweitbrille 15 / Sonderrabatt individuell"
+      />
+      <NumberInput
+        source="RabattBetrag"
+        label="Rabatt in €"
+        helperText="Fester Betrag, wird von der Summe abgezogen"
       />
     </FieldRow>
   );
@@ -104,7 +124,7 @@ const zahlungsstatusChoices = ZAHLUNGSSTATUS;
 // Live-Vorschau der "Summe" (Issue #52): spiegelt im Formular dieselbe Formel,
 // die serverseitig per Trigger berechnet wird -
 //   (GlasLinks.Betrag + GlasRechts.Betrag + Fassung.Betrag) * (1 - Rabatt%)
-//   + Summe(Zusatzleistung.Betrag) + WeitereLeistungen (#131)
+//   + Summe(Zusatzleistung.Betrag) + WeitereLeistungen (#131) - RabattBetrag
 // - damit Nutzer den Betrag schon vor dem Speichern sehen. Der eigentliche
 // Wert bleibt serverseitig maßgeblich (Trigger überschreibt ihn beim
 // Speichern ohnehin), die Vorschau schreibt ihn zusätzlich ins Formular, damit
@@ -130,6 +150,7 @@ const SummeUndRestbetragVorschau = () => {
     anzahlung,
     kkAnteil,
     weitereLeistungen,
+    rabattEuro,
   ] = useWatch({
     name: [
       "GlasLinks",
@@ -139,6 +160,7 @@ const SummeUndRestbetragVorschau = () => {
       "Anzahlung",
       "KKAnteil",
       "WeitereLeistungen",
+      "RabattBetrag",
     ],
   });
   const zusatzleistungIds: number[] = (
@@ -172,7 +194,8 @@ const SummeUndRestbetragVorschau = () => {
     Math.round(
       ((glasLinksBetrag + glasRechtsBetrag + fassungBetrag) * rabattFaktor +
         zusatzleistungenSumme +
-        (Number(weitereLeistungen) || 0)) *
+        (Number(weitereLeistungen) || 0) -
+        (Number(rabattEuro) || 0)) *
         100,
     ) / 100;
   const restbetrag =
@@ -319,22 +342,31 @@ const BrilleShowActions = () => (
   <ShowActionsBar>
     <RechnungErstellenButton />
     <FormulareButton />
-    <OptionenMenu>
-      <KarteikarteKopierenButton />
-      <BerechtigungsscheinErstellenButton />
-      <WerkstattauftragButton />
-      <MahnungErstellenButton />
-      <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
-        Drucken
-      </Button>
-    </OptionenMenu>
+    <KarteikarteKopierenButton />
+    <BrilleOptionenMenu />
   </ShowActionsBar>
 );
 
 export const BrilleShow = () => (
   <Show actions={<BrilleShowActions />}>
     <ShowLayout>
-      <BrilleKarteikarte />
+      {/* Karteikarte mit der Symbolleiste am rechten Rand wie in Prisma */}
+      <Box
+        sx={{
+          display: "flex",
+          gap: 1,
+          alignItems: "flex-start",
+          width: "100%",
+          minWidth: 0,
+        }}
+      >
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <BrilleKarteikarte />
+        </Box>
+        <Box sx={{ flex: "none" }}>
+          <BrilleSymbolleiste />
+        </Box>
+      </Box>
       <RelatedSection title="Weitere Aufträge dieses Kunden">
         <ReferenceManyField
           reference="brille"
@@ -381,13 +413,14 @@ export const BrilleEdit = () => (
         <MahnungErstellenButton />
         <BerechtigungsscheinErstellenButton />
         <WerkstattauftragButton />
+        <AuftragszettelButton />
         <FormulareButton />
         <KarteikarteKopierenButton />
       </EditActionsBar>
     }
   >
     <SimpleForm>
-      <FormSection title="Beratung">
+      <FormSection title="Auftrag">
         <KundeInput />
         <FieldRow>
           <MitarbeiterInput source="Berater" label="Bedient von" />
@@ -409,14 +442,7 @@ export const BrilleEdit = () => (
         <TextInput source="Notizen" multiline fullWidth />
       </FormSection>
       <FormSection title="Komponenten">
-        <FieldRow>
-          <ReferenceInput source="GlasRechts" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
-          <ReferenceInput source="GlasLinks" reference="glass">
-            <SelectInput />
-          </ReferenceInput>
-        </FieldRow>
+        {/* Werte direkt in der Tabelle eintippen (ohne Glas-Auswahl) */}
         <WerteVorschau />
         <FieldRow>
           <ReferenceInput source="Fassung" reference="fassung">
@@ -491,134 +517,81 @@ export const BrilleEdit = () => (
           />
         </FieldRow>
       </FormSection>
-      <FormSection title="Verordnung">
-        <FieldRow>
-          <TextInput source="VerordnenderArzt" />
-          <DateInput source="Verordnungsdatum" />
-        </FieldRow>
-        <TextInput source="Diagnose" fullWidth />
-      </FormSection>
-      <FormSection title="Kassenzulassung (§ 33 SGB V)">
-        <FieldRow>
-          <BooleanInput
-            source="ErstverordnungMuster8Vorhanden"
-            label="Erstverordnung (Muster 8) liegt im System vor"
-          />
-          <DateInput
-            source="ErstverordnungMuster8Datum"
-            label="Ausstellungsdatum Muster 8"
-          />
-        </FieldRow>
+      <FormSection title="Diagnose">
+        <TextInput source="Diagnose" multiline minRows={3} fullWidth />
       </FormSection>
       <DatenbankInfo />
     </SimpleForm>
   </Edit>
 );
 
+// Heutiges Datum (Ortszeit) als JJJJ-MM-TT
+const heute = () => new Date().toLocaleDateString("sv-SE");
+
+/*
+ * Neuer Brillenauftrag wie in Prisma: der Auftrag wird sofort angelegt und
+ * öffnet sich in der Brillenkartei, wo alles direkt ausgefüllt wird. Ist der
+ * Kunde noch nicht bekannt (z. B. aus der Brillenliste), wird zuerst nur der
+ * Kunde gewählt.
+ */
 export const BrilleCreate = () => {
   const location = useLocation();
-  const defaultValues =
+  const vorgaben =
     (location.state as Record<string, unknown> | undefined) ?? {};
+  if (vorgaben.kunde_id != null) {
+    return <BrilleSofortAnlegen vorgaben={vorgaben} />;
+  }
   return (
-    <Create>
-      <SimpleForm defaultValues={defaultValues}>
-        <FormSection title="Beratung">
+    <Create
+      title="Neuer Brillenauftrag"
+      redirect="show"
+      transform={(daten: Record<string, unknown>) => ({
+        ...daten,
+        Datum: heute(),
+      })}
+    >
+      <SimpleForm
+        defaultValues={vorgaben}
+        toolbar={
+          <Toolbar>
+            <SaveButton label="Auftrag anlegen" icon={<AddIcon />} />
+          </Toolbar>
+        }
+      >
+        <FormSection title="Kunde für den neuen Auftrag">
           <KundeInput />
-          <FieldRow>
-            <MitarbeiterInput source="Berater" label="Bedient von" />
-            <RefraktionInput
-              source="Refraktion"
-              label="Refraktion durch (Mitarbeiter / Arzt)"
-            />
-          </FieldRow>
-        </FormSection>
-        <FormSection title="Auftragsdaten">
-          <FieldRow>
-            <BrillenArtInput />
-            <DateInput source="Datum" />
-          </FieldRow>
-          <FieldRow>
-            <TextInput source="Werkstatt" />
-            <DateInput source="Abholung" />
-          </FieldRow>
-          <TextInput source="Notizen" multiline fullWidth />
-        </FormSection>
-        <FormSection title="Komponenten">
-          <FieldRow>
-            <ReferenceInput source="GlasRechts" reference="glass">
-              <SelectInput />
-            </ReferenceInput>
-            <ReferenceInput source="GlasLinks" reference="glass">
-              <SelectInput />
-            </ReferenceInput>
-          </FieldRow>
-          <WerteVorschau />
-          <FieldRow>
-            <ReferenceInput source="Fassung" reference="fassung">
-              <SelectInput />
-            </ReferenceInput>
-            <ReferenceInput source="Glastyp" reference="glastyp">
-              <SelectInput />
-            </ReferenceInput>
-          </FieldRow>
-        </FormSection>
-        <FormSection title="Zusatzleistungen">
-          <ReferenceArrayInput
-            source="ZusatzleistungIDs"
-            reference="zusatzleistung"
-            filter={{ Aktiv: true }}
-            sort={{ field: "Reihenfolge", order: "ASC" }}
-            perPage={100}
-          >
-            <AutocompleteArrayInput
-              optionText="Bezeichnung"
-              label="Zusatzleistungen"
-              fullWidth
-            />
-          </ReferenceArrayInput>
-        </FormSection>
-        <FormSection title="Rabatt">
-          <RabattInputs />
-        </FormSection>
-        <FormSection title="Preis & Zahlung">
-          <NumberInput
-            source="WeitereLeistungen"
-            label="Weitere Leistungen / Nachlass (€)"
-            helperText="Leistungen ohne Katalogeintrag, negativ für Nachlass. Bei Prisma-Aufträgen: die Freitext-Leistungen aus Prisma."
-          />
-          <SummeUndRestbetragVorschau />
-          <FieldRow>
-            <NumberInput source="Anzahlung" />
-            <NumberInput source="KKAnteil" label="KK-Anteil" />
-          </FieldRow>
-          <FieldRow>
-            <TextInput source="Rechnungsnummer" label="Rechnungsnr." />
-            <SelectInput
-              source="Zahlungsstatus"
-              choices={zahlungsstatusChoices}
-            />
-          </FieldRow>
-        </FormSection>
-        <FormSection title="Verordnung">
-          <FieldRow>
-            <TextInput source="VerordnenderArzt" />
-            <DateInput source="Verordnungsdatum" />
-          </FieldRow>
-          <TextInput source="Diagnose" fullWidth />
-        </FormSection>
-        <FormSection title="Kassenzulassung (§ 33 SGB V)">
-          <FieldRow>
-            <BooleanInput
-              source="ErstverordnungMuster8Vorhanden"
-              label="Erstverordnung (Muster 8) liegt im System vor"
-            />
-            <DateInput
-              source="ErstverordnungMuster8Datum"
-              label="Ausstellungsdatum Muster 8"
-            />
-          </FieldRow>
         </FormSection>
       </SimpleForm>
     </Create>
+  );
+};
+
+const BrilleSofortAnlegen = ({
+  vorgaben,
+}: {
+  vorgaben: Record<string, unknown>;
+}) => {
+  const dataProvider = useDataProvider();
+  const navigate = useNavigate();
+  const notify = useNotify();
+  // nur einmal anlegen (React StrictMode ruft Effekte doppelt auf)
+  const begonnen = useRef(false);
+  useEffect(() => {
+    if (begonnen.current) return;
+    begonnen.current = true;
+    dataProvider
+      .create("brille", { data: { ...vorgaben, Datum: heute() } })
+      .then(({ data }) =>
+        navigate(`/brille/${data.id}/show`, { replace: true }),
+      )
+      .catch(() => {
+        notify("Auftrag konnte nicht angelegt werden.", { type: "error" });
+        navigate(-1);
+      });
+  }, [dataProvider, navigate, notify, vorgaben]);
+  return (
+    <Box sx={{ display: "flex", justifyContent: "center", p: 6 }}>
+      <CircularProgress size={28} />
+    </Box>
   );
 };

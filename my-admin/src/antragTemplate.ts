@@ -1,5 +1,5 @@
-// Anträge auf Kostenübernahme für eine Brille (Kategorien "Antrag Zuschuss"
-// und "Antrag Sozialamt"): Seite 1 ist der mit den Kundendaten vorausgefüllte
+// Anträge auf Kostenübernahme für eine Brille (Kategorien "Antrag Zuschuss",
+// "Antrag Sozialamt" und "Antrag Jugendamt"): Seite 1 ist der mit den Kundendaten vorausgefüllte
 // Antrag des Kunden, Seite 2 der Kostenvoranschlag mit den Preisen des
 // Auftrags, auf den der Antrag als Anlage verweist. Felder, die das Programm
 // nicht kennt (Empfänger, Diagnose, Sozialversicherungsnummer), bleiben als
@@ -24,7 +24,7 @@ import {
   sehstaerkeVeraendert,
 } from "./formularVorschlaege";
 
-export type AntragArt = "zuschuss" | "sozialamt";
+export type AntragArt = "zuschuss" | "sozialamt" | "jugendamt";
 
 export type AntragDaten = {
   entities: DocumentMergeEntities;
@@ -163,10 +163,64 @@ const antragSozialamtHtml = (
 </div>`;
 };
 
+// Antrag an das Jugendamt (Kostenübernahme, oft für ein Kind): Betrag ist
+// der Endpreis nach Abzug eines Kassenanteils; Empfänger, Diagnose und
+// Angaben zur betroffenen Person bleiben zum Ausfüllen, die Unterlagen zum
+// Ankreuzen (Kostenvoranschlag liegt als Seite 2 bei und ist angekreuzt).
+const antragJugendamtHtml = (
+  entities: DocumentMergeEntities,
+  begruendung?: string,
+) => {
+  const k = kundenDaten(entities);
+  const summen = buildWerkstattauftragSummen(entities);
+  const betrag = escapeHtml(formatEuro(summen.endpreis));
+  const heute = dayjs().format("DD.MM.YYYY");
+  return `
+<div class="seite brief kompakt">
+  <div class="titel gross">Antrag auf Kostenübernahme einer Brille</div>
+  <div class="absender">
+    <div class="fett">Antragstellerin / Antragsteller</div>
+    <div>${escapeHtml(k.name)}</div>
+    <div>${escapeHtml(k.strasse)}</div>
+    <div>${escapeHtml(k.ort)}</div>
+    ${k.telefon ? `<div>Telefon: ${escapeHtml(k.telefon)}</div>` : ""}
+  </div>
+  <div class="empfaenger breit">
+    <div>An das Jugendamt</div>
+    ${ausfuellzeile("Stadt / Landkreis, Abteilung (z. B. Amtsvormundschaft)")}
+    ${ausfuellzeile("E-Mail")}
+    ${ausfuellzeile("Postanschrift")}
+    ${ausfuellzeile("PLZ, Ort")}
+  </div>
+  <p>${escapeHtml([k.stadt, heute].filter(Boolean).join(", "))}</p>
+  <div class="betreff">Betreff: Antrag auf Übernahme der Kosten für eine dringend benötigte Brille</div>
+  <p>Sehr geehrte Damen und Herren,</p>
+  <p>hiermit beantrage ich die Übernahme der Kosten für eine Brille in Höhe von ${betrag} €. Die Brille wird aufgrund einer Sehbeeinträchtigung dringend benötigt und ist für den Alltag erforderlich. Ich bitte Sie, meinen Antrag zu prüfen und mir die Kostenübernahme vor dem Kauf schriftlich zu bestätigen.</p>
+  <p class="zwischentitel fett">Zur Begründung</p>
+  <p>Es liegt folgende ärztlich festgestellte Sehbeeinträchtigung vor: ${linie("75mm")}. Die bisherige Sehhilfe ist nicht mehr ausreichend. Der beigefügte ärztliche Befund und der Kostenvoranschlag des Optikers belegen den Bedarf und die voraussichtlichen Kosten.</p>
+  ${begruendungHtml(begruendung)}
+  <p class="zwischentitel fett">Angaben zur betroffenen Person (falls abweichend von der antragstellenden Person)</p>
+  <p>Name: ${linie("70mm")} &nbsp; Geburtsdatum: ${linie("30mm")}<br />
+  Gesetzliche Vertretung / Verhältnis zum Kind: ${linie("70mm")}</p>
+  <p class="zwischentitel fett">Beigefügte Unterlagen</p>
+  <div class="ankreuzen">
+    <div>${kaestchen()} Ärztlicher Befund / Verordnung</div>
+    <div>${kaestchen(true)} Kostenvoranschlag des Optikers über ${betrag} €</div>
+    <div>${kaestchen()} Nachweis der finanziellen Situation (z. B. Einkommensnachweis)</div>
+    <div>${kaestchen()} Weitere Nachweise: ${linie("95mm")}</div>
+  </div>
+  <p>Bitte teilen Sie mir mit, falls weitere Unterlagen benötigt werden. Für Rückfragen erreichen Sie mich unter der oben angegebenen Telefonnummer.</p>
+  <p>Mit freundlichen Grüßen</p>
+  ${unterschrift(k.name ? `${k.name} / gesetzliche Vertretung` : "")}
+</div>`;
+};
+
 export const buildAntragBodyHtml = (art: AntragArt, daten: AntragDaten) =>
   (art === "sozialamt"
     ? antragSozialamtHtml(daten.entities, daten.begruendung)
-    : antragZuschussHtml(daten.entities, daten.begruendung)) +
+    : art === "jugendamt"
+      ? antragJugendamtHtml(daten.entities, daten.begruendung)
+      : antragZuschussHtml(daten.entities, daten.begruendung)) +
   buildKostenvoranschlagBodyHtml({ entities: daten.entities });
 
 const ANTRAG_STYLES = `
@@ -181,6 +235,14 @@ const ANTRAG_STYLES = `
   .brief p { margin: 0 0 3.5mm; }
   .fett { font-weight: bold; }
   .titel { font-weight: bold; font-size: 12pt; margin-bottom: 6mm; }
+  .titel.gross { font-size: 17pt; color: #1e2a3a; margin-bottom: 5mm; }
+  .empfaenger.breit { width: 110mm; }
+  .kompakt { font-size: 10pt; line-height: 1.38; padding-top: 14mm; }
+  .kompakt p { margin-bottom: 2.6mm; }
+  .kompakt .absender, .kompakt .empfaenger, .kompakt .betreff { margin-bottom: 4mm; }
+  .kompakt .ausfuellzeile span { height: 5mm; }
+  .kompakt .ankreuzen div { margin-bottom: 0.6mm; }
+  .kompakt .unterschrift-block { margin-top: 11mm; }
   .absender { margin-bottom: 7mm; }
   .empfaenger { width: 85mm; margin-bottom: 6mm; }
   .ausfuellzeile span { display: block; border-bottom: 1px solid #555; height: 6mm; }
@@ -204,6 +266,7 @@ const ANTRAG_STYLES = `
 const TITEL: Record<AntragArt, string> = {
   zuschuss: "Antrag auf Kostenübernahme / Zuschuss",
   sozialamt: "Antrag auf Kostenübernahme (Sozialamt)",
+  jugendamt: "Antrag auf Kostenübernahme (Jugendamt)",
 };
 
 export const buildAntragPrintHtml = (

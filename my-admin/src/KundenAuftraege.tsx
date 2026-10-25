@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Card,
+  IconButton,
   InputAdornment,
   Menu,
   MenuItem,
@@ -12,9 +13,9 @@ import {
   Tooltip,
   Typography,
 } from "@mui/material";
-import AddIcon from "@mui/icons-material/Add";
 import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
 import BuildIcon from "@mui/icons-material/Build";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import EuroIcon from "@mui/icons-material/Euro";
 import EventIcon from "@mui/icons-material/Event";
 import SearchIcon from "@mui/icons-material/Search";
@@ -24,12 +25,11 @@ import { OrderStatusKey, getBrilleOrderStatus } from "./orderStatus";
 
 /*
  * Alle Vorgänge eines Kunden in einer Liste wie in der Prisma-Kundenkartei:
- * Brillen, Kontaktlinsen und Termine nach Datum, mit Status-Symbolen,
- * "Neu anlegen"-Menü, Filter und Suche.
+ * Brillen- und Kontaktlinsenaufträge nach Datum, mit Status-Symbolen,
+ * "Neu anlegen"-Menü und Suche.
  */
 
-type Art = "brille" | "kontaktlinse" | "termin";
-type Filter = "alle" | Art;
+type Art = "brille" | "kontaktlinse";
 
 type Zeile = {
   key: string;
@@ -57,6 +57,19 @@ const randFarbe: Record<Zeile["status"], string> = {
   "termin-kommend": "primary.main",
 };
 
+// Spalten wie in der Prisma-Kundenmaske: Status | Art | Datum | Betrag
+const SPALTEN = "3.4em minmax(0, 1fr) 6.2em 6.5em";
+
+// Kopfknopf "Neuanlegen" im Prisma-Blau
+const prismaKopf = {
+  flex: "0 1 280px",
+  justifyContent: "space-between",
+  bgcolor: "#1d4e8f",
+  "&:hover": { bgcolor: "#173f74", transform: "none" },
+  borderRadius: "4px",
+  fontWeight: 700,
+};
+
 const datumText = (wert: string | null) =>
   wert ? new Date(wert).toLocaleDateString("de-DE") : "";
 
@@ -72,10 +85,8 @@ const text = (wert: unknown) =>
 export const KundenAuftraege = () => {
   const kunde = useRecordContext();
   const navigate = useNavigate();
-  const [filter, setFilter] = useState<Filter>("alle");
   const [suche, setSuche] = useState("");
   const [menuAnker, setMenuAnker] = useState<HTMLElement | null>(null);
-  const [filterAnker, setFilterAnker] = useState<HTMLElement | null>(null);
 
   const abfrage = (sortFeld: string) => ({
     filter: { kunde_id: kunde?.id },
@@ -93,11 +104,6 @@ export const KundenAuftraege = () => {
     abfrage("Datum"),
     optionen,
   );
-  const termine = useGetList<Datensatz & { id: number }>(
-    "termin",
-    abfrage("Start"),
-    optionen,
-  );
 
   const neu = (pfad: string) => {
     setMenuAnker(null);
@@ -106,7 +112,6 @@ export const KundenAuftraege = () => {
   useTastenkuerzel({
     b: () => neu("/brille/create"),
     l: () => neu("/kontaktlinse/create"),
-    e: () => neu("/termin/create"),
   });
 
   const glastypIds = useMemo(
@@ -129,7 +134,6 @@ export const KundenAuftraege = () => {
     const glastypName = new Map(
       (glastypen.data ?? []).map((g) => [g.id, text(g.Bezeichnung)]),
     );
-    const heute = new Date();
     const liste: Zeile[] = [];
     for (const b of brillen.data ?? []) {
       const rest = zahl(b.Restbetrag);
@@ -168,53 +172,23 @@ export const KundenAuftraege = () => {
         suchtext: ["Kontaktlinsen", typ, k.id, k.Notizen].join(" "),
       });
     }
-    for (const t of termine.data ?? []) {
-      const start = (t.Start as string) ?? null;
-      liste.push({
-        key: `termin-${t.id}`,
-        art: "termin",
-        id: t.id,
-        datum: start,
-        titel: "Termin",
-        nummer: start
-          ? new Date(start).toLocaleTimeString("de-DE", {
-              hour: "2-digit",
-              minute: "2-digit",
-            }) + " Uhr"
-          : "",
-        typ: [text(t.Terminart), text(t.Notiz)].filter(Boolean).join(" · "),
-        betrag: null,
-        status: start && new Date(start) >= heute ? "termin-kommend" : "termin",
-        offenerBetrag: false,
-        suchtext: ["Termin", t.Terminart, t.Notiz].join(" "),
-      });
-    }
     return liste.sort(
       (a, b) =>
         (b.datum ? new Date(b.datum).getTime() : 0) -
         (a.datum ? new Date(a.datum).getTime() : 0),
     );
-  }, [brillen.data, linsen.data, termine.data, glastypen.data]);
+  }, [brillen.data, linsen.data, glastypen.data]);
 
   const sichtbar = useMemo(() => {
     const begriff = suche.trim().toLowerCase();
     return zeilen.filter(
-      (z) =>
-        (filter === "alle" || z.art === filter) &&
-        (!begriff || z.suchtext.toLowerCase().includes(begriff)),
+      (z) => !begriff || z.suchtext.toLowerCase().includes(begriff),
     );
-  }, [zeilen, filter, suche]);
+  }, [zeilen, suche]);
 
   if (!kunde) return null;
 
-  const filterNamen: Record<Filter, string> = {
-    alle: "Alle",
-    brille: "Brillen",
-    kontaktlinse: "Kontaktlinsen",
-    termin: "Termine",
-  };
-
-  const laedt = brillen.isPending || linsen.isPending || termine.isPending;
+  const laedt = brillen.isPending || linsen.isPending;
 
   return (
     <Card variant="outlined" sx={{ p: "1em", width: "100%", minWidth: 0 }}>
@@ -227,18 +201,15 @@ export const KundenAuftraege = () => {
           mb: 1,
         }}
       >
-        <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1 }}>
-          Aufträge &amp; Termine
-        </Typography>
         <Button
           variant="contained"
-          startIcon={<AddIcon />}
           endIcon={<ArrowDropDownIcon />}
           onClick={(e: MouseEvent<HTMLElement>) =>
             setMenuAnker(e.currentTarget)
           }
+          sx={prismaKopf}
         >
-          Neu anlegen
+          Neuanlegen
         </Button>
         <Menu
           anchorEl={menuAnker}
@@ -257,48 +228,33 @@ export const KundenAuftraege = () => {
               Alt + L
             </Typography>
           </MenuItem>
-          <MenuItem onClick={() => neu("/termin/create")}>
-            Termin
-            <Typography variant="caption" color="text.secondary" sx={{ ml: 3 }}>
-              Alt + E
-            </Typography>
-          </MenuItem>
-        </Menu>
-        <Button
-          variant="outlined"
-          endIcon={<ArrowDropDownIcon />}
-          onClick={(e: MouseEvent<HTMLElement>) =>
-            setFilterAnker(e.currentTarget)
-          }
-        >
-          {filterNamen[filter]}
-        </Button>
-        <Menu
-          anchorEl={filterAnker}
-          open={Boolean(filterAnker)}
-          onClose={() => setFilterAnker(null)}
-        >
-          {(Object.keys(filterNamen) as Filter[]).map((f) => (
-            <MenuItem
-              key={f}
-              selected={f === filter}
-              onClick={() => {
-                setFilter(f);
-                setFilterAnker(null);
-              }}
-            >
-              {filterNamen[f]}
-            </MenuItem>
-          ))}
         </Menu>
       </Box>
 
       <Box
         sx={{
-          maxHeight: { xs: "none", lg: "60vh" },
+          display: "grid",
+          gridTemplateColumns: SPALTEN,
+          gap: "0 0.75em",
+          px: 1,
+          pb: 0.5,
+          fontStyle: "italic",
+          fontSize: "0.85rem",
+          color: "text.secondary",
+        }}
+      >
+        <span>Status</span>
+        <span>Art</span>
+        <span>Datum</span>
+        <span style={{ textAlign: "right" }}>Betrag</span>
+      </Box>
+      <Box
+        sx={{
+          maxHeight: { xs: "none", md: "70vh" },
           overflowY: "auto",
-          borderTop: 1,
-          borderColor: "divider",
+          display: "flex",
+          flexDirection: "column",
+          gap: "6px",
         }}
       >
         {laedt && (
@@ -320,23 +276,23 @@ export const KundenAuftraege = () => {
             onKeyDown={(e) => {
               if (e.key === "Enter") navigate(`/${z.art}/${z.id}/show`);
             }}
-            sx={{
+            sx={(theme) => ({
               display: "grid",
-              gridTemplateColumns: {
-                xs: "2.2em 1fr auto",
-                sm: "2.2em minmax(9em, 1.2fr) 6em minmax(0, 1.6fr) 6.5em",
-              },
+              gridTemplateColumns: SPALTEN,
               gap: "0 0.75em",
               alignItems: "center",
               py: 0.75,
-              pr: 1,
-              borderLeft: "5px solid",
+              px: 1,
+              borderLeft: "8px solid",
               borderLeftColor: randFarbe[z.status],
-              borderBottom: 1,
-              borderBottomColor: "divider",
+              borderRadius: "4px",
+              bgcolor:
+                theme.palette.mode === "dark"
+                  ? "rgba(255,255,255,0.06)"
+                  : "#f0f1f3",
               cursor: "pointer",
               "&:hover": { bgcolor: "action.hover" },
-            }}
+            })}
           >
             <Box
               sx={{
@@ -368,32 +324,9 @@ export const KundenAuftraege = () => {
               </Typography>
               <Typography variant="caption" color="text.secondary">
                 {z.nummer}
-                <Box
-                  component="span"
-                  sx={{ display: { xs: "inline", sm: "none" } }}
-                >
-                  {z.datum ? ` · ${datumText(z.datum)}` : ""}
-                </Box>
               </Typography>
             </Box>
-            <Typography
-              variant="body2"
-              sx={{ display: { xs: "none", sm: "block" } }}
-            >
-              {datumText(z.datum)}
-            </Typography>
-            <Typography
-              variant="body2"
-              color="text.secondary"
-              sx={{
-                display: { xs: "none", sm: "-webkit-box" },
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: "vertical",
-                overflow: "hidden",
-              }}
-            >
-              {z.typ}
-            </Typography>
+            <Typography variant="body2">{datumText(z.datum)}</Typography>
             <Typography variant="body2" sx={{ textAlign: "right" }}>
               {z.betrag !== null ? formatCurrency(z.betrag) : ""}
             </Typography>
@@ -404,7 +337,7 @@ export const KundenAuftraege = () => {
       <TextField
         size="small"
         fullWidth
-        placeholder="Suche in Aufträgen und Terminen"
+        placeholder="Suche"
         value={suche}
         onChange={(e) => setSuche(e.target.value)}
         sx={{ mt: 1.5 }}
@@ -415,6 +348,17 @@ export const KundenAuftraege = () => {
                 <SearchIcon fontSize="small" />
               </InputAdornment>
             ),
+            endAdornment: suche ? (
+              <InputAdornment position="end">
+                <IconButton
+                  size="small"
+                  aria-label="Suche leeren"
+                  onClick={() => setSuche("")}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
+              </InputAdornment>
+            ) : undefined,
           },
         }}
       />

@@ -40,6 +40,7 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Mahnung", name: "Mahnung" },
   { id: "Antrag Zuschuss", name: "Antrag Zuschuss" },
   { id: "Antrag Sozialamt", name: "Antrag Sozialamt" },
+  { id: "Antrag Jugendamt", name: "Antrag Jugendamt" },
   { id: "Berechtigungsschein AOK", name: "Berechtigungsschein AOK" },
   { id: "Optometrische Verordnung", name: "Optometrische Verordnung" },
   { id: "Optometrische Verordnung GKV", name: "Optometrische Verordnung GKV" },
@@ -50,10 +51,20 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Rezeptanfrage Augenarzt", name: "Rezeptanfrage Augenarzt" },
   { id: "Anamnesebogen", name: "Anamnesebogen" },
   { id: "Berechtigungsschein GKV", name: "Berechtigungsschein GKV" },
+  { id: "Auftragszettel", name: "Auftragszettel" },
+  { id: "Gutachten Kinderoptometrie", name: "Gutachten Kinderoptometrie" },
+  { id: "Glasbestellung POL", name: "Glasbestellung POL" },
+  { id: "Patientenanfrage", name: "Patientenanfrage" },
+  { id: "Antrag SRH", name: "Antrag SRH (Bildschirmarbeitsbrille)" },
+  {
+    id: "Rechnung Bildschirmarbeitsplatzbrille",
+    name: "Rechnung Bildschirmarbeitsplatzbrille",
+  },
+  { id: "Rechnung Arbeitsschutzbrille", name: "Rechnung Arbeitsschutzbrille" },
 ];
 
 const PLATZHALTER_HINWEIS =
-  "Platzhalter im Format {{entität.feld}}, z. B. {{kunde.vorname}}, {{brille.summe}} oder {{heute.datum}}, werden beim Öffnen des Formulare-Dialogs in der Brillenkartei automatisch durch die Daten des Auftrags/Kunden ersetzt.";
+  "Platzhalter im Format {{entität.feld}}, z. B. {{kunde.vorname}}, {{brille.summe}} oder {{heute.datum}}, werden beim Öffnen des Formulare-Dialogs in der Brillenkartei automatisch durch die Daten des Auftrags/Kunden ersetzt. Mahnungen: Die erste Zeile ist die Überschrift im grauen Balken; zusätzlich gibt es {{kunde.briefanrede}}, {{rechnung.nummer}}, {{rechnung.datum}}, {{rechnung.faellig}}, {{mahnung.betrag}}, {{mahnung.frist}}, {{betrieb.name}}, {{betrieb.kontakt}} und {{betrieb.bank}}.";
 
 export const DokumentvorlageList = () => (
   <List title="Dokumentvorlagen" sort={{ field: "Kategorie", order: "ASC" }}>

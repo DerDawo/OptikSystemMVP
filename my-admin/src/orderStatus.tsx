@@ -11,7 +11,10 @@ export interface OrderStatus {
   color: OrderStatusColor;
 }
 
-type BrilleStatusRecord = { Abholung?: string | null } | null | undefined;
+type BrilleStatusRecord =
+  | { Abholung?: string | null; Fertig?: string | null }
+  | null
+  | undefined;
 
 const statusBorderColor: Record<OrderStatusKey, string> = {
   offen: "warning.main",
@@ -19,37 +22,35 @@ const statusBorderColor: Record<OrderStatusKey, string> = {
   abgeholt: "success.main",
 };
 
+// Kalendertag (lokal) als "YYYY-MM-DD" für Vergleiche ohne Uhrzeit
+const tag = (wert: string | Date) => {
+  const d = new Date(wert);
+  if (Number.isNaN(d.getTime())) return null;
+  const zwei = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${zwei(d.getMonth() + 1)}-${zwei(d.getDate())}`;
+};
+
 /*
- * The `brille` table has no dedicated order-status field yet (see issue #59),
- * so the status shown in lists/history is derived from the pickup date
- * (`Abholung`): no date set means the order is still being processed, a future
- * date means it's ready but not yet collected, a past date means it was picked
- * up. This is a placeholder that can be swapped for a real status field later
- * without touching call sites, since everything reads it through this module.
+ * Auftragsstatus aus den Datumsfeldern der Kartei: "Abholung" (Knopf
+ * "Abgeholt", beim Prisma-Import das Abholdatum) bis heute = abgeholt;
+ * "Fertig" gesetzt = bereit zur Abholung; sonst in Bearbeitung. Ein
+ * Abholdatum in der Zukunft (früher als geplanter Abholtermin genutzt) gilt
+ * ebenfalls als bereit. Kontaktlinsen haben kein "Fertig" und laufen nur über
+ * "Abholung". Alle Listen lesen den Status über dieses Modul.
  */
 export const getBrilleOrderStatus = (
   record: BrilleStatusRecord,
 ): OrderStatus => {
-  const abholungRaw = record?.Abholung;
+  const heute = tag(new Date());
+  const abholung = record?.Abholung ? tag(record.Abholung) : null;
 
-  if (!abholungRaw) {
-    return { key: "offen", label: "In Bearbeitung", color: "warning" };
+  if (abholung && heute && abholung <= heute) {
+    return { key: "abgeholt", label: "Abgeholt", color: "success" };
   }
-
-  const abholungDate = new Date(abholungRaw);
-
-  if (Number.isNaN(abholungDate.getTime())) {
-    return { key: "offen", label: "In Bearbeitung", color: "warning" };
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  if (abholungDate.getTime() > today.getTime()) {
+  if (abholung || (record?.Fertig && tag(record.Fertig))) {
     return { key: "bereit", label: "Bereit zur Abholung", color: "info" };
   }
-
-  return { key: "abgeholt", label: "Abgeholt", color: "success" };
+  return { key: "offen", label: "In Bearbeitung", color: "warning" };
 };
 
 export const BrilleStatusChip = ({

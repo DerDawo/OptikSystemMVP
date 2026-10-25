@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   absenderAusBetrieb,
+  buildKontaktlinsenPositionen,
+  buildKontaktlinsenRechnungPrintHtml,
   buildKostenvoranschlagBodyHtml,
   buildRechnungBodyHtml,
   buildRechnungPositionen,
   formatGlaswerte,
+  GOOGLE_BEWERTUNG_URL,
   RECHNUNG_ABSENDER,
   STANDARD_ABSENDER,
 } from "./rechnungTemplate";
@@ -80,6 +83,19 @@ describe("buildRechnungPositionen", () => {
     expect(rabatt.betrag).toBeCloseTo(-31.98, 2);
   });
 
+  it("zeigt einen festen Euro-Rabatt als eigene negative Position", () => {
+    const positionen = buildRechnungPositionen({
+      ...ENTITIES,
+      brille: {
+        ...ENTITIES.brille,
+        RabattBetrag: 25,
+        RabattBezeichnung: "Sonderrabatt",
+      },
+    });
+    const rabatt = positionen[positionen.length - 1];
+    expect(rabatt).toEqual({ label: "Rabatt: Sonderrabatt", betrag: -25 });
+  });
+
   it("zeigt weitere Leistungen bzw. Nachlass als eigene Position (#131)", () => {
     const mit = buildRechnungPositionen({
       ...ENTITIES,
@@ -121,6 +137,19 @@ describe("buildRechnungBodyHtml", () => {
     expect(html).toContain(`${RECHNUNG_ABSENDER.mwstSatz}% Mwst`);
     expect(html).toContain("RECHNUNG");
     expect(html).toContain("Sehzentrum Gera - Werdauerstr.38 - 07551 Gera");
+  });
+
+  it("lädt dezent zur Google-Bewertung ein (Link aus dem QR-Code)", () => {
+    expect(html).toContain(
+      "Wie zufrieden waren Sie mit Ihrem Besuch?<br />Teilen Sie Ihre Erfahrung gern auf Google.",
+    );
+    expect(html).toContain('class="bewertung-qr"');
+    expect(html).toContain(GOOGLE_BEWERTUNG_URL.replace(/&/g, "&amp;"));
+    expect(GOOGLE_BEWERTUNG_URL).toMatch(
+      /^https:\/\/www\.google\.com\/maps\/place\/Augenoptik\+Ulm\//,
+    );
+    const kv = buildKostenvoranschlagBodyHtml({ entities: ENTITIES });
+    expect(kv).not.toContain("bewertung");
   });
 
   it("zeigt Anrede, Kundenname und Berater", () => {
@@ -226,5 +255,61 @@ describe("absenderAusBetrieb (#132)", () => {
     expect(absender.mwstSatz).toBe(7);
     expect(absender.zahlungszielTage).toBe(STANDARD_ABSENDER.zahlungszielTage);
     expect(absenderAusBetrieb(null)).toEqual(STANDARD_ABSENDER);
+  });
+});
+
+describe("Kontaktlinsen-Rechnung", () => {
+  const cl = {
+    SphRechts: 3.25,
+    SphLinks: 3,
+    RadiusRechts: 8.6,
+    LinsentypRechts: "Monatslinse (Test)",
+    HerstellerRechts: "Hersteller A",
+    PreisRechts: 39.9,
+    PreisLinks: 39.9,
+    Zusatzleistung1: "Anpassung",
+    Zusatzbetrag1: 30,
+    RabattBezeichnung: "Neukundenrabatt",
+    RabattProzent: 10,
+    Summe: 98.82,
+    Berater: "Robert Ulm",
+    Linsenart: "Weichlinsen",
+  };
+
+  it("listet Linsen, Zusatzleistungen und Rabatt", () => {
+    const positionen = buildKontaktlinsenPositionen(cl);
+    expect(positionen.map((p) => [p.label, p.betrag])).toEqual([
+      ["Kontaktlinse rechts :", 39.9],
+      ["Kontaktlinse links :", 39.9],
+      ["Anpassung", 30],
+      ["Rabatt: Neukundenrabatt (-10 %)", -10.98],
+    ]);
+    expect(positionen[0].werte).toContain("sph: + 3,25");
+    expect(positionen[0].werte).toContain("BC 8,60");
+    expect(positionen[0].details).toEqual([
+      "Monatslinse (Test) – Hersteller A",
+    ]);
+  });
+
+  it("ältere Aufträge ohne Einzelpreise: Gesamtbetrag als Position", () => {
+    expect(
+      buildKontaktlinsenPositionen({ Summe: 89 }).map((p) => [
+        p.label,
+        p.betrag,
+      ]),
+    ).toEqual([["Kontaktlinsen", 89]]);
+  });
+
+  it("baut die Rechnung im Briefpapier mit Nummer und Summe", () => {
+    const html = buildKontaktlinsenRechnungPrintHtml({
+      kontaktlinse: cl,
+      kunde: ENTITIES.kunde,
+      rechnungsnummer: "114999",
+    });
+    expect(html).toContain("RECHNUNG");
+    expect(html).toContain("114999");
+    expect(html).toContain("für neue Kontaktlinsen (Weichlinsen)");
+    expect(html).toContain("98,82 EUR");
+    expect(html).toContain("Es bediente Sie Robert Ulm.");
   });
 });

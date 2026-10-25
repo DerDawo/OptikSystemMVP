@@ -1,6 +1,7 @@
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
+  Identifier,
   Link,
   useDataProvider,
   useGetList,
@@ -14,6 +15,10 @@ import {
   Box,
   Button,
   Card,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   MenuItem,
   Select,
@@ -32,6 +37,9 @@ import CheckIcon from "@mui/icons-material/Check";
 import CloseIcon from "@mui/icons-material/Close";
 import OpenInNewIcon from "@mui/icons-material/OpenInNew";
 import EditIcon from "@mui/icons-material/Edit";
+import ArrowDropDownIcon from "@mui/icons-material/ArrowDropDown";
+import CheckBoxIcon from "@mui/icons-material/CheckBox";
+import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import { formatCurrency } from "./CurrencyField";
 import {
   MITARBEITER,
@@ -47,12 +55,23 @@ import {
 } from "./KarteiEingabe";
 import { brillenartOptionen } from "./brillenarten";
 import {
+  leistungenAusNotizen,
   leistungsText,
+  setzeNotizLeistungBetrag,
   weitereLeistungenPositionen,
 } from "./leistungenAusNotizen";
-import { rabattDaten, rabattOptionen } from "./rabatte";
+import {
+  rabattDatenBrille,
+  rabattEingabeBrille,
+  rabattOptionen,
+} from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
+import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
+import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
+import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
+import { HerstellerBestellung } from "./HerstellerBestellung";
+import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
 
 /*
  * Brillenauftrag als Karteikarte im Aufbau der Prisma-Brillenkartei: links
@@ -73,56 +92,112 @@ const zahl = (wert: unknown) => {
 const text = (wert: unknown) =>
   wert === null || wert === undefined ? "" : String(wert).trim();
 
+// Rabattfeld (Prozent/Euro) nach der Auswahl "Sonderrabatt" zum Tippen öffnen
+export const fokussiereRabattfeld = () =>
+  window.setTimeout(
+    () =>
+      document
+        .querySelector<HTMLElement>('[aria-label="Rabatt in %"]')
+        ?.focus(),
+    300,
+  );
+
+// Datum wie in Prisma: 15.05.2026
 const datum = (wert: unknown) =>
-  wert ? new Date(String(wert)).toLocaleDateString("de-DE") : "";
+  wert
+    ? new Date(String(wert)).toLocaleDateString("de-DE", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+      })
+    : "";
 
-const dioptrie = new Intl.NumberFormat("de-DE", {
-  minimumFractionDigits: 2,
+// Zahlen wie in Prisma: Punkt als Dezimalzeichen, feste Nachkommastellen,
+// kein Plus-Zeichen, keine Tausenderpunkte (0.75, -0.25, 32.0, 235.00)
+const prismaZahl = (stellen: number) =>
+  new Intl.NumberFormat("en-US", {
+    minimumFractionDigits: stellen,
+    maximumFractionDigits: stellen,
+    useGrouping: false,
+  });
+const dezimal = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 2,
-  signDisplay: "exceptZero",
+  useGrouping: false,
 });
-const dezimal = new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 });
-const betrag = new Intl.NumberFormat("de-DE", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+const betrag = prismaZahl(2);
 
-const WERTE: { feld: string; titel: string; vorzeichen?: boolean }[] = [
-  { feld: "Sph", titel: "Sph", vorzeichen: true },
-  { feld: "Cyl", titel: "Cyl", vorzeichen: true },
-  { feld: "A", titel: "A" },
-  { feld: "PD", titel: "PD" },
-  { feld: "Add", titel: "Add", vorzeichen: true },
-  { feld: "y_h", titel: "y/h" },
-  { feld: "Pr", titel: "Pr" },
-  { feld: "B", titel: "B" },
-  { feld: "HSA", titel: "HSA" },
-  { feld: "Vis", titel: "Vis" },
-  { feld: "iod", titel: "iod" },
+const WERTE: { feld: string; titel: string; stellen: number }[] = [
+  { feld: "Sph", titel: "Sph", stellen: 2 },
+  { feld: "Cyl", titel: "Cyl", stellen: 2 },
+  { feld: "A", titel: "A", stellen: 0 },
+  { feld: "PD", titel: "PD", stellen: 1 },
+  { feld: "Add", titel: "Add", stellen: 2 },
+  { feld: "y_h", titel: "y/h", stellen: 1 },
+  { feld: "Pr", titel: "Pr", stellen: 2 },
+  { feld: "B", titel: "B", stellen: 0 },
+  { feld: "HSA", titel: "HSA", stellen: 1 },
+  { feld: "Vis", titel: "Vis", stellen: 2 },
+  { feld: "iod", titel: "iod", stellen: 1 },
 ];
 const WERTE_LINKS = WERTE.slice(0, 8);
 
+// Bestellstatus eines Glases (Spalte glass."Auftragsstatus")
+const GLAS_BESTELLSTATUS = [
+  "zu bestellen",
+  "bestellt",
+  "eingetroffen",
+  "abgeholt",
+].map((s) => ({ id: s, name: s }));
+
+// Dunkelblaue Knöpfe wie in Prisma (Glasassistent, Bestelloptionen)
+export const prismaKnopf = {
+  bgcolor: "#1d4e8f",
+  "&:hover": { bgcolor: "#173f74" },
+  color: "#fff",
+  fontWeight: 700,
+  textTransform: "none",
+  borderRadius: "3px",
+  minHeight: 24,
+  py: 0.25,
+  px: 3,
+  width: 210,
+} as const;
+
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
 const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
+// Achtungsfeld: an wen die Rechnung geht
+// nur intern auf der Karteikarte, erscheint auf keinem Beleg
+const ACHTUNG_AUSWAHL = [
+  "RG für KK",
+  "RG für AG",
+  "RG für ST",
+  "RG für VS",
+  "SW (Sackwalze)",
+  "NS (Nöhlsau)",
+  "SF (Stänkerfritze)",
+  "GH (Geizhals)",
+  "UM (Umstandsmeier)",
+].map((a) => ({
+  id: a,
+  name: a,
+}));
 
 const WERTE_RECHTS = WERTE.slice(8);
 
-const wertText = (glas: Datensatz | undefined, feld: string, vz?: boolean) => {
+const wertText = (
+  glas: Datensatz | undefined,
+  feld: string,
+  stellen: number,
+) => {
   const n = zahl(glas?.[feld]);
   if (n === null) return "";
-  return vz ? dioptrie.format(n) : dezimal.format(n);
+  // Werte mit mehr Nachkommastellen nicht abschneiden (z. B. A 80.5)
+  return Number.isInteger(n * 10 ** stellen)
+    ? prismaZahl(stellen).format(n)
+    : dezimal.format(n);
 };
 
-// Visus als Ausklappliste (Werte des Betriebs), alle anderen Werte zum
-// Eintippen
-const VIS_WERTE = [
-  0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5,
-];
-const VIS_OPTIONEN = VIS_WERTE.map((v) => ({
-  id: String(v),
-  name: betrag.format(v),
-}));
-
+// Alle Werte einschließlich Visus zum Eintippen
 const WertEingabe = ({
   w,
   seite,
@@ -133,30 +208,16 @@ const WertEingabe = ({
   seite: string;
   glas: Datensatz | undefined;
   speichere: Speichern;
-}) => {
-  if (w.feld === "Vis") {
-    const vis = zahl(glas?.Vis);
-    return (
-      <Auswahl
-        rechts
-        name={`Vis ${seite}`}
-        wert={vis === null ? null : String(vis)}
-        optionen={VIS_OPTIONEN}
-        speichere={(neu) => speichere(neu == null ? null : Number(neu))}
-      />
-    );
-  }
-  return (
-    <Eingabe
-      typ="zahl"
-      rechts
-      name={`${w.titel} ${seite}`}
-      wert={glas?.[w.feld]}
-      anzeige={wertText(glas, w.feld, w.vorzeichen)}
-      speichere={speichere}
-    />
-  );
-};
+}) => (
+  <Eingabe
+    typ="zahl"
+    rechts
+    name={`${w.titel} ${seite}`}
+    wert={glas?.[w.feld]}
+    anzeige={wertText(glas, w.feld, w.stellen)}
+    speichere={speichere}
+  />
+);
 
 const betragText = (wert: unknown) => {
   const n = zahl(wert);
@@ -165,28 +226,28 @@ const betragText = (wert: unknown) => {
 
 /*
  * Raster wie in Prisma (Breiten aus dem Original, Felder wachsen mit):
- * 1 Beschriftung | 2 Lagernr. | 3 Rest links | 4 Abstand |
+ * 1 Beschriftung | 2-3 Felder links | 4 Abstand |
  * 5 Beschriftung rechts | 6 Feld rechts | 7 Summen-Beschriftung | 8 Betrag
  */
-const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
+export const SPALTEN = "95px 145fr 415fr 24px 80px 145fr 120fr 115fr";
 const LINKS = "2 / 4";
 const RECHTS = "6 / 9";
 const BREIT = "2 / 7";
 
-const feldFarbe = (theme: Theme) =>
+export const feldFarbe = (theme: Theme) =>
   theme.palette.mode === "dark" ? "rgba(255,255,255,0.08)" : "#e8eef6";
-const summenFarbe = (theme: Theme) =>
+export const summenFarbe = (theme: Theme) =>
   theme.palette.mode === "dark" ? "rgba(255,255,255,0.14)" : "#e2e3e5";
 
 // Rahmen um das Feld, in dem gerade getippt wird
-const aktivesFeld = (theme: Theme) => ({
+export const aktivesFeld = (theme: Theme) => ({
   boxShadow: `inset 0 0 0 2px ${theme.palette.primary.main}`,
 });
 
-type Platz = { z: number; s: string; h?: number };
+export type Platz = { z: number; s: string; h?: number };
 
 // Kursive, graue Beschriftung wie in Prisma
-const Beschriftung = ({
+export const Beschriftung = ({
   z,
   s,
   children,
@@ -198,7 +259,7 @@ const Beschriftung = ({
       gridColumn: s,
       alignSelf: "center",
       fontStyle: "italic",
-      fontSize: "0.78rem",
+      fontSize: "0.72rem",
       color: "text.secondary",
       textAlign: rechts ? "right" : "left",
       pr: rechts ? 1 : 0,
@@ -211,7 +272,7 @@ const Beschriftung = ({
 );
 
 // Helles Feld mit Wert
-const Feld = ({
+export const Feld = ({
   z,
   s,
   h = 1,
@@ -230,14 +291,14 @@ const Feld = ({
       gridRow: `${z} / span ${h}`,
       gridColumn: s,
       bgcolor: summe ? summenFarbe(theme) : feldFarbe(theme),
-      minHeight: 28,
+      minHeight: 24,
       minWidth: 0,
       px: "6px",
       py: mehrzeilig ? "4px" : 0,
       display: "flex",
       alignItems: mehrzeilig ? "flex-start" : "center",
       justifyContent: rechts ? "flex-end" : "flex-start",
-      fontSize: "0.95rem",
+      fontSize: "0.9rem",
       lineHeight: 1.35,
       fontWeight: summe ? 600 : 400,
       color: "text.primary",
@@ -253,7 +314,7 @@ const Feld = ({
 );
 
 // Mehrere gleich breite Zellen in einem Rasterbereich (Werte, Farbe/Größe)
-const Zellen = ({
+export const Zellen = ({
   z,
   s,
   spalten,
@@ -273,7 +334,7 @@ const Zellen = ({
   </Box>
 );
 
-const Wert = ({
+export const Wert = ({
   children,
   rechts,
   links,
@@ -285,12 +346,12 @@ const Wert = ({
   <Box
     sx={(theme) => ({
       bgcolor: feldFarbe(theme),
-      minHeight: 28,
+      minHeight: 24,
       px: "6px",
       display: "flex",
       alignItems: "center",
       justifyContent: rechts ? "flex-end" : links ? "flex-start" : "center",
-      fontSize: "0.95rem",
+      fontSize: "0.9rem",
       whiteSpace: "nowrap",
       overflow: "hidden",
       "&:focus-within": aktivesFeld(theme),
@@ -300,11 +361,11 @@ const Wert = ({
   </Box>
 );
 
-const Spaltentitel = ({ children }: { children: ReactNode }) => (
+export const Spaltentitel = ({ children }: { children: ReactNode }) => (
   <Box
     sx={{
       fontStyle: "italic",
-      fontSize: "0.78rem",
+      fontSize: "0.72rem",
       color: "text.secondary",
       alignSelf: "end",
       whiteSpace: "nowrap",
@@ -339,8 +400,8 @@ const AuftragPosition = ({ brille, z, s }: Platz & { brille: Datensatz }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        minHeight: 28,
-        fontSize: "0.95rem",
+        minHeight: 24,
+        fontSize: "0.9rem",
       }}
     >
       <IconButton
@@ -369,6 +430,16 @@ const AuftragPosition = ({ brille, z, s }: Platz & { brille: Datensatz }) => {
 // Werte-Tabelle R/L aus den Glas-Datensätzen eines Auftrags, mit Liefern
 // und Betrag je Glas. Wird im Bearbeiten-Formular verwendet; mit `brille`
 // (gespeicherter Auftrag) lassen sich die Werte direkt eintippen.
+// Zelle der Wertetabelle zum direkten Eintippen: als Feld erkennbar
+const eingabeZelle = (theme: Theme) => ({
+  display: "flex",
+  alignItems: "center",
+  minHeight: 28,
+  px: "6px",
+  borderRadius: "4px",
+  bgcolor: feldFarbe(theme),
+});
+
 export const WerteTabelle = ({
   rechtsId,
   linksId,
@@ -451,7 +522,7 @@ export const WerteTabelle = ({
                 {WERTE.map((w) => (
                   <TableCell key={w.feld} align="right" sx={{ minWidth: 48 }}>
                     {bearbeitbar ? (
-                      <Box sx={{ display: "flex", minHeight: 24 }}>
+                      <Box sx={eingabeZelle}>
                         <WertEingabe
                           w={w}
                           seite={seite}
@@ -460,7 +531,7 @@ export const WerteTabelle = ({
                         />
                       </Box>
                     ) : (
-                      wertText(glas, w.feld, w.vorzeichen)
+                      wertText(glas, w.feld, w.stellen)
                     )}
                   </TableCell>
                 ))}
@@ -479,7 +550,7 @@ export const WerteTabelle = ({
                 </TableCell>
                 <TableCell align="right" sx={{ minWidth: 80 }}>
                   {bearbeitbar ? (
-                    <Box sx={{ display: "flex", minHeight: 24 }}>
+                    <Box sx={eingabeZelle}>
                       <Eingabe
                         typ="zahl"
                         rechts
@@ -544,7 +615,7 @@ const ZusatzleistungAuswahl = ({
         gridRow: z,
         gridColumn: s,
         bgcolor: feldFarbe(theme),
-        minHeight: 28,
+        minHeight: 24,
         minWidth: 0,
         display: "flex",
         alignItems: "center",
@@ -568,7 +639,7 @@ const ZusatzleistungAuswahl = ({
         )}
         sx={{
           px: "6px",
-          fontSize: "0.95rem",
+          fontSize: "0.9rem",
           "& .MuiSelect-select": { py: 0 },
         }}
         inputProps={{ "aria-label": "Zusatzleistung hinzufügen" }}
@@ -616,9 +687,185 @@ const ZusatzleistungEntfernen = ({ zuordnung }: { zuordnung: Datensatz }) => {
   );
 };
 
+// Zwei Häkchen "ja"/"nein" wie eine Auswahl: ja = bezahlt, nein = offen
+// (auch bei "teilweise offen" angehakt); Ratenzahlung/Versicherung: keins
+const BezahlungJaNein = ({
+  status,
+  speichere,
+}: {
+  status: string;
+  speichere: Speichern;
+}) => {
+  const notify = useNotify();
+  const [vorlaeufig, setVorlaeufig] = useState<string | null>(null);
+  useEffect(() => setVorlaeufig(null), [status]);
+  const aktuell = vorlaeufig ?? status;
+  const setze = async (neu: string) => {
+    if (aktuell === neu) return;
+    setVorlaeufig(neu);
+    try {
+      await speichere(neu);
+    } catch {
+      setVorlaeufig(null);
+      notify("Bezahlung konnte nicht gespeichert werden.", { type: "error" });
+    }
+  };
+  const knopf = (beschriftung: string, an: boolean, neu: string) => (
+    // Klick aufs Häkchen oder auf das Wort speichert (einmal)
+    <Box
+      onClick={() => setze(neu)}
+      sx={{
+        display: "flex",
+        alignItems: "center",
+        fontSize: "0.8rem",
+        cursor: "pointer",
+      }}
+    >
+      <IconButton
+        size="small"
+        aria-label={`Bezahlung ${beschriftung}`}
+        aria-pressed={an}
+        sx={{ p: 0.25 }}
+      >
+        {an ? (
+          <CheckBoxIcon fontSize="small" />
+        ) : (
+          <CheckBoxOutlineBlankIcon
+            fontSize="small"
+            sx={{ color: "text.disabled" }}
+          />
+        )}
+      </IconButton>
+      {beschriftung}
+    </Box>
+  );
+  return (
+    <Box sx={{ display: "flex", gap: 1.5 }}>
+      {knopf("ja", aktuell === "bezahlt", "bezahlt")}
+      {knopf(
+        "nein",
+        aktuell === "offen" || aktuell === "teilweise offen",
+        "offen",
+      )}
+    </Box>
+  );
+};
+
+// Diagnosen zum Anhaken, darunter Freitext; gespeichert als Text in
+// "Diagnose" (siehe diagnosen.ts)
+const DiagnoseAuswahl = ({
+  wert,
+  speichere,
+}: {
+  wert: unknown;
+  speichere: Speichern;
+}) => {
+  const notify = useNotify();
+  const [vorlaeufig, setVorlaeufig] = useState<string | null>(null);
+  useEffect(() => setVorlaeufig(null), [wert]);
+  const { gewaehlt, rest } = zerlegeDiagnose(vorlaeufig ?? wert);
+  const sichern = async (neu: string | null) => {
+    setVorlaeufig(neu ?? "");
+    try {
+      await speichere(neu);
+    } catch {
+      setVorlaeufig(null);
+      notify("Diagnose konnte nicht gespeichert werden.", { type: "error" });
+    }
+  };
+  return (
+    <Box sx={{ flex: 1, minWidth: 0, py: "2px" }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
+          columnGap: 1,
+        }}
+      >
+        {DIAGNOSEN.map((d) => {
+          const an = gewaehlt.includes(d);
+          return (
+            <Box
+              key={d}
+              onClick={() =>
+                sichern(
+                  baueDiagnose(
+                    an ? gewaehlt.filter((x) => x !== d) : [...gewaehlt, d],
+                    rest,
+                  ),
+                )
+              }
+              sx={{
+                // lange Einträge (Asthenopische Beschwerden) über zwei Spalten
+                gridColumn: d.length > 16 ? "span 2" : undefined,
+                display: "flex",
+                alignItems: "center",
+                gap: 0.25,
+                cursor: "pointer",
+                fontSize: "0.8rem",
+                whiteSpace: "nowrap",
+              }}
+            >
+              <IconButton
+                size="small"
+                aria-label={`Diagnose ${d}`}
+                aria-pressed={an}
+                sx={{ p: 0.25 }}
+              >
+                {an ? (
+                  <CheckBoxIcon fontSize="small" />
+                ) : (
+                  <CheckBoxOutlineBlankIcon
+                    fontSize="small"
+                    sx={{ color: "text.disabled" }}
+                  />
+                )}
+              </IconButton>
+              {d}
+            </Box>
+          );
+        })}
+        {/* frei editierbares Feld für weitere Diagnosen */}
+        <Box
+          sx={(theme) => ({
+            gridColumn: "span 2",
+            display: "flex",
+            alignItems: "center",
+            minHeight: 24,
+            px: "6px",
+            borderRadius: "3px",
+            bgcolor: theme.palette.background.paper,
+            border: 1,
+            borderColor: "divider",
+            fontSize: "0.8rem",
+            "&:focus-within": aktivesFeld(theme),
+          })}
+        >
+          <Eingabe
+            name="Diagnose weitere Angaben"
+            wert={rest}
+            anzeige={
+              rest || (
+                <Box
+                  component="span"
+                  sx={{ color: "text.disabled", fontStyle: "italic" }}
+                >
+                  weitere Diagnose eintragen …
+                </Box>
+              )
+            }
+            speichere={(neu) =>
+              sichern(baueDiagnose(gewaehlt, String(neu ?? "")))
+            }
+          />
+        </Box>
+      </Box>
+    </Box>
+  );
+};
+
 export const BrilleKarteikarte = () => {
   const brille = useRecordContext<Datensatz>();
-  const navigate = useNavigate();
 
   const { data: kunde } = useGetOne<Datensatz>(
     "kunde",
@@ -643,6 +890,27 @@ export const BrilleKarteikarte = () => {
     { id: brille?.Fassung as number },
     { enabled: brille?.Fassung != null },
   );
+  // Glastypen der letzten Aufträge für die Ausklappliste am Glastyp
+  const { data: letzteGlastypen } = useGetList<Datensatz>(
+    "glastyp",
+    {
+      pagination: { page: 1, perPage: 300 },
+      sort: { field: "id", order: "DESC" },
+    },
+    { staleTime: 5 * 60 * 1000 },
+  );
+  const glastypNamen = useMemo(
+    () =>
+      [
+        ...new Set(
+          (letzteGlastypen ?? [])
+            .map((g) => text(g.Bezeichnung))
+            .filter(Boolean),
+        ),
+      ].sort((a, b) => a.localeCompare(b, "de")),
+    [letzteGlastypen],
+  );
+  const glastypFeld = useRef<HTMLDivElement>(null);
   const { data: zuordnungen } = useGetList<Datensatz>(
     "brille_hat_zusatzleistungen",
     {
@@ -663,7 +931,10 @@ export const BrilleKarteikarte = () => {
   );
 
   const refresh = useRefresh();
+  const dataProvider = useDataProvider();
   const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
+  const [bestellOffen, setBestellOffen] = useState(false);
+  const [assistentOffen, setAssistentOffen] = useState(false);
 
   if (!brille) return null;
 
@@ -694,17 +965,23 @@ export const BrilleKarteikarte = () => {
   // Zusatzleistungen plus "Weitere Leistungen" (Freitext aus Prisma),
   // mindestens drei Zeilen wie in Prisma
   const weitere = zahl(brille.WeitereLeistungen);
+  // Betrag je Zeile änderbar: Katalogleistung -> Preis für diesen Auftrag
+  // (brille_hat_zusatzleistungen.Betrag), Prisma-Leistung -> Zeile im Text
+  // und WeitereLeistungen, Rest -> WeitereLeistungen
+  const prismaZeilen = leistungenAusNotizen(leistungsText(brille));
   const posten: {
     bezeichnung: string;
     betrag: unknown;
     zuordnung?: Datensatz;
     auswahl?: boolean;
+    prismaIndex?: number;
+    rest?: boolean;
   }[] = [
     ...(zuordnungen ?? []).map((z) => {
       const l = leistungen?.find((x) => x.id === z.ZusatzleistungID);
       return {
         bezeichnung: text(l?.Bezeichnung),
-        betrag: l?.Betrag,
+        betrag: zahl(z.Betrag) ?? l?.Betrag,
         zuordnung: z,
       };
     }),
@@ -712,8 +989,43 @@ export const BrilleKarteikarte = () => {
       weitere ?? 0,
       leistungsText(brille),
       "(aus Prisma)",
-    ).map((l) => ({ bezeichnung: l.bezeichnung, betrag: l.betrag })),
+    ).map((l, i) => ({
+      bezeichnung: l.bezeichnung,
+      betrag: l.betrag,
+      ...(i < prismaZeilen.length ? { prismaIndex: i } : { rest: true }),
+    })),
   ];
+  const speichereZusatzbetrag =
+    (p: (typeof posten)[number]): Speichern =>
+    async (neu) => {
+      const wert = neu === null || neu === "" ? null : Number(neu);
+      if (p.zuordnung) {
+        await dataProvider.update("brille_hat_zusatzleistungen", {
+          id: p.zuordnung.id,
+          data: { Betrag: wert },
+          previousData: p.zuordnung,
+        });
+        refresh();
+        return;
+      }
+      const alt = zahl(p.betrag) ?? 0;
+      const differenz = (wert ?? 0) - alt;
+      const daten: Record<string, unknown> = {
+        WeitereLeistungen: Math.round(((weitere ?? 0) + differenz) * 100) / 100,
+      };
+      if (p.prismaIndex !== undefined) {
+        const feld = text(brille.PrismaAngaben).includes("Leistungen:")
+          ? "PrismaAngaben"
+          : "Notizen";
+        const neuerText = setzeNotizLeistungBetrag(
+          brille[feld],
+          p.prismaIndex,
+          wert ?? 0,
+        );
+        if (neuerText !== null) daten[feld] = neuerText;
+      }
+      await auftrag("WeitereLeistungen", () => daten)(wert);
+    };
   // eine Zeile mit der Auswahl zum Hinzufügen, wie die leeren Zeilen in Prisma
   posten.push({ bezeichnung: "", betrag: null, auswahl: true });
   while (posten.length < 3) posten.push({ bezeichnung: "", betrag: null });
@@ -725,6 +1037,12 @@ export const BrilleKarteikarte = () => {
     (zahl(fassung?.Betrag) ?? 0);
   const rabattBetrag =
     rabattProzent && rabattBasis ? -(rabattBasis * rabattProzent) / 100 : null;
+  // fester Euro-Rabatt (von der Summe) und angezeigter Rabatt gesamt
+  const rabattEuro = zahl(brille.RabattBetrag);
+  const rabattGesamt =
+    rabattBetrag === null && !rabattEuro
+      ? null
+      : (rabattBetrag ?? 0) - (rabattEuro ?? 0);
 
   const summe = zahl(brille.Summe);
   const kkAnteil = zahl(brille.KKAnteil);
@@ -745,13 +1063,12 @@ export const BrilleKarteikarte = () => {
   const zNotizen = zSumme + 1;
   const zZahlungen = zNotizen + 2;
   const zRest = zZahlungen + 1;
-  const zArzt = zRest + 2;
 
   return (
     <Card
       variant="outlined"
       sx={(theme) => ({
-        p: { xs: 1.5, md: 2.5 },
+        p: { xs: 1, md: 1.5 },
         background:
           theme.palette.mode === "dark"
             ? undefined
@@ -761,14 +1078,21 @@ export const BrilleKarteikarte = () => {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", xl: "minmax(160px, 230px) 1fr" },
-          gap: { xs: 1.5, xl: 3 },
+          // Kundenname schmal links wie in Prisma, die Karteikarte nutzt die
+          // übrige Breite
+          gridTemplateColumns: { xs: "1fr", md: "120px minmax(0, 1fr)" },
+          gap: { xs: 1, md: 1.5 },
         }}
       >
         <Typography
-          variant="h5"
           component="div"
-          sx={{ fontWeight: 400, color: "text.secondary", lineHeight: 1.2 }}
+          sx={{
+            fontSize: "1.15rem",
+            fontWeight: 400,
+            color: "text.secondary",
+            lineHeight: 1.25,
+            overflowWrap: "anywhere",
+          }}
         >
           {kunde ? (
             <Link
@@ -799,12 +1123,13 @@ export const BrilleKarteikarte = () => {
         </Typography>
 
         <Box sx={{ overflowX: "auto", minWidth: 0 }}>
+          <AuftragsstatusLeiste brille={brille} auftrag={auftrag} />
           <Box
             sx={{
               display: "grid",
               gridTemplateColumns: SPALTEN,
               columnGap: "6px",
-              rowGap: "4px",
+              rowGap: "3px",
               minWidth: 820,
             }}
           >
@@ -836,7 +1161,7 @@ export const BrilleKarteikarte = () => {
                 alignSelf: "center",
                 textAlign: "right",
                 pr: 1,
-                fontSize: "0.95rem",
+                fontSize: "0.9rem",
               }}
             >
               {brille.id}
@@ -854,16 +1179,34 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Berater")}
               />
             </Feld>
+            {/* Achtungsfeld (wo in Prisma "Werkstatt" steht): an wen die
+                Rechnung geht - gesetzt rot hervorgehoben */}
             <Beschriftung z={2} s="5 / 6">
-              Werkstatt
+              ACHTUNG
             </Beschriftung>
             <Feld z={2} s={RECHTS}>
-              <Auswahl
-                name="Werkstatt"
-                wert={mitarbeiterAnzeige(brille.Werkstatt) || null}
-                optionen={MITARBEITER_AUSWAHL}
-                speichere={auftrag("Werkstatt")}
-              />
+              <Box
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignSelf: "stretch",
+                  ...(text(brille.Achtung)
+                    ? {
+                        color: "error.main",
+                        fontWeight: 700,
+                        "& .MuiInputBase-root": { color: "inherit" },
+                      }
+                    : {}),
+                }}
+              >
+                <Auswahl
+                  name="ACHTUNG"
+                  wert={text(brille.Achtung) || null}
+                  optionen={ACHTUNG_AUSWAHL}
+                  speichere={auftrag("Achtung")}
+                />
+              </Box>
             </Feld>
 
             <Beschriftung z={3} s="1 / 2">
@@ -877,27 +1220,35 @@ export const BrilleKarteikarte = () => {
                 speichere={auftrag("Refraktion")}
               />
             </Feld>
+            {/* "Bezahlung" ja/nein (statt Abholung): ja = Zahlungsstatus
+                "bezahlt", nein = "offen" */}
             <Beschriftung z={3} s="5 / 6">
-              Abholung
+              Bezahlung
             </Beschriftung>
-            <Feld z={3} s="6 / 7">
-              {textFeld(
-                "Abholung",
-                "Abholung",
-                auftrag("Abholung"),
-                brille.Abholung,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.Abholung),
-                },
-              )}
-            </Feld>
+            <Box
+              sx={{
+                gridRow: 3,
+                gridColumn: "6 / 7",
+                display: "flex",
+                alignItems: "center",
+                ml: "-4px",
+              }}
+            >
+              <BezahlungJaNein
+                status={text(brille.Zahlungsstatus)}
+                speichere={auftrag("Zahlungsstatus")}
+              />
+            </Box>
             <Beschriftung z={3} s="7 / 8" rechts>
               Rechnungsnr.
             </Beschriftung>
             <Feld z={3} s="8 / 9" summe>
-              <Box component="span" sx={{ fontWeight: 400 }}>
-                {text(brille.Rechnungsnummer)}
+              <Box component="span" sx={{ fontWeight: 400, width: "100%" }}>
+                <RechnungsnummerFeld
+                  art="brille"
+                  id={brille.id}
+                  nummer={brille.Rechnungsnummer}
+                />
               </Box>
             </Feld>
 
@@ -946,10 +1297,9 @@ export const BrilleKarteikarte = () => {
                 seite
               );
               return [
-                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2">
-                  <Box component="span" sx={{ pl: 3 }}>
-                    {marke}
-                  </Box>
+                // R/L direkt vor den Werten wie in Prisma
+                <Beschriftung key={`${seite}-l`} z={z} s="1 / 2" rechts>
+                  {marke}
                 </Beschriftung>,
                 <Zellen
                   key={`${seite}-w`}
@@ -959,7 +1309,7 @@ export const BrilleKarteikarte = () => {
                 >
                   {WERTE_LINKS.map(wertFeld)}
                 </Zellen>,
-                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6">
+                <Beschriftung key={`${seite}-r`} z={z} s="5 / 6" rechts>
                   {seite}
                 </Beschriftung>,
                 <Zellen
@@ -996,26 +1346,31 @@ export const BrilleKarteikarte = () => {
               ];
             })}
 
-            {/* Glasassistent (im Bearbeiten-Formular) */}
-            <Box sx={{ gridRow: 7, gridColumn: LINKS, py: "4px" }}>
+            {/* Glasassistent (öffnet direkt hier) und Bestelloptionen */}
+            <Box
+              sx={{
+                gridRow: 7,
+                gridColumn: LINKS,
+                py: "2px",
+                display: "flex",
+                gap: 2,
+              }}
+            >
               <Button
                 variant="contained"
                 disableElevation
-                onClick={() => navigate(`/brille/${brille.id}`)}
-                sx={{
-                  bgcolor: "#1d4e8f",
-                  "&:hover": { bgcolor: "#173f74" },
-                  color: "#fff",
-                  fontWeight: 700,
-                  textTransform: "none",
-                  borderRadius: "3px",
-                  minHeight: 30,
-                  py: 0.25,
-                  px: 3,
-                  width: 210,
-                }}
+                onClick={() => setAssistentOffen(true)}
+                sx={prismaKnopf}
               >
                 Glasassistent
+              </Button>
+              <Button
+                variant="contained"
+                disableElevation
+                onClick={() => setBestellOffen(true)}
+                sx={prismaKnopf}
+              >
+                Bestelloptionen
               </Button>
             </Box>
 
@@ -1023,13 +1378,60 @@ export const BrilleKarteikarte = () => {
             <Beschriftung z={8} s="1 / 2">
               Glastyp
             </Beschriftung>
+            {/* Glastyp mit Ausklapp-Pfeil wie in Prisma: Liste der zuletzt
+                verwendeten Glastypen, freie Eingabe bleibt möglich */}
             <Feld z={8} s={LINKS}>
-              {textFeld(
-                "glastyp.Bezeichnung",
-                "Glastyp",
-                glasFeld("Bezeichnung"),
-                glastyp?.Bezeichnung,
-              )}
+              <Box
+                ref={glastypFeld}
+                sx={{
+                  flex: 1,
+                  minWidth: 0,
+                  display: "flex",
+                  alignSelf: "stretch",
+                }}
+              >
+                {textFeld(
+                  "glastyp.Bezeichnung",
+                  "Glastyp",
+                  glasFeld("Bezeichnung"),
+                  glastyp?.Bezeichnung,
+                  { vorschlaege: glastypNamen },
+                )}
+              </Box>
+              <IconButton
+                size="small"
+                aria-label="Glastyp-Liste öffnen"
+                tabIndex={-1}
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  // Feld in Bearbeitung bringen, dann die Liste aufklappen
+                  const suche = () =>
+                    glastypFeld.current?.querySelector<HTMLElement>(
+                      '[aria-label="Glastyp"]',
+                    );
+                  suche()?.focus();
+                  window.setTimeout(
+                    () =>
+                      suche()?.dispatchEvent(
+                        new MouseEvent("mousedown", { bubbles: true }),
+                      ),
+                    50,
+                  );
+                }}
+                sx={{
+                  mr: "-6px",
+                  ml: "4px",
+                  p: 0,
+                  width: 24,
+                  height: 22,
+                  borderRadius: "2px",
+                  border: 1,
+                  borderColor: "divider",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <ArrowDropDownIcon fontSize="small" />
+              </IconButton>
             </Feld>
             <Beschriftung z={8} s="5 / 6">
               Größe
@@ -1102,15 +1504,9 @@ export const BrilleKarteikarte = () => {
               )}
             </Feld>
 
-            <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 24 }} />
+            <Box sx={{ gridRow: 12, gridColumn: "1 / -1", height: 10 }} />
 
             {/* Fassung */}
-            <Box sx={{ gridRow: 13, gridColumn: "2 / 3" }}>
-              <Spaltentitel>Lagernr.</Spaltentitel>
-            </Box>
-            <Box sx={{ gridRow: 13, gridColumn: "3 / 4" }}>
-              <Spaltentitel>Fassung</Spaltentitel>
-            </Box>
             <Zellen z={13} s="6 / 8" spalten="100fr 165fr">
               <Spaltentitel>Farbe</Spaltentitel>
               <Spaltentitel>Größe</Spaltentitel>
@@ -1118,15 +1514,10 @@ export const BrilleKarteikarte = () => {
             <Box sx={{ gridRow: 13, gridColumn: "8 / 9" }}>
               <Spaltentitel>Betrag</Spaltentitel>
             </Box>
-            <Feld z={14} s="2 / 3">
-              {textFeld(
-                "fassung.Lagernummer",
-                "Lagernummer",
-                fassungFeld("Lagernummer"),
-                fassung?.Lagernummer,
-              )}
-            </Feld>
-            <Feld z={14} s="3 / 4">
+            <Beschriftung z={14} s="1 / 2">
+              Fassung
+            </Beschriftung>
+            <Feld z={14} s="2 / 4">
               {textFeld(
                 "fassung.Bezeichnung",
                 "Fassung",
@@ -1174,48 +1565,76 @@ export const BrilleKarteikarte = () => {
                 },
               )}
             </Feld>
-            <Beschriftung z={15} s="2 / 3" rechts>
-              Linie
-            </Beschriftung>
-            <Feld z={15} s="3 / 4">
-              {textFeld(
-                "fassung.Linie",
-                "Linie",
-                fassungFeld("Linie"),
-                fassung?.Linie,
-              )}
-            </Feld>
-            <Beschriftung z={15} s="5 / 6">
+            {/* Ein Feld "Hersteller" (statt Linie + Hersteller); bei
+                Prisma-Aufträgen steht die Marke oft in "Linie" und wird
+                angezeigt, solange kein Hersteller eingetragen ist */}
+            <Beschriftung z={15} s="1 / 2">
               Hersteller
             </Beschriftung>
-            <Feld z={15} s={RECHTS}>
+            <Feld z={15} s="2 / 4">
               {textFeld(
                 "fassung.Hersteller",
                 "Hersteller Fassung",
                 fassungFeld("Hersteller"),
-                fassung?.Hersteller,
+                text(fassung?.Hersteller) || text(fassung?.Linie) || null,
               )}
             </Feld>
 
+            {/* Medizinische Notizen des Kunden (Kundenkartei) - hier
+                sichtbar und direkt bearbeitbar, gespeichert beim Kunden */}
+            <Beschriftung z={15} s="5 / 6">
+              Notizen
+            </Beschriftung>
+            <Feld z={15} s={RECHTS}>
+              {kunde ? (
+                <Box
+                  title={text(kunde.Notizen)}
+                  sx={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: "flex",
+                    alignSelf: "stretch",
+                  }}
+                >
+                  {textFeld(
+                    "kunde.Notizen",
+                    "Medizinische Notizen",
+                    async (neu) => {
+                      await dataProvider.update("kunde", {
+                        id: kunde.id,
+                        data: { Notizen: neu },
+                        previousData: kunde,
+                      });
+                      refresh();
+                    },
+                    kunde.Notizen,
+                    {
+                      // mehrzeilig bearbeiten, damit Zeilenumbrüche
+                      // erhalten bleiben; angezeigt in einer Zeile
+                      mehrzeilig: true,
+                      anzeige: text(kunde.Notizen).replace(/\s*\n\s*/g, " · "),
+                    },
+                  )}
+                </Box>
+              ) : null}
+            </Feld>
+
             {/* Zusatzleistungen */}
-            <Box sx={{ gridRow: 16, gridColumn: "2 / 3", pt: 1.5 }}>
-              <Spaltentitel>Lagernr.</Spaltentitel>
-            </Box>
-            <Box sx={{ gridRow: 16, gridColumn: "3 / 7", pt: 1.5 }}>
-              <Spaltentitel>Zusatzleistungen</Spaltentitel>
-            </Box>
+            <Box sx={{ gridRow: 16, gridColumn: "1 / -1", height: 6 }} />
+            <Beschriftung z={zZusatz} s="1 / 2">
+              Zusatzleistungen
+            </Beschriftung>
             {posten.map((p, i) => [
-              <Feld key={`zl-n-${i}`} z={zZusatz + i} s="2 / 3" />,
               p.auswahl ? (
                 <ZusatzleistungAuswahl
                   key={`zl-b-${i}`}
                   z={zZusatz + i}
-                  s="3 / 7"
+                  s="2 / 7"
                   brilleId={brille.id}
                   vorhanden={leistungIds}
                 />
               ) : (
-                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="3 / 7">
+                <Feld key={`zl-b-${i}`} z={zZusatz + i} s="2 / 7">
                   <Box component="span" sx={{ flex: 1, minWidth: 0 }}>
                     {p.bezeichnung}
                   </Box>
@@ -1225,7 +1644,19 @@ export const BrilleKarteikarte = () => {
                 </Feld>
               ),
               <Feld key={`zl-e-${i}`} z={zZusatz + i} s="8 / 9" rechts>
-                {betragText(p.betrag)}
+                {p.auswahl || (!p.bezeichnung && p.betrag == null)
+                  ? null
+                  : textFeld(
+                      `zl-betrag-${i}`,
+                      `Betrag ${p.bezeichnung}`,
+                      speichereZusatzbetrag(p),
+                      zahl(p.betrag),
+                      {
+                        typ: "zahl",
+                        rechts: true,
+                        anzeige: betragText(p.betrag),
+                      },
+                    )}
               </Feld>,
             ])}
 
@@ -1235,32 +1666,79 @@ export const BrilleKarteikarte = () => {
             <Zellen z={zRabatt} s={BREIT} spalten="1fr 110px">
               <Wert links>
                 <Auswahl
+                  schlicht
                   name="Rabatt"
                   wert={brille.RabattBezeichnung}
                   optionen={rabattOptionen(brille.RabattBezeichnung)}
-                  speichere={auftrag("RabattBezeichnung", (neu) =>
-                    rabattDaten(neu == null ? null : String(neu)),
-                  )}
+                  speichere={async (neu) => {
+                    await auftrag("RabattBezeichnung", (wert) =>
+                      rabattDatenBrille(wert == null ? null : String(wert)),
+                    )(neu);
+                    // Sonderrabatt: gleich den Betrag eintragen lassen
+                    if (neu === "Sonderrabatt") fokussiereRabattfeld();
+                  }}
                 />
               </Wert>
+              {/* Prozent ("5") auf Gläser + Fassung oder Euro ("50 €",
+                  fester Betrag von der Summe) */}
               <Wert rechts>
                 {textFeld(
                   "RabattProzent",
                   "Rabatt in %",
-                  auftrag("RabattProzent"),
+                  auftrag("RabattProzent", (eingabe) =>
+                    rabattEingabeBrille(String(eingabe ?? ""), "prozent"),
+                  ),
                   brille.RabattProzent,
                   {
-                    typ: "zahl",
                     rechts: true,
-                    anzeige: rabattProzent
-                      ? `${dezimal.format(rabattProzent)} %`
-                      : "",
+                    anzeige: rabattProzent ? (
+                      `${dezimal.format(rabattProzent)} %`
+                    ) : rabattEuro ? (
+                      ""
+                    ) : text(brille.RabattBezeichnung) ? (
+                      <Box
+                        component="span"
+                        sx={{ color: "text.disabled", fontStyle: "italic" }}
+                      >
+                        % oder €
+                      </Box>
+                    ) : (
+                      ""
+                    ),
                   },
                 )}
               </Wert>
             </Zellen>
+            {/* Rabatt in Euro direkt eintragen ("50" = 50,00 € Rabatt, fester
+                Betrag von der Summe - auch ohne Glas-/Fassungspreise); ohne
+                gewählten Rabatt als Sonderrabatt. "10 %" geht hier auch. */}
             <Feld z={zRabatt} s="8 / 9" rechts>
-              {rabattBetrag === null ? "" : betrag.format(rabattBetrag)}
+              {textFeld(
+                "RabattBetrag",
+                "Rabatt in Euro",
+                auftrag("RabattBetrag", (eingabe) => {
+                  const daten = rabattEingabeBrille(
+                    String(eingabe ?? ""),
+                    "euro",
+                  );
+                  const gesetzt =
+                    daten.RabattProzent !== null || daten.RabattBetrag !== null;
+                  return {
+                    ...daten,
+                    ...(gesetzt && !text(brille.RabattBezeichnung)
+                      ? { RabattBezeichnung: "Sonderrabatt" }
+                      : {}),
+                  };
+                }),
+                rabattGesamt === null
+                  ? null
+                  : Math.round(Math.abs(rabattGesamt) * 100) / 100,
+                {
+                  rechts: true,
+                  anzeige:
+                    rabattGesamt === null ? "" : betrag.format(rabattGesamt),
+                },
+              )}
             </Feld>
 
             {/* Summen */}
@@ -1378,82 +1856,136 @@ export const BrilleKarteikarte = () => {
               {betragText(rest)}
             </Feld>
 
-            {/* Verordnung (für Kassenanträge) */}
-            <Box
-              sx={{ gridRow: zRest + 1, gridColumn: "1 / -1", height: 16 }}
-            />
-            <Beschriftung z={zArzt} s="1 / 2">
-              Arzt
-            </Beschriftung>
-            <Feld z={zArzt} s={LINKS}>
-              {textFeld(
-                "VerordnenderArzt",
-                "Arzt",
-                auftrag("VerordnenderArzt"),
-                brille.VerordnenderArzt,
-              )}
-            </Feld>
-            <Beschriftung z={zArzt} s="5 / 6">
-              Verordnung
-            </Beschriftung>
-            <Feld z={zArzt} s="6 / 7">
-              {textFeld(
-                "Verordnungsdatum",
-                "Verordnung",
-                auftrag("Verordnungsdatum"),
-                brille.Verordnungsdatum,
-                {
-                  typ: "datum",
-                  anzeige: datum(brille.Verordnungsdatum),
-                },
-              )}
-            </Feld>
-            <Beschriftung z={zArzt} s="7 / 8" rechts>
-              Muster 8
-            </Beschriftung>
-            <Feld z={zArzt} s="8 / 9">
-              {brille.ErstverordnungMuster8Vorhanden
-                ? datum(brille.ErstverordnungMuster8Datum) || "ja"
-                : ""}
-            </Feld>
-            <Beschriftung z={zArzt + 1} s="1 / 2">
+            {/* Diagnose (für Kassenanträge) groß über die ganze Breite */}
+            <Box sx={{ gridRow: zRest + 1, gridColumn: "1 / -1", height: 8 }} />
+            <Beschriftung z={zRest + 2} s="1 / 2">
               Diagnose
             </Beschriftung>
-            <Feld z={zArzt + 1} s={BREIT}>
-              {textFeld(
-                "Diagnose",
-                "Diagnose",
-                auftrag("Diagnose"),
-                brille.Diagnose,
-              )}
+            <Feld z={zRest + 2} s="2 / 9" mehrzeilig>
+              <DiagnoseAuswahl
+                wert={brille.Diagnose}
+                speichere={auftrag("Diagnose")}
+              />
             </Feld>
-
-            {/* Übernommene Prisma-Angaben (Leistungen, Kasse, Merkmale,
-                Rechnungsdatum) klein am Ende statt in den Notizen */}
-            {text(brille.PrismaAngaben) && (
-              <Box
-                sx={{
-                  gridRow: zArzt + 2,
-                  gridColumn: "1 / -1",
-                  mt: 2,
-                  fontSize: "0.72rem",
-                  color: "text.secondary",
-                  whiteSpace: "normal",
-                }}
-              >
-                <Box component="span" sx={{ fontStyle: "italic" }}>
-                  Angaben aus Prisma:{" "}
-                </Box>
-                {text(brille.PrismaAngaben)
-                  .split(/\r?\n/)
-                  .map((z) => z.trim().replace(/^-\s*/, ""))
-                  .filter((z) => z && z !== "Leistungen:")
-                  .join(" · ")}
-              </Box>
-            )}
           </Box>
         </Box>
       </Box>
+      {assistentOffen && (
+        <GlasassistentDialog
+          onClose={() => setAssistentOffen(false)}
+          glastypId={brille.Glastyp as Identifier | null}
+          glasRechtsId={brille.GlasRechts as Identifier | null}
+          glasLinksId={brille.GlasLinks as Identifier | null}
+          direktSpeichern={async (verweise) => {
+            if (Object.keys(verweise).length > 0) {
+              await dataProvider.update("brille", {
+                id: brille.id,
+                data: verweise,
+                previousData: brille,
+              });
+            }
+            refresh();
+          }}
+        />
+      )}
+      <Dialog
+        open={bestellOffen}
+        onClose={() => setBestellOffen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>Bestelloptionen</DialogTitle>
+        <DialogContent>
+          <Box
+            sx={{
+              display: "grid",
+              gridTemplateColumns: "60px minmax(0, 1fr) 80px",
+              columnGap: "12px",
+              rowGap: "8px",
+              alignItems: "center",
+            }}
+          >
+            <span />
+            <Box
+              sx={{
+                fontStyle: "italic",
+                fontSize: "0.8rem",
+                color: "text.secondary",
+              }}
+            >
+              Bestellstatus Glas
+            </Box>
+            <Box
+              sx={{
+                fontStyle: "italic",
+                fontSize: "0.8rem",
+                color: "text.secondary",
+              }}
+            >
+              Liefern
+            </Box>
+            {augen.map(({ seite, glas }, i) => {
+              const speichere = komponente(
+                "glass",
+                i === 0 ? "GlasRechts" : "GlasLinks",
+                glas,
+                { Seite: i === 0 ? "Rechts" : "Links" },
+              );
+              return [
+                <Box key={`${seite}-s`} sx={{ fontWeight: 600 }}>
+                  {seite === "R" ? "Rechts" : "Links"}
+                </Box>,
+                <Feld key={`${seite}-a`} z={0} s="auto">
+                  <Auswahl
+                    name={`Bestellstatus ${seite}`}
+                    wert={glas?.Auftragsstatus}
+                    optionen={GLAS_BESTELLSTATUS}
+                    speichere={speichere("Auftragsstatus")}
+                  />
+                </Feld>,
+                <Box key={`${seite}-l`}>
+                  <Haken
+                    an={Boolean(glas?.Liefern)}
+                    name={`Liefern ${seite}`}
+                    speichere={speichere("Liefern")}
+                  />
+                </Box>,
+              ];
+            })}
+            <Box
+              sx={{
+                gridColumn: "1 / -1",
+                mt: 1,
+                fontStyle: "italic",
+                fontSize: "0.8rem",
+                color: "text.secondary",
+              }}
+            >
+              Glastyp – Status beim Hersteller
+            </Box>
+            <span />
+            <Feld z={0} s="auto">
+              {textFeld(
+                "glastyp.Bestellstatus.dialog",
+                "Status Glastyp",
+                glasFeld("Bestellstatus"),
+                glastyp?.Bestellstatus,
+              )}
+            </Feld>
+            <span />
+          </Box>
+          <HerstellerBestellung
+            brille={brille}
+            kunde={kunde}
+            glastyp={glastyp}
+            fassung={fassung}
+            augen={augen}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBestellOffen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };

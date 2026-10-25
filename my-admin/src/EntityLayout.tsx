@@ -70,15 +70,22 @@ export const ShowLayout = ({ children }: { children: ReactNode }) => (
 export const ShowColumns = ({
   children,
   spalten = "minmax(0, 1.4fr) minmax(0, 1fr)",
+  spaltenMittel,
 }: {
   children: ReactNode;
   // Spaltenaufteilung ab breiten Bildschirmen (lg)
   spalten?: string;
+  // optional schon ab mittleren Fensterbreiten (md) zweispaltig
+  spaltenMittel?: string;
 }) => (
   <Box
     sx={{
       display: "grid",
-      gridTemplateColumns: { xs: "1fr", lg: spalten },
+      gridTemplateColumns: {
+        xs: "1fr",
+        ...(spaltenMittel ? { md: spaltenMittel } : {}),
+        lg: spalten,
+      },
       gap: "1em",
       width: "100%",
       minWidth: 0,
@@ -166,20 +173,31 @@ export const RelatedSection = ({ title, children }: SectionProps) => (
 );
 
 // Grouped section of inputs for Edit/Create forms (direct child of <SimpleForm>).
+// Kompakt, damit Formulare möglichst ohne Scrollen auf den Bildschirm
+// passen: weniger Abstand zwischen den Feldern, die (meist leere) Zeile für
+// Hinweise unter jedem Feld nur so hoch wie nötig.
 export const FormSection = ({ title, children }: SectionProps) => (
-  <Box sx={{ width: "100%", mb: 1 }}>
-    <Typography sx={{ fontWeight: 600, mt: 1, mb: 1 }}>{title}</Typography>
+  <Box sx={{ width: "100%", mb: 0.5 }}>
+    <Typography sx={{ fontWeight: 600, fontSize: "0.92rem", mt: 0.5, mb: 0 }}>
+      {title}
+    </Typography>
     <Box
       sx={{
         display: "flex",
         flexDirection: "column",
-        gap: "0.25em",
+        gap: 0,
         width: "100%",
+        "& .MuiFormControl-marginDense": { mt: "6px", mb: "2px" },
+        "& .MuiFormHelperText-root": {
+          mt: "1px",
+          lineHeight: 1.15,
+          fontSize: "0.7rem",
+        },
       }}
     >
       {children}
     </Box>
-    <Divider sx={{ mt: 2 }} />
+    <Divider sx={{ mt: 1 }} />
   </Box>
 );
 
