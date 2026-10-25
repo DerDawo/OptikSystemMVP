@@ -55,6 +55,7 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Gutachten Kinderoptometrie", name: "Gutachten Kinderoptometrie" },
   { id: "Glasbestellung POL", name: "Glasbestellung POL" },
   { id: "Patientenanfrage", name: "Patientenanfrage" },
+  { id: "Antrag SRH", name: "Antrag SRH (Bildschirmarbeitsbrille)" },
   {
     id: "Rechnung Bildschirmarbeitsplatzbrille",
     name: "Rechnung Bildschirmarbeitsplatzbrille",
