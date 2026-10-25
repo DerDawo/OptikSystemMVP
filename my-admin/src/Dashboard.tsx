@@ -393,6 +393,7 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [obenSlot, setObenSlot] = useState<HTMLElement | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
 
@@ -727,75 +728,6 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
             {!statistik && (
               <>
                 <DashboardCard
-                  title="Heutige Termine"
-                  action={
-                    <Button size="small" onClick={() => navigate("/kalender")}>
-                      Kalender
-                    </Button>
-                  }
-                >
-                  {stats.termine.heute.length === 0 ? (
-                    <EmptyHint>Keine Termine heute.</EmptyHint>
-                  ) : (
-                    <Box
-                      sx={{
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: 0.25,
-                      }}
-                    >
-                      {stats.termine.heute.slice(0, 6).map((termin) => (
-                        <ButtonBase
-                          key={termin.id}
-                          onClick={() => navigate(`/termin/${termin.id}/show`)}
-                          sx={listRowSx}
-                        >
-                          <Typography
-                            sx={{
-                              width: 44,
-                              flex: "none",
-                              fontSize: 13,
-                              fontWeight: 600,
-                              color: "text.secondary",
-                              fontVariantNumeric: "tabular-nums",
-                            }}
-                          >
-                            {dayjs(termin.Start).format("HH:mm")}
-                          </Typography>
-                          <Box
-                            aria-hidden="true"
-                            sx={{
-                              width: 3,
-                              alignSelf: "stretch",
-                              borderRadius: 3,
-                              bgcolor: "primary.main",
-                              flex: "none",
-                            }}
-                          />
-                          <Box sx={{ flex: 1, minWidth: 0 }}>
-                            <Typography
-                              noWrap
-                              sx={{ fontWeight: 600, fontSize: 14 }}
-                            >
-                              {termin.kundeName}
-                            </Typography>
-                            <Typography
-                              noWrap
-                              sx={{
-                                fontSize: 12.5,
-                                color: (theme) => tokensFor(theme).text3,
-                              }}
-                            >
-                              {termin.Terminart || "Termin"}
-                            </Typography>
-                          </Box>
-                        </ButtonBase>
-                      ))}
-                    </Box>
-                  )}
-                </DashboardCard>
-
-                <DashboardCard
                   title="Abholbereite Brillen"
                   span
                   action={
@@ -902,6 +834,8 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
                     </Box>
                   )}
                 </DashboardCard>
+
+                <Box ref={setObenSlot} sx={{ display: "contents" }} />
               </>
             )}
 
@@ -1044,7 +978,9 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
           </Box>
 
           {/* "Heute zu tun" unter den heutigen Terminen */}
-          {!statistik && <DashboardAufgaben stand={lastUpdated} />}
+          {!statistik && (
+            <DashboardAufgaben stand={lastUpdated} obenSlot={obenSlot} />
+          )}
         </>
       ) : null}
     </Box>
