@@ -16,7 +16,11 @@ import {
   formatWert,
   text,
 } from "./werkstattauftragTemplate";
-import { anzahlGlaeser, sehstaerkeVeraendert } from "./formularVorschlaege";
+import {
+  anzahlGlaeser,
+  brillenartKategorie,
+  sehstaerkeVeraendert,
+} from "./formularVorschlaege";
 import { verteileWerte } from "./aokBerechtigungsscheinTemplate";
 import { bruttoZeilenEinzeln } from "./kassenanteil";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
@@ -262,6 +266,64 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
   };
 };
 
+// Optometrische Verordnung als Vordruck (Felder siehe
+// scripts/verordnung-optometrist-felder.mjs, mit Firmenstempel und
+// Unterschrift im Vordruck): Versicherter und Kasse aus der Kundenkartei,
+// Refraktion Ferne/Nähe aus dem Auftrag, Erklärung (Veränderung, Anzahl der
+// Gläser) wie beim Berechtigungsschein. Kostenrechnung und weitere Kästchen
+// trägt der Optiker im PDF ein.
+const KASSEN_KUERZEL: [string, RegExp][] = [
+  ["aok", /\baok\b/i],
+  ["lkk", /\blkk\b|landwirtschaft/i],
+  ["bkk", /\bbkk\b|betriebskrankenkasse/i],
+  ["ikk", /\bikk\b|innungskrankenkasse/i],
+  ["vdak", /\bvdak\b/i],
+  ["knappschaft", /knappschaft/i],
+];
+
+const verordnungOptometristFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  const brille: Record<string, unknown> = entities.brille ?? {};
+  const veraendert = sehstaerkeVeraendert(entities) === true;
+  const rechts = verteileWerte(brille.BrillenArt, entities.glasRechts);
+  const links = verteileWerte(brille.BrillenArt, entities.glasLinks);
+  const werte = (
+    zeile: string,
+    w: ReturnType<typeof verteileWerte>["ferne"],
+  ) => ({
+    [`${zeile}_sph`]: formatWert(w.Sph, "dioptrie"),
+    [`${zeile}_cyl`]: formatWert(w.Cyl, "dioptrie"),
+    [`${zeile}_achse`]: formatWert(w.A, "achse"),
+    [`${zeile}_prisma`]: formatWert(w.Pr, "zwei"),
+    [`${zeile}_basis`]: formatWert(w.B, "frei"),
+    [`${zeile}_hsa`]: formatWert(w.HSA, "frei"),
+  });
+  const kasse = text(k.Krankenkasse);
+  const kassenFeld = KASSEN_KUERZEL.find(([, muster]) => muster.test(kasse));
+  const heute = dayjs().format("DD.MM.YYYY");
+  return {
+    ...(kassenFeld ? { [`kasse_${kassenFeld[0]}`]: "X" } : {}),
+    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    geburtsdatum: formatDatum(k.Geburtsdatum),
+    kassennr: text(k.KrankenkassenNummer),
+    versichertennr: text(k.VersichertenNummer),
+    status: text(k.Versichertenstatus),
+    vk_gueltig: formatDatum(k.VersichertenkarteGueltigBis),
+    datum: heute,
+    ausgestellt_am: heute,
+    ...(veraendert
+      ? { cb_veraenderung: true, anzahl_glaeser: anzahlGlaeser(entities) }
+      : {}),
+    ...(brillenartKategorie(brille.BrillenArt) === "Officebrille"
+      ? { cb_bildschirm: true }
+      : {}),
+    ...werte("FR", rechts.ferne),
+    ...werte("FL", links.ferne),
+    ...werte("NR", rechts.naehe),
+    ...werte("NL", links.naehe),
+  };
+};
+
 // Erprobungsbericht elektronische Lupe (Vorbereitung Muster 8A, Felder siehe
 // scripts/erprobungsbericht-lupe-felder.mjs): Patient, Kasse/IK, Fernvisus
 // mit Korrektur aus dem Auftrag, Ort/Datum. Messwerte, Kreuze und Gerät
@@ -344,6 +406,11 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
         { seite: -1, oben: 733 },
       ],
     },
+  },
+  "Optometrische Verordnung Vordruck": {
+    datei: "verordnung-optometrist.pdf",
+    titel: "Optometrische Verordnung (Vordruck)",
+    felder: verordnungOptometristFelder,
   },
   "Berechtigungsschein GKV": {
     datei: "berechtigungsschein-gkv.pdf",
