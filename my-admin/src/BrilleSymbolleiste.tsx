@@ -10,7 +10,6 @@ import { Box, IconButton, Tooltip } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import CalculateOutlinedIcon from "@mui/icons-material/CalculateOutlined";
 import TaskAltIcon from "@mui/icons-material/TaskAlt";
-import PrintOutlinedIcon from "@mui/icons-material/PrintOutlined";
 import SearchIcon from "@mui/icons-material/Search";
 import KeyboardReturnIcon from "@mui/icons-material/KeyboardReturn";
 import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
@@ -122,9 +121,8 @@ export const BrilleSymbolleiste = () => {
       <Symbol titel="Abholung heute" onClick={heuteAbgeholt}>
         <TaskAltIcon />
       </Symbol>
-      <Symbol titel="Drucken" onClick={() => window.print()}>
-        <PrintOutlinedIcon />
-      </Symbol>
+      {/* Druck-Symbol: druckt direkt den Werkstattauftrag (ohne Vorschau) */}
+      <WerkstattauftragButton symbol drucker />
       <Symbol titel="Kundensuche" onClick={() => navigate("/search")}>
         <SearchIcon />
       </Symbol>
