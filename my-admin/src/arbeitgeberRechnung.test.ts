@@ -106,16 +106,14 @@ describe("Gespeicherter Arbeitgeber", () => {
         kunde: {
           ...entities.kunde,
           Arbeitgeber: {
-            firma: "Muster GmbH",
-            strasse: "Hauptstr. 1",
-            ort: "07545 Gera",
+            anschrift: "Muster GmbH\nHauptstr. 1\n07545 Gera",
             email: "rechnung@muster.de",
           },
         },
       },
       rechnungsnummer: "2026-0042",
     });
-    expect(html).toContain('data-ag="firma">Muster GmbH<');
+    expect(html).toContain('data-ag="anschrift">Muster GmbH\nHauptstr. 1');
     expect(html).toContain('data-ag="email">rechnung@muster.de<');
   });
 });
