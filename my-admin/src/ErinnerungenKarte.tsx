@@ -36,7 +36,10 @@ import {
  */
 
 const RESOURCE = "erinnerung";
+// Sichtbare Zeilen; weitere Erinnerungen erreicht man durch Scrollen in der
+// Karte (Zeilenhöhe ca. 52 px).
 const MAX_ZEILEN = 8;
+const ZEILEN_HOEHE = 52;
 
 type Kunde = {
   id: number | string;
@@ -254,8 +257,19 @@ export const ErinnerungenKarte = ({ stand }: { stand: Date | null }) => {
           Keine offenen Erinnerungen.
         </Typography>
       ) : (
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          {liste.slice(0, MAX_ZEILEN).map((erinnerung) => {
+        <Box
+          tabIndex={0}
+          aria-label="Erinnerungen, scrollbar"
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: MAX_ZEILEN * ZEILEN_HOEHE,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            scrollbarGutter: "stable",
+          }}
+        >
+          {liste.map((erinnerung) => {
             const kunde =
               erinnerung.kunde_id != null
                 ? kunden.get(String(erinnerung.kunde_id))
@@ -326,15 +340,6 @@ export const ErinnerungenKarte = ({ stand }: { stand: Date | null }) => {
               </Box>
             );
           })}
-          {liste.length > MAX_ZEILEN && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ px: 1.5, pt: 0.5 }}
-            >
-              + {liste.length - MAX_ZEILEN} weitere
-            </Typography>
-          )}
         </Box>
       )}
     </Card>

@@ -86,6 +86,7 @@ import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { KundeKarteikarte } from "./KundeKarteikarte";
 import { KrankenkasseInput } from "./krankenkassen";
 import { KundeBrillenversicherungen } from "./KundeBrillenversicherungen";
+import { KundeKassenrezepte } from "./KundeKassenrezepte";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -564,6 +565,8 @@ export const KundeShow = () => {
               <KundeKarteikarte />
               {/* Eigener Bereich für die vermittelten Brillenversicherungen */}
               <KundeBrillenversicherungen />
+              {/* Über die Sammelabrechnung abgerechnete Kassenrezepte */}
+              <KundeKassenrezepte />
               <DatenbankInfo />
             </ShowColumn>
           </Box>
