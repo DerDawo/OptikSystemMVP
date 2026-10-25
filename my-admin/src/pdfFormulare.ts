@@ -309,9 +309,9 @@ const verordnungOptometristFelder = (entities: DocumentMergeEntities) => {
   const heute = dayjs().format("DD.MM.YYYY");
   return {
     kasse_text: "PRIVAT",
-    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
-    adresse: [
-      [text(k.Vorname), text(k.Nachname)].filter(Boolean).join(" "),
+    // Name, darunter Straße und PLZ Ort (links); der Kasten rechts bleibt frei
+    name: [
+      [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
       [k.Straße, k.Hausnummer].map(text).filter(Boolean).join(" "),
       [k.Postleitzahl, k.Stadt].map(text).filter(Boolean).join(" "),
     ]
