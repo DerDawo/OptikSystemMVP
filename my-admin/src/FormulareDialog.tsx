@@ -94,7 +94,12 @@ import {
 } from "./aokBerechtigungsscheinTemplate";
 import { heuteIso } from "./AuftragsstatusLeiste";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
-import { belegAlsPdf, belegVersenden, type Seitenformat } from "./belegPdf";
+import {
+  belegAlsPdf,
+  belegVersenden,
+  herunterladen,
+  type Seitenformat,
+} from "./belegPdf";
 import { druckfensterOeffnen } from "./druckfenster";
 import { choosePhoneNumberForMessaging } from "./messaging";
 import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
@@ -1023,6 +1028,10 @@ const FormulareDialog = ({
       .catch(() => undefined);
   };
   const [versendet, setVersendet] = useState<"email" | "whatsapp" | null>(null);
+  // Zuletzt verschicktes PDF: Chrome blockiert den automatischen Download
+  // gern (der Tab wechselt gleich zu Gmail); "PDF speichern" lädt es per Klick
+  const [versandDatei, setVersandDatei] = useState<File | null>(null);
+  useEffect(() => setVersandDatei(null), [selectedVorlage?.id]);
   const versenden = async (kanal: "email" | "whatsapp") => {
     if (!selectedVorlage) return;
     if (pdfVorlage && !pdfUrl) {
@@ -1121,10 +1130,11 @@ const FormulareDialog = ({
           ),
       );
       if (ergebnis !== "abgebrochen") kvMerken();
+      if (ergebnis === "heruntergeladen") setVersandDatei(datei);
       if (ergebnis === "heruntergeladen") {
         notify(
           kanal === "email"
-            ? `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und Gmail geöffnet – bitte das PDF in die E-Mail ziehen.`
+            ? `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und Gmail geöffnet – bitte das PDF in die E-Mail ziehen. Fehlt die Datei (Chrome blockiert Downloads), hier auf „PDF speichern“ klicken.`
             : `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und WhatsApp-Chat des Kunden geöffnet – bitte das PDF in den Chat ziehen.`,
           { type: "info", autoHideDuration: 15000 },
         );
@@ -1436,6 +1446,15 @@ const FormulareDialog = ({
                     ),
                   aus: !selectedVorlage,
                 },
+                ...(versandDatei
+                  ? [
+                      {
+                        text: "PDF speichern",
+                        onClick: () => herunterladen(versandDatei),
+                        aus: false,
+                      },
+                    ]
+                  : []),
                 {
                   text:
                     versendet === "email"
@@ -1702,6 +1721,14 @@ const FormulareDialog = ({
               </Button>
               {versendbar && (
                 <>
+                  {versandDatei && (
+                    <Button
+                      startIcon={<PictureAsPdfIcon />}
+                      onClick={() => herunterladen(versandDatei)}
+                    >
+                      PDF speichern
+                    </Button>
+                  )}
                   <Button
                     startIcon={<EmailIcon />}
                     disabled={versendet !== null}

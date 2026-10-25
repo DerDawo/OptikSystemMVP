@@ -150,7 +150,7 @@ export const belegAlsPdf = async (
   });
 };
 
-const herunterladen = (datei: File) => {
+export const herunterladen = (datei: File) => {
   const url = URL.createObjectURL(datei);
   const a = document.createElement("a");
   a.href = url;
@@ -216,6 +216,16 @@ export const belegVersenden = async (
     }
   }
   herunterladen(datei);
+  // Chrome blockiert den automatischen Download gern: das PDF zusätzlich in
+  // einem eigenen Tab öffnen, von dort lässt es sich speichern (Tab bleibt
+  // offen, Gmail/WhatsApp kommt danach in den Vordergrund)
+  try {
+    const pdfUrl = URL.createObjectURL(datei);
+    window.open(pdfUrl, "unicorn-pdf");
+    window.setTimeout(() => URL.revokeObjectURL(pdfUrl), 10 * 60_000);
+  } catch {
+    // Pop-up blockiert: dann bleibt der Download
+  }
   openExternalMessage(
     buildExternalMessageUrl(kanal, {
       to: nachricht.an,
