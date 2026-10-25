@@ -7,7 +7,7 @@
 // hierauf aufsetzen, indem sie lediglich weitere `dokumentvorlage`-Datensätze
 // mit Kategorie "Rechnung"/"Mahnung" anlegen - an dieser Dialog-/Render-Logik
 // muss dafür nichts geändert werden.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Alert,
@@ -18,15 +18,26 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
+  Tooltip,
   Typography,
   TextField,
   CircularProgress,
   MenuItem,
+  ToggleButton,
+  ToggleButtonGroup,
 } from "@mui/material";
 import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutlined";
 import CloseIcon from "@mui/icons-material/Close";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import {
+  neueNummern,
+  sortiereVorlagen,
+  verschiebeUmEins,
+  verschiebeVorlage,
+} from "./vorlagenReihenfolge";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
@@ -35,9 +46,15 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import PrintIcon from "@mui/icons-material/Print";
 import EditNoteIcon from "@mui/icons-material/EditNote";
 import FactCheckIcon from "@mui/icons-material/FactCheck";
+import PrintOutlinedIcon from "@mui/icons-material/PrintOutlined";
 import BuildIcon from "@mui/icons-material/Build";
+import AssignmentOutlinedIcon from "@mui/icons-material/AssignmentOutlined";
+import EmailIcon from "@mui/icons-material/Email";
+import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import {
+  Confirm,
   RaRecord,
+  useDataProvider,
   useGetList,
   useGetMany,
   useGetOne,
@@ -74,7 +91,11 @@ import {
   buildAokBerechtigungsscheinPreviewHtml,
   buildAokBerechtigungsscheinPrintHtml,
 } from "./aokBerechtigungsscheinTemplate";
+import { heuteIso } from "./AuftragsstatusLeiste";
 import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
+import { belegAlsPdf, belegVersenden, type Seitenformat } from "./belegPdf";
+import { druckfensterOeffnen } from "./druckfenster";
+import { choosePhoneNumberForMessaging } from "./messaging";
 import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
   buildErprobungsprotokollPreviewHtml,
@@ -89,6 +110,35 @@ import {
   buildRezeptanfragePrintHtml,
 } from "./rezeptanfrageTemplate";
 import {
+  buildGutachtenKinderoptometriePreviewHtml,
+  buildGutachtenKinderoptometriePrintHtml,
+} from "./gutachtenKinderoptometrieTemplate";
+import {
+  buildPolGlasbestellungPreviewHtml,
+  buildPolGlasbestellungPrintHtml,
+} from "./polGlasbestellungTemplate";
+import {
+  buildPatientenanfragePreviewHtml,
+  buildPatientenanfragePrintHtml,
+} from "./patientenanfrageTemplate";
+import {
+  buildSrhBildschirmbrillePreviewHtml,
+  buildSrhBildschirmbrillePrintHtml,
+} from "./srhBildschirmbrilleTemplate";
+import {
+  buildMahnungPreviewHtml,
+  buildMahnungPrintHtml,
+} from "./mahnungTemplate";
+import {
+  ARBEITGEBER_RECHNUNG_KATEGORIEN,
+  buildArbeitgeberRechnungPreviewHtml,
+  buildArbeitgeberRechnungPrintHtml,
+} from "./arbeitgeberRechnungTemplate";
+import {
+  buildAuftragszettelPreviewHtml,
+  buildAuftragszettelPrintHtml,
+} from "./auftragszettelTemplate";
+import {
   buildOptometrischeVerordnungPreviewHtml,
   buildOptometrischeVerordnungPrintHtml,
   buildVerordnungKurzPreviewHtml,
@@ -99,6 +149,10 @@ import {
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
 // Seed-Migration 20260831020100_seed_dokumentvorlage_rechnung.sql).
 const RECHNUNG_KATEGORIE = "Rechnung";
+
+// Mahnungen (Zahlungserinnerung und Mahnstufen) im Briefkopf der Rechnung
+// (mahnungTemplate.ts); der Brieftext kommt aus der jeweiligen Vorlage
+const MAHNUNG_KATEGORIE = "Mahnung";
 
 // Kategorie, die "Berechtigungsschein erstellen" öffnet: das Original des
 // ZVA (AOK-Vertrag Sehhilfen, Anlage 4) als ausfüllbares PDF (pdfFormulare.ts)
@@ -120,6 +174,21 @@ const VERORDNUNG_GKV_KATEGORIE = "Optometrische Verordnung GKV";
 // Kostenvoranschlag im Rechnungsdesign (rechnungTemplate.ts)
 const KOSTENVORANSCHLAG_KATEGORIE = "Kostenvoranschlag";
 
+// Rechnungen an den Arbeitgeber im Rechnungsdesign (arbeitgeberRechnungTemplate.ts):
+// Empfänger wird in der Vorschau eingetippt, der Versand geht per E-Mail an die
+// dort eingetragene Adresse des Arbeitgebers
+const AG_RECHNUNG_BILDSCHIRM_KATEGORIE =
+  ARBEITGEBER_RECHNUNG_KATEGORIEN.bildschirm;
+const AG_RECHNUNG_SCHUTZ_KATEGORIE = ARBEITGEBER_RECHNUNG_KATEGORIEN.schutz;
+const AG_RECHNUNG_KATEGORIEN: string[] = [
+  AG_RECHNUNG_BILDSCHIRM_KATEGORIE,
+  AG_RECHNUNG_SCHUTZ_KATEGORIE,
+];
+
+// Auftragszettel in A5 mit Anamnesebogen auf der Rückseite
+// (auftragszettelTemplate.ts), leer oder ausgefüllt
+const AUFTRAGSZETTEL_KATEGORIE = "Auftragszettel";
+
 // Knöpfe im Auswahlfenster wie in Prisma: dunkelblau, weiße fette Schrift
 const PRISMA_KNOPF = {
   bgcolor: "#1d4e8f",
@@ -137,6 +206,10 @@ type LayoutDaten = {
   betrieb?: RaRecord;
   rechnungsnummer: string;
   begruendung?: string;
+  // leer drucken (zum Ausfüllen von Hand), nur bei `leerMoeglich`
+  leer?: boolean;
+  // Text der gewählten Vorlage, nur bei `mitVorlagentext`
+  vorlagentext?: string;
 };
 
 type Layout = {
@@ -146,6 +219,14 @@ type Layout = {
   // Formulare mit anklickbaren Kästchen: gedruckt wird der Stand der
   // Vorschau (vorgeschlagene Kreuze lassen sich dort noch ändern)
   ausVorschau?: boolean;
+  // wahlweise leer oder mit den Daten des Auftrags ausgefüllt
+  leerMoeglich?: boolean;
+  // Layout aus dem Code, Text aus der Vorlage ("Text ändern" möglich)
+  mitVorlagentext?: boolean;
+  // Seitenformat für den Versand als PDF (ohne Angabe A4) und die Blätter,
+  // die dabei je eine eigene Seite werden (CSS-Selektor)
+  format?: Seitenformat;
+  blatt?: string;
 };
 
 // Vorschau samt angeklickter Kästchen als eigenständiges HTML
@@ -153,8 +234,37 @@ const vorschauAlsHtml = (doc: Document) => {
   doc
     .querySelectorAll<HTMLInputElement>('input[type="checkbox"]')
     .forEach((box) => box.toggleAttribute("checked", box.checked));
-  return `<!DOCTYPE html>\n${doc.documentElement.outerHTML}`;
+  // Nur für die Vorschau gedachte Teile (Eingabehilfen, Versandadresse) nicht
+  // mitdrucken: sie stehen in einer Kopie
+  const kopie = doc.documentElement.cloneNode(true) as HTMLElement;
+  kopie
+    .querySelectorAll("[data-nur-vorschau], style[data-bildschirm]")
+    .forEach((teil) => teil.remove());
+  return `<!DOCTYPE html>\n${kopie.outerHTML}`;
 };
+
+// Auswahl "ausgefüllt" oder "leer" für Formulare mit `leerMoeglich`
+const LeerOderAusgefuellt = ({
+  leer,
+  onChange,
+}: {
+  leer: boolean;
+  onChange: (leer: boolean) => void;
+}) => (
+  <ToggleButtonGroup
+    exclusive
+    size="small"
+    fullWidth
+    color="primary"
+    value={leer ? "leer" : "ausgefuellt"}
+    onChange={(_, wert) => wert && onChange(wert === "leer")}
+    aria-label="Ausgefüllt oder leer drucken"
+    sx={{ "& .MuiToggleButton-root": { textTransform: "none" } }}
+  >
+    <ToggleButton value="ausgefuellt">Ausgefüllt mit Kundendaten</ToggleButton>
+    <ToggleButton value="leer">Leer zum Ausfüllen von Hand</ToggleButton>
+  </ToggleButtonGroup>
+);
 
 const antragLayout = (art: AntragArt): Layout => ({
   title: "Antrag-Vorschau",
@@ -169,6 +279,12 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Rechnungsvorschau",
     preview: buildRechnungPreviewHtml,
     print: buildRechnungPrintHtml,
+  },
+  [MAHNUNG_KATEGORIE]: {
+    title: "Mahnung-Vorschau",
+    mitVorlagentext: true,
+    preview: buildMahnungPreviewHtml,
+    print: buildMahnungPrintHtml,
   },
   [KOSTENVORANSCHLAG_KATEGORIE]: {
     title: "Kostenvoranschlag-Vorschau",
@@ -191,8 +307,21 @@ const LAYOUTS: Record<string, Layout> = {
     preview: buildWerkstattauftragPreviewHtml,
     print: buildWerkstattauftragPrintHtml,
   },
+  [AG_RECHNUNG_BILDSCHIRM_KATEGORIE]: {
+    ausVorschau: true,
+    title: "Rechnung-Vorschau",
+    preview: (d) => buildArbeitgeberRechnungPreviewHtml("bildschirm", d),
+    print: (d) => buildArbeitgeberRechnungPrintHtml("bildschirm", d),
+  },
+  [AG_RECHNUNG_SCHUTZ_KATEGORIE]: {
+    ausVorschau: true,
+    title: "Rechnung-Vorschau",
+    preview: (d) => buildArbeitgeberRechnungPreviewHtml("schutz", d),
+    print: (d) => buildArbeitgeberRechnungPrintHtml("schutz", d),
+  },
   "Antrag Zuschuss": antragLayout("zuschuss"),
   "Antrag Sozialamt": antragLayout("sozialamt"),
+  "Antrag Jugendamt": antragLayout("jugendamt"),
   [VERORDNUNG_KATEGORIE]: {
     ausVorschau: true,
     title: "Verordnung-Vorschau",
@@ -223,19 +352,85 @@ const LAYOUTS: Record<string, Layout> = {
     preview: buildRezeptanfragePreviewHtml,
     print: buildRezeptanfragePrintHtml,
   },
+  // Gutachten Kinderoptometrie: Name, Alter und Refraktionswerte aus dem
+  // Auftrag, alles andere in der Vorschau eintippen
+  "Gutachten Kinderoptometrie": {
+    ausVorschau: true,
+    blatt: ".seite",
+    title: "Gutachten-Vorschau",
+    preview: buildGutachtenKinderoptometriePreviewHtml,
+    print: buildGutachtenKinderoptometriePrintHtml,
+  },
+  // Glasbestellung bei POL: Refraktions- und Zentrierdaten aus dem Auftrag,
+  // Kästchen und Felder in der Vorschau ergänzen
+  "Glasbestellung POL": {
+    ausVorschau: true,
+    title: "POL-Glasbestellung-Vorschau",
+    preview: buildPolGlasbestellungPreviewHtml,
+    print: buildPolGlasbestellungPrintHtml,
+  },
+  // Brief des Kunden an eine Augenarztpraxis (Aufnahme, Termin)
+  Patientenanfrage: {
+    ausVorschau: true,
+    title: "Patientenanfrage-Vorschau",
+    preview: buildPatientenanfragePreviewHtml,
+    print: buildPatientenanfragePrintHtml,
+  },
+  // Vordruck "Gewährung einer Bildschirmarbeitsbrille" für das SRH-Krankenhaus
+  // (ohne Stempel und Unterschrift)
+  "Antrag SRH": {
+    ausVorschau: true,
+    title: "Antrag-SRH-Vorschau",
+    preview: buildSrhBildschirmbrillePreviewHtml,
+    print: buildSrhBildschirmbrillePrintHtml,
+  },
+  [AUFTRAGSZETTEL_KATEGORIE]: {
+    ausVorschau: true,
+    leerMoeglich: true,
+    format: "A5",
+    blatt: ".blatt",
+    title: "Auftragszettel-Vorschau",
+    preview: buildAuftragszettelPreviewHtml,
+    print: buildAuftragszettelPrintHtml,
+  },
 };
 
-// Kategorie und Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen
-// (#57, Seed-Migration 20260831030100_seed_dokumentvorlage_mahnung.sql). Es
+// Zuordnung Mahnstufe -> Vorlagenname für die Mahnvorlagen (#57, Namen seit
+// 20261019100000_mahnung_briefkopf_texte.sql: Zahlungserinnerung,
+// 1. Mahnung, 2. Mahnung (Inkasso-Ankündigung)). Es
 // gibt mehrere aktive Vorlagen der Kategorie "Mahnung" (eine je Stufe), daher
 // reicht die generische "genau ein Treffer"-Auswahl unten nicht aus - der
 // Name der zur aktuellen Mahnstufe passenden Vorlage wird explizit über
 // `initialVorlageName` vorgegeben.
-const MAHNUNG_KATEGORIE = "Mahnung";
+
+// Formulare, auf die eine Genehmigung des Kostenträgers folgt: Drucken, PDF
+// oder Versand merkt sich das Datum am Auftrag ("KVVersendet"); ohne Haken
+// "genehmigt" erscheint der Auftrag nach 14 Tagen im Dashboard
+export const KV_KATEGORIEN = [
+  "Kostenvoranschlag",
+  "Antrag BAP",
+  "Antrag Zuschuss",
+  "Antrag Sozialamt",
+  "Antrag Jugendamt",
+  "Berechtigungsschein",
+  "Berechtigungsschein AOK",
+  "Berechtigungsschein GKV",
+];
+
+// Formulararten, die eigene Knöpfe öffnen (Rechnung, Mahnung,
+// Berechtigungsschein, Werkstattauftrag, Auftragszettel): die letzte aktive
+// Vorlage einer solchen Art lässt sich nicht ausblenden
+const UNVERZICHTBARE_KATEGORIEN = [
+  RECHNUNG_KATEGORIE,
+  MAHNUNG_KATEGORIE,
+  BERECHTIGUNGSSCHEIN_KATEGORIE,
+  WERKSTATTKARTE_KATEGORIE,
+  AUFTRAGSZETTEL_KATEGORIE,
+];
 const MAHNUNG_VORLAGE_NACH_STUFE: Record<number, string> = {
   1: "Zahlungserinnerung",
-  2: "2. Mahnung",
-  3: "3. Mahnung (Inkasso-Ankündigung)",
+  2: "1. Mahnung",
+  3: "2. Mahnung (Inkasso-Ankündigung)",
 };
 
 type Dokumentvorlage = RaRecord & {
@@ -243,6 +438,7 @@ type Dokumentvorlage = RaRecord & {
   Kategorie: string;
   Vorlagentext: string;
   Aktiv: boolean;
+  Reihenfolge?: number | null;
 };
 
 const escapeHtml = (value: string) =>
@@ -266,22 +462,29 @@ const buildPrintHtml = (title: string, body: string) => `<!DOCTYPE html>
 </body>
 </html>`;
 
-// Leichte, im Browser lauffähige "PDF"-Lösung ohne zusätzliche Bibliothek:
-// ein separates Fenster mit druckoptimiertem CSS, dessen Druckdialog der
-// Nutzer entweder an einen Drucker schickt oder als PDF speichert.
-const openDocumentWindow = (html: string, autoPrint: boolean): boolean => {
-  const documentWindow = window.open("", "_blank", "width=850,height=1100");
-  if (!documentWindow) {
-    return false;
-  }
-  documentWindow.document.open();
-  documentWindow.document.write(html);
-  documentWindow.document.close();
-  documentWindow.focus();
-  if (autoPrint) {
-    documentWindow.print();
-  }
-  return true;
+// Druck ohne Vorschau (Werkstattauftrag): ein unsichtbarer Rahmen nimmt das
+// Druck-HTML auf und öffnet sofort den Druckdialog des Browsers - ohne
+// zusätzliches Fenster, daher auch ohne Pop-up-Freigabe
+const druckeDirekt = (html: string) => {
+  document
+    .querySelectorAll("iframe[data-direktdruck]")
+    .forEach((alt) => alt.remove());
+  const rahmen = document.createElement("iframe");
+  rahmen.dataset.direktdruck = "";
+  rahmen.setAttribute("aria-hidden", "true");
+  rahmen.style.cssText =
+    "position:fixed;left:-10000px;top:0;width:210mm;height:297mm;border:0;";
+  rahmen.onload = () => {
+    const fenster = rahmen.contentWindow;
+    if (!fenster || fenster.location.href !== "about:srcdoc") return;
+    fenster.addEventListener("afterprint", () =>
+      setTimeout(() => rahmen.remove(), 1000),
+    );
+    fenster.focus();
+    fenster.print();
+  };
+  rahmen.srcdoc = html;
+  document.body.appendChild(rahmen);
 };
 
 interface FormulareDialogProps {
@@ -294,6 +497,10 @@ interface FormulareDialogProps {
   // Namen aus, falls es dort mehrere aktive Vorlagen gibt (Mahnung
   // erstellen, #57: eine Vorlage je Mahnstufe).
   initialVorlageName?: string;
+  // Ohne Vorschau sofort drucken, sobald alle Daten geladen sind; gibt es
+  // keine eindeutige Vorlage mit eigenem Layout, erscheint der Dialog wie
+  // gewohnt
+  direktDrucken?: boolean;
 }
 
 const FormulareDialog = ({
@@ -301,20 +508,54 @@ const FormulareDialog = ({
   onClose,
   initialKategorie,
   initialVorlageName,
+  direktDrucken = false,
 }: FormulareDialogProps) => {
   const notify = useNotify();
+  const [direkt, setDirekt] = useState(direktDrucken);
   const [selectedVorlage, setSelectedVorlage] =
     useState<Dokumentvorlage | null>(null);
   // "liste" = Auswahlfenster wie in Prisma, "vorschau" = Seitenansicht
   const [ansicht, setAnsicht] = useState<"liste" | "vorschau">("liste");
   const [typ, setTyp] = useState<string>("");
 
-  const { data: vorlagen, isPending: vorlagenLoading } =
-    useGetList<Dokumentvorlage>("dokumentvorlage", {
-      pagination: { page: 1, perPage: 200 },
-      sort: { field: "Kategorie", order: "ASC" },
-      filter: { Aktiv: true },
-    });
+  const {
+    data: vorlagen,
+    isPending: vorlagenLoading,
+    refetch: vorlagenNeuLaden,
+  } = useGetList<Dokumentvorlage>("dokumentvorlage", {
+    pagination: { page: 1, perPage: 200 },
+    sort: { field: "Kategorie", order: "ASC" },
+    filter: { Aktiv: true },
+  });
+
+  // Formular aus der Liste ausblenden ("Aktiv" aus) - nicht löschen; wieder
+  // einblenden unter Einstellungen -> Dokumentvorlagen
+  const dataProvider = useDataProvider();
+  const [ausblendenFrage, setAusblendenFrage] = useState(false);
+  const letzteIhrerArt =
+    selectedVorlage != null &&
+    UNVERZICHTBARE_KATEGORIEN.includes(selectedVorlage.Kategorie) &&
+    (vorlagen ?? []).filter((v) => v.Kategorie === selectedVorlage.Kategorie)
+      .length <= 1;
+  const ausblenden = async () => {
+    setAusblendenFrage(false);
+    if (!selectedVorlage) return;
+    try {
+      await dataProvider.update("dokumentvorlage", {
+        id: selectedVorlage.id,
+        data: { Aktiv: false },
+        previousData: selectedVorlage,
+      });
+      notify(
+        `„${selectedVorlage.Name}“ ausgeblendet. Wieder einblenden: Einstellungen → Dokumentvorlagen („Aktiv“).`,
+        { type: "success" },
+      );
+      setSelectedVorlage(null);
+      vorlagenNeuLaden();
+    } catch {
+      notify("Formular konnte nicht ausgeblendet werden.", { type: "error" });
+    }
+  };
 
   useEffect(() => {
     if (!initialKategorie || vorlagenLoading || selectedVorlage) {
@@ -344,42 +585,66 @@ const FormulareDialog = ({
   const zusatzleistungIds: number[] = (brille.ZusatzleistungIDs ?? []).filter(
     (id: number | null | undefined) => id !== null && id !== undefined,
   );
-  const { data: zusatzleistungen } = useGetMany(
+  const { data: katalogLeistungen, isLoading: katalogLaedt } = useGetMany(
     "zusatzleistung",
     { ids: zusatzleistungIds },
     { enabled: zusatzleistungIds.length > 0 },
   );
+  // Preis je Auftrag (brille_hat_zusatzleistungen.Betrag) statt Katalogpreis
+  const { data: zuordnungen, isLoading: zuordnungenLaden } = useGetList(
+    "brille_hat_zusatzleistungen",
+    {
+      filter: { BrillenID: brille.id },
+      pagination: { page: 1, perPage: 100 },
+      sort: { field: "id", order: "ASC" },
+    },
+    { enabled: brille.id != null && zusatzleistungIds.length > 0 },
+  );
+  const zusatzleistungen = useMemo(
+    () =>
+      (katalogLeistungen ?? []).map((leistung) => {
+        const zuordnung = (zuordnungen ?? []).find(
+          (z) => z.ZusatzleistungID === leistung.id,
+        );
+        return zuordnung?.Betrag != null
+          ? { ...leistung, Betrag: zuordnung.Betrag }
+          : leistung;
+      }),
+    [katalogLeistungen, zuordnungen],
+  );
 
-  const { data: kunde } = useGetOne(
+  const { data: kunde, isLoading: kundeLaedt } = useGetOne(
     "kunde",
     { id: brille.kunde_id },
     { enabled: Boolean(brille.kunde_id) },
   );
-  const { data: glasLinks } = useGetOne(
+  const { data: glasLinks, isLoading: glasLinksLaedt } = useGetOne(
     "glass",
     { id: brille.GlasLinks },
     { enabled: Boolean(brille.GlasLinks) },
   );
-  const { data: glasRechts } = useGetOne(
+  const { data: glasRechts, isLoading: glasRechtsLaedt } = useGetOne(
     "glass",
     { id: brille.GlasRechts },
     { enabled: Boolean(brille.GlasRechts) },
   );
-  const { data: fassung } = useGetOne(
+  const { data: fassung, isLoading: fassungLaedt } = useGetOne(
     "fassung",
     { id: brille.Fassung },
     { enabled: Boolean(brille.Fassung) },
   );
-  const { data: glastyp } = useGetOne(
+  const { data: glastyp, isLoading: glastypLaedt } = useGetOne(
     "glastyp",
     { id: brille.Glastyp },
     { enabled: Boolean(brille.Glastyp) },
   );
-  const { data: betrieb } = useGetOne("betrieb", { id: 1 });
+  const { data: betrieb, isLoading: betriebLaedt } = useGetOne("betrieb", {
+    id: 1,
+  });
 
   // Vorherige Brille desselben Kunden (bisherige Werte, Veränderung der
   // Sehstärke): der jüngste Auftrag vor diesem
-  const { data: vorherigeBrillen } = useGetList(
+  const { data: vorherigeBrillen, isLoading: vorherigeLaden } = useGetList(
     "brille",
     {
       pagination: { page: 1, perPage: 1 },
@@ -395,16 +660,18 @@ const FormulareDialog = ({
     { enabled: Boolean(brille.kunde_id) && brille.id != null },
   );
   const vorherigeBrille = vorherigeBrillen?.[0];
-  const { data: vorherigesGlasRechts } = useGetOne(
-    "glass",
-    { id: vorherigeBrille?.GlasRechts },
-    { enabled: Boolean(vorherigeBrille?.GlasRechts) },
-  );
-  const { data: vorherigesGlasLinks } = useGetOne(
-    "glass",
-    { id: vorherigeBrille?.GlasLinks },
-    { enabled: Boolean(vorherigeBrille?.GlasLinks) },
-  );
+  const { data: vorherigesGlasRechts, isLoading: vorherigesGlasRechtsLaedt } =
+    useGetOne(
+      "glass",
+      { id: vorherigeBrille?.GlasRechts },
+      { enabled: Boolean(vorherigeBrille?.GlasRechts) },
+    );
+  const { data: vorherigesGlasLinks, isLoading: vorherigesGlasLinksLaedt } =
+    useGetOne(
+      "glass",
+      { id: vorherigeBrille?.GlasLinks },
+      { enabled: Boolean(vorherigeBrille?.GlasLinks) },
+    );
 
   const mergeEntities: DocumentMergeEntities = useMemo(
     () => ({
@@ -451,11 +718,16 @@ const FormulareDialog = ({
   const kiFormular = selectedVorlage
     ? KI_FORMULARE[selectedVorlage.Kategorie]
     : undefined;
+  // Formulare mit Begründungsfeld ohne KI-Vorschlag
+  const mitBegruendung =
+    Boolean(kiFormular) || selectedVorlage?.Kategorie === "Antrag Jugendamt";
   const [begruendung, setBegruendung] = useState("");
   const [kiLaeuft, setKiLaeuft] = useState(false);
   useEffect(() => {
     setBegruendung("");
   }, [selectedVorlage?.id]);
+  // Auftragszettel: leer zum Ausfüllen von Hand statt mit den Daten
+  const [leer, setLeer] = useState(false);
   const kiVorschlagHolen = async () => {
     if (!kiFormular) return;
     setKiLaeuft(true);
@@ -470,14 +742,55 @@ const FormulareDialog = ({
     }
   };
 
+  // Rechnungen an den Arbeitgeber: fehlt am Auftrag noch die Rechnungsnummer,
+  // wird beim Öffnen der Vorlage die nächste fortlaufende vergeben
+  const refresh = useRefresh();
+  const [vergebeneNummer, setVergebeneNummer] = useState("");
+  const rechnungsnummer = String(
+    brille.Rechnungsnummer || vergebeneNummer || "",
+  );
+  const braucheNummer =
+    Boolean(selectedVorlage) &&
+    AG_RECHNUNG_KATEGORIEN.includes(selectedVorlage?.Kategorie ?? "") &&
+    !rechnungsnummer &&
+    typeof brille.id === "number";
+  const nummerAngefragt = useRef(false);
+  useEffect(() => {
+    if (!braucheNummer || nummerAngefragt.current) return;
+    nummerAngefragt.current = true;
+    supabase
+      .rpc("assign_rechnungsnummer", { p_brille_id: brille.id })
+      .then(({ data, error }) => {
+        if (error || !data) {
+          nummerAngefragt.current = false;
+          notify("Rechnungsnummer konnte nicht vergeben werden.", {
+            type: "error",
+          });
+          return;
+        }
+        setVergebeneNummer(String(data));
+        notify(`Rechnungsnummer ${data} vergeben.`, { type: "success" });
+        refresh();
+      });
+  }, [braucheNummer, brille.id, notify, refresh]);
+
   const layoutDaten: LayoutDaten = useMemo(
     () => ({
       entities: mergeEntities,
       betrieb,
-      rechnungsnummer: brille.Rechnungsnummer ?? "",
+      rechnungsnummer,
       begruendung,
+      leer,
+      vorlagentext: selectedVorlage?.Vorlagentext ?? "",
     }),
-    [mergeEntities, betrieb, brille.Rechnungsnummer, begruendung],
+    [
+      mergeEntities,
+      betrieb,
+      rechnungsnummer,
+      begruendung,
+      leer,
+      selectedVorlage?.Vorlagentext,
+    ],
   );
   const layoutDef = selectedVorlage
     ? LAYOUTS[selectedVorlage.Kategorie]
@@ -501,7 +814,7 @@ const FormulareDialog = ({
   const kaestchenStand = useRef<boolean[] | null>(null);
   useEffect(() => {
     kaestchenStand.current = null;
-  }, [selectedVorlage?.id]);
+  }, [selectedVorlage?.id, leer]);
   const vorschauGeladen = () => {
     const doc = vorschauRef.current?.contentDocument;
     if (!doc) return;
@@ -565,12 +878,247 @@ const FormulareDialog = ({
   );
   const listenVorlagen = useMemo(
     () =>
-      auswahlVorlagen
-        .filter((v) => !typ || v.Kategorie === typ)
-        .sort((x, y) => x.Name.localeCompare(y.Name, "de")),
+      sortiereVorlagen(auswahlVorlagen).filter(
+        (v) => !typ || v.Kategorie === typ,
+      ),
     [auswahlVorlagen, typ],
   );
-  const textAenderbar = Boolean(selectedVorlage) && !layout && !pdfVorlage;
+
+  // Eigene Reihenfolge (für alle gespeichert in dokumentvorlage.Reihenfolge)
+  const sortierteAuswahl = useMemo(
+    () => sortiereVorlagen(vorlagen ?? []),
+    [vorlagen],
+  );
+  const [gezogenId, setGezogenId] = useState<Dokumentvorlage["id"] | null>(
+    null,
+  );
+  const reihenfolgeSpeichern = async (neu: Dokumentvorlage[]) => {
+    const aenderungen = neueNummern(neu);
+    if (aenderungen.length === 0) return;
+    try {
+      await Promise.all(
+        aenderungen.map(({ id, Reihenfolge }) =>
+          dataProvider.update("dokumentvorlage", {
+            id,
+            data: { Reihenfolge },
+            previousData: neu.find((v) => v.id === id),
+          }),
+        ),
+      );
+      vorlagenNeuLaden();
+    } catch {
+      notify("Reihenfolge konnte nicht gespeichert werden.", {
+        type: "error",
+      });
+    }
+  };
+  const reihenfolgeZuruecksetzen = async () => {
+    const mitNummer = (vorlagen ?? []).filter((v) => v.Reihenfolge != null);
+    try {
+      await Promise.all(
+        mitNummer.map((v) =>
+          dataProvider.update("dokumentvorlage", {
+            id: v.id,
+            data: { Reihenfolge: null },
+            previousData: v,
+          }),
+        ),
+      );
+      vorlagenNeuLaden();
+      notify("Reihenfolge wieder alphabetisch.", { type: "success" });
+    } catch {
+      notify("Reihenfolge konnte nicht zurückgesetzt werden.", {
+        type: "error",
+      });
+    }
+  };
+  const textAenderbar =
+    Boolean(selectedVorlage) &&
+    ((!layout && !pdfVorlage) || Boolean(layoutDef?.mitVorlagentext));
+
+  const datenLaden = [
+    vorlagenLoading,
+    katalogLaedt,
+    zuordnungenLaden,
+    kundeLaedt,
+    glasLinksLaedt,
+    glasRechtsLaedt,
+    fassungLaedt,
+    glastypLaedt,
+    betriebLaedt,
+    vorherigeLaden,
+    vorherigesGlasRechtsLaedt,
+    vorherigesGlasLinksLaedt,
+  ].some(Boolean);
+  const direktGedruckt = useRef(false);
+  useEffect(() => {
+    if (!direkt || datenLaden || direktGedruckt.current) return;
+    if (!selectedVorlage) {
+      // keine oder mehrere passende Vorlagen: Auswahl anzeigen
+      if (auswahlVorlagen.length !== 1) setDirekt(false);
+      return;
+    }
+    if (!layoutDef) {
+      setDirekt(false);
+      return;
+    }
+    direktGedruckt.current = true;
+    druckeDirekt(layoutDef.print(layoutDaten));
+    onClose();
+  }, [
+    direkt,
+    datenLaden,
+    selectedVorlage,
+    auswahlVorlagen,
+    layoutDef,
+    layoutDaten,
+    onClose,
+  ]);
+
+  // HTML für Druck und PDF (bei Anträgen samt angeklickter Kästchen)
+  const druckHtml = () => {
+    const vorschau = vorschauRef.current?.contentDocument;
+    return layoutDef?.ausVorschau && vorschau
+      ? vorschauAlsHtml(vorschau)
+      : (layout?.print ??
+          buildPrintHtml(selectedVorlage?.Name ?? "", renderedText));
+  };
+
+  // Jedes Formular als PDF per E-Mail oder WhatsApp an den Kunden;
+  // ausfüllbare PDF-Vorlagen gehen vorausgefüllt raus, alle anderen werden
+  // aus dem Druck-HTML erzeugt
+  const versendbar = Boolean(selectedVorlage);
+  const [versendet, setVersendet] = useState<"email" | "whatsapp" | null>(null);
+  const versenden = async (kanal: "email" | "whatsapp") => {
+    if (!selectedVorlage) return;
+    if (pdfVorlage && !pdfUrl) {
+      notify(
+        "Das PDF wird noch erstellt – bitte gleich noch einmal versuchen.",
+        {
+          type: "warning",
+        },
+      );
+      return;
+    }
+    setVersendet(kanal);
+    try {
+      const mahnung = selectedVorlage.Kategorie === MAHNUNG_KATEGORIE;
+      const agRechnung = AG_RECHNUNG_KATEGORIEN.includes(
+        selectedVorlage.Kategorie,
+      );
+      const beleg =
+        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE ||
+        mahnung ||
+        agRechnung;
+      const nummer = beleg ? rechnungsnummer.trim() : "";
+      const art =
+        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE || agRechnung
+          ? "Rechnung"
+          : selectedVorlage.Name;
+      // Rechnung an den Arbeitgeber: Empfänger ist die in der Vorschau
+      // eingetragene Adresse, nicht der Kunde
+      const agEmail = agRechnung
+        ? (
+            vorschauRef.current?.contentDocument?.querySelector(
+              ".versand-email",
+            )?.textContent ?? ""
+          ).trim()
+        : "";
+      if (agRechnung && kanal === "whatsapp") {
+        notify("Rechnungen an den Arbeitgeber gehen per E-Mail.", {
+          type: "warning",
+        });
+        return;
+      }
+      const dateiname = `${art}${nummer ? `-${nummer}` : ""}.pdf`.replace(
+        /[^\w.\-äöüÄÖÜß]+/g,
+        "-",
+      );
+      const datei =
+        pdfVorlage && pdfUrl
+          ? new File([await (await fetch(pdfUrl)).blob()], dateiname, {
+              type: "application/pdf",
+            })
+          : await belegAlsPdf(
+              druckHtml(),
+              dateiname,
+              layoutDef?.format,
+              layoutDef?.blatt,
+            );
+      const nachname = String(kunde?.Nachname ?? "").trim();
+      const anrede = String(kunde?.Anrede ?? "").trim();
+      const gruss = agRechnung
+        ? "Sehr geehrte Damen und Herren"
+        : anrede === "Frau" && nachname
+          ? `Sehr geehrte Frau ${nachname}`
+          : anrede === "Herr" && nachname
+            ? `Sehr geehrter Herr ${nachname}`
+            : "Guten Tag";
+      const firma = String(betrieb?.Firmenname ?? "").trim();
+      const ergebnis = await belegVersenden(
+        kanal,
+        datei,
+        {
+          an:
+            kanal === "email"
+              ? agRechnung
+                ? agEmail
+                : String(kunde?.Email ?? "").trim()
+              : choosePhoneNumberForMessaging([
+                  kunde?.Handy,
+                  kunde?.TelefonnummerPrivat,
+                ]),
+          betreff: mahnung
+            ? `${art}${nummer ? ` zur Rechnung ${nummer}` : ""}`
+            : `${art}${nummer ? ` ${nummer}` : ""}`,
+          text: `${gruss},\n\nanbei erhalten Sie ${
+            mahnung
+              ? `unser Schreiben „${art}“${nummer ? ` zur Rechnung Nr. ${nummer}` : ""}`
+              : beleg
+                ? `Ihre ${art}${nummer ? ` Nr. ${nummer}` : ""}`
+                : `das Formular „${art}“`
+          } als PDF.\n\nMit freundlichen Grüßen\n${firma}`,
+        },
+        (adresse) =>
+          notify(
+            `E-Mail-Adresse ${adresse} kopiert – in der E-Mail beim Empfänger einfügen.`,
+            { type: "info", autoHideDuration: 15000 },
+          ),
+      );
+      if (ergebnis !== "abgebrochen") kvMerken();
+      if (ergebnis === "heruntergeladen") {
+        notify(
+          kanal === "email"
+            ? `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und Gmail geöffnet – bitte das PDF in die E-Mail ziehen.`
+            : `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und WhatsApp-Chat des Kunden geöffnet – bitte das PDF in den Chat ziehen.`,
+          { type: "info", autoHideDuration: 15000 },
+        );
+      }
+    } catch {
+      notify("PDF konnte nicht erstellt werden.", { type: "error" });
+    } finally {
+      setVersendet(null);
+    }
+  };
+
+  // Kostenvoranschlag/Antrag gedruckt oder verschickt: Datum am Auftrag
+  // merken (nur Brillenaufträge; Fehler hier stören den Druck nicht)
+  const kvMerken = () => {
+    if (
+      !selectedVorlage ||
+      !KV_KATEGORIEN.includes(selectedVorlage.Kategorie) ||
+      typeof brille.id !== "number"
+    )
+      return;
+    dataProvider
+      .update("brille", {
+        id: brille.id,
+        data: { KVVersendet: heuteIso() },
+        previousData: brille,
+      })
+      .then(() => refresh())
+      .catch(() => undefined);
+  };
 
   const handleAction = (
     autoPrint: boolean,
@@ -580,6 +1128,7 @@ const FormulareDialog = ({
     if (!selectedVorlage) {
       return;
     }
+    if (autoPrint) kvMerken();
     if (pdfVorlage) {
       // Druck und Speichern übernimmt der PDF-Viewer des Browsers
       const opened = pdfUrl ? window.open(pdfUrl, "_blank") : null;
@@ -593,16 +1142,15 @@ const FormulareDialog = ({
       );
       return;
     }
-    const vorschau = vorschauRef.current?.contentDocument;
-    const html =
-      layoutDef?.ausVorschau && vorschau
-        ? vorschauAlsHtml(vorschau)
-        : (layout?.print ?? buildPrintHtml(selectedVorlage.Name, renderedText));
-    const opened = openDocumentWindow(html, autoPrint);
+    const opened = druckfensterOeffnen(druckHtml(), autoPrint);
     notify(opened ? successMessage : blockedMessage, {
       type: opened ? "success" : "warning",
     });
   };
+
+  if (direkt) {
+    return null;
+  }
 
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="md">
@@ -666,6 +1214,22 @@ const FormulareDialog = ({
                       role="option"
                       aria-selected={gewaehlt}
                       tabIndex={0}
+                      draggable
+                      onDragStart={() => setGezogenId(vorlage.id)}
+                      onDragEnd={() => setGezogenId(null)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (gezogenId == null) return;
+                        void reihenfolgeSpeichern(
+                          verschiebeVorlage(
+                            sortierteAuswahl,
+                            gezogenId,
+                            vorlage.id,
+                          ),
+                        );
+                        setGezogenId(null);
+                      }}
                       onClick={() => setSelectedVorlage(vorlage)}
                       onDoubleClick={() => {
                         setSelectedVorlage(vorlage);
@@ -683,7 +1247,8 @@ const FormulareDialog = ({
                         gap: 1,
                         px: 0.75,
                         py: "3px",
-                        cursor: "pointer",
+                        cursor: "grab",
+                        opacity: gezogenId === vorlage.id ? 0.5 : 1,
                         color: gewaehlt ? "#fff" : "text.primary",
                         bgcolor: gewaehlt ? "#0a63d6" : "transparent",
                         "&:hover": {
@@ -710,6 +1275,67 @@ const FormulareDialog = ({
                   );
                 })}
               </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  mt: 0.5,
+                }}
+              >
+                <Tooltip title="Nach oben">
+                  <span>
+                    <IconButton
+                      size="small"
+                      aria-label="Formular nach oben"
+                      disabled={!selectedVorlage}
+                      onClick={() =>
+                        selectedVorlage &&
+                        void reihenfolgeSpeichern(
+                          verschiebeUmEins(
+                            sortierteAuswahl,
+                            selectedVorlage.id,
+                            -1,
+                          ),
+                        )
+                      }
+                    >
+                      <ArrowUpwardIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Nach unten">
+                  <span>
+                    <IconButton
+                      size="small"
+                      aria-label="Formular nach unten"
+                      disabled={!selectedVorlage}
+                      onClick={() =>
+                        selectedVorlage &&
+                        void reihenfolgeSpeichern(
+                          verschiebeUmEins(
+                            sortierteAuswahl,
+                            selectedVorlage.id,
+                            1,
+                          ),
+                        )
+                      }
+                    >
+                      <ArrowDownwardIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ flex: 1, minWidth: 0 }}
+                >
+                  Ziehen oder Pfeile – gilt für alle
+                </Typography>
+                <Button size="small" onClick={reihenfolgeZuruecksetzen}>
+                  Alphabetisch
+                </Button>
+              </Box>
               <Typography sx={{ fontStyle: "italic", mt: 2, mb: 0.5 }}>
                 Typ
               </Typography>
@@ -729,6 +1355,11 @@ const FormulareDialog = ({
                   </MenuItem>
                 ))}
               </TextField>
+              {layoutDef?.leerMoeglich && (
+                <Box sx={{ mt: 2 }}>
+                  <LeerOderAusgefuellt leer={leer} onChange={setLeer} />
+                </Box>
+              )}
             </Box>
             <Box
               sx={{
@@ -765,6 +1396,22 @@ const FormulareDialog = ({
                     ),
                   aus: !selectedVorlage,
                 },
+                {
+                  text:
+                    versendet === "email"
+                      ? "PDF wird erstellt …"
+                      : "Per E-Mail",
+                  onClick: () => versenden("email"),
+                  aus: !versendbar || versendet !== null,
+                },
+                {
+                  text:
+                    versendet === "whatsapp"
+                      ? "PDF wird erstellt …"
+                      : "Per WhatsApp",
+                  onClick: () => versenden("whatsapp"),
+                  aus: !versendbar || versendet !== null,
+                },
               ].map((knopf) => (
                 <Button
                   key={knopf.text}
@@ -788,6 +1435,31 @@ const FormulareDialog = ({
               >
                 Text ändern
               </Button>
+              <Button
+                variant="contained"
+                disableElevation
+                disabled={!selectedVorlage}
+                onClick={() =>
+                  letzteIhrerArt
+                    ? notify(
+                        `„${selectedVorlage?.Name}“ wird für den Knopf „${selectedVorlage?.Kategorie}“ gebraucht und kann nicht ausgeblendet werden.`,
+                        { type: "warning" },
+                      )
+                    : setAusblendenFrage(true)
+                }
+                sx={PRISMA_KNOPF}
+              >
+                Ausblenden
+              </Button>
+              <Confirm
+                isOpen={ausblendenFrage}
+                title={`„${selectedVorlage?.Name ?? ""}“ ausblenden?`}
+                content="Das Formular erscheint dann nicht mehr in dieser Liste. Es wird nicht gelöscht und lässt sich unter Einstellungen → Dokumentvorlagen („Aktiv“ anhaken) wieder einblenden."
+                confirm="Ausblenden"
+                cancel="Abbrechen"
+                onConfirm={ausblenden}
+                onClose={() => setAusblendenFrage(false)}
+              />
             </Box>
           </Box>
         ) : !selectedVorlage ? null : (
@@ -816,7 +1488,7 @@ const FormulareDialog = ({
                   {selectedVorlage.Kategorie}
                 </Typography>
               </Box>
-              {!layout && !pdfVorlage && (
+              {textAenderbar && (
                 <Button
                   size="small"
                   startIcon={<EditNoteIcon />}
@@ -851,7 +1523,12 @@ const FormulareDialog = ({
               )
             ) : layout ? (
               <>
-                {kiFormular && (
+                {layoutDef?.leerMoeglich && (
+                  <Box sx={{ mb: 1.5 }}>
+                    <LeerOderAusgefuellt leer={leer} onChange={setLeer} />
+                  </Box>
+                )}
+                {mitBegruendung && (
                   <Box sx={{ mb: 1.5 }}>
                     <TextField
                       label="Begründung (erscheint im Formular)"
@@ -861,48 +1538,52 @@ const FormulareDialog = ({
                       minRows={3}
                       fullWidth
                     />
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 1.5,
-                        mt: 0.5,
-                      }}
-                    >
-                      <Button
-                        size="small"
-                        startIcon={
-                          kiLaeuft ? (
-                            <CircularProgress size={14} />
-                          ) : (
-                            <AutoAwesomeIcon />
-                          )
-                        }
-                        onClick={kiVorschlagHolen}
-                        disabled={kiLaeuft}
+                    {kiFormular && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1.5,
+                          mt: 0.5,
+                        }}
                       >
-                        Mit KI vorschlagen
-                      </Button>
-                      <Typography variant="caption" color="text.secondary">
-                        Übertragen werden nur Alter, Brillenart, Messwerte,
-                        Diagnose und Beruf – keine Namen, Adressen, Geburtsdaten
-                        oder Versichertennummern. Text vor dem Druck prüfen.
-                      </Typography>
-                    </Box>
+                        <Button
+                          size="small"
+                          startIcon={
+                            kiLaeuft ? (
+                              <CircularProgress size={14} />
+                            ) : (
+                              <AutoAwesomeIcon />
+                            )
+                          }
+                          onClick={kiVorschlagHolen}
+                          disabled={kiLaeuft}
+                        >
+                          Mit KI vorschlagen
+                        </Button>
+                        <Typography variant="caption" color="text.secondary">
+                          Übertragen werden nur Alter, Brillenart, Messwerte,
+                          Diagnose und Beruf – keine Namen, Adressen,
+                          Geburtsdaten oder Versichertennummern. Text vor dem
+                          Druck prüfen.
+                        </Typography>
+                      </Box>
+                    )}
                   </Box>
                 )}
-                {layoutDef?.ausVorschau && (
-                  <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    component="p"
-                    sx={{ mb: 0.5 }}
-                  >
-                    Kreuze sind Vorschläge aus den gespeicherten Daten –
-                    Kästchen in der Vorschau anklicken, um sie vor dem Druck zu
-                    ändern.
-                  </Typography>
-                )}
+                {layoutDef?.ausVorschau &&
+                  !(layoutDef.leerMoeglich && leer) && (
+                    <Typography
+                      variant="caption"
+                      color="text.secondary"
+                      component="p"
+                      sx={{ mb: 0.5 }}
+                    >
+                      Kreuze sind Vorschläge aus den gespeicherten Daten –
+                      Kästchen in der Vorschau anklicken, um sie vor dem Druck
+                      zu ändern.
+                    </Typography>
+                  )}
                 <Box
                   component="iframe"
                   ref={vorschauRef}
@@ -979,6 +1660,29 @@ const FormulareDialog = ({
               >
                 Drucken
               </Button>
+              {versendbar && (
+                <>
+                  <Button
+                    startIcon={<EmailIcon />}
+                    disabled={versendet !== null}
+                    onClick={() => versenden("email")}
+                  >
+                    {versendet === "email"
+                      ? "PDF wird erstellt …"
+                      : "Per E-Mail"}
+                  </Button>
+                  <Button
+                    startIcon={<WhatsAppIcon />}
+                    disabled={versendet !== null}
+                    onClick={() => versenden("whatsapp")}
+                    sx={{ color: "#1da851" }}
+                  >
+                    {versendet === "whatsapp"
+                      ? "PDF wird erstellt …"
+                      : "Per WhatsApp"}
+                  </Button>
+                </>
+              )}
             </>
           )}
           <Box sx={{ flex: 1 }} />
@@ -991,7 +1695,10 @@ const FormulareDialog = ({
 
 // Button für die Brillenkartei (BrilleShow/BrilleEdit), der den
 // Formulare-Dialog für den aktuellen Auftrag öffnet.
-export const FormulareButton = () => {
+export const FormulareButton = ({
+  label = "Formulare",
+  symbol,
+}: { label?: string; symbol?: boolean } = {}) => {
   const record = useRecordContext();
   const [open, setOpen] = useState(false);
 
@@ -1001,13 +1708,13 @@ export const FormulareButton = () => {
 
   return (
     <>
-      <Button
-        variant="outlined"
-        startIcon={<DescriptionIcon />}
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel={label}
+        icon={<DescriptionIcon />}
         onClick={() => setOpen(true)}
-      >
-        Formulare
-      </Button>
+        variant="outlined"
+      />
       {open && (
         <FormulareDialog brille={record} onClose={() => setOpen(false)} />
       )}
@@ -1019,7 +1726,50 @@ export const FormulareButton = () => {
 // zuerst die fortlaufende Rechnungsnummer (RPC `assign_rechnungsnummer`,
 // siehe Migration 20260831020000_rechnungsnummer_vergabe.sql) und öffnet
 // anschließend den Formulare-Dialog, auf die Kategorie "Rechnung" gefiltert.
-export const RechnungErstellenButton = () => {
+// Knopf mit Beschriftung oder - in der Symbolleiste der Karteikarte - nur
+// als Symbol mit Tooltip
+const KnopfOderSymbol = ({
+  symbol,
+  titel,
+  icon,
+  onClick,
+  disabled,
+  variant,
+}: {
+  symbol?: boolean;
+  titel: string;
+  icon: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+  variant: "contained" | "outlined";
+}) =>
+  symbol ? (
+    <Tooltip title={titel} placement="left">
+      <span>
+        <IconButton
+          onClick={onClick}
+          disabled={disabled}
+          aria-label={titel}
+          sx={{ color: "inherit" }}
+        >
+          {icon}
+        </IconButton>
+      </span>
+    </Tooltip>
+  ) : (
+    <Button
+      variant={variant}
+      startIcon={icon}
+      onClick={onClick}
+      disabled={disabled}
+    >
+      {titel}
+    </Button>
+  );
+
+export const RechnungErstellenButton = ({
+  symbol,
+}: { symbol?: boolean } = {}) => {
   const record = useRecordContext();
   const notify = useNotify();
   const refresh = useRefresh();
@@ -1060,14 +1810,14 @@ export const RechnungErstellenButton = () => {
 
   return (
     <>
-      <Button
-        variant="contained"
-        startIcon={<ReceiptIcon />}
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel="Rechnung erstellen"
+        icon={<ReceiptIcon />}
         onClick={handleClick}
         disabled={assigning}
-      >
-        Rechnung erstellen
-      </Button>
+        variant="contained"
+      />
       {open && rechnungsBrille && (
         <FormulareDialog
           brille={rechnungsBrille}
@@ -1175,9 +1925,13 @@ export const BerechtigungsscheinErstellenButton = () => {
   );
 };
 
-// "Werkstattauftrag"-Button für die Brillenkartei: öffnet den Formulare-Dialog
-// direkt mit dem Werkstattauftrag (Kategorie "Werkstattkarte") zum Drucken.
-export const WerkstattauftragButton = () => {
+// "Werkstattauftrag"-Button für die Brillenkartei: druckt den Werkstattauftrag
+// (Kategorie "Werkstattkarte") ohne Vorschau; Seitenansicht, PDF und Versand
+// gibt es weiter über "Formulare".
+export const WerkstattauftragButton = ({
+  symbol,
+  drucker,
+}: { symbol?: boolean; drucker?: boolean } = {}) => {
   const record = useRecordContext();
   const [open, setOpen] = useState(false);
 
@@ -1187,17 +1941,49 @@ export const WerkstattauftragButton = () => {
 
   return (
     <>
-      <Button
-        variant="outlined"
-        startIcon={<BuildIcon />}
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel={drucker ? "Werkstattauftrag drucken" : "Werkstattauftrag"}
+        icon={drucker ? <PrintOutlinedIcon /> : <BuildIcon />}
         onClick={() => setOpen(true)}
-      >
-        Werkstattauftrag
-      </Button>
+        variant="outlined"
+      />
       {open && (
         <FormulareDialog
           brille={record}
           initialKategorie={WERKSTATTKARTE_KATEGORIE}
+          direktDrucken
+          onClose={() => setOpen(false)}
+        />
+      )}
+    </>
+  );
+};
+
+// "Auftragszettel"-Knopf für die Brillenkartei: öffnet die Vorschau des
+// A5-Auftragszettels (Kategorie "Auftragszettel"), dort wahlweise leer zum
+// Ausfüllen von Hand oder mit den Daten des Auftrags
+export const AuftragszettelButton = ({ symbol }: { symbol?: boolean } = {}) => {
+  const record = useRecordContext();
+  const [open, setOpen] = useState(false);
+
+  if (!record) {
+    return null;
+  }
+
+  return (
+    <>
+      <KnopfOderSymbol
+        symbol={symbol}
+        titel="Auftragszettel"
+        icon={<AssignmentOutlinedIcon />}
+        onClick={() => setOpen(true)}
+        variant="outlined"
+      />
+      {open && (
+        <FormulareDialog
+          brille={record}
+          initialKategorie={AUFTRAGSZETTEL_KATEGORIE}
           onClose={() => setOpen(false)}
         />
       )}

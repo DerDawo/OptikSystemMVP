@@ -29,6 +29,7 @@ import {
   LayersIcon,
   LensIcon,
   ListIcon,
+  PrescriptionIcon,
   ReceiptIcon,
   SearchIcon,
   TagIcon,
@@ -186,7 +187,6 @@ export const MyMenu = () => (
       primaryText="Terminkalender"
       leftIcon={<CalendarIcon />}
     />
-    <Menu.Item to="/termin" primaryText="Terminliste" leftIcon={<ListIcon />} />
 
     <Section label="Kunden" />
     <Menu.Item to="/kunde" primaryText="Kunden" leftIcon={<UsersIcon />} />
@@ -215,6 +215,11 @@ export const MyMenu = () => (
       primaryText="Mahnungen"
       leftIcon={<AlertIcon />}
     />
+    <Menu.Item
+      to="/rezepte"
+      primaryText="Abgerechnete Rezepte"
+      leftIcon={<PrescriptionIcon />}
+    />
 
     <Section label="Verwaltung" />
     <SubMenu
@@ -228,6 +233,7 @@ export const MyMenu = () => (
         "/zusatzleistung",
         "/glaskatalog",
         "/glashersteller",
+        "/krankenkasse",
       ]}
     >
       <Menu.Item to="/glass" primaryText="Gläser" leftIcon={<LensIcon />} />
@@ -260,6 +266,11 @@ export const MyMenu = () => (
         to="/glaskatalog-import"
         primaryText="Katalog-Import (SF6)"
         leftIcon={<ImportIcon />}
+      />
+      <Menu.Item
+        to="/krankenkasse"
+        primaryText="Krankenkassen"
+        leftIcon={<BuildingIcon />}
       />
     </SubMenu>
     <SubMenu

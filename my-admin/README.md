@@ -63,11 +63,38 @@ Abnahmekriterien ein PR erfüllen muss, ist in
 
 ## Deployment (Vercel)
 
-Diese App wird über Vercel gehostet, mit getrennten Deployments für `dev`
-und `main` (jeweils mit den zugehörigen Supabase-Env-Variablen).
+Diese App wird über Vercel gehostet. Produktiv-URL:
+https://optik-system-mvp.vercel.app (die frühere URL
+`optik-system-mvp-demo2.vercel.app` existiert nicht mehr).
+
+**Stand 2026-10-16:** Vercel deployt Production seit ca. 2026-10-12 aus
+dem Fork `ulmrobert/OptikSystemMVP` (Branch `main`), nicht aus
+`DerDawo/OptikSystemMVP`. Ein Merge nach `main` in `DerDawo/OptikSystemMVP`
+deployt deshalb **nicht sofort**. Ein Release geht so live:
+
+1. Release-PR `dev` → `main` in `DerDawo/OptikSystemMVP` mergen.
+2. `main` des Forks direkt danach von Hand synchronisieren:
+
+   ```sh
+   gh api -X POST repos/ulmrobert/OptikSystemMVP/merge-upstream -f branch=main
+   ```
+
+   (alternativ im Fork auf GitHub der Button "Sync fork").
+3. Vercel deployt nach ca. 20-60 s automatisch.
+
+Im Fork gibt es zusätzlich einen automatischen Sync (Workflow
+"Upstream-Sync (main)", alle 15 Minuten eingeplant). GitHub startet ihn
+aber oft erst Stunden später, und bei Änderungen unter
+`.github/workflows/` schlägt er fehl. Deshalb Schritt 2 nicht auslassen
+(Details in `CONTRIBUTING.md`).
+
+Ob `dev` bzw. PRs derzeit noch eigene Preview-Deployments erhalten, ist
+ungeklärt (offener Punkt in `CONTRIBUTING.md`).
+
 `vercel.json` in diesem Verzeichnis enthält die SPA-Rewrite-Regel für das
 clientseitige Routing. Details zur Projekt-Konfiguration im
-Vercel-Dashboard (Root Directory, Environment Variables pro Branch) stehen
-im Abschnitt ["Hosting (Vercel)"](../CONTRIBUTING.md#hosting-vercel) in
+Vercel-Dashboard (Root Directory, Environment Variables pro Environment)
+und zum Deployment-Ablauf stehen im Abschnitt
+["Hosting (Vercel)"](../CONTRIBUTING.md#hosting-vercel) in
 `CONTRIBUTING.md` (#99).
 

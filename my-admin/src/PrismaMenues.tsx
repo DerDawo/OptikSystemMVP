@@ -21,7 +21,6 @@ const GEHE_ZU: ({ text: string; to: string; kuerzel?: string } | null)[] = [
   { text: "Brillen-Kartei", to: "/brille" },
   { text: "CL-Kartei", to: "/kontaktlinse" },
   { text: "Terminplaner", to: "/kalender", kuerzel: "Alt+T" },
-  { text: "Terminliste", to: "/termin" },
   null,
   { text: "Rechnungen", to: "/rechnungen" },
   { text: "Mahnungen", to: "/mahnungen" },
@@ -29,7 +28,8 @@ const GEHE_ZU: ({ text: string; to: string; kuerzel?: string } | null)[] = [
   { text: "Fassungen", to: "/fassung" },
   null,
   { text: "Textverarbeitung (Vorlagen)", to: "/dokumentvorlage" },
-  { text: "Statistiken", to: "/" },
+  { text: "Statistiken", to: "/statistiken" },
+  { text: "Serienbrief", to: "/serienbrief" },
   { text: "Betriebsdaten", to: "/betrieb/1" },
 ];
 

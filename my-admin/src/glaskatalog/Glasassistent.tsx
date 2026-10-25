@@ -219,17 +219,22 @@ interface GlasassistentDialogProps {
   glastypId?: Identifier | null;
   glasLinksId?: Identifier | null;
   glasRechtsId?: Identifier | null;
+  // Außerhalb eines Formulars (Brillenkartei): die neuen Verweise (Glastyp,
+  // GlasRechts, GlasLinks) direkt am Auftrag speichern
+  direktSpeichern?: (verweise: Record<string, Identifier>) => Promise<void>;
 }
 
-const GlasassistentDialog = ({
+export const GlasassistentDialog = ({
   onClose,
   glastypId,
   glasLinksId,
   glasRechtsId,
+  direktSpeichern,
 }: GlasassistentDialogProps) => {
   const dataProvider = useDataProvider();
   const notify = useNotify();
-  const { setValue } = useFormContext();
+  // im Bearbeiten-Formular vorhanden, in der Brillenkartei nicht
+  const formular = useFormContext() as ReturnType<typeof useFormContext> | null;
 
   const [schritt, setSchritt] = useState<Schritt>("vorgaben");
   const [vorgaben, setVorgaben] = useState<Set<Vorgabe>>(new Set());
@@ -452,6 +457,11 @@ const GlasassistentDialog = ({
     if (!selectedGrundglas || !selectedHersteller) return;
     setPreisFrage(false);
     setSubmitting(true);
+    const neueVerweise: Record<string, Identifier> = {};
+    const setze = (feld: string, id: Identifier) => {
+      if (direktSpeichern) neueVerweise[feld] = id;
+      else formular?.setValue(feld, id, { shouldDirty: true });
+    };
     try {
       const groesse =
         rlGetrennt && dRechts !== dLinks
@@ -484,7 +494,7 @@ const GlasassistentDialog = ({
         });
         resolvedGlastypId = data.id;
       }
-      setValue("Glastyp", resolvedGlastypId, { shouldDirty: true });
+      if (resolvedGlastypId != null) setze("Glastyp", resolvedGlastypId);
 
       const aufAuge = async (
         feld: "GlasLinks" | "GlasRechts",
@@ -501,9 +511,12 @@ const GlasassistentDialog = ({
           });
         } else {
           const { data } = await dataProvider.create("glass", {
-            data: { Betrag: betrag },
+            data: {
+              Betrag: betrag,
+              Seite: feld === "GlasRechts" ? "Rechts" : "Links",
+            },
           });
-          setValue(feld, data.id, { shouldDirty: true });
+          setze(feld, data.id);
         }
       };
 
@@ -519,9 +532,14 @@ const GlasassistentDialog = ({
         await aufAuge("GlasLinks", glasLinksId, glasLinksRecord, preisLinks);
       }
 
-      notify("Glasauswahl übernommen. Bitte den Auftrag speichern.", {
-        type: "success",
-      });
+      if (direktSpeichern) {
+        await direktSpeichern(neueVerweise);
+        notify("Glasauswahl übernommen.", { type: "success" });
+      } else {
+        notify("Glasauswahl übernommen. Bitte den Auftrag speichern.", {
+          type: "success",
+        });
+      }
       onClose();
     } catch {
       notify("Glasauswahl konnte nicht übernommen werden", { type: "error" });

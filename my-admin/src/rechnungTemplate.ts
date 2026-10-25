@@ -12,6 +12,7 @@
 import type { DocumentMergeEntities } from "./documentTemplateEngine";
 import dayjs from "dayjs";
 import logoSehzentrum from "./assets/logo-sehzentrum.jpg?inline";
+import bewertungQr from "./assets/google-bewertung-qr.png?inline";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 import {
   leistungsText,
@@ -250,6 +251,18 @@ export const buildRechnungPositionen = (
     });
   }
 
+  // fester Euro-Rabatt (wird in der Datenbank von der Summe abgezogen)
+  const rabattEuro = Number(entities.brille?.RabattBetrag) || 0;
+  if (rabattEuro > 0) {
+    const rabattBezeichnung = entities.brille?.RabattBezeichnung
+      ? String(entities.brille.RabattBezeichnung)
+      : "";
+    positionen.push({
+      label: `Rabatt${rabattBezeichnung ? `: ${rabattBezeichnung}` : ""}`,
+      betrag: -Math.round(rabattEuro * 100) / 100,
+    });
+  }
+
   return positionen;
 };
 
@@ -274,16 +287,61 @@ type BelegDaten = {
   art: BelegArt;
   entities: DocumentMergeEntities;
   nummer: string;
+  // abweichende Positionen und Zweckzeile (Kontaktlinsen-Rechnung)
+  positionen?: RechnungPosition[];
+  zweck?: string;
 };
 
 const a = RECHNUNG_ABSENDER;
 const e = escapeHtml;
 
-const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
+// Briefkopf der Belege: Absenderzeile, Logo, Anschrift, Datenbox und grauer
+// Titelbalken (auch für Mahnungen, mahnungTemplate.ts)
+export const briefkopfHtml = (
+  kunde: DocumentMergeEntities["kunde"],
+  datenbox: [string, string][],
+  titel: string,
+  // eigener Anschriftsblock (z. B. eintippbar bei Rechnungen an den
+  // Arbeitgeber); ohne Angabe die Anschrift des Kunden
+  anschriftHtml?: string,
+): string => `
+  <div class="absenderzeile">${e(`${a.marke} - ${a.strasseKurz} - ${a.plz} ${a.ort}`)}</div>
+  <img class="logo" src="${logoSehzentrum}" alt="" />
+  <div class="anschrift">
+    ${
+      anschriftHtml ??
+      buildAnschriftZeilen(kunde)
+        .map((z) => `<div>${e(z)}</div>`)
+        .join("")
+    }
+  </div>
+  <table class="datenbox">
+    ${datenbox.map(([l, w]) => `<tr><td>${e(l)}</td><td>${e(w)}</td></tr>`).join("")}
+  </table>
+  <div class="titelbalken">${e(titel)}</div>`;
+
+// Fußzeile mit Firma, Bank und Kontakt; der Dank nicht auf Mahnungen
+export const fusszeileHtml = (mitDank = true): string => `
+  <div class="fusszeile">
+    ${mitDank ? `<p class="dank">Vielen Dank für Ihr Vertrauen, das Sie uns entgegengebracht haben. Unser Service endet aber nicht mit der Bezahlung!<br />Gern stehen wir Ihnen jederzeit mit unserem Wissen, Können und unserer fachlichen Kompetenz zur Seite!</p>` : ""}
+    <div class="spalten">
+      <div>${e(a.firma)}<br />Inh. : ${e(a.inhaber)}<br />${e(a.strasseKurz)}<br />${e(`${a.plz} ${a.ort}`)}</div>
+      <div>Bankverbindung:<br />${e(a.bankName)}<br />${e(a.bic)}<br />${e(a.iban)}</div>
+      <div>Tel: ${e(a.telefon)}<br />Fax: ${e(a.fax)}<br />Mail: ${e(a.email)}<br />${e(a.web)}</div>
+    </div>
+  </div>`;
+
+const belegHtml = ({
+  art,
+  entities,
+  nummer,
+  positionen: eigenePositionen,
+  zweck,
+}: BelegDaten): string => {
   const { brille, kunde } = entities;
   const istRechnung = art === "rechnung";
   const heute = dayjs();
-  const positionen = buildRechnungPositionen(entities);
+  const positionen = eigenePositionen ?? buildRechnungPositionen(entities);
   const rund = (wert: number) => Math.round(wert * 100) / 100;
   const summe = Number(brille?.Summe) || 0;
   const kassenanteil = Number(brille?.KKAnteil) || 0;
@@ -344,19 +402,10 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
 
   return `
 <div class="beleg">
-  <div class="absenderzeile">${e(`${a.marke} - ${a.strasseKurz} - ${a.plz} ${a.ort}`)}</div>
-  <img class="logo" src="${logoSehzentrum}" alt="" />
-  <div class="anschrift">
-    ${buildAnschriftZeilen(kunde)
-      .map((z) => `<div>${e(z)}</div>`)
-      .join("")}
-  </div>
-  <table class="datenbox">
-    ${datenbox.map(([l, w]) => `<tr><td>${e(l)}</td><td>${e(w)}</td></tr>`).join("")}
-  </table>
-  <div class="titelbalken">${istRechnung ? "RECHNUNG" : "KOSTENVORANSCHLAG"}</div>
+  ${briefkopfHtml(kunde, datenbox, istRechnung ? "RECHNUNG" : "KOSTENVORANSCHLAG")}
   <div class="inhalt">
-    <p class="zweck">für eine neue ${e(brillenArt)}&nbsp; lt. optometr. Verordnung</p>
+   <div class="inhalt-block">
+    <p class="zweck">${zweck ? e(zweck) : `für eine neue ${e(brillenArt)}&nbsp; lt. optometr. Verordnung`}</p>
     ${positionenHtml}
     ${
       kassenanteil > 0
@@ -380,17 +429,101 @@ const belegHtml = ({ art, entities, nummer }: BelegDaten): string => {
       .filter(Boolean)
       .map((h) => `<div>${h}</div>`)
       .join("")}</div>
+   </div>
+    ${istRechnung ? BEWERTUNG_HTML : ""}
   </div>
-  <div class="fusszeile">
-    <p class="dank">Vielen Dank für Ihr Vertrauen, das Sie uns entgegengebracht haben. Unser Service endet aber nicht mit der Bezahlung!<br />Gern stehen wir Ihnen jederzeit mit unserem Wissen, Können und unserer fachlichen Kompetenz zur Seite!</p>
-    <div class="spalten">
-      <div>${e(a.firma)}<br />Inh. : ${e(a.inhaber)}<br />${e(a.strasseKurz)}<br />${e(`${a.plz} ${a.ort}`)}</div>
-      <div>Bankverbindung:<br />${e(a.bankName)}<br />${e(a.bic)}<br />${e(a.iban)}</div>
-      <div>Tel: ${e(a.telefon)}<br />Fax: ${e(a.fax)}<br />Mail: ${e(a.email)}<br />${e(a.web)}</div>
-    </div>
-  </div>
+  ${fusszeileHtml()}
 </div>`;
 };
+
+// Dezente Einladung zur Google-Bewertung (nur auf Rechnungen): Ziel ist
+// genau der Link aus dem QR-Code des Betriebs (Google-Eintrag "Augenoptik
+// Ulm", Bewertungen). Das Bild wurde aus genau diesem Link neu erzeugt
+// (Fehlerkorrektur L statt Q: Version 10, 57 Module statt 73) und wird 20 mm
+// breit gedruckt (ca. 0,34 mm je Modul) - kleiner als das Original und
+// trotzdem im Ausdruck sicher lesbar.
+export const GOOGLE_BEWERTUNG_URL =
+  "https://www.google.com/maps/place/Augenoptik+Ulm/@50.8522328,12.0867627,642m/data=!3m1!1e3!4m8!3m7!1s0x47a6cf06ebbd0651:0xc4f10eddabfaeeba!8m2!3d50.8522328!4d12.0867627!9m1!1b1!16s%252Fg%252F1thpvvx_?entry=ttu&g_ep=EgoyMDI1MDUyOC4wIKXMDSoASAFQAw%253D%253D";
+
+const BEWERTUNG_HTML = `<div class="bewertung">
+    <div class="bewertung-text">Wie zufrieden waren Sie mit Ihrem Besuch?<br />Teilen Sie Ihre Erfahrung gern auf Google.<br /><a href="${e(GOOGLE_BEWERTUNG_URL)}">Zur Bewertung auf Google</a></div>
+    <img class="bewertung-qr" src="${bewertungQr}" alt="QR-Code zur Google-Bewertung" />
+  </div>`;
+
+// Platz für die Bewertungs-Einladung, ohne etwas zu überdecken:
+// 1. unten rechts über dem Dankestext, der QR-Code notfalls kleiner
+//    (20 -> 18 -> 16 -> 15 mm, alle im Ausdruck lesbar);
+// 2. reicht das nicht (viele Positionen): QR-Code 18 mm mit kurzem Hinweis
+//    rechts neben MwSt-Hinweis und Zahlungstext - an der ersten Stelle, an
+//    der keine Textzeile liegt (gemessen an den echten Zeilen);
+// 3. sonst ausblenden.
+const BEWERTUNG_PLATZ_PRUEFEN = `<script>
+(function () {
+  var beleg = document.querySelector(".beleg");
+  var b = document.querySelector(".bewertung");
+  var f = document.querySelector(".fusszeile");
+  var q = document.querySelector(".bewertung-qr");
+  var t = document.querySelector(".bewertung-text");
+  var balken = document.querySelector(".summenbalken");
+  if (!beleg || !b || !f || !q || !t) return;
+  var passt = function () {
+    return b.getBoundingClientRect().bottom <= f.getBoundingClientRect().top - 2;
+  };
+  var groessen = [20, 18, 16, 15];
+  for (var i = 0; i < groessen.length; i++) {
+    q.style.width = groessen[i] + "mm";
+    q.style.height = groessen[i] + "mm";
+    if (i > 0) b.style.paddingTop = "1mm";
+    if (passt()) return;
+  }
+  // 2. seitlich neben den Hinweisen
+  var r0 = beleg.getBoundingClientRect();
+  var mm = r0.width / 210;
+  var zeilen = [];
+  // nur die Textzeilen selbst messen (nicht die volle Breite der Absätze)
+  [".mwst", ".hinweise"].forEach(function (sel) {
+    var el = document.querySelector(sel);
+    if (!el) return;
+    var gang = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    var knoten;
+    while ((knoten = gang.nextNode())) {
+      var range = document.createRange();
+      range.selectNodeContents(knoten);
+      var rs = range.getClientRects();
+      for (var k = 0; k < rs.length; k++) zeilen.push(rs[k]);
+    }
+  });
+  beleg.appendChild(b);
+  t.innerHTML = "Teilen Sie Ihre Erfahrung gern auf Google.";
+  b.style.position = "absolute";
+  b.style.right = "26.2mm";
+  b.style.margin = "0";
+  b.style.padding = "0";
+  b.style.width = "22mm";
+  b.style.flexDirection = "column-reverse";
+  b.style.gap = "1mm";
+  t.style.fontSize = "5.5pt";
+  t.style.textAlign = "center";
+  t.style.lineHeight = "1.25";
+  q.style.width = "18mm";
+  q.style.height = "18mm";
+  var oben = (balken ? balken.getBoundingClientRect().bottom : r0.top) + 2 * mm;
+  var grenze = f.getBoundingClientRect().top - 2 * mm;
+  for (var y = oben; y + 1 <= grenze; y += mm) {
+    b.style.top = (y - r0.top) + "px";
+    var box = b.getBoundingClientRect();
+    if (box.bottom > grenze) break;
+    var frei = true;
+    for (var z = 0; z < zeilen.length; z++) {
+      var l = zeilen[z];
+      if (l.right > box.left - 2 * mm && l.left < box.right &&
+          l.bottom > box.top && l.top < box.bottom) { frei = false; break; }
+    }
+    if (frei) return;
+  }
+  b.style.visibility = "hidden";
+})();
+</script>`;
 
 // Maße in mm nach der A4-Referenz (Logo, Datenbox, Balken)
 export const BELEG_STYLES = `
@@ -403,7 +536,12 @@ export const BELEG_STYLES = `
   .beleg .datenbox td { padding: 0 0.6mm; height: 5.2mm; }
   .beleg .datenbox td:last-child { background: #e0e0e0; text-align: right; width: 50%; }
   .beleg .titelbalken { position: absolute; left: 24.7mm; right: 26.2mm; top: 96.2mm; height: 8.6mm; background: #e6e6e6; border-top: 0.3mm solid #555; border-bottom: 0.3mm solid #555; font-size: 17pt; line-height: 8.2mm; padding-left: 0.6mm; }
-  .beleg .inhalt { position: absolute; left: 25mm; right: 26.2mm; top: 111mm; }
+  .beleg .inhalt { position: absolute; left: 25mm; right: 26.2mm; top: 111mm; bottom: 46mm; display: flex; flex-direction: column; }
+  .beleg .inhalt-block { flex: 0 0 auto; }
+  .beleg .bewertung { margin-top: auto; padding-top: 2mm; flex: 0 0 auto; display: flex; justify-content: flex-end; align-items: center; gap: 3mm; }
+  .beleg .bewertung-text { font-size: 7.5pt; line-height: 1.45; color: #666; text-align: right; }
+  .beleg .bewertung-text a { color: #4a6a8a; text-decoration: none; }
+  .beleg .bewertung-qr { width: 20mm; height: 20mm; image-rendering: pixelated; }
   .beleg .zweck { margin: 0 0 1.4mm; }
   .beleg .position { margin-bottom: 7mm; }
   .beleg .position .zeile { display: flex; justify-content: space-between; }
@@ -421,7 +559,8 @@ export const BELEG_STYLES = `
   .beleg .spalten > div:nth-child(3) { text-align: right; }
 `;
 
-const seite = (
+// Seitenrahmen der Belege (A4, Vorschau mit grauem Hintergrund)
+export const belegSeite = (
   titel: string,
   body: string,
   vorschau: boolean,
@@ -438,6 +577,7 @@ const seite = (
 </head>
 <body>
 ${body}
+${BEWERTUNG_PLATZ_PRUEFEN}
 </body>
 </html>`;
 
@@ -453,14 +593,14 @@ export const buildRechnungBodyHtml = ({
   belegHtml({ art: "rechnung", entities, nummer: rechnungsnummer });
 
 export const buildRechnungPrintHtml = (daten: RechnungDaten): string =>
-  seite(
+  belegSeite(
     `Rechnung ${daten.rechnungsnummer}`,
     buildRechnungBodyHtml(daten),
     false,
   );
 
 export const buildRechnungPreviewHtml = (daten: RechnungDaten): string =>
-  seite(
+  belegSeite(
     `Rechnung ${daten.rechnungsnummer}`,
     buildRechnungBodyHtml(daten),
     true,
@@ -481,9 +621,132 @@ export const buildKostenvoranschlagBodyHtml = ({
 export const buildKostenvoranschlagPrintHtml = (
   daten: KostenvoranschlagDaten,
 ): string =>
-  seite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), false);
+  belegSeite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), false);
 
 export const buildKostenvoranschlagPreviewHtml = (
   daten: KostenvoranschlagDaten,
 ): string =>
-  seite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), true);
+  belegSeite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), true);
+
+// Rechnung für einen Kontaktlinsenauftrag im selben Design: Kontaktlinse
+// rechts/links mit Werten, Zusatzleistungen, Rabatt; Summe, KK-Anteil und
+// Anzahlung aus dem Auftrag
+export type KontaktlinsenRechnungDaten = {
+  kontaktlinse: Record<string, unknown>;
+  kunde?: DocumentMergeEntities["kunde"];
+  rechnungsnummer: string;
+};
+
+const textOderLeer = (wert: unknown) =>
+  wert === null || wert === undefined ? "" : String(wert).trim();
+
+export const buildKontaktlinsenPositionen = (
+  cl: Record<string, unknown>,
+): RechnungPosition[] => {
+  const positionen: RechnungPosition[] = [];
+  let mitPreis = 0;
+  for (const [endung, label] of [
+    ["Rechts", "Kontaktlinse rechts :"],
+    ["Links", "Kontaktlinse links :"],
+  ] as const) {
+    const preis = asNumber(cl[`Preis${endung}`]);
+    const werte = [
+      formatGlaswerte({
+        Sph: cl[`Sph${endung}`],
+        Cyl: cl[`Cyl${endung}`],
+        A: cl[`Achse${endung}`],
+        Add: cl[`Add${endung}`],
+      } as DocumentMergeEntities["glasLinks"]),
+      asNumber(cl[`Radius${endung}`]) !== null
+        ? `BC ${zahl2.format(Number(cl[`Radius${endung}`]))}`
+        : "",
+      asNumber(cl[`Durchmesser${endung}`]) !== null
+        ? `DM ${zahl2.format(Number(cl[`Durchmesser${endung}`]))}`
+        : "",
+    ]
+      .filter(Boolean)
+      .join("  ");
+    const typ = [
+      textOderLeer(cl[`Linsentyp${endung}`]),
+      textOderLeer(cl[`Hersteller${endung}`]),
+    ]
+      .filter(Boolean)
+      .join(" – ");
+    if (preis === null && !werte && !typ) continue;
+    if (preis !== null) mitPreis += preis;
+    positionen.push({
+      label,
+      betrag: preis,
+      werte: werte || undefined,
+      details: typ ? [typ] : [],
+    });
+  }
+  for (const n of [1, 2, 3]) {
+    const bezeichnung = textOderLeer(cl[`Zusatzleistung${n}`]);
+    const betrag = asNumber(cl[`Zusatzbetrag${n}`]);
+    if (!bezeichnung && betrag === null) continue;
+    if (betrag !== null) mitPreis += betrag;
+    positionen.push({ label: bezeichnung || "Zusatzleistung", betrag });
+  }
+  const prozent = asNumber(cl.RabattProzent) ?? 0;
+  if (prozent > 0 && mitPreis > 0) {
+    const bezeichnung = textOderLeer(cl.RabattBezeichnung);
+    positionen.push({
+      label: `Rabatt${bezeichnung ? `: ${bezeichnung}` : ""} (-${prozent} %)`,
+      betrag: -Math.round(mitPreis * prozent) / 100,
+    });
+  }
+  // ältere Aufträge ohne Einzelpreise: Gesamtbetrag als eine Position
+  const summe = asNumber(cl.Summe) ?? 0;
+  if (mitPreis === 0 && summe > 0) {
+    positionen.push({ label: "Kontaktlinsen", betrag: summe });
+  }
+  return positionen;
+};
+
+const kontaktlinsenBeleg = ({
+  kontaktlinse: cl,
+  kunde,
+  rechnungsnummer,
+}: KontaktlinsenRechnungDaten) => {
+  const positionen = buildKontaktlinsenPositionen(cl);
+  // Rechnungsbetrag = Summe der Positionen (passt immer zu den Zeilen)
+  const summe =
+    Math.round(positionen.reduce((s, p) => s + (p.betrag ?? 0), 0) * 100) / 100;
+  return belegHtml({
+    art: "rechnung",
+    nummer: rechnungsnummer,
+    entities: {
+      kunde,
+      brille: {
+        Summe: summe,
+        KKAnteil: cl.KKAnteil,
+        Anzahlung: cl.Anzahlung,
+        Berater: cl.Berater,
+        Zahlungsstatus: cl.Zahlungsstatus,
+      },
+    } as DocumentMergeEntities,
+    positionen,
+    zweck: `für neue Kontaktlinsen${
+      textOderLeer(cl.Linsenart) ? ` (${textOderLeer(cl.Linsenart)})` : ""
+    }`,
+  });
+};
+
+export const buildKontaktlinsenRechnungPrintHtml = (
+  daten: KontaktlinsenRechnungDaten,
+): string =>
+  belegSeite(
+    `Rechnung ${daten.rechnungsnummer}`,
+    kontaktlinsenBeleg(daten),
+    false,
+  );
+
+export const buildKontaktlinsenRechnungPreviewHtml = (
+  daten: KontaktlinsenRechnungDaten,
+): string =>
+  belegSeite(
+    `Rechnung ${daten.rechnungsnummer}`,
+    kontaktlinsenBeleg(daten),
+    true,
+  );

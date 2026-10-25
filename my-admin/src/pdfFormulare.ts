@@ -11,20 +11,14 @@ import type {
 import { RECHNUNG_ABSENDER } from "./rechnungTemplate";
 import dayjs from "dayjs";
 import {
-  buildWerkstattauftragSummen,
   formatDatum,
   formatEuro,
   formatWert,
   text,
 } from "./werkstattauftragTemplate";
-import {
-  alterVorherigeBrille,
-  anzahlGlaeser,
-  brillenartKategorie,
-  sehstaerkeVeraendert,
-} from "./formularVorschlaege";
+import { anzahlGlaeser, sehstaerkeVeraendert } from "./formularVorschlaege";
 import { verteileWerte } from "./aokBerechtigungsscheinTemplate";
-import { MWST, abrechnungsZeilen } from "./kassenanteil";
+import { bruttoZeilenEinzeln } from "./kassenanteil";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
@@ -34,6 +28,18 @@ export type PdfVorlage = {
   datei: string;
   titel: string;
   felder: (entities: DocumentMergeEntities) => PdfFeldwerte;
+  // Vorlage ist vorausgefüllt: Viewer sollen die gespeicherten Darstellungen
+  // der Felder zeigen und nicht neu berechnen (sonst erscheinen
+  // vorbelegte Felder in manchen Viewern leer)
+  vorbelegt?: boolean;
+  // Eintragungen (Felder und Ort/Datum) in Courier schreiben
+  courier?: boolean;
+  // Text "Ort, Datum" und Stellen (Seite 1-basiert, -1 = letzte; Abstand der
+  // Textgrundlinie vom oberen Seitenrand in pt), an die er gedruckt wird
+  ortDatum?: {
+    text: (entities: DocumentMergeEntities) => string;
+    stellen: { seite: number; oben: number }[];
+  };
 };
 
 // Auswahllisten im Beobachtungsbogen schreiben positive Werte ohne "+"
@@ -91,13 +97,8 @@ const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
 const bapFelder = (entities: DocumentMergeEntities) => {
   const k = kunde(entities);
   const brille: Record<string, unknown> = entities.brille ?? {};
-  const glastyp: Record<string, unknown> = entities.glastyp ?? {};
-  const fassung: Record<string, unknown> = entities.fassung ?? {};
-  const { glasRechts: r, glasLinks: l } = entities;
-  const summen = buildWerkstattauftragSummen(entities);
-  const zusatzleistungen = (entities.zusatzleistungen ?? []).filter(Boolean);
   const messdatum = formatDatum(brille.Datum) || dayjs().format("DD.MM.YYYY");
-  const a = RECHNUNG_ABSENDER;
+  const { glasRechts: r, glasLinks: l } = entities;
 
   // Abschnitt 6 (Seite 2): Sphäre, Zylinder, Achse, Addition, Prisma/Basis, PD
   const bescheinigung = (glas: MergeSource, start: number) => {
@@ -134,14 +135,6 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     [`pr_${start + 3}`]: formatWert(glas?.HSA, "frei"),
     [`pr_${start + 6}`]: formatWert(glas?.Add, "dioptrie"),
   });
-  // Kopfzeile der Protokollseiten 3-5: Untersuchungsdatum, Untersucher/in,
-  // Kunden-Nr. (Protokoll-Nr. und Uhrzeit bleiben frei)
-  const kopf = (start: number) => ({
-    [`hd_${start + 1}`]: messdatum,
-    [`hd_${start + 3}`]: text(mitarbeiterAnzeige(brille.Berater)),
-    [`hd_${start + 4}`]: text(k.KundenNummer),
-  });
-
   // B a) Werte der vorhandenen Brille (Seite 3): Sph, Cyl, Achse, Visus,
   // HSA, MA, NZ, Add, NZ-Add - MA, NZ und NZ-Add kennt das Programm nicht
   const vorhanden = (glas: MergeSource, start: number) => ({
@@ -152,44 +145,24 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     [`pr_${start + 4}`]: formatWert(glas?.HSA, "frei"),
     [`pr_${start + 7}`]: formatWert(glas?.Add, "dioptrie"),
   });
-  // Kästchen "Art der Brille": Fern, Nah, Bifokal, Gleitsicht, Office
-  const art = (brillenArt: unknown, felder: Record<string, string>) => {
-    const kategorie = brillenartKategorie(brillenArt);
-    return kategorie && felder[kategorie] ? { [felder[kategorie]]: true } : {};
-  };
-  const veraendert = sehstaerkeVeraendert(entities) === true;
-  const alter = alterVorherigeBrille(entities);
-  const addAlt = Number(entities.vorherigesGlasRechts?.Add) || 0;
-  const addNeu = Number(r?.Add) || 0;
-  const glasart = brillenartKategorie(brille.BrillenArt);
 
+  // Die Vorlage (public/formulare/antrag-bap.pdf) ist komplett vorbelegt,
+  // auch mit Stempel und Unterschrift. Das Programm trägt nur die
+  // Personendaten (Name, Geburtsdatum, Telefon/E-Mail, Kunden-Nr.), das
+  // Messdatum und die Dioptrienwerte ein; alle Texte bleiben wie in der Vorlage.
   return {
     f_4: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
     f_5: formatDatum(k.Geburtsdatum),
-    f_8: text(k.Tätigkeit),
-    f_9: [telefon(k), text(k.Email)].filter(Boolean).join(" / "),
-    f_29: `${a.firma}, ${a.strasseLang}, ${a.plz} ${a.ort}`,
     f_30: messdatum,
+    hd_62: messdatum,
+    hd_130: messdatum,
+    hd_208: messdatum,
+    hd_65: text(k.KundenNummer),
+    hd_133: text(k.KundenNummer),
+    hd_211: text(k.KundenNummer),
+    f_9: [telefon(k), text(k.Email)].filter(Boolean).join(" / "),
     ...bescheinigung(r, 31),
     ...bescheinigung(l, 37),
-    f_48: [fassung.Hersteller, fassung.Bezeichnung]
-      .map(text)
-      .filter(Boolean)
-      .join(" "),
-    f_49: betrag(Number(fassung.Betrag) || 0),
-    f_50: [glastyp.Bezeichnung, glastyp.Verguetung]
-      .map(text)
-      .filter(Boolean)
-      .join(", "),
-    f_51: betrag((Number(r?.Betrag) || 0) + (Number(l?.Betrag) || 0)),
-    f_52: zusatzleistungen.map((z) => text(z?.Bezeichnung)).join(", "),
-    f_53: betrag(
-      zusatzleistungen.reduce((sum, z) => sum + (Number(z?.Betrag) || 0), 0),
-    ),
-    f_54: betrag(summen.gesamt),
-    ...kopf(61),
-    ...kopf(129),
-    ...kopf(207),
     f_66: text(k.Nachname),
     f_67: text(k.Vorname),
     f_68: formatDatum(k.Geburtsdatum),
@@ -197,36 +170,8 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     ...messung(l, 118),
     ...neueBrille(r, 225),
     ...neueBrille(l, 233),
-    // vorhandene Brille (vorheriger Auftrag)
     ...vorhanden(entities.vorherigesGlasRechts, 85),
     ...vorhanden(entities.vorherigesGlasLinks, 94),
-    ...art(entities.vorherigeBrille?.BrillenArt, {
-      Fernbrille: "cb_77",
-      Nahbrille: "cb_78",
-      Bifokalbrille: "cb_79",
-      Gleitsichtbrille: "cb_80",
-      Officebrille: "cb_81",
-    }),
-    // "ist ca. __ Jahre alt; Glasstärken entsprechen nicht mehr dem Bedarf"
-    ...(veraendert && alter !== null
-      ? { tb_103: true, tbf_104: String(alter) }
-      : {}),
-    // fortschreitende Presbyopie: Addition gegenüber der alten Brille gestiegen
-    ...(addAlt > 0 && addNeu > addAlt ? { tb_105: true } : {}),
-    // Empfohlene Glasart (Seite 2) und Art der neuen Brille (Seite 5)
-    ...(glasart === "Officebrille" ? { cb_44: true } : {}),
-    ...(glasart === "Gleitsichtbrille" ? { cb_45: true } : {}),
-    ...(glasart === "Bifokalbrille" ? { cb_46: true } : {}),
-    ...(glasart === "Fernbrille" || glasart === "Nahbrille"
-      ? { cb_43: true }
-      : {}),
-    ...art(brille.BrillenArt, {
-      Fernbrille: "cb_217",
-      Nahbrille: "cb_218",
-      Bifokalbrille: "cb_219",
-      Gleitsichtbrille: "cb_220",
-      Officebrille: "cb_221",
-    }),
   };
 };
 
@@ -255,9 +200,10 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
     [`${zeile}_hsa`]: formatWert(w.HSA, "frei"),
   });
   const kassenanteil = Number(brille.KKAnteil) || 0;
-  // Kostenabrechnung: Hilfsmittelpositionen netto, dazu eine Zeile MwSt.,
-  // damit die Spalte den Rechnungsbetrag (KK-Anteil inkl. MwSt.) ergibt
-  const abrechnung = abrechnungsZeilen({
+  // Kostenabrechnung: jedes Glas (jede Hilfsmittelposition) einzeln mit
+  // Faktor 1 und Bruttopreis; die Zeilen ergeben den Rechnungsbetrag
+  // (KK-Anteil inkl. MwSt.)
+  const abrechnung = bruttoZeilenEinzeln({
     augen: [
       { seite: "R", glas: entities.glasRechts ?? undefined },
       { seite: "L", glas: entities.glasLinks ?? undefined },
@@ -265,22 +211,13 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
     kkAnteil: kassenanteil,
     gespeichert: brille.KassenPositionen,
   });
-  const zeilen = [
-    ...abrechnung.zeilen.map((z) => ({
+  const zeilen = abrechnung.zeilen
+    .map((z) => ({
       hmv: z.nummer,
       faktor: String(z.faktor),
       betrag: formatWert(z.betrag, "zwei"),
-    })),
-    ...(abrechnung.zeilen.length > 0
-      ? [
-          {
-            hmv: `zzgl. ${Math.round(MWST * 100)} % MwSt.`,
-            faktor: "",
-            betrag: formatWert(abrechnung.mwst, "zwei"),
-          },
-        ]
-      : []),
-  ].slice(0, 9);
+    }))
+    .slice(0, 9);
   const abrechnungsFelder = Object.fromEntries(
     zeilen.flatMap((z, i) => [
       [`abr${i + 1}_hmv`, z.hmv],
@@ -312,7 +249,75 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
     ...werte("NR", rechts.naehe),
     ...werte("NL", links.naehe),
     ...abrechnungsFelder,
-    rechnungsbetrag: kassenanteil > 0 ? formatWert(kassenanteil, "zwei") : "",
+    // Summe der Zeilen (je Position gerundet), wenn sie bis auf Rundungscents
+    // zum KK-Anteil passt; sonst (Zeilen unvollständig) der KK-Anteil
+    rechnungsbetrag: formatWert(
+      abrechnung.zeilen.length > 0 &&
+        (kassenanteil === 0 ||
+          Math.abs(abrechnung.summe - kassenanteil) <= 0.025)
+        ? abrechnung.summe
+        : kassenanteil || "",
+      "zwei",
+    ),
+  };
+};
+
+// Erprobungsbericht elektronische Lupe (Vorbereitung Muster 8A, Felder siehe
+// scripts/erprobungsbericht-lupe-felder.mjs): Patient, Kasse/IK, Fernvisus
+// mit Korrektur aus dem Auftrag, Ort/Datum. Messwerte, Kreuze und Gerät
+// trägt der Optiker im PDF ein.
+const erprobungsberichtLupeFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  return {
+    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    geburtsdatum: formatDatum(k.Geburtsdatum),
+    kasse_ik: [text(k.Krankenkasse), text(k.KrankenkassenNummer)]
+      .filter(Boolean)
+      .join(" / "),
+    fern_od: formatWert(entities.glasRechts?.Vis, "zwei"),
+    fern_os: formatWert(entities.glasLinks?.Vis, "zwei"),
+    ort_datum: `${RECHNUNG_ABSENDER.ort}, ${dayjs().format("DD.MM.YYYY")}`,
+  };
+};
+
+// Abholbestätigung mit Schuldanerkenntnis (Felder siehe
+// scripts/abholbestaetigung-felder.mjs): Kunde, Auftrag und Beträge aus dem
+// Auftrag; Zahlungsziel, IBAN, Ratenzahlung und Ausweis trägt der Optiker
+// im PDF ein.
+const abholbestaetigungFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  const brille: Record<string, unknown> = entities.brille ?? {};
+  const zahl = (wert: unknown) => Number(wert) || 0;
+  const summe = zahl(brille.Summe);
+  const kassenanteil = zahl(brille.KKAnteil);
+  const anzahlung = zahl(brille.Anzahlung);
+  const offen = Math.round((summe - kassenanteil - anzahlung) * 100) / 100;
+  const fassung = [entities.fassung?.Hersteller, entities.fassung?.Bezeichnung]
+    .map(text)
+    .filter(Boolean)
+    .join(" ");
+  return {
+    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    geburtsdatum: formatDatum(k.Geburtsdatum),
+    anschrift: adresse(k),
+    telefon_email: [telefon(k), text(k.Email)].filter(Boolean).join(" / "),
+    auftragsnummer: [text(brille.id), text(brille.Rechnungsnummer)]
+      .filter(Boolean)
+      .join(" / "),
+    auftragsdatum: formatDatum(brille.Datum),
+    abgabedatum: dayjs().format("DD.MM.YYYY"),
+    leistung: [
+      text(brille.BrillenArt),
+      fassung && `Fassung ${fassung}`,
+      text(entities.glastyp?.Bezeichnung),
+    ]
+      .filter(Boolean)
+      .join(", "),
+    gesamtpreis: betrag(summe),
+    kassenanteil: betrag(kassenanteil),
+    anzahlung: betrag(anzahlung),
+    offener_betrag: summe ? formatEuro(offen) : "",
+    ort_datum: dayjs().format("DD.MM.YYYY"),
   };
 };
 
@@ -327,6 +332,18 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "antrag-bap.pdf",
     titel: "Antrag Bildschirmarbeitsplatzbrille",
     felder: bapFelder,
+    vorbelegt: true,
+    courier: true,
+    // "Ort, Datum" der Bescheinigung (Seite 2, Abschnitt 6) und des
+    // Untersuchungsprotokolls (letzte Seite); Ort ist immer Gera
+    ortDatum: {
+      text: (entities) =>
+        `Gera, ${formatDatum(entities.brille?.Datum) || dayjs().format("DD.MM.YYYY")}`,
+      stellen: [
+        { seite: 2, oben: 249 },
+        { seite: -1, oben: 733 },
+      ],
+    },
   },
   "Berechtigungsschein GKV": {
     datei: "berechtigungsschein-gkv.pdf",
@@ -340,6 +357,16 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "berechtigungsschein-gkv.pdf",
     titel: "Berechtigungsschein (GKV)",
     felder: berechtigungsscheinGkvFelder,
+  },
+  Abholbestätigung: {
+    datei: "abholbestaetigung.pdf",
+    titel: "Abholbestätigung mit Schuldanerkenntnis",
+    felder: abholbestaetigungFelder,
+  },
+  "Erprobungsbericht Lupe": {
+    datei: "erprobungsbericht-lupe.pdf",
+    titel: "Erprobungsbericht elektronische Lupe",
+    felder: erprobungsberichtLupeFelder,
   },
 };
 
@@ -389,10 +416,13 @@ export const fuellePdfVorlage = async (
   pdfBytes: ArrayBuffer | Uint8Array,
   entities: DocumentMergeEntities,
 ): Promise<Uint8Array> => {
-  const { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } =
+  const { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField, StandardFonts } =
     await import("pdf-lib");
   const pdf = await PDFDocument.load(pdfBytes);
   const form = pdf.getForm();
+  const courier = vorlage.courier
+    ? await pdf.embedFont(StandardFonts.Courier)
+    : undefined;
   for (const [name, wert] of Object.entries(vorlage.felder(entities))) {
     if (!wert) continue;
     const feld = form.getFieldMaybe(name);
@@ -410,8 +440,11 @@ export const fuellePdfVorlage = async (
         try {
           feld.setFontSize(10);
         } catch {
-          feld.acroField.setDefaultAppearance("/Helv 10 Tf 0 g");
+          feld.acroField.setDefaultAppearance(
+            `/${courier ? "Cour" : "Helv"} 10 Tf 0 g`,
+          );
         }
+        if (courier) feld.updateAppearances(courier);
       } else if (feld instanceof PDFDropdown) {
         // Werte außerhalb der Liste schaltet pdf-lib als freie Eingabe frei
         feld.select(fuerPdfSchrift(wert));
@@ -419,6 +452,25 @@ export const fuellePdfVorlage = async (
     } catch (error) {
       console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
     }
+  }
+  if (vorlage.ortDatum && courier) {
+    const seiten = pdf.getPages();
+    const text = fuerPdfSchrift(vorlage.ortDatum.text(entities));
+    for (const { seite, oben } of vorlage.ortDatum.stellen) {
+      const s = seiten[seite < 0 ? seiten.length + seite : seite - 1];
+      s.drawText(text, {
+        x: 52,
+        y: s.getHeight() - oben,
+        size: 10,
+        font: courier,
+      });
+    }
+  }
+  if (vorlage.vorbelegt) {
+    const { PDFBool, PDFDict, PDFName } = await import("pdf-lib");
+    pdf.catalog
+      .lookup(PDFName.of("AcroForm"), PDFDict)
+      .set(PDFName.of("NeedAppearances"), PDFBool.False);
   }
   return pdf.save();
 };

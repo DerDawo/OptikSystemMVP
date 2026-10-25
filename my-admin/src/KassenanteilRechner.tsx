@@ -1,4 +1,7 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+// Ereignis zum Öffnen des KK-Rechners von außerhalb (Menü "Optionen")
+export const KK_RECHNER_OEFFNEN = "kk-rechner-oeffnen";
 import { useNotify } from "react-admin";
 import {
   Box,
@@ -12,7 +15,13 @@ import {
   Typography,
 } from "@mui/material";
 import CalculateIcon from "@mui/icons-material/Calculate";
-import { MWST, ZUSAETZE, berechneKassenanteil, mitMwst } from "./kassenanteil";
+import {
+  GespeichertePosition,
+  MWST,
+  ZUSAETZE,
+  berechneKassenanteil,
+  bruttoSumme,
+} from "./kassenanteil";
 
 type Glas = Record<string, unknown> | undefined;
 
@@ -45,6 +54,13 @@ export const KassenanteilRechner = ({
 }) => {
   const notify = useNotify();
   const [anker, setAnker] = useState<HTMLElement | null>(null);
+  const knopf = useRef<HTMLButtonElement>(null);
+  // "Optionen -> Positionen Krankenkasse" öffnet den Rechner
+  useEffect(() => {
+    const oeffnen = () => setAnker(knopf.current);
+    window.addEventListener(KK_RECHNER_OEFFNEN, oeffnen);
+    return () => window.removeEventListener(KK_RECHNER_OEFFNEN, oeffnen);
+  }, []);
   const [abgewaehlt, setAbgewaehlt] = useState<Set<string>>(new Set());
   const [zusaetze, setZusaetze] = useState<Set<string>>(
     () => new Set(augenaerztlicheVerordnung ? [] : ["glasbestimmung"]),
@@ -98,7 +114,8 @@ export const KassenanteilRechner = ({
     Math.round(
       zeilen.filter((z) => z.an).reduce((s, z) => s + z.netto, 0) * 100,
     ) / 100;
-  const brutto = mitMwst(netto);
+  // je Position gerundet, wie die Kasse abrechnet (2 × 19,31 = 38,62)
+  const brutto = bruttoSumme(zeilen.filter((z) => z.an).map((z) => z.position));
 
   const uebernehmen = async () => {
     setSpeichert(true);
@@ -119,6 +136,7 @@ export const KassenanteilRechner = ({
     <>
       <Tooltip title="KK-Anteil berechnen">
         <IconButton
+          ref={knopf}
           size="small"
           aria-label="KK-Anteil berechnen"
           onClick={(e) => setAnker(e.currentTarget)}
@@ -155,7 +173,7 @@ export const KassenanteilRechner = ({
                 {"gruppe" in z && z.gruppe !== gruppeVor(i) && (
                   <Divider sx={{ my: 0.5 }}>
                     <Typography variant="caption" color="text.secondary">
-                      {z.gruppe} (bei Bedarf anhaken)
+                      {String(z.gruppe)} (bei Bedarf anhaken)
                     </Typography>
                   </Divider>
                 )}

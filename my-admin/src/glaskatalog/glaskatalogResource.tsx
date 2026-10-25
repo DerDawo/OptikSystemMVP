@@ -1,13 +1,28 @@
+import { useState } from "react";
 import {
   BooleanField,
   DataTable,
   DateField,
   List,
   ReferenceField,
+  ReferenceInput,
   ReferenceManyField,
+  SelectInput,
   Show,
   TextField,
+  TextInput,
+  TopToolbar,
+  useRefresh,
 } from "react-admin";
+import {
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+} from "@mui/material";
+import UploadFileIcon from "@mui/icons-material/UploadFile";
+import { Sf6Import } from "./GlaskatalogImportPage";
 import { CurrencyField } from "../CurrencyField";
 import {
   Field,
@@ -69,16 +84,71 @@ export const GlashersstellerShow = () => (
   </Show>
 );
 
+// Glaskatalog hochladen (SF6-ZIP, auch mehrere) direkt von der Liste aus
+const KatalogHochladen = () => {
+  const [offen, setOffen] = useState(false);
+  const refresh = useRefresh();
+  return (
+    <>
+      <Button
+        variant="contained"
+        startIcon={<UploadFileIcon />}
+        onClick={() => setOffen(true)}
+      >
+        SF6-Kataloge hochladen
+      </Button>
+      <Dialog
+        open={offen}
+        onClose={() => setOffen(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>SF6-Kataloge hochladen</DialogTitle>
+        <DialogContent>
+          <Sf6Import nachImport={refresh} />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOffen(false)}>Schließen</Button>
+        </DialogActions>
+      </Dialog>
+    </>
+  );
+};
+
+const glaskatalogFilter = [
+  <TextInput
+    key="suche"
+    source="bezeichnung@ilike"
+    label="Glas suchen"
+    resettable
+    alwaysOn
+  />,
+  <ReferenceInput
+    key="hersteller"
+    source="glashersteller_id"
+    reference="glashersteller"
+    sort={{ field: "name", order: "ASC" }}
+    perPage={100}
+    alwaysOn
+  >
+    <SelectInput optionText="name" label="Hersteller" />
+  </ReferenceInput>,
+];
+
 export const GlaskatalogList = () => (
   <List
     title="Glaskatalog (Herstellerdaten)"
     resource="glaskatalog"
     sort={{ field: "bezeichnung", order: "ASC" }}
+    filters={glaskatalogFilter}
+    perPage={50}
+    actions={
+      <TopToolbar>
+        <KatalogHochladen />
+      </TopToolbar>
+    }
   >
-    <DataTable>
-      <DataTable.Col source="id" />
-      <DataTable.Col source="esd_code" label="ESD-Code" />
-      <DataTable.Col source="bezeichnung" label="Bezeichnung" />
+    <DataTable rowClick="show" bulkActionButtons={false}>
       <DataTable.Col source="glashersteller_id" label="Hersteller">
         <ReferenceField
           reference="glashersteller"
@@ -88,6 +158,8 @@ export const GlaskatalogList = () => (
           <TextField source="name" />
         </ReferenceField>
       </DataTable.Col>
+      <DataTable.Col source="bezeichnung" label="Bezeichnung" />
+      <DataTable.Col source="esd_code" label="ESD-Code" />
       <DataTable.NumberCol source="brechungsindex" label="Index" />
       <DataTable.Col
         sx={{ textAlign: "end" }}

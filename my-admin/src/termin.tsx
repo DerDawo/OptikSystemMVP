@@ -8,18 +8,13 @@ import {
   SimpleForm,
   TextField,
 } from "react-admin";
-import {
-  DateTimeInput,
-  Edit,
-  Create,
-  TextInput,
-  FunctionField,
-} from "react-admin";
+import { Edit, Create, TextInput, FunctionField } from "react-admin";
 import type { RaRecord } from "react-admin";
 import { CreateButton, TopToolbar } from "react-admin";
 import { useLocation } from "react-router-dom";
 import { GoogleAbgleichButton } from "./GoogleAbgleich";
 import { KundeInput } from "./KundeInput";
+import { EndeFolgtStart, ViertelstundeInput } from "./ViertelstundeInput";
 import {
   Field,
   FieldRow,
@@ -126,8 +121,9 @@ export const TerminEdit = () => (
         <TextInput source="Titel" fullWidth />
         <KundeInput />
         <FieldRow>
-          <DateTimeInput source="Start" />
-          <DateTimeInput source="Ende" />
+          <ViertelstundeInput source="Start" label="Beginn" />
+          <ViertelstundeInput source="Ende" label="Ende" />
+          <EndeFolgtStart />
         </FieldRow>
         <TextInput source="Terminart" />
         <TextInput source="Notiz" multiline />
@@ -154,8 +150,9 @@ export const TerminCreate = () => {
           <TextInput source="Titel" fullWidth />
           <KundeInput />
           <FieldRow>
-            <DateTimeInput source="Start" />
-            <DateTimeInput source="Ende" />
+            <ViertelstundeInput source="Start" label="Beginn" />
+            <ViertelstundeInput source="Ende" label="Ende" />
+            <EndeFolgtStart />
           </FieldRow>
           <TextInput source="Terminart" />
           <TextInput source="Notiz" multiline />
