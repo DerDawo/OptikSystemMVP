@@ -28,6 +28,18 @@ export type PdfVorlage = {
   datei: string;
   titel: string;
   felder: (entities: DocumentMergeEntities) => PdfFeldwerte;
+  // Vorlage ist vorausgefüllt: Viewer sollen die gespeicherten Darstellungen
+  // der Felder zeigen und nicht neu berechnen (sonst erscheinen
+  // vorbelegte Felder in manchen Viewern leer)
+  vorbelegt?: boolean;
+  // Eintragungen (Felder und Ort/Datum) in Courier schreiben
+  courier?: boolean;
+  // Text "Ort, Datum" und Stellen (Seite 1-basiert, -1 = letzte; Abstand der
+  // Textgrundlinie vom oberen Seitenrand in pt), an die er gedruckt wird
+  ortDatum?: {
+    text: (entities: DocumentMergeEntities) => string;
+    stellen: { seite: number; oben: number }[];
+  };
 };
 
 // Auswahllisten im Beobachtungsbogen schreiben positive Werte ohne "+"
@@ -85,8 +97,8 @@ const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
 const bapFelder = (entities: DocumentMergeEntities) => {
   const k = kunde(entities);
   const brille: Record<string, unknown> = entities.brille ?? {};
-  const { glasRechts: r, glasLinks: l } = entities;
   const messdatum = formatDatum(brille.Datum) || dayjs().format("DD.MM.YYYY");
+  const { glasRechts: r, glasLinks: l } = entities;
 
   // Abschnitt 6 (Seite 2): Sphäre, Zylinder, Achse, Addition, Prisma/Basis, PD
   const bescheinigung = (glas: MergeSource, start: number) => {
@@ -135,20 +147,22 @@ const bapFelder = (entities: DocumentMergeEntities) => {
   });
 
   // Die Vorlage (public/formulare/antrag-bap.pdf) ist komplett vorbelegt,
-  // auch mit Stempel und Unterschrift. Das Programm ändert nur Name
-  // (mit Geburtsdatum und Kunden-Nr.), Datum und Dioptrienwerte.
+  // auch mit Stempel und Unterschrift. Das Programm trägt nur die
+  // Personendaten (Name, Geburtsdatum, Telefon/E-Mail, Kunden-Nr.), das
+  // Messdatum und die Dioptrienwerte ein; alle Texte bleiben wie in der Vorlage.
   return {
     f_4: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
     f_5: formatDatum(k.Geburtsdatum),
     f_30: messdatum,
-    ...bescheinigung(r, 31),
-    ...bescheinigung(l, 37),
     hd_62: messdatum,
     hd_130: messdatum,
     hd_208: messdatum,
     hd_65: text(k.KundenNummer),
     hd_133: text(k.KundenNummer),
     hd_211: text(k.KundenNummer),
+    f_9: [telefon(k), text(k.Email)].filter(Boolean).join(" / "),
+    ...bescheinigung(r, 31),
+    ...bescheinigung(l, 37),
     f_66: text(k.Nachname),
     f_67: text(k.Vorname),
     f_68: formatDatum(k.Geburtsdatum),
@@ -318,6 +332,18 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "antrag-bap.pdf",
     titel: "Antrag Bildschirmarbeitsplatzbrille",
     felder: bapFelder,
+    vorbelegt: true,
+    courier: true,
+    // "Ort, Datum" der Bescheinigung (Seite 2, Abschnitt 6) und des
+    // Untersuchungsprotokolls (letzte Seite); Ort ist immer Gera
+    ortDatum: {
+      text: (entities) =>
+        `Gera, ${formatDatum(entities.brille?.Datum) || dayjs().format("DD.MM.YYYY")}`,
+      stellen: [
+        { seite: 2, oben: 249 },
+        { seite: -1, oben: 733 },
+      ],
+    },
   },
   "Berechtigungsschein GKV": {
     datei: "berechtigungsschein-gkv.pdf",
@@ -390,10 +416,13 @@ export const fuellePdfVorlage = async (
   pdfBytes: ArrayBuffer | Uint8Array,
   entities: DocumentMergeEntities,
 ): Promise<Uint8Array> => {
-  const { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } =
+  const { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField, StandardFonts } =
     await import("pdf-lib");
   const pdf = await PDFDocument.load(pdfBytes);
   const form = pdf.getForm();
+  const courier = vorlage.courier
+    ? await pdf.embedFont(StandardFonts.Courier)
+    : undefined;
   for (const [name, wert] of Object.entries(vorlage.felder(entities))) {
     if (!wert) continue;
     const feld = form.getFieldMaybe(name);
@@ -411,8 +440,11 @@ export const fuellePdfVorlage = async (
         try {
           feld.setFontSize(10);
         } catch {
-          feld.acroField.setDefaultAppearance("/Helv 10 Tf 0 g");
+          feld.acroField.setDefaultAppearance(
+            `/${courier ? "Cour" : "Helv"} 10 Tf 0 g`,
+          );
         }
+        if (courier) feld.updateAppearances(courier);
       } else if (feld instanceof PDFDropdown) {
         // Werte außerhalb der Liste schaltet pdf-lib als freie Eingabe frei
         feld.select(fuerPdfSchrift(wert));
@@ -420,6 +452,25 @@ export const fuellePdfVorlage = async (
     } catch (error) {
       console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
     }
+  }
+  if (vorlage.ortDatum && courier) {
+    const seiten = pdf.getPages();
+    const text = fuerPdfSchrift(vorlage.ortDatum.text(entities));
+    for (const { seite, oben } of vorlage.ortDatum.stellen) {
+      const s = seiten[seite < 0 ? seiten.length + seite : seite - 1];
+      s.drawText(text, {
+        x: 52,
+        y: s.getHeight() - oben,
+        size: 10,
+        font: courier,
+      });
+    }
+  }
+  if (vorlage.vorbelegt) {
+    const { PDFBool, PDFDict, PDFName } = await import("pdf-lib");
+    pdf.catalog
+      .lookup(PDFName.of("AcroForm"), PDFDict)
+      .set(PDFName.of("NeedAppearances"), PDFBool.False);
   }
   return pdf.save();
 };
