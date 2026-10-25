@@ -115,7 +115,7 @@ export const KontaktlinseShow = () => (
         <Box sx={{ flex: 1, minWidth: 0 }}>
           <KontaktlinseKarteikarte />
         </Box>
-        <Box sx={{ display: { xs: "none", md: "block" } }}>
+        <Box sx={{ flex: "none" }}>
           <KontaktlinseSymbolleiste />
         </Box>
       </Box>
