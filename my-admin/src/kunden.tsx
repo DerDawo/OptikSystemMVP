@@ -85,6 +85,7 @@ import { KundeDokumente } from "./KundeDokumente";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { KundeKarteikarte } from "./KundeKarteikarte";
 import { KrankenkasseInput } from "./krankenkassen";
+import { KundeBrillenversicherungen } from "./KundeBrillenversicherungen";
 
 const messageChannelIcons: Record<MessageChannel, typeof SmsIcon> = {
   sms: SmsIcon,
@@ -561,6 +562,8 @@ export const KundeShow = () => {
           <Box sx={{ flex: "1 1 0", minWidth: "min(100%, 460px)" }}>
             <ShowColumn>
               <KundeKarteikarte />
+              {/* Eigener Bereich für die vermittelten Brillenversicherungen */}
+              <KundeBrillenversicherungen />
               <DatenbankInfo />
             </ShowColumn>
           </Box>
