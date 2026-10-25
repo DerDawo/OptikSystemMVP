@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { type ReactNode, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { useDataProvider, useNotify } from "react-admin";
 import { useNavigate } from "react-router-dom";
 import {
@@ -207,7 +208,19 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
   );
 };
 
-export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
+const ZULETZT_TITEL = "Zuletzt angelegt oder angesehen";
+
+// obenSlot/ersatzKarte: "Zuletzt angelegt oder angesehen" wird in den oberen
+// Kartenbereich (obenSlot) verschoben, an seiner Stelle erscheint ersatzKarte.
+export const DashboardAufgaben = ({
+  stand,
+  obenSlot,
+  ersatzKarte,
+}: {
+  stand: Date | null;
+  obenSlot?: HTMLElement | null;
+  ersatzKarte?: ReactNode;
+}) => {
   const dataProvider = useDataProvider();
   const [listen, setListen] = useState<Liste[] | null>(null);
   const [fehler, setFehler] = useState(false);
@@ -355,7 +368,7 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
             })),
         },
         {
-          titel: "Zuletzt angelegt oder angesehen",
+          titel: ZULETZT_TITEL,
           hinweis: "die neuesten zuerst",
           leer: "Noch keine Kunden angelegt oder angesehen.",
           ohneZahl: true,
@@ -455,9 +468,16 @@ export const DashboardAufgaben = ({ stand }: { stand: Date | null }) => {
         }}
       >
         <ErinnerungenKarte stand={stand} />
-        {listen.map((liste) => (
-          <AufgabenKarte key={liste.titel} liste={liste} />
-        ))}
+        {listen.map((liste) => {
+          const karte = <AufgabenKarte key={liste.titel} liste={liste} />;
+          if (liste.titel !== ZULETZT_TITEL || !ersatzKarte) return karte;
+          return (
+            <Box key={liste.titel} sx={{ display: "contents" }}>
+              {ersatzKarte}
+              {obenSlot ? createPortal(karte, obenSlot) : null}
+            </Box>
+          );
+        })}
       </Box>
     </Box>
   );
