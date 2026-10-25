@@ -60,11 +60,16 @@ const zahl2 = new Intl.NumberFormat("de-DE", {
 const eingabe = (wert = "", hinweis = "", klasse = "", feld = "") =>
   `<span class="eingabe ${klasse}" contenteditable="true" data-hinweis="${e(hinweis)}" data-ag="${feld}">${e(wert)}</span>`;
 
-const eingabeZeile = (wert = "", hinweis = "", feld = "") =>
-  `<div class="eingabe" contenteditable="true" data-hinweis="${e(hinweis)}" data-ag="${feld}">${e(wert)}</div>`;
+// Mehrzeiliges Feld für die ganze Firmenadresse: Einfügen aus der Zwischenablage
+// bleibt reiner Text mit Zeilenumbrüchen (plaintext-only)
+const eingabeBlock = (wert = "", hinweis = "", feld = "") =>
+  `<div class="eingabe adressblock" contenteditable="plaintext-only" data-hinweis="${e(hinweis)}" data-ag="${feld}">${e(wert)}</div>`;
 
-// Arbeitgeber, der beim Kunden gespeichert ist (Spalte "Arbeitgeber", jsonb)
+// Arbeitgeber, der beim Kunden gespeichert ist (Spalte "Arbeitgeber", jsonb):
+// "anschrift" (ganze Firmenadresse) und "email"; ältere Einträge haben die
+// Anschrift in firma/abteilung/strasse/ort
 export type ArbeitgeberAnschrift = {
+  anschrift?: string;
   firma?: string;
   abteilung?: string;
   strasse?: string;
@@ -187,11 +192,15 @@ export const buildArbeitgeberRechnungBodyHtml = (
     typeof k.Arbeitgeber === "object" && k.Arbeitgeber !== null
       ? (k.Arbeitgeber as ArbeitgeberAnschrift)
       : {};
+  const anschriftText =
+    ag.anschrift ??
+    [ag.firma, ag.abteilung, ag.strasse, ag.ort].filter(Boolean).join("\n");
   const anschrift = [
-    eingabeZeile(ag.firma, "Arbeitgeber / Firma", "firma"),
-    eingabeZeile(ag.abteilung, "Abteilung / zuständige Stelle", "abteilung"),
-    eingabeZeile(ag.strasse, "Straße Hausnummer", "strasse"),
-    eingabeZeile(ag.ort, "PLZ Ort", "ort"),
+    eingabeBlock(
+      anschriftText,
+      "Firmenadresse hier einfügen (Firma, Abteilung, Straße, PLZ Ort)",
+      "anschrift",
+    ),
     `<div class="nur-vorschau" data-nur-vorschau>E-Mail für den Versand: ${eingabe(ag.email, "E-Mail-Adresse des Arbeitgebers", "versand-email", "email")}</div>`,
   ].join("");
 
@@ -244,6 +253,7 @@ const BILDSCHIRM_STYLES = `<style data-bildschirm>
   .eingabe:focus { background: #e3efff; }
   .eingabe:empty::before { content: attr(data-hinweis); color: #9aa8bb; font-style: italic; }
   .beleg .anschrift .eingabe { display: block; min-height: 1.45em; }
+  .beleg .anschrift .adressblock { min-height: 5.8em; }
   .nur-vorschau { font-size: 8pt; color: #4a6a8a; margin-top: 2mm; }
   .nur-vorschau .eingabe { display: inline-block; min-width: 40mm; }
 </style>`;
@@ -261,6 +271,7 @@ const seite = (
   body { margin: 0; }
   ${BELEG_STYLES}
   .beleg .zweck { line-height: 1.5; }
+  .beleg .adressblock { white-space: pre-wrap; }
   .beleg .mitarbeiterzeile { display: flex; justify-content: space-between; margin-bottom: 5mm; }
   .beleg .kursiv { font-style: italic; }
   .beleg .position { margin-bottom: 3.2mm; }
