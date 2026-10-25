@@ -282,13 +282,16 @@ describe("Courier und Ort/Datum", () => {
 });
 
 describe("Optometrische Verordnung (Vordruck)", () => {
-  it("füllt Versicherten, Kasse und Refraktion", () => {
+  it("füllt Versicherten, PRIVAT, Verbesserung, Begründung und Refraktion", () => {
     const felder = PDF_VORLAGEN["Optometrische Verordnung Vordruck"].felder({
       ...entities,
       kunde: { ...entities.kunde, Krankenkasse: "AOK PLUS" },
     });
     expect(felder.name).toBe("Muster, Erika");
-    expect(felder.kasse_aok).toBe("X");
+    expect(felder.kasse_text).toBe("PRIVAT");
+    expect(felder.verbesserung_x).toBe("X");
+    expect(felder.begruendung).toContain("Zervikalneuralgie");
+    expect(String(felder.adresse).split("\n")[0]).toBe("Erika Muster");
     expect(felder.FR_sph).toBe("+0,75");
     expect(felder.FL_sph).toBe("-0,25");
   });
