@@ -216,15 +216,21 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
 };
 
 const ZULETZT_TITEL = "Zuletzt angelegt oder angesehen";
+const UEBERFAELLIG_TITEL = "Überfällige Aufträge";
+// Karten, die im oberen Kartenbereich (obenSlot) statt in "Heute zu tun" stehen.
+const OBEN_TITEL = [ZULETZT_TITEL, UEBERFAELLIG_TITEL];
 
-// obenSlot: "Zuletzt angelegt oder angesehen" erscheint im oberen
-// Kartenbereich (obenSlot) statt in "Heute zu tun".
+// obenSlot: Erinnerungen, Überfällige Aufträge und "Zuletzt angelegt oder
+// angesehen" erscheinen im oberen Kartenbereich. untenRef: Platz für die
+// "Abholbereiten Brillen", die dafür hier unten stehen.
 export const DashboardAufgaben = ({
   stand,
   obenSlot,
+  untenRef,
 }: {
   stand: Date | null;
   obenSlot?: HTMLElement | null;
+  untenRef?: (el: HTMLElement | null) => void;
 }) => {
   const dataProvider = useDataProvider();
   const [listen, setListen] = useState<Liste[] | null>(null);
@@ -355,7 +361,7 @@ export const DashboardAufgaben = ({
           })),
         },
         {
-          titel: "Überfällige Aufträge",
+          titel: UEBERFAELLIG_TITEL,
           hinweis: `seit über ${FRISTEN.ueberfaelligTage} Tagen nicht fertig`,
           leer: "Keine überfälligen Aufträge.",
           zeilen: ueberfaellig
@@ -472,10 +478,16 @@ export const DashboardAufgaben = ({
           gap: 1.75,
         }}
       >
-        <ErinnerungenKarte stand={stand} />
+        <Box ref={untenRef} sx={{ display: "contents" }} />
+        {obenSlot === undefined ? (
+          <ErinnerungenKarte stand={stand} />
+        ) : (
+          obenSlot &&
+          createPortal(<ErinnerungenKarte stand={stand} />, obenSlot)
+        )}
         {listen.map((liste) => {
           const karte = <AufgabenKarte key={liste.titel} liste={liste} />;
-          if (liste.titel !== ZULETZT_TITEL || obenSlot === undefined)
+          if (!OBEN_TITEL.includes(liste.titel) || obenSlot === undefined)
             return karte;
           return obenSlot ? createPortal(karte, obenSlot) : null;
         })}
