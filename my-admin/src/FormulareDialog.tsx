@@ -63,6 +63,7 @@ import {
   useRefresh,
 } from "react-admin";
 import { supabase } from "./utils";
+import { ladeBetriebBilder } from "./betriebBilder";
 import {
   buildDocumentMergeValues,
   renderDocumentTemplate,
@@ -722,6 +723,13 @@ const FormulareDialog = ({
   const mitBegruendung =
     Boolean(kiFormular) || selectedVorlage?.Kategorie === "Antrag Jugendamt";
   const [begruendung, setBegruendung] = useState("");
+  // Stempel/Unterschrift (privat gespeichert) laden und Vorschau neu zeichnen
+  const [, setBilderStand] = useState(0);
+  useEffect(() => {
+    ladeBetriebBilder()
+      .then(() => setBilderStand((n) => n + 1))
+      .catch(() => undefined);
+  }, []);
   const [kiLaeuft, setKiLaeuft] = useState(false);
   useEffect(() => {
     setBegruendung("");
