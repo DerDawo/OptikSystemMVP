@@ -78,14 +78,17 @@ const dez = (wert: unknown): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
-/** "RA: sph + 1,00 cyl - 0,50 A 10 Degression 0,75 Vcc 1,00" */
+/** "RA: sph + 1,75 cyl - 0,50 A 10 Degression 0,75 Vcc 1,00" (Nahstärke) */
 export const arbeitgeberGlasZeile = (
   seite: "RA" | "LA",
   glas: DocumentMergeEntities["glasRechts"],
 ): string => {
   if (!glas) return "";
   const teile: string[] = [];
-  const sph = dez(glas.Sph);
+  // Nahstärke (Sph + Addition) mit der dazugehörigen Degression (Addition)
+  const add = dez(glas.Add);
+  const fern = dez(glas.Sph);
+  const sph = fern === null ? null : fern + (add !== null && add > 0 ? add : 0);
   if (sph !== null)
     teile.push(`sph ${sph < 0 ? "-" : "+"} ${zahl2.format(Math.abs(sph))}`);
   const cyl = dez(glas.Cyl);
@@ -94,7 +97,6 @@ export const arbeitgeberGlasZeile = (
     const achse = dez(glas.A);
     if (achse !== null) teile.push(`A ${Math.round(achse)}`);
   }
-  const add = dez(glas.Add);
   if (add !== null && add > 0) teile.push(`Degression ${zahl2.format(add)}`);
   const vis = dez(glas.Vis);
   if (vis !== null && vis > 0) teile.push(`Vcc ${zahl2.format(vis)}`);

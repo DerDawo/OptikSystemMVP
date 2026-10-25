@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ARBEITGEBER_RECHNUNG_KATEGORIEN,
+  arbeitgeberGlasZeile,
   arbeitgeberPositionen,
   buildArbeitgeberRechnungPreviewHtml,
   buildArbeitgeberRechnungPrintHtml,
@@ -26,6 +27,12 @@ describe("Rechnungen an den Arbeitgeber", () => {
     expect(pos[2].betrag).toBe(83.3);
     expect(pos[2].werte).toBe("RA: sph + 1,25 cyl - 0,50 A 10");
     expect(pos[3].werte).toBe("LA: sph + 1,00 cyl - 0,75 A 170");
+  });
+
+  it("nennt die Nahstärke mit der Degression", () => {
+    expect(
+      arbeitgeberGlasZeile("RA", { Sph: 1, Cyl: 0, Add: 0.75, Vis: 1 }),
+    ).toBe("RA: sph + 1,75 Degression 0,75 Vcc 1,00");
   });
 
   it("zeigt Summe, enthaltene Mwst, Rechnungsnummer und Zweck", () => {
