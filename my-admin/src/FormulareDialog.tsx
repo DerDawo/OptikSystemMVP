@@ -122,6 +122,10 @@ import {
   buildPatientenanfragePrintHtml,
 } from "./patientenanfrageTemplate";
 import {
+  buildSrhBildschirmbrillePreviewHtml,
+  buildSrhBildschirmbrillePrintHtml,
+} from "./srhBildschirmbrilleTemplate";
+import {
   buildMahnungPreviewHtml,
   buildMahnungPrintHtml,
 } from "./mahnungTemplate";
@@ -371,6 +375,14 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Patientenanfrage-Vorschau",
     preview: buildPatientenanfragePreviewHtml,
     print: buildPatientenanfragePrintHtml,
+  },
+  // Vordruck "Gewährung einer Bildschirmarbeitsbrille" für das SRH-Krankenhaus
+  // (ohne Stempel und Unterschrift)
+  "Antrag SRH": {
+    ausVorschau: true,
+    title: "Antrag-SRH-Vorschau",
+    preview: buildSrhBildschirmbrillePreviewHtml,
+    print: buildSrhBildschirmbrillePrintHtml,
   },
   [AUFTRAGSZETTEL_KATEGORIE]: {
     ausVorschau: true,
