@@ -30,6 +30,14 @@ import InsertDriveFileOutlinedIcon from "@mui/icons-material/InsertDriveFileOutl
 import CloseIcon from "@mui/icons-material/Close";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import {
+  neueNummern,
+  sortiereVorlagen,
+  verschiebeUmEins,
+  verschiebeVorlage,
+} from "./vorlagenReihenfolge";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ReceiptIcon from "@mui/icons-material/Receipt";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
@@ -383,6 +391,7 @@ type Dokumentvorlage = RaRecord & {
   Kategorie: string;
   Vorlagentext: string;
   Aktiv: boolean;
+  Reihenfolge?: number | null;
 };
 
 const escapeHtml = (value: string) =>
@@ -790,11 +799,60 @@ const FormulareDialog = ({
   );
   const listenVorlagen = useMemo(
     () =>
-      auswahlVorlagen
-        .filter((v) => !typ || v.Kategorie === typ)
-        .sort((x, y) => x.Name.localeCompare(y.Name, "de")),
+      sortiereVorlagen(auswahlVorlagen).filter(
+        (v) => !typ || v.Kategorie === typ,
+      ),
     [auswahlVorlagen, typ],
   );
+
+  // Eigene Reihenfolge (für alle gespeichert in dokumentvorlage.Reihenfolge)
+  const sortierteAuswahl = useMemo(
+    () => sortiereVorlagen(vorlagen ?? []),
+    [vorlagen],
+  );
+  const [gezogenId, setGezogenId] = useState<Dokumentvorlage["id"] | null>(
+    null,
+  );
+  const reihenfolgeSpeichern = async (neu: Dokumentvorlage[]) => {
+    const aenderungen = neueNummern(neu);
+    if (aenderungen.length === 0) return;
+    try {
+      await Promise.all(
+        aenderungen.map(({ id, Reihenfolge }) =>
+          dataProvider.update("dokumentvorlage", {
+            id,
+            data: { Reihenfolge },
+            previousData: neu.find((v) => v.id === id),
+          }),
+        ),
+      );
+      vorlagenNeuLaden();
+    } catch {
+      notify("Reihenfolge konnte nicht gespeichert werden.", {
+        type: "error",
+      });
+    }
+  };
+  const reihenfolgeZuruecksetzen = async () => {
+    const mitNummer = (vorlagen ?? []).filter((v) => v.Reihenfolge != null);
+    try {
+      await Promise.all(
+        mitNummer.map((v) =>
+          dataProvider.update("dokumentvorlage", {
+            id: v.id,
+            data: { Reihenfolge: null },
+            previousData: v,
+          }),
+        ),
+      );
+      vorlagenNeuLaden();
+      notify("Reihenfolge wieder alphabetisch.", { type: "success" });
+    } catch {
+      notify("Reihenfolge konnte nicht zurückgesetzt werden.", {
+        type: "error",
+      });
+    }
+  };
   const textAenderbar =
     Boolean(selectedVorlage) &&
     ((!layout && !pdfVorlage) || Boolean(layoutDef?.mitVorlagentext));
@@ -1054,6 +1112,22 @@ const FormulareDialog = ({
                       role="option"
                       aria-selected={gewaehlt}
                       tabIndex={0}
+                      draggable
+                      onDragStart={() => setGezogenId(vorlage.id)}
+                      onDragEnd={() => setGezogenId(null)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={(event) => {
+                        event.preventDefault();
+                        if (gezogenId == null) return;
+                        void reihenfolgeSpeichern(
+                          verschiebeVorlage(
+                            sortierteAuswahl,
+                            gezogenId,
+                            vorlage.id,
+                          ),
+                        );
+                        setGezogenId(null);
+                      }}
                       onClick={() => setSelectedVorlage(vorlage)}
                       onDoubleClick={() => {
                         setSelectedVorlage(vorlage);
@@ -1071,7 +1145,8 @@ const FormulareDialog = ({
                         gap: 1,
                         px: 0.75,
                         py: "3px",
-                        cursor: "pointer",
+                        cursor: "grab",
+                        opacity: gezogenId === vorlage.id ? 0.5 : 1,
                         color: gewaehlt ? "#fff" : "text.primary",
                         bgcolor: gewaehlt ? "#0a63d6" : "transparent",
                         "&:hover": {
@@ -1097,6 +1172,67 @@ const FormulareDialog = ({
                     </Box>
                   );
                 })}
+              </Box>
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 0.5,
+                  mt: 0.5,
+                }}
+              >
+                <Tooltip title="Nach oben">
+                  <span>
+                    <IconButton
+                      size="small"
+                      aria-label="Formular nach oben"
+                      disabled={!selectedVorlage}
+                      onClick={() =>
+                        selectedVorlage &&
+                        void reihenfolgeSpeichern(
+                          verschiebeUmEins(
+                            sortierteAuswahl,
+                            selectedVorlage.id,
+                            -1,
+                          ),
+                        )
+                      }
+                    >
+                      <ArrowUpwardIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Tooltip title="Nach unten">
+                  <span>
+                    <IconButton
+                      size="small"
+                      aria-label="Formular nach unten"
+                      disabled={!selectedVorlage}
+                      onClick={() =>
+                        selectedVorlage &&
+                        void reihenfolgeSpeichern(
+                          verschiebeUmEins(
+                            sortierteAuswahl,
+                            selectedVorlage.id,
+                            1,
+                          ),
+                        )
+                      }
+                    >
+                      <ArrowDownwardIcon fontSize="small" />
+                    </IconButton>
+                  </span>
+                </Tooltip>
+                <Typography
+                  variant="caption"
+                  color="text.secondary"
+                  sx={{ flex: 1, minWidth: 0 }}
+                >
+                  Ziehen oder Pfeile – gilt für alle
+                </Typography>
+                <Button size="small" onClick={reihenfolgeZuruecksetzen}>
+                  Alphabetisch
+                </Button>
               </Box>
               <Typography sx={{ fontStyle: "italic", mt: 2, mb: 0.5 }}>
                 Typ
