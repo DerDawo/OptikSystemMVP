@@ -84,7 +84,8 @@ for (const [name, von, bis] of kassen) {
 text("kasse_text", 112, 162, 150, 11, 9);
 
 // Versicherter
-text("name", 113, 187, 175, 26, 9);
+// Name und darunter die Adresse (links); der Kasten rechts bleibt frei
+text("name", 113, 187, 175, 44, 9).enableMultiline();
 text("geburtsdatum", 283, 201, 57, 10, 8);
 text("kassennr", 113, 246, 62, 10, 8);
 text("versichertennr", 177, 246, 95, 10, 8);
@@ -92,8 +93,6 @@ text("status", 274, 246, 65, 10, 8);
 text("vk_gueltig", 194, 270, 70, 10, 8);
 text("datum", 267, 270, 72, 10, 8);
 text("ausgestellt_am", 408, 191.5, 92, 9.5, 9);
-// Adressfeld (Kasten rechts): Name, Straße, PLZ Ort
-text("adresse", 362, 221, 136, 48, 8).enableMultiline();
 
 // 1. Erklärung des Optometristen
 haken("cb_veraenderung", 116.7, 323.3);
