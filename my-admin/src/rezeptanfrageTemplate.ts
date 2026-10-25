@@ -18,8 +18,17 @@ import {
   versorgungVorschlaege,
 } from "./formularVorschlaege";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import {
+  type BetriebBilder,
+  betriebBilder,
+  bildUrl,
+} from "./betriebBilderCache";
 
-export type RezeptanfrageDaten = { entities: DocumentMergeEntities };
+export type RezeptanfrageDaten = {
+  entities: DocumentMergeEntities;
+  // Stempel/Unterschrift; ohne Angabe die privat gespeicherten Bilder
+  bilder?: BetriebBilder;
+};
 
 const e = escapeHtml;
 const a = RECHNUNG_ABSENDER;
@@ -80,7 +89,20 @@ const werteZeile = (auge: string, glas: MergeSource) =>
 
 export const buildRezeptanfrageBodyHtml = ({
   entities,
+  bilder = betriebBilder(),
 }: RezeptanfrageDaten): string => {
+  const stempel = bildUrl(bilder.stempel);
+  const unterschrift = bildUrl(bilder.unterschrift);
+  const optikerBilder =
+    stempel || unterschrift
+      ? `<div class="ortdatum stempelfeld">${
+          stempel ? `<img class="stempel" src="${stempel}" alt="" />` : ""
+        }${
+          unterschrift
+            ? `<img class="unterschrift" src="${unterschrift}" alt="" />`
+            : ""
+        }</div>`
+      : '<div class="ortdatum"></div>';
   const k: Record<string, unknown> = entities.kunde ?? {};
   const brille: Record<string, unknown> = entities.brille ?? {};
   const { glasRechts: r, glasLinks: l } = entities;
@@ -143,7 +165,7 @@ export const buildRezeptanfrageBodyHtml = ({
   <div class="unterschriften">
     <div><div class="ortdatum eintrag">Gera, ${e(heute)}</div><div class="strich"></div>Ort, Datum</div>
     <div><div class="ortdatum"></div><div class="strich"></div>Unterschrift Patient / gesetzl. Vertreter</div>
-    <div><div class="ortdatum"></div><div class="strich"></div>Stempel &amp; Unterschrift Optiker</div>
+    <div>${optikerBilder}<div class="strich"></div>Stempel &amp; Unterschrift Optiker</div>
   </div>
 </div>`;
 };
@@ -180,6 +202,10 @@ const STYLES = `
   .dringlich .linie { flex: 1; border-bottom: 0.25mm solid #444; height: 3.6mm; }
   .freitext .wert { min-height: 11mm; font-size: 9pt; font-weight: bold; }
   .datenschutz { font-size: 6.5pt; color: #777; margin: 0.8mm 0 0; max-width: 115mm; }
+  .stempelfeld { position: relative; }
+  .stempelfeld img { position: absolute; bottom: 0.4mm; mix-blend-mode: multiply; }
+  .stempelfeld .stempel { left: 0; max-width: 42mm; max-height: 17mm; }
+  .stempelfeld .unterschrift { left: 26mm; max-width: 36mm; max-height: 11mm; }
   .strich { border-top: 0.25mm solid #999; margin-bottom: 0.8mm; }
 `;
 

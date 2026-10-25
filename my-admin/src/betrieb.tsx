@@ -13,6 +13,7 @@ import {
   TextInput,
 } from "react-admin";
 import { FieldRow, FormSection } from "./EntityLayout";
+import { BetriebBilderFeld } from "./BetriebBilder";
 
 export const BetriebEdit = () => (
   <Edit title="Betriebsdaten" redirect={false}>
@@ -68,6 +69,11 @@ export const BetriebEdit = () => (
             label="Kostenvoranschlag gültig (Tage)"
           />
         </FieldRow>
+      </FormSection>
+      {/* Privat gespeichert (nicht im Code): Stempel und Unterschrift für
+          Formulare wie die Rezeptanfrage an den Augenarzt */}
+      <FormSection title="Stempel und Unterschrift (privat gespeichert)">
+        <BetriebBilderFeld />
       </FormSection>
     </SimpleForm>
   </Edit>
