@@ -81,6 +81,7 @@ import {
   KundeVerwaltung,
 } from "./KundeFelder";
 import { KundenAuftraege } from "./KundenAuftraege";
+import { KundeDokumente } from "./KundeDokumente";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { KundeKarteikarte } from "./KundeKarteikarte";
 import { KrankenkasseInput } from "./krankenkassen";
@@ -569,6 +570,8 @@ export const KundeShow = () => {
             </ShowColumn>
           </Box>
         </Box>
+        {/* Eigener Bereich für Befunde, Fundusaufnahmen, Rezepte usw. */}
+        <KundeDokumente />
       </ShowLayout>
     </Show>
   );
