@@ -71,6 +71,9 @@ type Liste = {
 // in der Karte (Zeilenhöhe ca. 52 px).
 const ZEILEN_HOEHE = 52;
 const ZULETZT_ANZAHL = 10;
+// geladen werden mehr Kunden, als die Kachel auf einmal zeigt - der Rest
+// ist per Scrollen erreichbar
+const ZULETZT_LADEN = 40;
 
 const datum = (wert: unknown) =>
   wert ? dayjs(String(wert)).format("DD.MM.YYYY") : "—";
@@ -284,12 +287,12 @@ export const DashboardAufgaben = ({
         // zuletzt angelegte und zuletzt angesehene Kunden
         Promise.all([
           dataProvider.getList("kunde", {
-            pagination: { page: 1, perPage: ZULETZT_ANZAHL },
+            pagination: { page: 1, perPage: ZULETZT_LADEN },
             sort: { field: "id", order: "DESC" },
             filter: {},
           }),
           dataProvider.getList("kunde", {
-            pagination: { page: 1, perPage: ZULETZT_ANZAHL },
+            pagination: { page: 1, perPage: ZULETZT_LADEN },
             sort: { field: "last_viewed_at", order: "DESC" },
             filter: { "last_viewed_at@not.is": "null" },
           }),
@@ -297,7 +300,7 @@ export const DashboardAufgaben = ({
           zuletztBenutzt(
             angelegt.data as Kunde[],
             angesehen.data as Kunde[],
-            ZULETZT_ANZAHL,
+            ZULETZT_LADEN,
           ),
         ),
         liste("brille", {
