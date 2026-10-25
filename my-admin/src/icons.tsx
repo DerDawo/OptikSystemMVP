@@ -58,6 +58,10 @@ export const ReceiptIcon = lineIcon(
   "M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6M9 16h4",
   "ReceiptIcon",
 );
+export const PrescriptionIcon = lineIcon(
+  "M9 4h6v3H9zM7 5.5H6a1 1 0 0 0-1 1V20a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V6.5a1 1 0 0 0-1-1h-1M9 14.5l2 2 4-4.5",
+  "PrescriptionIcon",
+);
 export const AlertIcon = lineIcon(
   "M12 4 2.5 20h19zM12 10v4M12 17.5v.01",
   "AlertIcon",

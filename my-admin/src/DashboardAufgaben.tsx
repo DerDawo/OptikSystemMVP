@@ -67,7 +67,10 @@ type Liste = {
   max?: number;
 };
 
+// Sichtbare Zeilen je Karte; weitere Einträge erreicht man durch Scrollen
+// in der Karte (Zeilenhöhe ca. 52 px).
 const MAX_ZEILEN = 6;
+const ZEILEN_HOEHE = 52;
 const ZULETZT_ANZAHL = 10;
 
 const datum = (wert: unknown) =>
@@ -130,8 +133,20 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
           {liste.leer}
         </Typography>
       ) : (
-        <Box sx={{ display: "flex", flexDirection: "column" }}>
-          {liste.zeilen.slice(0, liste.max ?? MAX_ZEILEN).map((zeile) => {
+        <Box
+          tabIndex={0}
+          role="list"
+          aria-label={`${liste.titel}, scrollbar`}
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            maxHeight: (liste.max ?? MAX_ZEILEN) * ZEILEN_HOEHE,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            scrollbarGutter: "stable",
+          }}
+        >
+          {liste.zeilen.map((zeile) => {
             const nummer = choosePhoneNumberForMessaging([
               zeile.kunde?.Handy,
               zeile.kunde?.TelefonnummerPrivat,
@@ -139,6 +154,7 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
             return (
               <Box
                 key={zeile.key}
+                role="listitem"
                 sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
               >
                 <ButtonBase
@@ -193,15 +209,6 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
               </Box>
             );
           })}
-          {liste.zeilen.length > (liste.max ?? MAX_ZEILEN) && (
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{ px: 1.5, pt: 0.5 }}
-            >
-              + {liste.zeilen.length - (liste.max ?? MAX_ZEILEN)} weitere
-            </Typography>
-          )}
         </Box>
       )}
     </Card>

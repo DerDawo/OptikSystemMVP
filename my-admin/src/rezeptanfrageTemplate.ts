@@ -127,7 +127,7 @@ export const buildRezeptanfrageBodyHtml = ({
   <div class="reihe">${feld("Weitere Diagnosen / ICD-10 Code", text(brille.Diagnose), "3")}${feld("Befunddatum")}</div>
 
   <h2>4 Gewünschte Versorgung</h2>
-  <div class="raster vier">${VERSORGUNG.map((v) => `<div>${box(v, versorgung.has(v))}</div>`).join("")}<div>${box("Sonstiges:")} ________</div></div>
+  <div class="raster vier">${VERSORGUNG.map((v) => `<div>${box(v, versorgung.has(v))}</div>`).join("")}<div>${box("Sonstiges:")}______</div></div>
   <div class="zeile">Indikation Kantenfiltergläser (GKV § 33 SGB V / Low Vision) – ICD: ____________________</div>
   <div class="zeile klein">Empfohlene Filterstufe / Tönung / Transmission (%), Filterwellenlänge (nm): ${["400", "420", "450", "480", "511", "527"].map((nm) => box(nm)).join("")}</div>
   <div class="reihe">${feld("Besonderer Bedarf (z. B. Bildschirmarbeit, Führerschein, Sport, Beruf)")}</div>
@@ -146,38 +146,36 @@ export const buildRezeptanfrageBodyHtml = ({
     <div><div class="strich"></div>Unterschrift Patient / gesetzl. Vertreter</div>
     <div><div class="strich"></div>Stempel &amp; Unterschrift Optiker</div>
   </div>
-  <div class="fuss">Optikerformular · Rezeptanfrage an Augenarzt &nbsp;|&nbsp; Alle Felder mit * sind Pflichtfelder &nbsp;|&nbsp; Dieses Formular verbleibt im Optikerbetrieb</div>
 </div>`;
 };
 
 const STYLES = `
   ${KAESTCHEN_STYLES}
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #222; font-size: 8.3pt; line-height: 1.25; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .anfrage { position: relative; width: 210mm; height: 297mm; padding: 11mm 15mm 9mm 17mm; overflow: hidden; background: #fff; }
-  .titelzeile { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 0.4mm solid #2a63b1; padding-bottom: 1.6mm; margin-bottom: 2mm; }
-  h1 { color: #2a63b1; font-size: 16pt; margin: 0; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #222; font-size: 8.3pt; line-height: 1.2; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .anfrage { position: relative; display: flex; flex-direction: column; width: 210mm; height: 297mm; padding: 9mm 15mm 8mm 17mm; overflow: hidden; background: #fff; }
+  .titelzeile { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 0.4mm solid #222; padding-bottom: 1.6mm; margin-bottom: 2mm; }
+  h1 { color: #111; font-size: 16pt; margin: 0; }
   .meta { font-size: 8pt; color: #555; min-width: 48mm; }
-  h2 { color: #2a63b1; font-size: 8.8pt; margin: 2.8mm 0 1mm; }
-  .reihe { display: flex; gap: 6mm; border-bottom: 0.2mm solid #ccc; padding-bottom: 0.6mm; margin-bottom: 1mm; }
+  h2 { color: #111; font-size: 9pt; margin: 2.2mm 0 0.9mm; padding-bottom: 0.5mm; border-bottom: 0.25mm solid #888; }
+  .reihe { display: flex; gap: 6mm; border-bottom: 0.2mm solid #ccc; padding-bottom: 0.5mm; margin-bottom: 0.6mm; }
   .feld .label { font-size: 7.4pt; color: #777; }
-  .feld .wert { min-height: 4.3mm; font-size: 9pt; color: #111; }
+  .feld .wert { min-height: 3.8mm; font-size: 9pt; color: #111; }
   .werte { width: 100%; border-collapse: collapse; margin-bottom: 1.4mm; }
-  .werte th, .werte td { border: 0.2mm solid #c9d4e6; padding: 0.6mm 1.2mm; text-align: left; height: 5.6mm; }
-  .werte tr:first-child th { background: #eef3fb; font-weight: normal; color: #666; font-size: 7.6pt; }
+  .werte th, .werte td { border: 0.2mm solid #bbb; padding: 0.6mm 1.2mm; text-align: left; height: 5mm; }
+  .werte tr:first-child th { background: #f0f0f0; font-weight: normal; color: #666; font-size: 7.6pt; }
   .werte tr th:first-child { width: 14mm; }
-  .zeile { margin: 1mm 0; }
+  .zeile { margin: 0.8mm 0; }
   .klein { font-size: 7.6pt; color: #555; }
-  .raster { display: grid; column-gap: 6mm; row-gap: 0; border: 0.2mm solid #ccc; padding: 0.8mm 1.6mm; margin-bottom: 1mm; }
-  .raster > div { padding: 0.5mm 0; border-bottom: 0.2mm solid #eee; }
+  .raster { display: grid; column-gap: 6mm; row-gap: 0; border: 0.2mm solid #ccc; padding: 0.5mm 1.6mm; margin-bottom: 0.8mm; }
+  .raster > div { padding: 0.25mm 0; border-bottom: 0.2mm solid #eee; }
   .raster.zwei { grid-template-columns: 1fr 1fr; }
   .raster.vier { grid-template-columns: repeat(4, 1fr); }
   .option { display: inline-block; margin-right: 3.5mm; white-space: nowrap; }
   .kaestchen { display: inline-block; width: 2.8mm; height: 2.8mm; border: 0.25mm solid #444; margin-right: 1.2mm; vertical-align: -0.3mm; }
-  .unterschriften { display: flex; gap: 10mm; margin-top: 9mm; }
+  .unterschriften { display: flex; gap: 10mm; margin-top: auto; padding-top: 11mm; }
   .unterschriften > div { flex: 1; color: #555; }
   .strich { border-top: 0.25mm solid #999; margin-bottom: 0.8mm; }
-  .fuss { position: absolute; left: 0; right: 0; bottom: 6mm; text-align: center; font-size: 6.5pt; color: #2a63b1; }
 `;
 
 export const buildRezeptanfragePrintHtml = (
