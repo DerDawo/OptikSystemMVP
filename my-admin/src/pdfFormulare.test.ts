@@ -261,3 +261,21 @@ describe("vorbelegte Vorlage", () => {
     expect(feldwert(pdf, "f_180")).toBe("Ishihara (21 Tafeln)");
   });
 });
+
+describe("Courier und Ort/Datum", () => {
+  it("Antrag BAP: Eintragungen in Courier, Ort/Datum auf Seite 2 und letzter Seite", async () => {
+    const vorlage = PDF_VORLAGEN["Antrag BAP"];
+    const bytes = await fuellePdfVorlage(
+      vorlage,
+      lade(vorlage.datei),
+      entities,
+    );
+    const pdf = await PDFDocument.load(bytes);
+    const feld = pdf.getForm().getTextField("f_4");
+    expect(feld.acroField.getDefaultAppearance()).toContain("/Cour");
+    expect(vorlage.ortDatum?.text(entities)).toMatch(
+      /^Gera, \d{2}\.\d{2}\.\d{4}$/,
+    );
+    expect(vorlage.ortDatum?.stellen.map((s) => s.seite)).toEqual([2, -1]);
+  });
+});

@@ -32,6 +32,14 @@ export type PdfVorlage = {
   // der Felder zeigen und nicht neu berechnen (sonst erscheinen
   // vorbelegte Felder in manchen Viewern leer)
   vorbelegt?: boolean;
+  // Eintragungen (Felder und Ort/Datum) in Courier schreiben
+  courier?: boolean;
+  // Text "Ort, Datum" und Stellen (Seite 1-basiert, -1 = letzte; Abstand der
+  // Textgrundlinie vom oberen Seitenrand in pt), an die er gedruckt wird
+  ortDatum?: {
+    text: (entities: DocumentMergeEntities) => string;
+    stellen: { seite: number; oben: number }[];
+  };
 };
 
 // Auswahllisten im Beobachtungsbogen schreiben positive Werte ohne "+"
@@ -325,6 +333,17 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     titel: "Antrag Bildschirmarbeitsplatzbrille",
     felder: bapFelder,
     vorbelegt: true,
+    courier: true,
+    // "Ort, Datum" der Bescheinigung (Seite 2, Abschnitt 6) und des
+    // Untersuchungsprotokolls (letzte Seite); Ort ist immer Gera
+    ortDatum: {
+      text: (entities) =>
+        `Gera, ${formatDatum(entities.brille?.Datum) || dayjs().format("DD.MM.YYYY")}`,
+      stellen: [
+        { seite: 2, oben: 249 },
+        { seite: -1, oben: 733 },
+      ],
+    },
   },
   "Berechtigungsschein GKV": {
     datei: "berechtigungsschein-gkv.pdf",
@@ -397,10 +416,13 @@ export const fuellePdfVorlage = async (
   pdfBytes: ArrayBuffer | Uint8Array,
   entities: DocumentMergeEntities,
 ): Promise<Uint8Array> => {
-  const { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } =
+  const { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField, StandardFonts } =
     await import("pdf-lib");
   const pdf = await PDFDocument.load(pdfBytes);
   const form = pdf.getForm();
+  const courier = vorlage.courier
+    ? await pdf.embedFont(StandardFonts.Courier)
+    : undefined;
   for (const [name, wert] of Object.entries(vorlage.felder(entities))) {
     if (!wert) continue;
     const feld = form.getFieldMaybe(name);
@@ -418,14 +440,30 @@ export const fuellePdfVorlage = async (
         try {
           feld.setFontSize(10);
         } catch {
-          feld.acroField.setDefaultAppearance("/Helv 10 Tf 0 g");
+          feld.acroField.setDefaultAppearance(
+            `/${courier ? "Cour" : "Helv"} 10 Tf 0 g`,
+          );
         }
+        if (courier) feld.updateAppearances(courier);
       } else if (feld instanceof PDFDropdown) {
         // Werte außerhalb der Liste schaltet pdf-lib als freie Eingabe frei
         feld.select(fuerPdfSchrift(wert));
       }
     } catch (error) {
       console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
+    }
+  }
+  if (vorlage.ortDatum && courier) {
+    const seiten = pdf.getPages();
+    const text = fuerPdfSchrift(vorlage.ortDatum.text(entities));
+    for (const { seite, oben } of vorlage.ortDatum.stellen) {
+      const s = seiten[seite < 0 ? seiten.length + seite : seite - 1];
+      s.drawText(text, {
+        x: 52,
+        y: s.getHeight() - oben,
+        size: 10,
+        font: courier,
+      });
     }
   }
   if (vorlage.vorbelegt) {
