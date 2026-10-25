@@ -29,6 +29,7 @@ import {
   LayersIcon,
   LensIcon,
   ListIcon,
+  PrescriptionIcon,
   ReceiptIcon,
   SearchIcon,
   TagIcon,
@@ -213,6 +214,11 @@ export const MyMenu = () => (
       to="/mahnungen"
       primaryText="Mahnungen"
       leftIcon={<AlertIcon />}
+    />
+    <Menu.Item
+      to="/rezepte"
+      primaryText="Abgerechnete Rezepte"
+      leftIcon={<PrescriptionIcon />}
     />
 
     <Section label="Verwaltung" />

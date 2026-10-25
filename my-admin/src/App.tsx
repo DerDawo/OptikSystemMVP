@@ -88,6 +88,7 @@ import {
 import { GlaskatalogImportPage } from "./glaskatalog/GlaskatalogImportPage";
 import { RechnungenList } from "./Rechnungen";
 import { MahnungenList } from "./Mahnungen";
+import { KassenrezepteSeite } from "./Kassenrezepte";
 import { Dashboard, StatistikSeite } from "./Dashboard";
 import { BetriebEdit } from "./betrieb";
 
@@ -245,6 +246,7 @@ export const App = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/rechnungen" element={<RechnungenList />} />
         <Route path="/mahnungen" element={<MahnungenList />} />
+        <Route path="/rezepte" element={<KassenrezepteSeite />} />
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />
         <Route path="/kalender" element={<TerminKalender />} />
