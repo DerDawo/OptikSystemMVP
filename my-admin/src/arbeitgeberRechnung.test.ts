@@ -70,3 +70,20 @@ describe("Rechnungen an den Arbeitgeber", () => {
     });
   });
 });
+
+describe("Stempel und Unterschrift auf der Arbeitgeber-Rechnung", () => {
+  const PNG =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+  it("erscheinen nur, wenn sie in den Einstellungen gespeichert sind", () => {
+    const daten = { entities, rechnungsnummer: "1" };
+    expect(
+      buildArbeitgeberRechnungPrintHtml("bildschirm", { ...daten, bilder: {} }),
+    ).not.toContain('stempelblock"');
+    const mit = buildArbeitgeberRechnungPrintHtml("bildschirm", {
+      ...daten,
+      bilder: { stempel: PNG, unterschrift: PNG },
+    });
+    expect(mit).toContain('class="stempel"');
+    expect(mit).toContain('class="unterschrift"');
+  });
+});
