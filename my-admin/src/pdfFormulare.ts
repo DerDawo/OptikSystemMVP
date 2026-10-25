@@ -11,23 +11,15 @@ import type {
 import { RECHNUNG_ABSENDER } from "./rechnungTemplate";
 import dayjs from "dayjs";
 import {
-  buildWerkstattauftragSummen,
   formatDatum,
   formatEuro,
   formatWert,
   text,
 } from "./werkstattauftragTemplate";
-import {
-  alterVorherigeBrille,
-  anzahlGlaeser,
-  brillenartKategorie,
-  sehstaerkeVeraendert,
-} from "./formularVorschlaege";
+import { anzahlGlaeser, sehstaerkeVeraendert } from "./formularVorschlaege";
 import { verteileWerte } from "./aokBerechtigungsscheinTemplate";
 import { bruttoZeilenEinzeln } from "./kassenanteil";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
-import stempelBild from "./assets/stempel-ulm.png?inline";
-import unterschriftBild from "./assets/unterschrift-ulm.png?inline";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
 export type PdfFeldwerte = Record<string, string | boolean>;
@@ -36,36 +28,6 @@ export type PdfVorlage = {
   datei: string;
   titel: string;
   felder: (entities: DocumentMergeEntities) => PdfFeldwerte;
-  // Stempel und Unterschrift des Inhabers auf der letzten Seite (Seite 5 des
-  // BAP-Formulars: Stempel-Kasten, Ort/Datum und Unterschriftszeile)
-  stempelUnterschrift?: boolean;
-};
-
-const bildBytes = async (dataUri: string) =>
-  new Uint8Array(await (await fetch(dataUri)).arrayBuffer());
-
-const setzeStempelUnterschrift = async (pdf: import("pdf-lib").PDFDocument) => {
-  const seite = pdf.getPages()[pdf.getPageCount() - 1];
-  const hoehe = seite.getHeight();
-  const [stempel, unterschrift] = await Promise.all([
-    pdf.embedPng(await bildBytes(stempelBild)),
-    pdf.embedPng(await bildBytes(unterschriftBild)),
-  ]);
-  // Koordinaten von oben (wie im PDF-Viewer gemessen) -> PDF-Ursprung unten
-  seite.drawImage(stempel, { x: 408, y: hoehe - 775, width: 84, height: 47 });
-  seite.drawImage(unterschrift, {
-    x: 130,
-    y: hoehe - 766,
-    width: 58,
-    height: 28,
-  });
-  const helv = await pdf.embedFont("Helvetica");
-  seite.drawText(`${RECHNUNG_ABSENDER.ort}, ${dayjs().format("DD.MM.YYYY")}`, {
-    x: 52,
-    y: hoehe - 733,
-    size: 10,
-    font: helv,
-  });
 };
 
 // Auswahllisten im Beobachtungsbogen schreiben positive Werte ohne "+"
@@ -123,13 +85,8 @@ const beobachtungsbogenFelder = (entities: DocumentMergeEntities) => {
 const bapFelder = (entities: DocumentMergeEntities) => {
   const k = kunde(entities);
   const brille: Record<string, unknown> = entities.brille ?? {};
-  const glastyp: Record<string, unknown> = entities.glastyp ?? {};
-  const fassung: Record<string, unknown> = entities.fassung ?? {};
   const { glasRechts: r, glasLinks: l } = entities;
-  const summen = buildWerkstattauftragSummen(entities);
-  const zusatzleistungen = (entities.zusatzleistungen ?? []).filter(Boolean);
   const messdatum = formatDatum(brille.Datum) || dayjs().format("DD.MM.YYYY");
-  const a = RECHNUNG_ABSENDER;
 
   // Abschnitt 6 (Seite 2): Sphäre, Zylinder, Achse, Addition, Prisma/Basis, PD
   const bescheinigung = (glas: MergeSource, start: number) => {
@@ -166,14 +123,6 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     [`pr_${start + 3}`]: formatWert(glas?.HSA, "frei"),
     [`pr_${start + 6}`]: formatWert(glas?.Add, "dioptrie"),
   });
-  // Kopfzeile der Protokollseiten 3-5: Untersuchungsdatum, Untersucher/in,
-  // Kunden-Nr. (Protokoll-Nr. und Uhrzeit bleiben frei)
-  const kopf = (start: number) => ({
-    [`hd_${start + 1}`]: messdatum,
-    [`hd_${start + 3}`]: text(mitarbeiterAnzeige(brille.Berater)),
-    [`hd_${start + 4}`]: text(k.KundenNummer),
-  });
-
   // B a) Werte der vorhandenen Brille (Seite 3): Sph, Cyl, Achse, Visus,
   // HSA, MA, NZ, Add, NZ-Add - MA, NZ und NZ-Add kennt das Programm nicht
   const vorhanden = (glas: MergeSource, start: number) => ({
@@ -184,44 +133,19 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     [`pr_${start + 4}`]: formatWert(glas?.HSA, "frei"),
     [`pr_${start + 7}`]: formatWert(glas?.Add, "dioptrie"),
   });
-  // Kästchen "Art der Brille": Fern, Nah, Bifokal, Gleitsicht, Office
-  const art = (brillenArt: unknown, felder: Record<string, string>) => {
-    const kategorie = brillenartKategorie(brillenArt);
-    return kategorie && felder[kategorie] ? { [felder[kategorie]]: true } : {};
-  };
-  const veraendert = sehstaerkeVeraendert(entities) === true;
-  const alter = alterVorherigeBrille(entities);
-  const addAlt = Number(entities.vorherigesGlasRechts?.Add) || 0;
-  const addNeu = Number(r?.Add) || 0;
-  const glasart = brillenartKategorie(brille.BrillenArt);
 
+  // Die Vorlage (public/formulare/antrag-bap.pdf) ist komplett vorbelegt,
+  // auch mit Stempel und Unterschrift. Das Programm ändert nur Name
+  // (mit Geburtsdatum), Datum und Dioptrienwerte.
   return {
     f_4: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
     f_5: formatDatum(k.Geburtsdatum),
-    f_8: text(k.Tätigkeit),
-    f_9: [telefon(k), text(k.Email)].filter(Boolean).join(" / "),
-    f_29: `${a.firma}, ${a.strasseLang}, ${a.plz} ${a.ort}`,
     f_30: messdatum,
     ...bescheinigung(r, 31),
     ...bescheinigung(l, 37),
-    f_48: [fassung.Hersteller, fassung.Bezeichnung]
-      .map(text)
-      .filter(Boolean)
-      .join(" "),
-    f_49: betrag(Number(fassung.Betrag) || 0),
-    f_50: [glastyp.Bezeichnung, glastyp.Verguetung]
-      .map(text)
-      .filter(Boolean)
-      .join(", "),
-    f_51: betrag((Number(r?.Betrag) || 0) + (Number(l?.Betrag) || 0)),
-    f_52: zusatzleistungen.map((z) => text(z?.Bezeichnung)).join(", "),
-    f_53: betrag(
-      zusatzleistungen.reduce((sum, z) => sum + (Number(z?.Betrag) || 0), 0),
-    ),
-    f_54: betrag(summen.gesamt),
-    ...kopf(61),
-    ...kopf(129),
-    ...kopf(207),
+    hd_62: messdatum,
+    hd_130: messdatum,
+    hd_208: messdatum,
     f_66: text(k.Nachname),
     f_67: text(k.Vorname),
     f_68: formatDatum(k.Geburtsdatum),
@@ -229,36 +153,8 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     ...messung(l, 118),
     ...neueBrille(r, 225),
     ...neueBrille(l, 233),
-    // vorhandene Brille (vorheriger Auftrag)
     ...vorhanden(entities.vorherigesGlasRechts, 85),
     ...vorhanden(entities.vorherigesGlasLinks, 94),
-    ...art(entities.vorherigeBrille?.BrillenArt, {
-      Fernbrille: "cb_77",
-      Nahbrille: "cb_78",
-      Bifokalbrille: "cb_79",
-      Gleitsichtbrille: "cb_80",
-      Officebrille: "cb_81",
-    }),
-    // "ist ca. __ Jahre alt; Glasstärken entsprechen nicht mehr dem Bedarf"
-    ...(veraendert && alter !== null
-      ? { tb_103: true, tbf_104: String(alter) }
-      : {}),
-    // fortschreitende Presbyopie: Addition gegenüber der alten Brille gestiegen
-    ...(addAlt > 0 && addNeu > addAlt ? { tb_105: true } : {}),
-    // Empfohlene Glasart (Seite 2) und Art der neuen Brille (Seite 5)
-    ...(glasart === "Officebrille" ? { cb_44: true } : {}),
-    ...(glasart === "Gleitsichtbrille" ? { cb_45: true } : {}),
-    ...(glasart === "Bifokalbrille" ? { cb_46: true } : {}),
-    ...(glasart === "Fernbrille" || glasart === "Nahbrille"
-      ? { cb_43: true }
-      : {}),
-    ...art(brille.BrillenArt, {
-      Fernbrille: "cb_217",
-      Nahbrille: "cb_218",
-      Bifokalbrille: "cb_219",
-      Gleitsichtbrille: "cb_220",
-      Officebrille: "cb_221",
-    }),
   };
 };
 
@@ -419,7 +315,6 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "antrag-bap.pdf",
     titel: "Antrag Bildschirmarbeitsplatzbrille",
     felder: bapFelder,
-    stempelUnterschrift: true,
   },
   "Berechtigungsschein GKV": {
     datei: "berechtigungsschein-gkv.pdf",
@@ -523,7 +418,6 @@ export const fuellePdfVorlage = async (
       console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
     }
   }
-  if (vorlage.stempelUnterschrift) await setzeStempelUnterschrift(pdf);
   return pdf.save();
 };
 
