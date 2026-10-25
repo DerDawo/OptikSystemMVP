@@ -53,6 +53,8 @@ export type PdfVorlage = {
   };
   // Eintragungen (Felder und Ort/Datum) in Courier schreiben
   courier?: boolean;
+  // Schriftgröße und -farbe der Felder aus dem PDF beibehalten (statt 10 pt)
+  feldSchrift?: boolean;
   // Text "Ort, Datum" und Stellen (Seite 1-basiert, -1 = letzte; Abstand der
   // Textgrundlinie vom oberen Seitenrand in pt), an die er gedruckt wird
   ortDatum?: {
@@ -282,20 +284,11 @@ const berechtigungsscheinGkvFelder = (entities: DocumentMergeEntities) => {
 };
 
 // Optometrische Verordnung als Vordruck (Felder siehe
-// scripts/verordnung-optometrist-felder.mjs, mit Firmenstempel und
-// Unterschrift im Vordruck): Versicherter und Kasse aus der Kundenkartei,
-// Refraktion Ferne/Nähe aus dem Auftrag, Erklärung (Veränderung, Anzahl der
-// Gläser) wie beim Berechtigungsschein. Kostenrechnung und weitere Kästchen
-// trägt der Optiker im PDF ein.
-const KASSEN_KUERZEL: [string, RegExp][] = [
-  ["aok", /\baok\b/i],
-  ["lkk", /\blkk\b|landwirtschaft/i],
-  ["bkk", /\bbkk\b|betriebskrankenkasse/i],
-  ["ikk", /\bikk\b|innungskrankenkasse/i],
-  ["vdak", /\bvdak\b/i],
-  ["knappschaft", /knappschaft/i],
-];
-
+// scripts/verordnung-optometrist-felder.mjs; Stempel und Unterschrift aus den
+// Einstellungen). Immer "PRIVAT" in der Kassenzeile, Verbesserung um
+// mindestens 20 Prozentpunkte angekreuzt und feste Begründung. Versicherter
+// und Adresse aus der Kundenkartei, Refraktion aus dem Auftrag. Alles in
+// Courier, dunkelgrau.
 const verordnungOptometristFelder = (entities: DocumentMergeEntities) => {
   const k = kunde(entities);
   const brille: Record<string, unknown> = entities.brille ?? {};
@@ -313,12 +306,17 @@ const verordnungOptometristFelder = (entities: DocumentMergeEntities) => {
     [`${zeile}_basis`]: formatWert(w.B, "frei"),
     [`${zeile}_hsa`]: formatWert(w.HSA, "frei"),
   });
-  const kasse = text(k.Krankenkasse);
-  const kassenFeld = KASSEN_KUERZEL.find(([, muster]) => muster.test(kasse));
   const heute = dayjs().format("DD.MM.YYYY");
   return {
-    ...(kassenFeld ? { [`kasse_${kassenFeld[0]}`]: "X" } : {}),
+    kasse_text: "PRIVAT",
     name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    adresse: [
+      [text(k.Vorname), text(k.Nachname)].filter(Boolean).join(" "),
+      [k.Straße, k.Hausnummer].map(text).filter(Boolean).join(" "),
+      [k.Postleitzahl, k.Stadt].map(text).filter(Boolean).join(" "),
+    ]
+      .filter(Boolean)
+      .join("\n"),
     geburtsdatum: formatDatum(k.Geburtsdatum),
     kassennr: text(k.KrankenkassenNummer),
     versichertennr: text(k.VersichertenNummer),
@@ -326,9 +324,11 @@ const verordnungOptometristFelder = (entities: DocumentMergeEntities) => {
     vk_gueltig: formatDatum(k.VersichertenkarteGueltigBis),
     datum: heute,
     ausgestellt_am: heute,
-    ...(veraendert
-      ? { cb_veraenderung: true, anzahl_glaeser: anzahlGlaeser(entities) }
-      : {}),
+    // immer: Verbesserung um mindestens 20 Prozentpunkte
+    verbesserung_x: "X",
+    ...(veraendert ? { anzahl_glaeser: anzahlGlaeser(entities) } : {}),
+    begruendung:
+      "Asthenopische Beschwerden: beginnende Presbyopie, Sicca-Syndrom, Zervikalneuralgie",
     ...(brillenartKategorie(brille.BrillenArt) === "Officebrille"
       ? { cb_bildschirm: true }
       : {}),
@@ -433,6 +433,8 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "verordnung-optometrist.pdf",
     titel: "Optometrische Verordnung (Vordruck)",
     felder: verordnungOptometristFelder,
+    courier: true,
+    feldSchrift: true,
     // Kasten "Firmenstempel": Stempel links, Unterschrift rechts daneben
     stempelUnterschrift: {
       stempel: { seite: 1, x: 122, oben: 650, breite: 92, hoehe: 50 },
@@ -526,13 +528,15 @@ export const fuellePdfVorlage = async (
         continue;
       }
       if (feld instanceof PDFTextField) {
-        feld.setText(
-          passeAnFeldlaenge(fuerPdfSchrift(wert), feld.getMaxLength()),
-        );
+        // mehrzeilige Felder (z. B. Adresse) behalten ihre Zeilenumbrüche
+        const bereinigt = feld.isMultiline()
+          ? wert.split("\n").map(fuerPdfSchrift).join("\n")
+          : fuerPdfSchrift(wert);
+        feld.setText(passeAnFeldlaenge(bereinigt, feld.getMaxLength()));
         // feste Größe statt "automatisch" (füllt sonst die ganze Feldhöhe);
         // Felder ohne eigene Schriftangabe bekommen eine
         try {
-          feld.setFontSize(10);
+          if (!vorlage.feldSchrift) feld.setFontSize(10);
         } catch {
           feld.acroField.setDefaultAppearance(
             `/${courier ? "Cour" : "Helv"} 10 Tf 0 g`,
