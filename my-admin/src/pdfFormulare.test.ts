@@ -114,15 +114,16 @@ describe("Zuordnung der Felder", () => {
     expect(felder["AXE OD"]).toBe("90");
   });
 
-  it("Antrag BAP: trägt nur Name und Dioptrien ein", () => {
+  it("Antrag BAP: trägt nur Personendaten, Messdatum und Dioptrien ein", () => {
     const felder = PDF_VORLAGEN["Antrag BAP"].felder(entities);
     expect(felder.f_4).toBe("Muster, Erika");
+    expect(felder.f_9).toBe("0170 1234567 / erika@example.com");
     expect(felder.rx_31).toBe("+0,75");
     expect(felder.pr_225).toBe("+0,75");
     expect(felder.pr_86).toBe("-0,50");
     // alles andere (Arbeitgeber, Kostenvoranschlag, Kästchen, Texte) bleibt
     const erlaubt =
-      /^(f_4|f_5|f_30|f_6[678]|hd_(62|65|130|133|208|211)|rx_\d+|pr_\d+)$/;
+      /^(f_4|f_5|f_9|f_30|f_6[678]|hd_(62|65|130|133|208|211)|rx_\d+|pr_\d+)$/;
     expect(Object.keys(felder).filter((n) => !erlaubt.test(n))).toEqual([]);
   });
 
