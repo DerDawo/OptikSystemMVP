@@ -55,11 +55,20 @@ const zahl2 = new Intl.NumberFormat("de-DE", {
   maximumFractionDigits: 2,
 });
 
-const eingabe = (wert = "", hinweis = "", klasse = "") =>
-  `<span class="eingabe ${klasse}" contenteditable="true" data-hinweis="${e(hinweis)}">${e(wert)}</span>`;
+const eingabe = (wert = "", hinweis = "", klasse = "", feld = "") =>
+  `<span class="eingabe ${klasse}" contenteditable="true" data-hinweis="${e(hinweis)}" data-ag="${feld}">${e(wert)}</span>`;
 
-const eingabeZeile = (wert = "", hinweis = "") =>
-  `<div class="eingabe" contenteditable="true" data-hinweis="${e(hinweis)}">${e(wert)}</div>`;
+const eingabeZeile = (wert = "", hinweis = "", feld = "") =>
+  `<div class="eingabe" contenteditable="true" data-hinweis="${e(hinweis)}" data-ag="${feld}">${e(wert)}</div>`;
+
+// Arbeitgeber, der beim Kunden gespeichert ist (Spalte "Arbeitgeber", jsonb)
+export type ArbeitgeberAnschrift = {
+  firma?: string;
+  abteilung?: string;
+  strasse?: string;
+  ort?: string;
+  email?: string;
+};
 
 /**
  * Positionen der Rechnung an den Arbeitgeber: wie die Kundenrechnung, aber die
@@ -126,12 +135,16 @@ export const buildArbeitgeberRechnungBodyHtml = (
     ["Rech.-Nr.", rechnungsnummer],
     ["USt.ID.", a.ustId],
   ];
+  const ag: ArbeitgeberAnschrift =
+    typeof k.Arbeitgeber === "object" && k.Arbeitgeber !== null
+      ? (k.Arbeitgeber as ArbeitgeberAnschrift)
+      : {};
   const anschrift = [
-    eingabeZeile("", "Arbeitgeber / Firma"),
-    eingabeZeile("", "Abteilung / zuständige Stelle"),
-    eingabeZeile("", "Straße Hausnummer"),
-    eingabeZeile("", "PLZ Ort"),
-    `<div class="nur-vorschau" data-nur-vorschau>E-Mail für den Versand: ${eingabe("", "E-Mail-Adresse des Arbeitgebers", "versand-email")}</div>`,
+    eingabeZeile(ag.firma, "Arbeitgeber / Firma", "firma"),
+    eingabeZeile(ag.abteilung, "Abteilung / zuständige Stelle", "abteilung"),
+    eingabeZeile(ag.strasse, "Straße Hausnummer", "strasse"),
+    eingabeZeile(ag.ort, "PLZ Ort", "ort"),
+    `<div class="nur-vorschau" data-nur-vorschau>E-Mail für den Versand: ${eingabe(ag.email, "E-Mail-Adresse des Arbeitgebers", "versand-email", "email")}</div>`,
   ].join("");
 
   const positionenHtml = positionen

@@ -87,3 +87,25 @@ describe("Stempel und Unterschrift auf der Arbeitgeber-Rechnung", () => {
     expect(mit).toContain('class="unterschrift"');
   });
 });
+
+describe("Gespeicherter Arbeitgeber", () => {
+  it("trägt Anschrift und E-Mail aus dem Kunden in die Vorschau ein", () => {
+    const html = buildArbeitgeberRechnungPreviewHtml("bildschirm", {
+      entities: {
+        ...entities,
+        kunde: {
+          ...entities.kunde,
+          Arbeitgeber: {
+            firma: "Muster GmbH",
+            strasse: "Hauptstr. 1",
+            ort: "07545 Gera",
+            email: "rechnung@muster.de",
+          },
+        },
+      },
+      rechnungsnummer: "2026-0042",
+    });
+    expect(html).toContain('data-ag="firma">Muster GmbH<');
+    expect(html).toContain('data-ag="email">rechnung@muster.de<');
+  });
+});
