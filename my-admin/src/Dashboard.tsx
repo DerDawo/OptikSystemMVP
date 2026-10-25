@@ -35,6 +35,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import dayjs from "dayjs";
 import { CurrencyField } from "./CurrencyField";
 import { DashboardAufgaben } from "./DashboardAufgaben";
+import { SchuldnerlisteKarte } from "./SchuldnerlisteKarte";
 import { BrilleStatusChip, getBrilleOrderStatus } from "./orderStatus";
 import { tokensFor } from "./designTokens";
 import { CalendarIcon, CheckIcon, GlassesIcon, UserPlusIcon } from "./icons";
@@ -1020,6 +1021,7 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
               untenRef={setUntenSlot}
             />
           )}
+          {!statistik && <SchuldnerlisteKarte />}
         </>
       ) : null}
     </Box>
