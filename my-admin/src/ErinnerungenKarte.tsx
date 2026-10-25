@@ -38,7 +38,6 @@ import {
 const RESOURCE = "erinnerung";
 // Sichtbare Zeilen; weitere Erinnerungen erreicht man durch Scrollen in der
 // Karte (Zeilenhöhe ca. 52 px).
-const MAX_ZEILEN = 8;
 const ZEILEN_HOEHE = 52;
 
 type Kunde = {
@@ -263,10 +262,19 @@ export const ErinnerungenKarte = ({ stand }: { stand: Date | null }) => {
           sx={{
             display: "flex",
             flexDirection: "column",
-            maxHeight: MAX_ZEILEN * ZEILEN_HOEHE,
+            maxHeight: 10 * ZEILEN_HOEHE,
             overflowY: "auto",
             overscrollBehavior: "contain",
             scrollbarGutter: "stable",
+            "&::-webkit-scrollbar": { width: 8 },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "rgba(120,130,145,0.55)",
+              borderRadius: 4,
+            },
+            "&::-webkit-scrollbar-track": {
+              backgroundColor: "rgba(120,130,145,0.12)",
+              borderRadius: 4,
+            },
           }}
         >
           {liste.map((erinnerung) => {

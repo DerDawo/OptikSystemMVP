@@ -63,13 +63,12 @@ type Liste = {
   zeilen: Zeile[];
   // reine Übersicht (keine Aufgabe): ohne Anzahl oben rechts
   ohneZahl?: boolean;
-  // abweichende Zeilenzahl (sonst MAX_ZEILEN)
+  // abweichende Zeilenzahl (sonst ZULETZT_ANZAHL)
   max?: number;
 };
 
 // Sichtbare Zeilen je Karte; weitere Einträge erreicht man durch Scrollen
 // in der Karte (Zeilenhöhe ca. 52 px).
-const MAX_ZEILEN = 6;
 const ZEILEN_HOEHE = 52;
 const ZULETZT_ANZAHL = 10;
 
@@ -140,10 +139,19 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
           sx={{
             display: "flex",
             flexDirection: "column",
-            maxHeight: (liste.max ?? MAX_ZEILEN) * ZEILEN_HOEHE,
+            maxHeight: (liste.max ?? ZULETZT_ANZAHL) * ZEILEN_HOEHE,
             overflowY: "auto",
             overscrollBehavior: "contain",
             scrollbarGutter: "stable",
+            "&::-webkit-scrollbar": { width: 8 },
+            "&::-webkit-scrollbar-thumb": {
+              backgroundColor: "rgba(120,130,145,0.55)",
+              borderRadius: 4,
+            },
+            "&::-webkit-scrollbar-track": {
+              backgroundColor: "rgba(120,130,145,0.12)",
+              borderRadius: 4,
+            },
           }}
         >
           {liste.zeilen.map((zeile) => {
