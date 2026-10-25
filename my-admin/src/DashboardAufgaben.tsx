@@ -228,7 +228,9 @@ const AufgabenKarte = ({ liste }: { liste: Liste }) => {
 
 const ZULETZT_TITEL = "Zuletzt angelegt oder angesehen";
 const UEBERFAELLIG_TITEL = "Überfällige Aufträge";
-// Karten, die im oberen Kartenbereich (obenSlot) statt in "Heute zu tun" stehen.
+// Karten, die im oberen Kartenbereich (obenSlot) statt in "Heute zu tun" stehen,
+// in dieser Reihenfolge: "Zuletzt angelegt oder angesehen" steht gleich neben
+// den Erinnerungen, danach die überfälligen Aufträge.
 const OBEN_TITEL = [ZULETZT_TITEL, UEBERFAELLIG_TITEL];
 
 // obenSlot: Erinnerungen, Überfällige Aufträge und "Zuletzt angelegt oder
@@ -496,12 +498,20 @@ export const DashboardAufgaben = ({
           obenSlot &&
           createPortal(<ErinnerungenKarte stand={stand} />, obenSlot)
         )}
-        {listen.map((liste) => {
-          const karte = <AufgabenKarte key={liste.titel} liste={liste} />;
-          if (!OBEN_TITEL.includes(liste.titel) || obenSlot === undefined)
-            return karte;
-          return obenSlot ? createPortal(karte, obenSlot) : null;
-        })}
+        {[...listen]
+          .sort((a, b) => {
+            const rang = (titel: string) => {
+              const i = OBEN_TITEL.indexOf(titel);
+              return i < 0 ? OBEN_TITEL.length : i;
+            };
+            return rang(a.titel) - rang(b.titel);
+          })
+          .map((liste) => {
+            const karte = <AufgabenKarte key={liste.titel} liste={liste} />;
+            if (!OBEN_TITEL.includes(liste.titel) || obenSlot === undefined)
+              return karte;
+            return obenSlot ? createPortal(karte, obenSlot) : null;
+          })}
       </Box>
     </Box>
   );
