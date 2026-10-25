@@ -9,6 +9,7 @@ import {
   PDFTextField,
 } from "pdf-lib";
 import { formatEuro } from "./werkstattauftragTemplate";
+import { setzeBetriebBilder } from "./betriebBilderCache";
 import {
   PDF_VORLAGEN,
   fuellePdfVorlage,
@@ -277,5 +278,50 @@ describe("Courier und Ort/Datum", () => {
       /^Gera, \d{2}\.\d{2}\.\d{4}$/,
     );
     expect(vorlage.ortDatum?.stellen.map((s) => s.seite)).toEqual([2, -1]);
+  });
+});
+
+describe("Optometrische Verordnung (Vordruck)", () => {
+  it("füllt Versicherten, Kasse und Refraktion", () => {
+    const felder = PDF_VORLAGEN["Optometrische Verordnung Vordruck"].felder({
+      ...entities,
+      kunde: { ...entities.kunde, Krankenkasse: "AOK PLUS" },
+    });
+    expect(felder.name).toBe("Muster, Erika");
+    expect(felder.kasse_aok).toBe("X");
+    expect(felder.FR_sph).toBe("+0,75");
+    expect(felder.FL_sph).toBe("-0,25");
+  });
+});
+
+describe("Stempel und Unterschrift aus den Einstellungen", () => {
+  const PNG =
+    "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==";
+  const bilder = async () => {
+    const vorlage = PDF_VORLAGEN["Optometrische Verordnung Vordruck"];
+    const bytes = await fuellePdfVorlage(
+      vorlage,
+      lade(vorlage.datei),
+      entities,
+    );
+    const pdf = await PDFDocument.load(bytes);
+    return (
+      pdf
+        .getPage(0)
+        .node.Resources()
+        ?.lookup(PDFName.of("XObject"), PDFDict)
+        ?.keys().length ?? 0
+    );
+  };
+
+  it("setzt gespeicherte Bilder in den Kasten, ohne Bilder bleibt er leer", async () => {
+    setzeBetriebBilder({});
+    const ohne = await bilder();
+    setzeBetriebBilder({ stempel: PNG, unterschrift: PNG });
+    try {
+      expect(await bilder()).toBe(ohne + 2);
+    } finally {
+      setzeBetriebBilder({});
+    }
   });
 });
