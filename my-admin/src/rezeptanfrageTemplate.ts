@@ -105,7 +105,7 @@ export const buildRezeptanfrageBodyHtml = ({
 <div class="anfrage">
   <div class="titelzeile">
     <h1>Rezeptanfrage an den Augenarzt</h1>
-    <div class="meta">Datum: ${e(heute)}<br />Bearbeiter: ${e(text(mitarbeiterAnzeige(brille.Berater)))}</div>
+    <div class="meta">Datum: <span class="eintrag">${e(heute)}</span><br />Bearbeiter: <span class="eintrag">${e(text(mitarbeiterAnzeige(brille.Berater)))}</span></div>
   </div>
 
   <h2>1 Patientendaten</h2>
@@ -135,18 +135,16 @@ export const buildRezeptanfrageBodyHtml = ({
   <h2>5 Anfrage an die augenärztliche Praxis</h2>
   <div class="reihe">${feld("Zuweisender Optiker / Betrieb", `${a.firma} · ${a.marke}`)}${feld("Telefon / E-Mail Optiker", `${a.telefon} · ${a.email}`)}${feld("Anfragedatum", heute, "0.6")}</div>
   <div class="reihe">${feld("Letzte augenärztl. Untersuchung (ca.)")}<div class="feld" style="flex:1.4"><div class="label">Aktuelle Brillenglasstärke bekannt</div><div class="wert">${box("Ja")}${box("Nein")}${box("Unbekannt")}</div></div></div>
-  <div class="zeile">Dringlichkeit: ${box("Normal")}${box("Dringend")} (Begründung: ______________________________)</div>
-  <div class="reihe">${feld("Anliegen / Freitext an den Augenarzt")}</div>
+  <div class="zeile dringlich"><span>Dringlichkeit: ${box("Normal")}${box("Dringend")}</span><span>(Begründung:</span><span class="linie"></span><span>)</span></div>
+  <div class="reihe freitext">${feld("Anliegen / Freitext an den Augenarzt")}</div>
 
   <h2>6 Datenschutz, Einwilligung &amp; Unterschrift</h2>
-  <div class="zeile">${box("Patient hat der Weitergabe seiner Daten an den behandelnden Augenarzt zugestimmt (gemäß DSGVO Art. 9).")}</div>
-  <div class="zeile">${box("Kopie der Refraktionswerte wurde dem Patienten ausgehändigt.")}</div>
+  <div class="datenschutz">(Datenschutz: Die Gesundheitsdaten werden nur zur Rezeptanfrage an den behandelnden Augenarzt verwendet; Weitergabe nur mit Einwilligung des Patienten gemäß DSGVO Art. 9.)</div>
   <div class="unterschriften">
-    <div><div class="strich"></div>Ort, Datum</div>
-    <div><div class="strich"></div>Unterschrift Patient / gesetzl. Vertreter</div>
-    <div><div class="strich"></div>Stempel &amp; Unterschrift Optiker</div>
+    <div><div class="ortdatum eintrag">Gera, ${e(heute)}</div><div class="strich"></div>Ort, Datum</div>
+    <div><div class="ortdatum"></div><div class="strich"></div>Unterschrift Patient / gesetzl. Vertreter</div>
+    <div><div class="ortdatum"></div><div class="strich"></div>Stempel &amp; Unterschrift Optiker</div>
   </div>
-  <div class="fuss">Optikerformular · Rezeptanfrage an Augenarzt &nbsp;|&nbsp; Alle Felder mit * sind Pflichtfelder &nbsp;|&nbsp; Dieses Formular verbleibt im Optikerbetrieb</div>
 </div>`;
 };
 
@@ -154,14 +152,15 @@ const STYLES = `
   ${KAESTCHEN_STYLES}
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #222; font-size: 8.3pt; line-height: 1.25; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .anfrage { position: relative; width: 210mm; height: 297mm; padding: 11mm 15mm 9mm 17mm; overflow: hidden; background: #fff; }
+  .anfrage { position: relative; width: 210mm; height: 297mm; padding: 9mm 15mm 7mm 17mm; overflow: hidden; background: #fff; }
   .titelzeile { display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 0.4mm solid #2a63b1; padding-bottom: 1.6mm; margin-bottom: 2mm; }
   h1 { color: #2a63b1; font-size: 16pt; margin: 0; }
   .meta { font-size: 8pt; color: #555; min-width: 48mm; }
-  h2 { color: #2a63b1; font-size: 8.8pt; margin: 2.8mm 0 1mm; }
+  h2 { color: #2a63b1; font-size: 8.8pt; margin: 2.2mm 0 0.8mm; }
   .reihe { display: flex; gap: 6mm; border-bottom: 0.2mm solid #ccc; padding-bottom: 0.6mm; margin-bottom: 1mm; }
   .feld .label { font-size: 7.4pt; color: #777; }
-  .feld .wert { min-height: 4.3mm; font-size: 9pt; color: #111; }
+  .eintrag, .feld .wert, .werte td { font-family: "Courier New", Courier, monospace; color: #404040; }
+  .feld .wert { min-height: 4.3mm; font-size: 8.5pt; }
   .werte { width: 100%; border-collapse: collapse; margin-bottom: 1.4mm; }
   .werte th, .werte td { border: 0.2mm solid #c9d4e6; padding: 0.6mm 1.2mm; text-align: left; height: 5.6mm; }
   .werte tr:first-child th { background: #eef3fb; font-weight: normal; color: #666; font-size: 7.6pt; }
@@ -169,15 +168,19 @@ const STYLES = `
   .zeile { margin: 1mm 0; }
   .klein { font-size: 7.6pt; color: #555; }
   .raster { display: grid; column-gap: 6mm; row-gap: 0; border: 0.2mm solid #ccc; padding: 0.8mm 1.6mm; margin-bottom: 1mm; }
-  .raster > div { padding: 0.5mm 0; border-bottom: 0.2mm solid #eee; }
+  .raster > div { padding: 0.3mm 0; border-bottom: 0.2mm solid #eee; }
   .raster.zwei { grid-template-columns: 1fr 1fr; }
   .raster.vier { grid-template-columns: repeat(4, 1fr); }
   .option { display: inline-block; margin-right: 3.5mm; white-space: nowrap; }
   .kaestchen { display: inline-block; width: 2.8mm; height: 2.8mm; border: 0.25mm solid #444; margin-right: 1.2mm; vertical-align: -0.3mm; }
-  .unterschriften { display: flex; gap: 10mm; margin-top: 9mm; }
+  .unterschriften { display: flex; gap: 10mm; margin-top: 3mm; }
   .unterschriften > div { flex: 1; color: #555; }
+  .ortdatum { height: 8mm; display: flex; align-items: flex-end; font-size: 8.5pt; }
+  .dringlich { display: flex; align-items: flex-end; gap: 1.2mm; }
+  .dringlich .linie { flex: 1; border-bottom: 0.25mm solid #444; height: 3.6mm; }
+  .freitext .wert { min-height: 11mm; font-size: 9pt; font-weight: bold; }
+  .datenschutz { font-size: 6.5pt; color: #777; margin: 0.8mm 0 0; max-width: 115mm; }
   .strich { border-top: 0.25mm solid #999; margin-bottom: 0.8mm; }
-  .fuss { position: absolute; left: 0; right: 0; bottom: 6mm; text-align: center; font-size: 6.5pt; color: #2a63b1; }
 `;
 
 export const buildRezeptanfragePrintHtml = (
