@@ -301,13 +301,19 @@ export const briefkopfHtml = (
   kunde: DocumentMergeEntities["kunde"],
   datenbox: [string, string][],
   titel: string,
+  // eigener Anschriftsblock (z. B. eintippbar bei Rechnungen an den
+  // Arbeitgeber); ohne Angabe die Anschrift des Kunden
+  anschriftHtml?: string,
 ): string => `
   <div class="absenderzeile">${e(`${a.marke} - ${a.strasseKurz} - ${a.plz} ${a.ort}`)}</div>
   <img class="logo" src="${logoSehzentrum}" alt="" />
   <div class="anschrift">
-    ${buildAnschriftZeilen(kunde)
-      .map((z) => `<div>${e(z)}</div>`)
-      .join("")}
+    ${
+      anschriftHtml ??
+      buildAnschriftZeilen(kunde)
+        .map((z) => `<div>${e(z)}</div>`)
+        .join("")
+    }
   </div>
   <table class="datenbox">
     ${datenbox.map(([l, w]) => `<tr><td>${e(l)}</td><td>${e(w)}</td></tr>`).join("")}

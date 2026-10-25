@@ -57,13 +57,15 @@ const feldwert = (pdf: PDFDocument, name: string) => {
 };
 
 describe.each(Object.entries(PDF_VORLAGEN))("PDF-Vorlage %s", (_, vorlage) => {
-  it("ist leer und kennt alle zugeordneten Felder", async () => {
+  it("ist leer (außer der bewusst vorbelegten Antrag-BAP-Vorlage) und kennt alle zugeordneten Felder", async () => {
     const pdf = await PDFDocument.load(lade(vorlage.datei));
     const form = pdf.getForm();
     const ausgefuellt = form
       .getFields()
       .filter((f) => f instanceof PDFTextField && f.getText());
-    expect(ausgefuellt.map((f) => f.getName())).toEqual([]);
+    if (vorlage.datei !== "antrag-bap.pdf") {
+      expect(ausgefuellt.map((f) => f.getName())).toEqual([]);
+    }
     const fehlend = Object.keys(vorlage.felder(entities)).filter(
       (name) => !form.getFieldMaybe(name),
     );
@@ -112,23 +114,17 @@ describe("Zuordnung der Felder", () => {
     expect(felder["AXE OD"]).toBe("90");
   });
 
-  it("Antrag BAP: Beschäftigte/r, Werte und Kostenvoranschlag", () => {
+  it("Antrag BAP: ändert nur Name, Datum und Dioptrien", () => {
     const felder = PDF_VORLAGEN["Antrag BAP"].felder(entities);
     expect(felder.f_4).toBe("Muster, Erika");
-    expect(felder.f_9).toBe("0170 1234567 / erika@example.com");
     expect(felder.rx_31).toBe("+0,75");
-    expect(felder.f_51).toBe("240,00");
-    expect(felder.f_54).toBe("389,00");
     expect(felder.pr_225).toBe("+0,75");
-  });
-
-  it("Antrag BAP: vorhandene Brille, Alter und Presbyopie", () => {
-    const felder = PDF_VORLAGEN["Antrag BAP"].felder(entities);
     expect(felder.pr_86).toBe("-0,50");
-    expect(felder.cb_77).toBe(true);
-    expect(felder.tb_103).toBe(true);
-    expect(Number(felder.tbf_104)).toBeGreaterThanOrEqual(5);
-    expect(felder.tb_105).toBe(true);
+    expect(felder.hd_62).toBe(felder.f_30);
+    // alles andere (Arbeitgeber, Kostenvoranschlag, Kästchen, Texte) bleibt
+    const erlaubt =
+      /^(f_4|f_5|f_30|f_6[678]|hd_(62|65|130|133|208|211)|rx_\d+|pr_\d+)$/;
+    expect(Object.keys(felder).filter((n) => !erlaubt.test(n))).toEqual([]);
   });
 
   it("Beobachtungsbogen: bisherige Korrektur", () => {
