@@ -136,7 +136,7 @@ const bapFelder = (entities: DocumentMergeEntities) => {
 
   // Die Vorlage (public/formulare/antrag-bap.pdf) ist komplett vorbelegt,
   // auch mit Stempel und Unterschrift. Das Programm ändert nur Name
-  // (mit Geburtsdatum), Datum und Dioptrienwerte.
+  // (mit Geburtsdatum und Kunden-Nr.), Datum und Dioptrienwerte.
   return {
     f_4: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
     f_5: formatDatum(k.Geburtsdatum),
@@ -146,6 +146,9 @@ const bapFelder = (entities: DocumentMergeEntities) => {
     hd_62: messdatum,
     hd_130: messdatum,
     hd_208: messdatum,
+    hd_65: text(k.KundenNummer),
+    hd_133: text(k.KundenNummer),
+    hd_211: text(k.KundenNummer),
     f_66: text(k.Nachname),
     f_67: text(k.Vorname),
     f_68: formatDatum(k.Geburtsdatum),
