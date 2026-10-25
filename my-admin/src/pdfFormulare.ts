@@ -26,6 +26,8 @@ import {
 import { verteileWerte } from "./aokBerechtigungsscheinTemplate";
 import { bruttoZeilenEinzeln } from "./kassenanteil";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import stempelBild from "./assets/stempel-ulm.png?inline";
+import unterschriftBild from "./assets/unterschrift-ulm.png?inline";
 
 // Textfelder bekommen einen Text, Kästchen true (angekreuzt)
 export type PdfFeldwerte = Record<string, string | boolean>;
@@ -34,6 +36,36 @@ export type PdfVorlage = {
   datei: string;
   titel: string;
   felder: (entities: DocumentMergeEntities) => PdfFeldwerte;
+  // Stempel und Unterschrift des Inhabers auf der letzten Seite (Seite 5 des
+  // BAP-Formulars: Stempel-Kasten, Ort/Datum und Unterschriftszeile)
+  stempelUnterschrift?: boolean;
+};
+
+const bildBytes = async (dataUri: string) =>
+  new Uint8Array(await (await fetch(dataUri)).arrayBuffer());
+
+const setzeStempelUnterschrift = async (pdf: import("pdf-lib").PDFDocument) => {
+  const seite = pdf.getPages()[pdf.getPageCount() - 1];
+  const hoehe = seite.getHeight();
+  const [stempel, unterschrift] = await Promise.all([
+    pdf.embedPng(await bildBytes(stempelBild)),
+    pdf.embedPng(await bildBytes(unterschriftBild)),
+  ]);
+  // Koordinaten von oben (wie im PDF-Viewer gemessen) -> PDF-Ursprung unten
+  seite.drawImage(stempel, { x: 408, y: hoehe - 775, width: 84, height: 47 });
+  seite.drawImage(unterschrift, {
+    x: 130,
+    y: hoehe - 766,
+    width: 58,
+    height: 28,
+  });
+  const helv = await pdf.embedFont("Helvetica");
+  seite.drawText(`${RECHNUNG_ABSENDER.ort}, ${dayjs().format("DD.MM.YYYY")}`, {
+    x: 52,
+    y: hoehe - 733,
+    size: 10,
+    font: helv,
+  });
 };
 
 // Auswahllisten im Beobachtungsbogen schreiben positive Werte ohne "+"
@@ -387,6 +419,7 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "antrag-bap.pdf",
     titel: "Antrag Bildschirmarbeitsplatzbrille",
     felder: bapFelder,
+    stempelUnterschrift: true,
   },
   "Berechtigungsschein GKV": {
     datei: "berechtigungsschein-gkv.pdf",
@@ -490,6 +523,7 @@ export const fuellePdfVorlage = async (
       console.warn(`PDF-Feld "${name}" konnte nicht gesetzt werden`, error);
     }
   }
+  if (vorlage.stempelUnterschrift) await setzeStempelUnterschrift(pdf);
   return pdf.save();
 };
 

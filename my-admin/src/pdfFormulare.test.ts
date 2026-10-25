@@ -1,6 +1,13 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { PDFCheckBox, PDFDocument, PDFDropdown, PDFTextField } from "pdf-lib";
+import {
+  PDFCheckBox,
+  PDFDict,
+  PDFDocument,
+  PDFDropdown,
+  PDFName,
+  PDFTextField,
+} from "pdf-lib";
 import { formatEuro } from "./werkstattauftragTemplate";
 import {
   PDF_VORLAGEN,
@@ -93,6 +100,31 @@ describe.each(Object.entries(PDF_VORLAGEN))("PDF-Vorlage %s", (_, vorlage) => {
     expect(pdf.getForm().getFields().length).toBe(
       original.getForm().getFields().length,
     );
+  });
+});
+
+describe("Stempel und Unterschrift", () => {
+  it("Antrag BAP trägt Stempel und Unterschrift auf der letzten Seite", async () => {
+    const vorlage = PDF_VORLAGEN["Antrag BAP"];
+    const bytes = await fuellePdfVorlage(
+      vorlage,
+      lade(vorlage.datei),
+      entities,
+    );
+    const pdf = await PDFDocument.load(bytes);
+    const seiten = pdf.getPages();
+    const bilder = (i: number) =>
+      seiten[i].node.Resources()?.lookup(PDFName.of("XObject"), PDFDict)?.keys()
+        .length ?? 0;
+    const original = await PDFDocument.load(lade(vorlage.datei));
+    const vorher = original.getPages();
+    const letzte = seiten.length - 1;
+    const alt =
+      vorher[letzte].node
+        .Resources()
+        ?.lookup(PDFName.of("XObject"), PDFDict)
+        ?.keys().length ?? 0;
+    expect(bilder(letzte)).toBe(alt + 2);
   });
 });
 
