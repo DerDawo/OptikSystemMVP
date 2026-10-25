@@ -1,3 +1,4 @@
+import { versandDateiname, versandNachricht } from "./versandText";
 import { useState } from "react";
 import {
   RaRecord,
@@ -23,7 +24,6 @@ import EmailIcon from "@mui/icons-material/Email";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { supabase } from "./utils";
 import {
-  RECHNUNG_ABSENDER,
   buildKontaktlinsenRechnungPreviewHtml,
   buildKontaktlinsenRechnungPrintHtml,
 } from "./rechnungTemplate";
@@ -97,16 +97,14 @@ export const KontaktlinseRechnungButton = ({
       const nummer = daten.rechnungsnummer;
       const datei = await belegAlsPdf(
         buildKontaktlinsenRechnungPrintHtml(daten),
-        `Rechnung-${nummer}.pdf`,
+        versandDateiname("Rechnung", nummer, kunde),
       );
-      const nachname = String(kunde?.Nachname ?? "").trim();
-      const anrede = String(kunde?.Anrede ?? "").trim();
-      const gruss =
-        anrede === "Frau" && nachname
-          ? `Sehr geehrte Frau ${nachname}`
-          : anrede === "Herr" && nachname
-            ? `Sehr geehrter Herr ${nachname}`
-            : "Guten Tag";
+      const nachricht = versandNachricht({
+        art: "rechnung",
+        titel: "Rechnung",
+        nummer,
+        kunde,
+      });
       const ergebnis = await belegVersenden(
         kanal,
         datei,
@@ -118,8 +116,7 @@ export const KontaktlinseRechnungButton = ({
                   kunde?.Handy,
                   kunde?.TelefonnummerPrivat,
                 ]),
-          betreff: `Rechnung ${nummer}`,
-          text: `${gruss},\n\nanbei erhalten Sie Ihre Rechnung Nr. ${nummer} als PDF.\n\nMit freundlichen Grüßen\n${RECHNUNG_ABSENDER.firma}`,
+          ...nachricht,
         },
         (adresse) =>
           notify(
