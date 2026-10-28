@@ -8,7 +8,7 @@ import {
   ladeBetriebBilder,
   loescheBetriebBild,
   speichereBetriebBild,
-} from "./betriebBilder";
+} from "./betriebBilderSpeicher";
 import {
   type BetriebBildName,
   type BetriebBilder as Bilder,
