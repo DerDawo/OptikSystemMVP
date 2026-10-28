@@ -63,7 +63,7 @@ import {
   useRefresh,
 } from "react-admin";
 import { supabase } from "./utils";
-import { ladeBetriebBilder } from "./betriebBilder";
+import { ladeBetriebBilder } from "./betriebBilderSpeicher";
 import {
   buildDocumentMergeValues,
   renderDocumentTemplate,

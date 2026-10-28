@@ -33,7 +33,7 @@ import {
   pruefeDatei,
   schlageArtVor,
   speicherPfad,
-} from "./kundeDokumente";
+} from "./kundeDokumenteSpeicher";
 
 /*
  * Bereich "Dokumente" in der Kundenkartei: Befunde, Fundusaufnahmen, Rezepte,

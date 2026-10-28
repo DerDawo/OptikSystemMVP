@@ -17,16 +17,21 @@ const daten = {
 };
 
 describe("Brillenpass", () => {
-  it("Karte mit Werten R/L, Glas, Fassung; Text maskiert", () => {
-    const html = brillenpassHtml(daten, STANDARD_ABSENDER);
+  it("Karte nur mit Kopf, Werten R/L und Fußzeile", () => {
+    const html = brillenpassHtml(
+      { ...daten, kunde: { ...daten.kunde, Nachname: "M<u>ster" } },
+      STANDARD_ABSENDER,
+    );
     expect(html).toContain("Brillenpass");
-    expect(html).toContain("Frau Anja Muster");
+    expect(html).toContain("Frau Anja M&lt;u&gt;ster");
     expect(html).toContain("Brille vom 11.10.2026 · Auftrag 49604");
     expect(html).toContain("<td>+1,25</td>");
     expect(html).toContain("<td>106</td>");
-    expect(html).toContain("32 / 31,5");
-    expect(html).toContain("POC Adapta 2.0 &lt;1.50&gt;");
-    expect(html).toContain("AE TR9901 · 52-18");
+    expect(html).toContain("Bei Verlust oder Bruch");
+    expect(html).not.toContain("32 / 31,5");
+    expect(html).not.toContain("Adapta");
+    expect(html).not.toContain("TR9901");
+    expect(html).not.toContain("Gleitsichtbrille");
   });
 
   it("Text für SMS/E-Mail", () => {
@@ -37,8 +42,6 @@ describe("Brillenpass", () => {
         "hier Ihr Brillenpass (Brille vom 11.10.2026, Gleitsichtbrille):",
         "Rechts: Sph +1,25, Cyl -0,50, Achse 48, Add +2,00",
         "Links: Sph +2,00, Cyl -0,75, Achse 106, Add +2,00",
-        "PD R / L: 32 / 31,5",
-        "Gläser: POC Adapta 2.0 <1.50>",
         "",
         "Bei Verlust oder Bruch einfach diesen Pass vorzeigen.",
         "",
