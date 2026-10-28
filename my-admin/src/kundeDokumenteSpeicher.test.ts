@@ -6,7 +6,7 @@ import {
   sichererDateiname,
   speicherPfad,
   zielGroesse,
-} from "./kundeDokumente";
+} from "./kundeDokumenteSpeicher";
 
 describe("Dokumente in der Kundenkartei", () => {
   it("schlägt die Art aus dem Dateinamen vor", () => {
