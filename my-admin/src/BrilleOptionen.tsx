@@ -22,6 +22,7 @@ import {
   WerkstattauftragButton,
 } from "./FormulareDialog";
 import { KK_RECHNER_OEFFNEN } from "./KassenanteilRechner";
+import { BRILLENPASS_OEFFNEN } from "./BrillenpassButton";
 
 /*
  * "Optionen ▾" der Brillenkartei im Aufbau des Prisma-Menüs. Vorhandene
@@ -116,7 +117,16 @@ export const BrilleOptionenMenu = () => {
       <AlteMemoButton />
       <Folgt>2 Auftrag stornieren</Folgt>
       <Folgt>3 Auftrag zu anderem Kunden verschieben</Folgt>
-      <Folgt>4 Digitalen CL-Pass senden</Folgt>
+      <Button
+        onClick={() =>
+          window.setTimeout(
+            () => window.dispatchEvent(new Event(BRILLENPASS_OEFFNEN)),
+            250,
+          )
+        }
+      >
+        4 Digitalen Brillenpass senden
+      </Button>
       <Folgt>5 Medikamentenauskunft</Folgt>
       <Folgt>6 Mwst-Satz ändern</Folgt>
       <Folgt>7 Protokoll der Änderungen</Folgt>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   useGetMany,
   useGetOne,
@@ -40,6 +40,9 @@ import {
  * Text) oder als Bild speichern.
  */
 
+// Öffnet den Dialog von außen, z. B. aus "Optionen ▾" der Brillenkartei
+export const BRILLENPASS_OEFFNEN = "brillenpass-oeffnen";
+
 type Datensatz = Record<string, unknown> & { id: number | string };
 
 const herunterladen = (datei: File) => {
@@ -58,6 +61,11 @@ export const BrillenpassButton = () => {
   const notify = useNotify();
   const [offen, setOffen] = useState(false);
   const [laeuft, setLaeuft] = useState<string | null>(null);
+  useEffect(() => {
+    const oeffnen = () => setOffen(true);
+    window.addEventListener(BRILLENPASS_OEFFNEN, oeffnen);
+    return () => window.removeEventListener(BRILLENPASS_OEFFNEN, oeffnen);
+  }, []);
   const { data: kunde } = useGetOne<Datensatz>(
     "kunde",
     { id: brille?.kunde_id as number },
@@ -71,16 +79,6 @@ export const BrillenpassButton = () => {
     { ids: glasIds },
     { enabled: offen && glasIds.length > 0 },
   );
-  const { data: glastyp } = useGetOne<Datensatz>(
-    "glastyp",
-    { id: brille?.Glastyp as number },
-    { enabled: offen && brille?.Glastyp != null },
-  );
-  const { data: fassung } = useGetOne<Datensatz>(
-    "fassung",
-    { id: brille?.Fassung as number },
-    { enabled: offen && brille?.Fassung != null },
-  );
   if (!brille) return null;
 
   const daten: BrillenpassDaten = {
@@ -88,8 +86,6 @@ export const BrillenpassButton = () => {
     kunde,
     glasRechts: glaeser?.find((g) => g.id === brille.GlasRechts),
     glasLinks: glaeser?.find((g) => g.id === brille.GlasLinks),
-    glastyp,
-    fassung,
   };
   const html = brillenpassHtml(daten);
   const textNachricht = brillenpassText(daten);
@@ -173,7 +169,7 @@ export const BrillenpassButton = () => {
             sx={{
               width: BRILLENPASS_BREITE + 4,
               maxWidth: "100%",
-              height: 470,
+              height: 290,
               border: "1px solid",
               borderColor: "divider",
               borderRadius: 2,

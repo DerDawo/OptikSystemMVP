@@ -10,8 +10,8 @@ import { formatWert } from "./werkstattauftragTemplate";
 
 /*
  * Brillenpass fürs Handy: eine Karte im Handyformat (Bild, wird in WhatsApp
- * direkt angezeigt) mit den Werten der Brille, Glas und Fassung - plus
- * dieselben Angaben als Text für SMS/E-Mail.
+ * direkt angezeigt) mit den Werten R/L der Brille - plus dieselben Werte als
+ * Text für SMS/E-Mail.
  */
 
 type Datensatz = Record<string, unknown>;
@@ -21,8 +21,6 @@ export type BrillenpassDaten = {
   kunde?: Datensatz;
   glasRechts?: Datensatz;
   glasLinks?: Datensatz;
-  glastyp?: Datensatz;
-  fassung?: Datensatz;
 };
 
 // Breite der Karte in CSS-Pixeln (als PNG doppelt so groß)
@@ -53,28 +51,6 @@ const kundeName = (kunde?: Datensatz) =>
     .filter((t) => t && !/^keine angabe$/i.test(t))
     .join(" ");
 
-const glasText = (glastyp?: Datensatz) =>
-  [text(glastyp?.Hersteller), text(glastyp?.Bezeichnung)]
-    .filter(Boolean)
-    .join(" ");
-
-const fassungText = (fassung?: Datensatz) =>
-  [
-    text(fassung?.Hersteller),
-    text(fassung?.Bezeichnung),
-    text(fassung?.Farbe) ? `Farbe ${text(fassung?.Farbe)}` : "",
-    text(fassung?.Groesse),
-  ]
-    .filter(Boolean)
-    .join(" · ");
-
-// PD/HSA je Seite als "32 / 31,5"
-const paar = (d: BrillenpassDaten, feld: string) => {
-  const r = wert(d.glasRechts, feld, "frei");
-  const l = wert(d.glasLinks, feld, "frei");
-  return r || l ? `${r || "–"} / ${l || "–"}` : "";
-};
-
 export const brillenpassHtml = (
   d: BrillenpassDaten,
   absender: Absender = RECHNUNG_ABSENDER,
@@ -83,15 +59,6 @@ export const brillenpassHtml = (
     `<tr><th>${seite}</th>${WERTE.map(
       (w) => `<td>${e(wert(glas, w.feld, w.format))}</td>`,
     ).join("")}</tr>`;
-  const angaben = [
-    ["Brillenart", text(d.brille.BrillenArt)],
-    ["PD R / L", paar(d, "PD")],
-    ["HSA R / L", paar(d, "HSA")],
-    ["Gläser", glasText(d.glastyp)],
-    ["Vergütung", text(d.glastyp?.Verguetung)],
-    ["Fassung", fassungText(d.fassung)],
-    ["Refraktion", text(d.brille.Refraktion)],
-  ].filter(([, w]) => w);
   return `<!DOCTYPE html>
 <html lang="de">
 <head>
@@ -107,13 +74,10 @@ export const brillenpassHtml = (
   .inhalt { padding: 14px 16px 16px; }
   .name { font-size: 17px; font-weight: 700; }
   .datum { font-size: 12.5px; color: #55657e; margin-top: 2px; }
-  table.werte { width: 100%; border-collapse: collapse; margin: 14px 0 12px; font-size: 14px; }
+  table.werte { width: 100%; border-collapse: collapse; margin: 14px 0 0; font-size: 14px; }
   .werte th, .werte td { border: 1px solid #d6dde8; padding: 6px 2px; text-align: center; }
   .werte thead th { background: #eef3fa; font-size: 11.5px; font-weight: 700; color: #3a4a63; }
   .werte tbody th { width: 30px; background: #eef3fa; }
-  .angaben { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .angaben th { text-align: left; font-weight: 400; color: #55657e; width: 92px; padding: 3px 8px 3px 0; vertical-align: top; }
-  .angaben td { padding: 3px 0; vertical-align: top; }
   .fuss { border-top: 1px solid #d6dde8; padding: 10px 16px 12px; font-size: 11.5px; color: #55657e; line-height: 1.45; background: #f7f9fc; }
 </style>
 </head>
@@ -130,9 +94,6 @@ export const brillenpassHtml = (
       <thead><tr><th></th>${WERTE.map((w) => `<th>${w.titel}</th>`).join("")}</tr></thead>
       <tbody>${zeile("R", d.glasRechts)}${zeile("L", d.glasLinks)}</tbody>
     </table>
-    <table class="angaben">${angaben
-      .map(([t, w]) => `<tr><th>${e(t)}</th><td>${e(w)}</td></tr>`)
-      .join("")}</table>
   </div>
   <div class="fuss">
     Bei Verlust oder Bruch einfach diesen Pass vorzeigen.<br />
@@ -162,8 +123,6 @@ export const brillenpassText = (
     `hier Ihr Brillenpass (Brille vom ${datum(d.brille.Datum)}${text(d.brille.BrillenArt) ? `, ${text(d.brille.BrillenArt)}` : ""}):`,
     seite("Rechts", d.glasRechts),
     seite("Links", d.glasLinks),
-    paar(d, "PD") ? `PD R / L: ${paar(d, "PD")}` : null,
-    glasText(d.glastyp) ? `Gläser: ${glasText(d.glastyp)}` : null,
     "",
     "Bei Verlust oder Bruch einfach diesen Pass vorzeigen.",
     "",
