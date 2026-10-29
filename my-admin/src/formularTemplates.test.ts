@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildAntragPrintHtml } from "./antragTemplate";
-import {
-  buildAnamnesePrintHtml,
-  versichertenStatusText,
-} from "./anamneseTemplate";
+import { buildAnamnesePrintHtml } from "./anamneseTemplate";
 import { buildErprobungsprotokollPrintHtml } from "./erprobungsprotokollTemplate";
 import { buildRezeptanfragePrintHtml } from "./rezeptanfrageTemplate";
 import {
@@ -248,10 +245,15 @@ describe("Anamnesebogen", () => {
         KrankenversicherungsTyp: "Gesetzlich Krankenversichert",
         Geschlecht: "weiblich",
       },
+      glasRechts: { Sph: 1.25, Cyl: -0.5, A: 48, Add: 2, Vis: "1,0" },
+      glasLinks: { Sph: 2, Cyl: -0.75, A: 106, Add: 2 },
+      vorherigeBrille: { Datum: "2023-05-04" },
+      vorherigesGlasRechts: { Sph: 0.75, Cyl: -0.25, A: 45 },
+      vorherigesGlasLinks: { Sph: 1.5 },
     },
   });
 
-  it("füllt persönliche Daten und Krankenversicherung vor", () => {
+  it("füllt persönliche Daten vor", () => {
     for (const wert of [
       "Anja",
       "Muster",
@@ -262,24 +264,46 @@ describe("Anamnesebogen", () => {
       "Deutschland",
       "anja@example.org",
       "0170 1234567",
-      "AOK PLUS",
-      "A123456789",
-      "Familienversichert (30000)",
     ])
       expect(html).toContain(wert);
   });
 
-  it("kreuzt nur Versicherungsstatus und Geschlecht an", () => {
-    const angekreuzt =
-      html.match(/<input type="checkbox" class="kaestchen" checked \/>/g) ?? [];
-    expect(angekreuzt).toHaveLength(2);
-    expect(html).toMatch(/checked \/>Gesetzlich versichert/);
-    expect(html).toMatch(/checked \/>Weiblich/);
+  it("enthält keine Krankenkassendaten mehr", () => {
+    for (const wert of [
+      "Krankenversicherung",
+      "Versichertennummer",
+      "AOK PLUS",
+      "A123456789",
+      "Familienversichert",
+    ])
+      expect(html).not.toContain(wert);
   });
 
-  it("übersetzt den Versichertenstatus", () => {
-    expect(versichertenStatusText("10000")).toBe("Mitglied (10000)");
-    expect(versichertenStatusText("50001")).toBe("Rentner (50001)");
-    expect(versichertenStatusText("")).toBe("");
+  it("trägt alte und neue Brillenstärken ein", () => {
+    expect(html).toContain("Alte Brillenstärken");
+    expect(html).toContain("(Brille vom 04.05.2023)");
+    expect(html).toContain("Neue Brillenstärken");
+    for (const wert of ["+0,75", "-0,25", "+1,50", "+1,25", "106", "1,0"])
+      expect(html).toContain(`>${wert}</div>`);
+  });
+
+  it("hat Besonderheiten Brille und Gläser und die Abschnitte der Vorlage", () => {
+    for (const wert of [
+      "Besonderheiten Brille und Gläser",
+      "Gleitsichtbrille",
+      "Blaulichtfilter",
+      "Weitere Besonderheiten",
+      "Sehgewohnheiten",
+      "Symptome",
+      "Familienanamnese – Augen",
+    ])
+      expect(html).toContain(wert);
+  });
+
+  it("kreuzt nur das Geschlecht an", () => {
+    const angekreuzt =
+      html.match(/<input type="checkbox" class="kaestchen" checked \/>/g) ?? [];
+    expect(angekreuzt).toHaveLength(1);
+    expect(html).toMatch(/checked \/>Weiblich/);
   });
 });
