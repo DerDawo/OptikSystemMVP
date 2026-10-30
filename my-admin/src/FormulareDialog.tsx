@@ -129,6 +129,10 @@ import {
   buildPatientenanfragePrintHtml,
 } from "./patientenanfrageTemplate";
 import {
+  buildTrockenesAugePreviewHtml,
+  buildTrockenesAugePrintHtml,
+} from "./trockenesAugeTemplate";
+import {
   buildSrhBildschirmbrillePreviewHtml,
   buildSrhBildschirmbrillePrintHtml,
 } from "./srhBildschirmbrilleTemplate";
@@ -382,6 +386,13 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Patientenanfrage-Vorschau",
     preview: buildPatientenanfragePreviewHtml,
     print: buildPatientenanfragePrintHtml,
+  },
+  // Fragebogen für das Trockene Auge mit Punkteauswertung und Stufenplan
+  "Trockenes Auge": {
+    ausVorschau: true,
+    title: "Trockenes-Auge-Vorschau",
+    preview: buildTrockenesAugePreviewHtml,
+    print: buildTrockenesAugePrintHtml,
   },
   // Vordruck "Gewährung einer Bildschirmarbeitsbrille" für das SRH-Krankenhaus
   // (ohne Stempel und Unterschrift)
