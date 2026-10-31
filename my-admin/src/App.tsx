@@ -71,6 +71,7 @@ import {
   KrankenkasseCreate,
 } from "./krankenkassen";
 import { TerminKalender } from "./TerminKalender";
+import { OnlineAnfragenSeite } from "./OnlineAnfragenSeite";
 import {
   DokumentvorlageList,
   DokumentvorlageShow,
@@ -250,6 +251,7 @@ export const App = () => {
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />
         <Route path="/kalender" element={<TerminKalender />} />
+        <Route path="/online-anfragen" element={<OnlineAnfragenSeite />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />
         <Route path="/glaskatalog-import" element={<GlaskatalogImportPage />} />
       </CustomRoutes>

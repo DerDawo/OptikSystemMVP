@@ -36,6 +36,19 @@ import {
   UsersIcon,
 } from "./icons";
 import unicornLogo from "./assets/unicorn-weiss.png";
+import { useOffeneAnfragen } from "./OnlineAnfragenSeite";
+
+// Terminanfragen von der Website, mit Anzahl der offenen
+const OnlineAnfragenEintrag = () => {
+  const offen = useOffeneAnfragen();
+  return (
+    <Menu.Item
+      to="/online-anfragen"
+      primaryText={offen ? `Online-Anfragen (${offen})` : "Online-Anfragen"}
+      leftIcon={<CalendarIcon />}
+    />
+  );
+};
 
 const Brand = () => {
   const [open] = useSidebarState();
@@ -187,6 +200,7 @@ export const MyMenu = () => (
       primaryText="Terminkalender"
       leftIcon={<CalendarIcon />}
     />
+    <OnlineAnfragenEintrag />
 
     <Section label="Kunden" />
     <Menu.Item to="/kunde" primaryText="Kunden" leftIcon={<UsersIcon />} />

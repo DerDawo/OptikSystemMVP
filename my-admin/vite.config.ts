@@ -9,6 +9,10 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: mode === "development",
+    // zweite Seite: öffentliche Online-Terminbuchung (ohne Anmeldung)
+    rollupOptions: {
+      input: { main: "index.html", buchen: "buchen.html" },
+    },
   },
   base: "./",
 }));

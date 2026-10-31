@@ -1,10 +1,22 @@
 import { MouseEvent, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useGetList, useGetMany, useRecordContext } from "react-admin";
+import {
+  useDataProvider,
+  useGetList,
+  useGetMany,
+  useNotify,
+  useRecordContext,
+  useRefresh,
+} from "react-admin";
 import {
   Box,
   Button,
   Card,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
   IconButton,
   InputAdornment,
   Menu,
@@ -20,6 +32,8 @@ import EuroIcon from "@mui/icons-material/Euro";
 import EventIcon from "@mui/icons-material/Event";
 import SearchIcon from "@mui/icons-material/Search";
 import { formatCurrency } from "./CurrencyField";
+import { loeschSperre } from "./auftragLoeschen";
+import { supabase } from "./utils";
 import { useTastenkuerzel } from "./tastenkuerzel";
 import { OrderStatusKey, getBrilleOrderStatus } from "./orderStatus";
 
@@ -30,6 +44,8 @@ import { OrderStatusKey, getBrilleOrderStatus } from "./orderStatus";
  */
 
 type Art = "brille" | "kontaktlinse";
+
+type Datensatz = Record<string, unknown>;
 
 type Zeile = {
   key: string;
@@ -43,9 +59,8 @@ type Zeile = {
   status: OrderStatusKey | "termin" | "termin-kommend";
   offenerBetrag: boolean;
   suchtext: string;
+  datensatz: Datensatz;
 };
-
-type Datensatz = Record<string, unknown>;
 
 const MAX_EINTRAEGE = 1000;
 
@@ -58,7 +73,7 @@ const randFarbe: Record<Zeile["status"], string> = {
 };
 
 // Spalten wie in der Prisma-Kundenmaske: Status | Art | Datum | Betrag
-const SPALTEN = "3.4em minmax(0, 1fr) 6.2em 6.5em";
+const SPALTEN = "3.4em minmax(0, 1fr) 6.2em 6.5em 2.2em";
 
 // Kopfknopf "Neuanlegen" im Prisma-Blau
 const prismaKopf = {
@@ -87,6 +102,12 @@ export const KundenAuftraege = () => {
   const navigate = useNavigate();
   const [suche, setSuche] = useState("");
   const [menuAnker, setMenuAnker] = useState<HTMLElement | null>(null);
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const refresh = useRefresh();
+  const [loeschen, setLoeschen] = useState<Zeile | null>(null);
+  const [sperre, setSperre] = useState<string | null>(null);
+  const [loescht, setLoescht] = useState(false);
 
   const abfrage = (sortFeld: string) => ({
     filter: { kunde_id: kunde?.id },
@@ -151,6 +172,7 @@ export const KundenAuftraege = () => {
         status: getBrilleOrderStatus(b as { Abholung?: string }).key,
         offenerBetrag: rest !== null && rest > 0.005,
         suchtext: [titel, typ, b.id, b.Werkstatt, b.Notizen].join(" "),
+        datensatz: b,
       });
     }
     for (const k of linsen.data ?? []) {
@@ -170,6 +192,7 @@ export const KundenAuftraege = () => {
         status: getBrilleOrderStatus(k as { Abholung?: string }).key,
         offenerBetrag: false,
         suchtext: ["Kontaktlinsen", typ, k.id, k.Notizen].join(" "),
+        datensatz: k,
       });
     }
     return liste.sort(
@@ -189,6 +212,48 @@ export const KundenAuftraege = () => {
   if (!kunde) return null;
 
   const laedt = brillen.isPending || linsen.isPending;
+
+  const fragLoeschen = async (z: Zeile) => {
+    let grund = loeschSperre(z.datensatz);
+    if (!grund && z.art === "brille") {
+      const { count, error } = await supabase
+        .from("kunde_leistet_zauzahlung_fuer_brille")
+        .select("*", { count: "exact", head: true })
+        .eq("BrillenID", z.id as number);
+      if (error) {
+        notify("Auftrag konnte nicht geprüft werden.", { type: "error" });
+        return;
+      }
+      if (count) grund = "Es ist eine Zuzahlung eingetragen.";
+    }
+    setSperre(grund);
+    setLoeschen(z);
+  };
+
+  const endgueltigLoeschen = async () => {
+    if (!loeschen) return;
+    setLoescht(true);
+    try {
+      if (loeschen.art === "brille") {
+        const { error } = await supabase
+          .from("brille_hat_zusatzleistungen")
+          .delete()
+          .eq("BrillenID", loeschen.id as number);
+        if (error) throw error;
+      }
+      await dataProvider.delete(loeschen.art, {
+        id: loeschen.id as number,
+        previousData: loeschen.datensatz as Datensatz & { id: number },
+      });
+      notify("Auftrag gelöscht.", { type: "success" });
+      setLoeschen(null);
+      refresh();
+    } catch {
+      notify("Auftrag konnte nicht gelöscht werden.", { type: "error" });
+    } finally {
+      setLoescht(false);
+    }
+  };
 
   return (
     <Card variant="outlined" sx={{ p: "1em", width: "100%", minWidth: 0 }}>
@@ -247,6 +312,7 @@ export const KundenAuftraege = () => {
         <span>Art</span>
         <span>Datum</span>
         <span style={{ textAlign: "right" }}>Betrag</span>
+        <span />
       </Box>
       <Box
         sx={{
@@ -330,6 +396,19 @@ export const KundenAuftraege = () => {
             <Typography variant="body2" sx={{ textAlign: "right" }}>
               {z.betrag !== null ? formatCurrency(z.betrag) : ""}
             </Typography>
+            <Tooltip title="Auftrag löschen">
+              <IconButton
+                size="small"
+                aria-label={`Auftrag ${String(z.id)} löschen`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  void fragLoeschen(z);
+                }}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
           </Box>
         ))}
       </Box>
@@ -362,6 +441,36 @@ export const KundenAuftraege = () => {
           },
         }}
       />
+
+      <Dialog open={loeschen !== null} onClose={() => setLoeschen(null)}>
+        <DialogTitle>
+          {sperre ? "Auftrag kann nicht gelöscht werden" : "Auftrag löschen?"}
+        </DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {loeschen?.titel}, {loeschen?.nummer} vom{" "}
+            {datumText(loeschen?.datum ?? null)}
+            {sperre
+              ? `: ${sperre} Der Auftrag bleibt als Beleg erhalten.`
+              : ". Das lässt sich nicht rückgängig machen."}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setLoeschen(null)}>
+            {sperre ? "Schließen" : "Abbrechen"}
+          </Button>
+          {!sperre && (
+            <Button
+              color="error"
+              variant="contained"
+              disabled={loescht}
+              onClick={() => void endgueltigLoeschen()}
+            >
+              Endgültig löschen
+            </Button>
+          )}
+        </DialogActions>
+      </Dialog>
     </Card>
   );
 };
