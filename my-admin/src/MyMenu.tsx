@@ -209,6 +209,11 @@ export const MyMenu = () => (
       primaryText="Kundensuche"
       leftIcon={<SearchIcon />}
     />
+    <Menu.Item
+      to="/fundusarchiv"
+      primaryText="Fundusarchiv"
+      leftIcon={<SearchIcon />}
+    />
 
     <Section label="Aufträge" />
     <Menu.Item to="/brille" primaryText="Brillen" leftIcon={<GlassesIcon />} />
