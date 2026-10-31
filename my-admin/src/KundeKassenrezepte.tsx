@@ -2,17 +2,21 @@ import { useEffect, useMemo, useState } from "react";
 import { useRecordContext } from "react-admin";
 import {
   Box,
+  Button,
   Card,
   Chip,
   CircularProgress,
   Tooltip,
   Typography,
 } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
 import dayjs from "dayjs";
 import { supabase } from "./utils";
 import { formatCurrency } from "./CurrencyField";
+import { NeuesRezeptDialog } from "./NeuesRezeptDialog";
 import {
   Kassenrezept,
+  RezeptKunde,
   doppelteIds,
   kassenanteil,
   leistungenText,
@@ -28,7 +32,8 @@ import {
  * kassenrezept) mit Brutto, Zuzahlung und Kassenanteil. Gefunden werden sie
  * über die Kundenzuordnung (kunde_id) und zusätzlich über die
  * Versichertennummer, damit auch noch nicht zugeordnete Belege erscheinen.
- * Reine Anzeige: die Daten stammen aus den Rezeptübersichten.
+ * Die Daten stammen aus den Rezeptübersichten; "Neues Rezept" erfasst ein
+ * Rezept von Hand.
  */
 
 const datum = (w: string | null) => (w ? dayjs(w).format("DD.MM.YYYY") : "");
@@ -41,6 +46,8 @@ export const KundeKassenrezepte = () => {
   ).trim();
   const [liste, setListe] = useState<Kassenrezept[] | null>(null);
   const [fehler, setFehler] = useState(false);
+  const [neuOffen, setNeuOffen] = useState(false);
+  const [stand, setStand] = useState(0);
 
   useEffect(() => {
     if (kundeId == null) return;
@@ -70,7 +77,7 @@ export const KundeKassenrezepte = () => {
     return () => {
       abgebrochen = true;
     };
-  }, [kundeId, versichertenNr]);
+  }, [kundeId, versichertenNr, stand]);
 
   const doppelt = useMemo(() => doppelteIds(liste ?? []), [liste]);
   const summen = useMemo(() => rezeptSummen(liste ?? []), [liste]);
@@ -79,10 +86,31 @@ export const KundeKassenrezepte = () => {
 
   return (
     <Card variant="outlined" sx={{ p: 1.5, width: "100%" }}>
-      <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 1 }}>
-        Abgerechnete Rezepte
-        {summen.anzahl > 0 ? ` (${summen.anzahl})` : ""}
-      </Typography>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
+        <Typography variant="subtitle1" sx={{ fontWeight: 600, flex: 1 }}>
+          Abgerechnete Rezepte
+          {summen.anzahl > 0 ? ` (${summen.anzahl})` : ""}
+        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AddIcon />}
+          onClick={() => setNeuOffen(true)}
+        >
+          Neues Rezept
+        </Button>
+      </Box>
+
+      <NeuesRezeptDialog
+        offen={neuOffen}
+        kundeId={kundeId}
+        kunde={kunde as RezeptKunde}
+        onSchliessen={() => setNeuOffen(false)}
+        onGespeichert={() => {
+          setNeuOffen(false);
+          setStand((s) => s + 1);
+        }}
+      />
 
       {liste === null ? (
         <Box sx={{ display: "flex", justifyContent: "center", p: 2 }}>

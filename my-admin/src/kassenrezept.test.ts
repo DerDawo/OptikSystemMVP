@@ -6,12 +6,15 @@ import {
   fehlendeMonate,
   filtereRezepte,
   kassenanteil,
+  leereRezeptEingabe,
   leererFilter,
   leistungenText,
   monatKurz,
   monatName,
   nachKasse,
   nachMonat,
+  rezeptAusEingabe,
+  rezeptEingabeFehlt,
   rezeptSummen,
   sortiereRezepte,
 } from "./kassenrezept";
@@ -255,5 +258,55 @@ describe("csvAus", () => {
   it("setzt Texte mit Semikolon in Anführungszeichen", () => {
     const csv = csvAus([rezept({ Nachname: 'Mü;ller "jun."' })]);
     expect(csv).toContain('"Mü;ller ""jun."""');
+  });
+});
+
+describe("Rezept von Hand erfassen", () => {
+  const eingabe = {
+    ...leereRezeptEingabe("2026-10-31"),
+    beleg: " 123 ",
+    leistung: "Einstärkengläser",
+    brutto: "119,00",
+    zuzahlung: "10",
+  };
+
+  it("belegt Datum und Monat vor", () => {
+    expect(leereRezeptEingabe("2026-10-31")).toMatchObject({
+      rezeptdatum: "2026-10-31",
+      monat: "2026-10",
+    });
+  });
+
+  it("meldet fehlende und ungültige Angaben", () => {
+    expect(rezeptEingabeFehlt(eingabe)).toEqual([]);
+    expect(rezeptEingabeFehlt(leereRezeptEingabe("2026-10-31"))).toEqual([
+      "Belegnummer",
+      "Leistung",
+      "Brutto",
+    ]);
+    expect(rezeptEingabeFehlt({ ...eingabe, zuzahlung: "200" })).toEqual([
+      "Zuzahlung",
+    ]);
+  });
+
+  it("übernimmt Kundendaten und rechnet Netto aus", () => {
+    const zeile = rezeptAusEingabe(
+      7,
+      { Nachname: "Muster", VersichertenNummer: " A1 " },
+      eingabe,
+      19,
+    );
+    expect(zeile).toMatchObject({
+      kunde_id: 7,
+      Belegnummer: "123",
+      Nachname: "Muster",
+      Versichertennummer: "A1",
+      Netto: 100,
+      MwSt: 19,
+      Brutto: 119,
+      Zuzahlung: 10,
+      Bemerkung: "Von Hand erfasst",
+    });
+    expect(zeile.Leistungen[0].text).toBe("Einstärkengläser");
   });
 });
