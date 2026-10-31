@@ -19,7 +19,6 @@ import {
   isoTag,
   istFertigungsauftrag,
   istGleitsicht,
-  sehtestFaellig,
   wannText,
   zuletztBenutzt,
 } from "./aufgabenRegeln";
@@ -30,11 +29,12 @@ import {
 } from "./messaging";
 import { RECHNUNG_ABSENDER } from "./rechnungTemplate";
 import { ErinnerungenKarte } from "./ErinnerungenKarte";
+import { SchuldnerlisteKarte } from "./SchuldnerlisteKarte";
 
 /*
- * "Heute zu tun" im Dashboard: fünf Listen aus den Daten der Kartei
+ * "Heute zu tun" im Dashboard: Listen aus den Daten der Kartei
  * (Knöpfe Bestellt/Fertig/Abgeholt, KV verschickt/genehmigt,
- * CL-Nachkontrolle, letzte Brille). Klick auf eine Zeile öffnet den Auftrag
+ * CL-Nachkontrolle), dazu die Schuldnerliste. Klick auf eine Zeile öffnet den Auftrag
  * bzw. Kunden; das WhatsApp-Symbol öffnet eine vorbereitete Nachricht.
  */
 
@@ -45,7 +45,6 @@ type Kunde = Datensatz & {
   Nachname?: string | null;
   Handy?: string | null;
   TelefonnummerPrivat?: string | null;
-  Werbeeinwilligung?: boolean | null;
 };
 
 type Zeile = {
@@ -263,80 +262,51 @@ export const DashboardAufgaben = ({
           })
           .then((r) => r.data as Datensatz[]);
 
-      const sehtestBis = heute.subtract(FRISTEN.sehtestMonate, "month");
-      const sehtestVon = sehtestBis.subtract(1, "month");
-
-      const [
-        nichtAbgeholt,
-        ueberfaellig,
-        neueKunden,
-        gleitsicht,
-        clKontrolle,
-        sehtestFenster,
-      ] = await Promise.all([
-        liste("brille", {
-          "Fertig@lte": vor(FRISTEN.nichtAbgeholtTage),
-          "Abholung@is": "null",
-        }),
-        liste("brille", {
-          "Datum@lte": vor(FRISTEN.ueberfaelligTage),
-          "Datum@gte": isoTag(
-            heute.subtract(FRISTEN.ueberfaelligBisMonate, "month"),
-          ),
-          "Fertig@is": "null",
-          "Abholung@is": "null",
-        }),
-        // zuletzt angelegte und zuletzt angesehene Kunden
-        Promise.all([
-          dataProvider.getList("kunde", {
-            pagination: { page: 1, perPage: ZULETZT_LADEN },
-            sort: { field: "id", order: "DESC" },
-            filter: {},
+      const [nichtAbgeholt, ueberfaellig, neueKunden, gleitsicht, clKontrolle] =
+        await Promise.all([
+          liste("brille", {
+            "Fertig@lte": vor(FRISTEN.nichtAbgeholtTage),
+            "Abholung@is": "null",
           }),
-          dataProvider.getList("kunde", {
-            pagination: { page: 1, perPage: ZULETZT_LADEN },
-            sort: { field: "last_viewed_at", order: "DESC" },
-            filter: { "last_viewed_at@not.is": "null" },
+          liste("brille", {
+            "Datum@lte": vor(FRISTEN.ueberfaelligTage),
+            "Datum@gte": isoTag(
+              heute.subtract(FRISTEN.ueberfaelligBisMonate, "month"),
+            ),
+            "Fertig@is": "null",
+            "Abholung@is": "null",
           }),
-        ]).then(([angelegt, angesehen]) =>
-          zuletztBenutzt(
-            angelegt.data as Kunde[],
-            angesehen.data as Kunde[],
-            ZULETZT_LADEN,
+          // zuletzt angelegte und zuletzt angesehene Kunden
+          Promise.all([
+            dataProvider.getList("kunde", {
+              pagination: { page: 1, perPage: ZULETZT_LADEN },
+              sort: { field: "id", order: "DESC" },
+              filter: {},
+            }),
+            dataProvider.getList("kunde", {
+              pagination: { page: 1, perPage: ZULETZT_LADEN },
+              sort: { field: "last_viewed_at", order: "DESC" },
+              filter: { "last_viewed_at@not.is": "null" },
+            }),
+          ]).then(([angelegt, angesehen]) =>
+            zuletztBenutzt(
+              angelegt.data as Kunde[],
+              angesehen.data as Kunde[],
+              ZULETZT_LADEN,
+            ),
           ),
-        ),
-        liste("brille", {
-          "Abholung@gte": vor(FRISTEN.gleitsichtBisTage),
-          "Abholung@lte": vor(FRISTEN.gleitsichtVonTage),
-          "BrillenArt@ilike": "*gleitsicht*",
-        }),
-        liste("kontaktlinse", {
-          "Nachkontrolltermin@gte": vor(FRISTEN.nachkontrolleVorTage),
-          "Nachkontrolltermin@lte": isoTag(
-            heute.add(FRISTEN.nachkontrolleNachTage, "day"),
-          ),
-        }),
-        liste("brille", {
-          "Datum@gte": isoTag(sehtestVon),
-          "Datum@lt": isoTag(sehtestBis),
-        }),
-      ]);
-
-      // Sehtest: Kunden mit neuerer Brille fallen heraus
-      const sehtestKunden = [
-        ...new Set(sehtestFenster.map((b) => b.kunde_id).filter(Boolean)),
-      ];
-      const neuere =
-        sehtestKunden.length > 0
-          ? await liste("brille", {
-              "kunde_id@in": `(${sehtestKunden.join(",")})`,
-              "Datum@gte": isoTag(sehtestBis),
-            })
-          : [];
-      const sehtest = sehtestFaellig(
-        sehtestFenster as { kunde_id?: number; Datum?: string }[],
-        neuere as { kunde_id?: number; Datum?: string }[],
-      );
+          liste("brille", {
+            "Abholung@gte": vor(FRISTEN.gleitsichtBisTage),
+            "Abholung@lte": vor(FRISTEN.gleitsichtVonTage),
+            "BrillenArt@ilike": "*gleitsicht*",
+          }),
+          liste("kontaktlinse", {
+            "Nachkontrolltermin@gte": vor(FRISTEN.nachkontrolleVorTage),
+            "Nachkontrolltermin@lte": isoTag(
+              heute.add(FRISTEN.nachkontrolleNachTage, "day"),
+            ),
+          }),
+        ]);
 
       const alleAuftraege = [
         ...nichtAbgeholt,
@@ -345,10 +315,9 @@ export const DashboardAufgaben = ({
         ...clKontrolle,
       ];
       const kundeIds = [
-        ...new Set([
-          ...alleAuftraege.map((a) => a.kunde_id).filter((id) => id != null),
-          ...sehtest.map((s) => s.kundeId),
-        ]),
+        ...new Set(
+          alleAuftraege.map((a) => a.kunde_id).filter((id) => id != null),
+        ),
       ] as (number | string)[];
       const kunden =
         kundeIds.length > 0
@@ -434,21 +403,6 @@ export const DashboardAufgaben = ({
               })),
           ],
         },
-        {
-          titel: "Sehtest-Erinnerung",
-          hinweis: `letzte Brille vor ${FRISTEN.sehtestMonate} Monaten, mit Werbeeinwilligung`,
-          leer: "Diesen Monat niemand fällig.",
-          zeilen: sehtest
-            .map((s) => ({ s, kunde: k(s.kundeId) }))
-            .filter(({ kunde }) => kunde && kunde.Werbeeinwilligung !== false)
-            .map(({ s, kunde }) => ({
-              key: `s${s.kundeId}`,
-              ziel: `/kunde/${s.kundeId}/show`,
-              kunde,
-              detail: `letzte Brille ${datum(s.datum)}`,
-              nachricht: NACHRICHTEN.sehtest,
-            })),
-        },
       ];
       if (!abgebrochen) {
         setListen(ergebnis);
@@ -512,6 +466,7 @@ export const DashboardAufgaben = ({
               return karte;
             return obenSlot ? createPortal(karte, obenSlot) : null;
           })}
+        <SchuldnerlisteKarte />
       </Box>
     </Box>
   );
