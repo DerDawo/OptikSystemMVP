@@ -84,6 +84,18 @@ export const speicherPfad = (
   zufall: string = crypto.randomUUID(),
 ): string => `${kundeId}/${zufall}-${sichererDateiname(dateiname)}`;
 
+/**
+ * Kopie der Datei im Arbeitsspeicher, gleich beim Auswählen: Der Browser liest
+ * eine gewählte Datei sonst erst beim Hochladen von der Platte. Wurde sie bis
+ * dahin geändert, verschoben oder gelöscht (Vorschau aus Mail oder ZIP,
+ * synchronisierter Ordner), scheitert das Hochladen ohne Hinweis.
+ */
+export const dateiImSpeicher = async (datei: File): Promise<File> =>
+  new File([await datei.arrayBuffer()], datei.name, {
+    type: datei.type,
+    lastModified: datei.lastModified,
+  });
+
 /** Zielgröße beim Verkleinern: längste Kante höchstens `max`. */
 export const zielGroesse = (
   breite: number,
