@@ -1,4 +1,11 @@
-import { DragEvent, useCallback, useEffect, useRef, useState } from "react";
+import {
+  DragEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useNotify, useRecordContext } from "react-admin";
 import {
   Box,
@@ -24,6 +31,8 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import dayjs from "dayjs";
 import { supabase } from "./utils";
+import { FundusberichtListe } from "./Fundusarchiv";
+import { FundusberichtDialog } from "./FundusberichtDialog";
 import {
   DOKUMENT_ARTEN,
   DOKUMENT_BUCKET,
@@ -86,6 +95,11 @@ export const KundeDokumente = () => {
   const [ziehtDrueber, setZiehtDrueber] = useState(false);
   const [loeschen, setLoeschen] = useState<Dokument | null>(null);
   const [loescht, setLoescht] = useState(false);
+  const [berichtOffen, setBerichtOffen] = useState(false);
+  const aufnahmen = useMemo(
+    () => (liste ?? []).filter((d) => d.Art === "Fundusaufnahme"),
+    [liste],
+  );
 
   const laden = useCallback(async () => {
     if (kundeId == null) return;
@@ -144,8 +158,11 @@ export const KundeDokumente = () => {
     for (const entwurf of entwuerfe) {
       let pfad: string | null = null;
       try {
-        // Fotos verkleinern, PDFs bleiben unverändert
-        const datei = await bildVerkleinern(entwurf.datei);
+        // Fotos verkleinern, PDFs und Fundusaufnahmen bleiben unverändert
+        const datei =
+          entwurf.art === "Fundusaufnahme"
+            ? entwurf.datei
+            : await bildVerkleinern(entwurf.datei);
         pfad = speicherPfad(kundeId, datei.name);
         const { error: uploadFehler } = await supabase.storage
           .from(DOKUMENT_BUCKET)
@@ -270,6 +287,16 @@ export const KundeDokumente = () => {
           Dokumente
           {liste && liste.length > 0 ? ` (${liste.length})` : ""}
         </Typography>
+        {aufnahmen.length > 0 && (
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={<PictureAsPdfIcon />}
+            onClick={() => setBerichtOffen(true)}
+          >
+            Fundusbericht
+          </Button>
+        )}
         <Button
           size="small"
           variant="outlined"
@@ -399,6 +426,22 @@ export const KundeDokumente = () => {
           </Box>
         </Box>
       )}
+
+      <Box sx={{ mt: 1.5 }}>
+        <FundusberichtListe kundeId={kundeId} stand={liste} />
+      </Box>
+
+      <FundusberichtDialog
+        offen={berichtOffen}
+        kundeId={kundeId}
+        kunde={kunde as Record<string, string | number | null>}
+        aufnahmen={aufnahmen}
+        onSchliessen={() => setBerichtOffen(false)}
+        onAbgelegt={() => {
+          setBerichtOffen(false);
+          void laden();
+        }}
+      />
 
       {/* Art und Datum wählen, bevor die Dateien abgelegt werden */}
       <Dialog
