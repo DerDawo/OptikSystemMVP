@@ -14,6 +14,8 @@ import EventOutlinedIcon from "@mui/icons-material/EventOutlined";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import { GlassesIcon } from "./icons";
 import { Symbol, SymbolleistenRahmen } from "./BrilleSymbolleiste";
+import { druckeDirekt } from "./direktDruck";
+import { buildKontaktlinseAuftragPrintHtml } from "./kontaktlinseAuftragTemplate";
 import { KontaktlinseRechnungButton } from "./KontaktlinseRechnung";
 import { zurueckZiel } from "./seitenVerlauf";
 
@@ -50,6 +52,19 @@ export const KontaktlinseSymbolleiste = () => {
     }
   };
 
+  // Kontaktlinsen-Auftrag als A4-Kartei drucken (statt des Bildschirms)
+  const drucken = async () => {
+    try {
+      const { data: kunde } =
+        kundeId != null
+          ? await dataProvider.getOne("kunde", { id: kundeId })
+          : { data: null };
+      druckeDirekt(buildKontaktlinseAuftragPrintHtml({ cl, kunde }));
+    } catch {
+      notify("Auftrag konnte nicht gedruckt werden.", { type: "error" });
+    }
+  };
+
   return (
     <SymbolleistenRahmen>
       <Symbol
@@ -67,7 +82,7 @@ export const KontaktlinseSymbolleiste = () => {
       <Symbol titel="Abholung heute" onClick={heuteAbgeholt}>
         <TaskAltIcon />
       </Symbol>
-      <Symbol titel="Drucken" onClick={() => window.print()}>
+      <Symbol titel="Auftrag drucken" onClick={drucken}>
         <PrintOutlinedIcon />
       </Symbol>
       <Symbol titel="Kundensuche" onClick={() => navigate("/search")}>
