@@ -76,6 +76,94 @@ export const rezeptSummen = (liste: Kassenrezept[]): Summen => {
   };
 };
 
+export type RezeptKunde = {
+  Nachname?: string | null;
+  Vorname?: string | null;
+  Geburtsdatum?: string | null;
+  Krankenkasse?: string | null;
+  VersichertenNummer?: string | null;
+};
+
+export type RezeptEingabe = {
+  rezeptdatum: string;
+  monat: string;
+  beleg: string;
+  leistung: string;
+  brutto: string;
+  zuzahlung: string;
+  bemerkung: string;
+};
+
+export const leereRezeptEingabe = (heute: string): RezeptEingabe => ({
+  rezeptdatum: heute,
+  monat: heute.slice(0, 7),
+  beleg: "",
+  leistung: "",
+  brutto: "",
+  zuzahlung: "",
+  bemerkung: "",
+});
+
+/** "12,50" und "12.50" werden zu 12.5, sonst NaN. */
+const eurobetrag = (wert: string) =>
+  wert.trim() === "" ? NaN : Number(wert.trim().replace(",", "."));
+
+/** Fehlende oder ungültige Felder; leer = Rezept kann gespeichert werden. */
+export const rezeptEingabeFehlt = (e: RezeptEingabe): string[] => {
+  const fehlt: string[] = [];
+  if (!e.rezeptdatum) fehlt.push("Rezeptdatum");
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(e.monat)) fehlt.push("Abrechnungsmonat");
+  if (!e.beleg.trim()) fehlt.push("Belegnummer");
+  if (!e.leistung.trim()) fehlt.push("Leistung");
+  const brutto = eurobetrag(e.brutto);
+  if (Number.isNaN(brutto) || brutto < 0) fehlt.push("Brutto");
+  const zuzahlung = e.zuzahlung.trim() ? eurobetrag(e.zuzahlung) : 0;
+  if (Number.isNaN(zuzahlung) || zuzahlung < 0 || zuzahlung > brutto) {
+    fehlt.push("Zuzahlung");
+  }
+  return fehlt;
+};
+
+/** Zeile für die Tabelle kassenrezept; Netto aus Brutto und MwSt-Satz. */
+export const rezeptAusEingabe = (
+  kundeId: number,
+  kunde: RezeptKunde,
+  e: RezeptEingabe,
+  mwstSatz: number,
+) => {
+  const brutto = runde(eurobetrag(e.brutto));
+  const zuzahlung = e.zuzahlung.trim() ? runde(eurobetrag(e.zuzahlung)) : 0;
+  const netto = runde(brutto / (1 + mwstSatz / 100));
+  const mwst = runde(brutto - netto);
+  return {
+    kunde_id: kundeId,
+    Abrechnungsmonat: e.monat,
+    Belegnummer: e.beleg.trim(),
+    Nachname: kunde.Nachname ?? null,
+    Vorname: kunde.Vorname ?? null,
+    Geburtsdatum: kunde.Geburtsdatum ?? null,
+    Versichertennummer: kunde.VersichertenNummer?.trim() || null,
+    Krankenkasse: kunde.Krankenkasse?.trim() || null,
+    Rezeptdatum: e.rezeptdatum,
+    Leistungen: [
+      {
+        pzn: "",
+        text: e.leistung.trim(),
+        faktor: 1,
+        netto,
+        brutto,
+        zuzahlung,
+        mwst,
+      },
+    ],
+    Netto: netto,
+    MwSt: mwst,
+    Brutto: brutto,
+    Zuzahlung: zuzahlung,
+    Bemerkung: e.bemerkung.trim() || "Von Hand erfasst",
+  };
+};
+
 const MONATE = [
   "Januar",
   "Februar",
