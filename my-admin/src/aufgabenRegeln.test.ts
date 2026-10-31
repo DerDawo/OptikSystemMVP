@@ -4,7 +4,6 @@ import {
   anredeGruss,
   istFertigungsauftrag,
   istGleitsicht,
-  sehtestFaellig,
   wannText,
   zuletztBenutzt,
 } from "./aufgabenRegeln";
@@ -32,25 +31,6 @@ describe("istGleitsicht", () => {
     expect(istGleitsicht("Gleitsichtbrille VS")).toBe(true);
     expect(istGleitsicht("Sonnenbrille Gleitsicht")).toBe(true);
     expect(istGleitsicht("Fernbrille")).toBe(false);
-  });
-});
-
-describe("sehtestFaellig", () => {
-  it("nimmt nur Kunden ohne neuere Brille, je Kunde einmal", () => {
-    const ergebnis = sehtestFaellig(
-      [
-        { kunde_id: 1, Datum: "2024-10-01" },
-        { kunde_id: 1, Datum: "2024-10-05" },
-        { kunde_id: 2, Datum: "2024-09-20" },
-        { kunde_id: 3, Datum: "2024-10-02" },
-        { kunde_id: null, Datum: "2024-10-02" },
-      ],
-      [{ kunde_id: 3, Datum: "2025-06-01" }],
-    );
-    expect(ergebnis).toEqual([
-      { kundeId: "2", datum: "2024-09-20" },
-      { kundeId: "1", datum: "2024-10-05" },
-    ]);
   });
 });
 

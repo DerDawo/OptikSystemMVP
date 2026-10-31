@@ -19,8 +19,6 @@ export const FRISTEN = {
   // Kontaktlinsen-Nachkontrolle: Termin in diesem Fenster um heute
   nachkontrolleVorTage: 7,
   nachkontrolleNachTage: 7,
-  // Sehtest-Erinnerung: letzte Brille vor 24-25 Monaten, seither keine
-  sehtestMonate: 24,
 } as const;
 
 export const isoTag = (d: dayjs.Dayjs) => d.format("YYYY-MM-DD");
@@ -35,29 +33,6 @@ export const istFertigungsauftrag = (brillenArt: unknown) =>
 
 export const istGleitsicht = (brillenArt: unknown) =>
   /gleitsicht/i.test(String(brillenArt ?? ""));
-
-type Auftrag = { kunde_id?: number | string | null; Datum?: string | null };
-
-/*
- * Sehtest-Erinnerung: Kunden, deren letzte Brille im Fenster liegt
- * (`imFenster`) und die seither keine neuere bekommen haben (`neuere`).
- * Liefert je Kunde das Datum der letzten Brille, älteste zuerst.
- */
-export const sehtestFaellig = (imFenster: Auftrag[], neuere: Auftrag[]) => {
-  const hatNeuere = new Set(
-    neuere.map((a) => String(a.kunde_id ?? "")).filter(Boolean),
-  );
-  const letzte = new Map<string, string>();
-  imFenster.forEach((a) => {
-    const id = String(a.kunde_id ?? "");
-    if (!id || hatNeuere.has(id) || !a.Datum) return;
-    const bisher = letzte.get(id);
-    if (!bisher || a.Datum > bisher) letzte.set(id, a.Datum);
-  });
-  return [...letzte.entries()]
-    .map(([kundeId, datum]) => ({ kundeId, datum }))
-    .sort((x, y) => x.datum.localeCompare(y.datum));
-};
 
 type Kunde = {
   Anrede?: string | null;
@@ -77,8 +52,6 @@ export const NACHRICHTEN = {
     `${anredeGruss(kunde)},\n\nIhre Brille liegt bei uns zur Abholung bereit. Wir freuen uns auf Ihren Besuch!\n\nMit freundlichen Grüßen\n${firma}`,
   gleitsicht: (kunde: Kunde | null | undefined, firma: string) =>
     `${anredeGruss(kunde)},\n\nwie kommen Sie mit Ihrer neuen Gleitsichtbrille zurecht? Wenn etwas noch nicht passt, kommen Sie gern vorbei – wir stellen sie nach.\n\nMit freundlichen Grüßen\n${firma}`,
-  sehtest: (kunde: Kunde | null | undefined, firma: string) =>
-    `${anredeGruss(kunde)},\n\nIhre letzte Brille ist jetzt zwei Jahre alt. Wir empfehlen, Ihre Sehwerte überprüfen zu lassen – gern vereinbaren wir einen Termin mit Ihnen.\n\nMit freundlichen Grüßen\n${firma}`,
 };
 
 type KundeMitZeit = {
