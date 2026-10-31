@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  dateiImSpeicher,
   formatGroesse,
   pruefeDatei,
   schlageArtVor,
@@ -58,5 +59,16 @@ describe("Dokumente in der Kundenkartei", () => {
     expect(formatGroesse(380 * 1024)).toBe("380 KB");
     expect(formatGroesse(1.5 * 1024 * 1024)).toBe("1,5 MB");
     expect(formatGroesse(null)).toBe("");
+  });
+});
+
+describe("dateiImSpeicher", () => {
+  it("behält Inhalt, Name und Typ", async () => {
+    const kopie = await dateiImSpeicher(
+      new File(["abc"], "befund.pdf", { type: "application/pdf" }),
+    );
+    expect(kopie.name).toBe("befund.pdf");
+    expect(kopie.type).toBe("application/pdf");
+    expect(await kopie.text()).toBe("abc");
   });
 });

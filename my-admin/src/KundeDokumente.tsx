@@ -29,6 +29,7 @@ import {
   DOKUMENT_BUCKET,
   DokumentArt,
   bildVerkleinern,
+  dateiImSpeicher,
   formatGroesse,
   pruefeDatei,
   schlageArtVor,
@@ -109,12 +110,22 @@ export const KundeDokumente = () => {
 
   if (kundeId == null) return null;
 
-  const dateienAnnehmen = (dateien: FileList | File[]) => {
+  const dateienAnnehmen = async (dateien: FileList | File[]) => {
     const neu: Entwurf[] = [];
-    for (const datei of Array.from(dateien)) {
-      const fehler = pruefeDatei(datei);
+    for (const gewaehlt of Array.from(dateien)) {
+      const fehler = pruefeDatei(gewaehlt);
       if (fehler) {
         notify(fehler, { type: "warning" });
+        continue;
+      }
+      let datei: File;
+      try {
+        datei = await dateiImSpeicher(gewaehlt);
+      } catch {
+        notify(
+          `${gewaehlt.name} konnte nicht gelesen werden. Bitte die Datei zuerst in den Ordner „Downloads“ speichern und von dort auswählen.`,
+          { type: "error" },
+        );
         continue;
       }
       neu.push({
@@ -156,9 +167,10 @@ export const KundeDokumente = () => {
           await supabase.storage.from(DOKUMENT_BUCKET).remove([pfad]);
           throw zeileFehler;
         }
-      } catch {
+      } catch (fehler) {
         fehlgeschlagen += 1;
-        notify(`${entwurf.datei.name} konnte nicht abgelegt werden.`, {
+        const grund = fehler instanceof Error ? ` (${fehler.message})` : "";
+        notify(`${entwurf.datei.name} konnte nicht abgelegt werden.${grund}`, {
           type: "error",
         });
       }
@@ -232,7 +244,8 @@ export const KundeDokumente = () => {
   const onDrop = (e: DragEvent) => {
     e.preventDefault();
     setZiehtDrueber(false);
-    if (e.dataTransfer.files.length > 0) dateienAnnehmen(e.dataTransfer.files);
+    if (e.dataTransfer.files.length > 0)
+      void dateienAnnehmen(e.dataTransfer.files);
   };
 
   return (
@@ -272,7 +285,7 @@ export const KundeDokumente = () => {
           multiple
           accept="application/pdf,image/jpeg,image/png,image/webp"
           onChange={(e) => {
-            if (e.target.files) dateienAnnehmen(e.target.files);
+            if (e.target.files) void dateienAnnehmen(e.target.files);
             e.target.value = "";
           }}
         />
