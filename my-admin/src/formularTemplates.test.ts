@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
+import dayjs from "dayjs";
 import { buildAntragPrintHtml } from "./antragTemplate";
 import { buildAnamnesePrintHtml } from "./anamneseTemplate";
+import { buildTrockenesAugePrintHtml } from "./trockenesAugeTemplate";
 import { buildErprobungsprotokollPrintHtml } from "./erprobungsprotokollTemplate";
 import { buildRezeptanfragePrintHtml } from "./rezeptanfrageTemplate";
 import {
@@ -305,5 +307,47 @@ describe("Anamnesebogen", () => {
       html.match(/<input type="checkbox" class="kaestchen" checked \/>/g) ?? [];
     expect(angekreuzt).toHaveLength(1);
     expect(html).toMatch(/checked \/>Weiblich/);
+  });
+});
+
+describe("Fragebogen Trockenes Auge", () => {
+  const html = buildTrockenesAugePrintHtml({
+    entities: {
+      kunde: {
+        Vorname: "Anja",
+        Nachname: "Muster",
+        Geburtsdatum: "1980-02-08",
+        Geschlecht: "weiblich",
+      },
+    },
+  });
+
+  it("füllt Name, Geburtsdatum und Alter vor", () => {
+    for (const wert of ["Anja", "Muster", "08.02.1980"])
+      expect(html).toContain(wert);
+    expect(html).toContain(`>${dayjs().diff(dayjs("1980-02-08"), "year")}<`);
+  });
+
+  it("kreuzt nur das Geschlecht an", () => {
+    const angekreuzt =
+      html.match(/<input type="checkbox" class="kaestchen" checked \/>/g) ?? [];
+    expect(angekreuzt).toHaveLength(1);
+    expect(html).toMatch(/checked \/>weibl\./);
+  });
+
+  it("hat Fragen 1 bis 10, Auswertung und Stufenplan", () => {
+    for (const wert of [
+      "HÄUFIGKEIT",
+      "STÄRKE",
+      "Kontaktlinsen",
+      "Augentropfen",
+      "chron.",
+      "Punktwerte bei Frage 5 und Frage 6 addieren",
+      "Verdacht auf Trockenes Auge",
+      "schweres Trockenes Auge",
+      "STUFE 1 (leicht)",
+      "STUFE 4 (sehr schwer)",
+    ])
+      expect(html).toContain(wert);
   });
 });
