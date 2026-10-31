@@ -86,7 +86,6 @@ export const SchuldnerlisteKarte = () => {
       component="section"
       sx={{
         p: "16px 18px",
-        mt: 2,
         minWidth: 0,
         display: "flex",
         flexDirection: "column",
