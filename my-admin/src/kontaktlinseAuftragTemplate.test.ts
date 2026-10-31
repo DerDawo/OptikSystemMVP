@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildKontaktlinseAuftragPrintHtml } from "./kontaktlinseAuftragTemplate";
-import { STANDARD_ABSENDER } from "./rechnungTemplate";
 
 const html = buildKontaktlinseAuftragPrintHtml({
-  absender: STANDARD_ABSENDER,
   cl: {
     id: 827,
     Datum: "2026-10-30",
@@ -45,21 +43,30 @@ const html = buildKontaktlinseAuftragPrintHtml({
   },
 });
 
-describe("Kontaktlinsen-Auftrag (Druck)", () => {
+describe("Kontaktlinsenauftrag (Druck, Aufbau wie Werkstattauftrag)", () => {
   it("Kopf, Kunde und Anpassung", () => {
     for (const wert of [
-      "Kontaktlinsen-Auftrag",
-      "Auftrag 827",
-      "vom 30.10.2026",
-      "Herr Sören Neupert",
-      "Werdauer Str. 38, 07551 Gera",
+      "Kontaktlinsenauftrag",
+      "Auftrag <b>827</b>",
+      "30.10.2026",
+      "Sören Neupert",
+      "Werdauer Str. 38",
+      "07551 Gera",
       "02.04.1990",
       "0170 1234567",
       "Weichlinsen",
       "Erstanpassung",
       "Robert Ulm",
+      "Biotrue 300 ml",
     ])
       expect(html).toContain(wert);
+  });
+
+  it("gleiche Blatt-Aufteilung wie der Werkstattauftrag", () => {
+    expect(html).toContain('<div class="blatt">');
+    expect(html.match(/<section class="haelfte">/g)).toHaveLength(2);
+    expect(html).toContain("✂ Kundenabschnitt");
+    expect(html).toContain("Pflegetipps für Ihre Kontaktlinsen");
   });
 
   it("Linsenparameter, Linsen und Lieferung je Auge", () => {
@@ -77,15 +84,12 @@ describe("Kontaktlinsen-Auftrag (Druck)", () => {
       expect(html).toContain(wert);
   });
 
-  it("Beträge mit KK-Anteil, Anzahlung und Restbetrag", () => {
-    expect(html).toContain("Kontaktlinse rechts – MyDay");
-    expect(html).toContain("<td>Anpassung</td><td>20,00 €</td>");
-    expect(html).toContain("<td>Summe</td><td>84,00 €</td>");
-    expect(html).toContain(
-      "<td>abzgl. Anteil Krankenkasse</td><td>10,00 €</td>",
-    );
-    expect(html).toContain("<td>Restbetrag</td><td>54,00 €</td>");
-    expect(html).toContain("Biotrue 300 ml");
-    expect(html).toContain("Unterschrift Kunde");
+  it("Preise mit Kassenanteil, Anzahlung und Offen", () => {
+    expect(html).toContain("Kontaktlinse R. – MyDay");
+    expect(html).toContain('<td>Anpassung</td><td class="betrag">20,00</td>');
+    expect(html).toContain('<td>Gesamtpreis</td><td class="betrag">84,00</td>');
+    expect(html).toContain('<td>Endpreis</td><td class="betrag">74,00</td>');
+    expect(html).toContain('<td>Offen</td><td class="betrag">54,00</td>');
+    expect(html).toContain("Unterschrift Kunde/Kundin");
   });
 });

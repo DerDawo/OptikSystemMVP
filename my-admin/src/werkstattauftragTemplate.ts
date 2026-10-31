@@ -144,11 +144,11 @@ export const buildWerkstattauftragSummen = (
 const zeile = (label: string, wert: string) =>
   `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(wert)}</td></tr>`;
 
-const angaben = (paare: [string, string][]) =>
+export const angaben = (paare: [string, string][]) =>
   `<table class="angaben">${paare.map(([l, w]) => zeile(l, w)).join("")}</table>`;
 
 // Zwei Spalten Label/Wert nebeneinander, spart Höhe in der oberen Hälfte
-const angabenZweispaltig = (paare: [string, string][]) => {
+export const angabenZweispaltig = (paare: [string, string][]) => {
   const reihen: string[] = [];
   for (let i = 0; i < paare.length; i += 2) {
     const [l1, w1] = paare[i];
@@ -363,7 +363,9 @@ export const FORMULAR_TABELLEN_STYLES = `
   .summen .klein td { font-size: 7.5pt; color: #444; }
 `;
 
-const WERKSTATTAUFTRAG_STYLES = `
+// Auch für den Kontaktlinsenauftrag (kontaktlinseAuftragTemplate.ts), damit
+// beide Karten gleich gefaltet in die Auftragstüte passen
+export const WERKSTATTAUFTRAG_STYLES = `
   ${FORMULAR_TABELLEN_STYLES}
   * { box-sizing: border-box; }
   body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #111; font-size: 8.5pt; line-height: 1.3; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -410,7 +412,7 @@ const WERKSTATTAUFTRAG_STYLES = `
 // Passt eine Spalte nicht in ihre Hälfte (viele Positionen, lange
 // Bemerkungen), wird sie stufenweise verkleinert statt an der Falz
 // abgeschnitten (transform statt zoom, damit auch das PDF stimmt).
-const EINPASSEN = `<script>
+export const EINPASSEN = `<script>
 (function () {
   document.querySelectorAll(".haelfte").forEach(function (haelfte) {
     var hoehe = haelfte.clientHeight;
