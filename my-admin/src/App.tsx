@@ -88,6 +88,7 @@ import {
 } from "./glaskatalog/glaskatalogResource";
 import { GlaskatalogImportPage } from "./glaskatalog/GlaskatalogImportPage";
 import { RechnungenList } from "./Rechnungen";
+import { Fundusarchiv } from "./Fundusarchiv";
 import { MahnungenList } from "./Mahnungen";
 import { KassenrezepteSeite } from "./Kassenrezepte";
 import { Dashboard, StatistikSeite } from "./Dashboard";
@@ -247,6 +248,7 @@ export const App = () => {
         <Route path="/search" element={<Search />} />
         <Route path="/rechnungen" element={<RechnungenList />} />
         <Route path="/mahnungen" element={<MahnungenList />} />
+        <Route path="/fundusarchiv" element={<Fundusarchiv />} />
         <Route path="/rezepte" element={<KassenrezepteSeite />} />
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />

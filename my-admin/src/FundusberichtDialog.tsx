@@ -201,7 +201,7 @@ export const FundusberichtDialog = ({
         .from(DOKUMENT_BUCKET)
         .upload(pfad, datei, { contentType: datei.type, upsert: false });
       if (uploadFehler) throw uploadFehler;
-      const { error: zeileFehler } = await supabase
+      const { data: dokument, error: zeileFehler } = await supabase
         .from("kunde_dokument")
         .insert({
           kunde_id: kundeId,
@@ -211,10 +211,35 @@ export const FundusberichtDialog = ({
           Pfad: pfad,
           Typ: datei.type,
           Groesse: datei.size,
-        });
+        })
+        .select("id")
+        .single();
       if (zeileFehler) {
         await supabase.storage.from(DOKUMENT_BUCKET).remove([pfad]);
         throw zeileFehler;
+      }
+      // Befund getrennt von Bildern und PDF, für Archiv und Verlauf
+      const { error: befundFehler } = await supabase
+        .from("fundusbericht")
+        .insert({
+          kunde_id: kundeId,
+          Untersuchung: dayjs(zeit).toISOString(),
+          Untersucher: untersucher.trim(),
+          Methode: methode.trim() || null,
+          Geraet: geraet.trim() || null,
+          Bild_OS: wahl.OS || null,
+          Bild_OD: wahl.OD || null,
+          Bericht: dokument.id,
+          Befund: befund,
+          Seitenvergleich: seitenvergleich.trim() || null,
+          Gesamtbeurteilung: gesamt.trim() || null,
+          Empfehlung: empfehlung.trim() || null,
+        });
+      if (befundFehler) {
+        // kein PDF ohne Archiveintrag zurücklassen
+        await supabase.from("kunde_dokument").delete().eq("id", dokument.id);
+        await supabase.storage.from(DOKUMENT_BUCKET).remove([pfad]);
+        throw befundFehler;
       }
       notify("Fundusbericht freigegeben und abgelegt.", { type: "success" });
       onAbgelegt();

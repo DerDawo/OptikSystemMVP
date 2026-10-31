@@ -31,6 +31,7 @@ import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
 import ImageOutlinedIcon from "@mui/icons-material/ImageOutlined";
 import dayjs from "dayjs";
 import { supabase } from "./utils";
+import { FundusberichtListe } from "./Fundusarchiv";
 import { FundusberichtDialog } from "./FundusberichtDialog";
 import {
   DOKUMENT_ARTEN,
@@ -425,6 +426,10 @@ export const KundeDokumente = () => {
           </Box>
         </Box>
       )}
+
+      <Box sx={{ mt: 1.5 }}>
+        <FundusberichtListe kundeId={kundeId} stand={liste} />
+      </Box>
 
       <FundusberichtDialog
         offen={berichtOffen}

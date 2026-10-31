@@ -89,6 +89,20 @@ export const erkenneAuge = (dateiname: string): Auge | null => {
   return rechts ? "OD" : "OS";
 };
 
+/** Kritischster Status eines Berichts, für Archiv und Verlauf. */
+export const schlechtesterStatus = (
+  befund: Record<Auge, Augenbefund>,
+): Status | "" => {
+  const alle = AUGEN.flatMap(({ id }) =>
+    BEREICHE.map((b) => befund[id]?.bereiche?.[b.id]?.status ?? ""),
+  );
+  return (
+    (
+      ["abklaerung", "kontrolle", "nicht_beurteilbar", "unauffaellig"] as const
+    ).find((s) => alle.includes(s)) ?? ""
+  );
+};
+
 /** Was vor der Freigabe noch fehlt; leer = Bericht kann erstellt werden. */
 export const fehlendeAngaben = (
   augen: Auge[],

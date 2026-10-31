@@ -5,6 +5,7 @@ import {
   erstelleFundusberichtPdf,
   fehlendeAngaben,
   leererAugenbefund,
+  schlechtesterStatus,
   type Augenbefund,
   type FundusberichtDaten,
 } from "./fundusbericht";
@@ -52,6 +53,17 @@ describe("erkenneAuge", () => {
     expect(erkenneAuge("Fundus.jpg")).toBeNull();
     expect(erkenneAuge("OD_OS.jpg")).toBeNull();
     expect(erkenneAuge("Oskar.jpg")).toBeNull();
+  });
+});
+
+describe("schlechtesterStatus", () => {
+  it("nimmt den kritischsten Status beider Augen", () => {
+    const os = fertig();
+    os.bereiche.makula.status = "kontrolle";
+    expect(schlechtesterStatus({ OS: os, OD: fertig() })).toBe("kontrolle");
+    expect(
+      schlechtesterStatus({ OS: leererAugenbefund(), OD: leererAugenbefund() }),
+    ).toBe("");
   });
 });
 
