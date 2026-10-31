@@ -1,21 +1,24 @@
-import logoSehzentrum from "./assets/logo-sehzentrum.jpg?inline";
+import dayjs from "dayjs";
+import { RECHNUNG_ABSENDER, escapeHtml as e } from "./rechnungTemplate";
+import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
 import {
-  RECHNUNG_ABSENDER,
-  escapeHtml as e,
-  type Absender,
-} from "./rechnungTemplate";
-import {
+  EINPASSEN,
+  WERKSTATTAUFTRAG_STYLES,
+  angaben,
   formatDatum,
   formatEuro,
   formatWert,
+  preisTabelle,
   text,
+  type WerkstattauftragSummen,
 } from "./werkstattauftragTemplate";
 
 /*
- * Kontaktlinsen-Auftragskartei zum Drucken (A4, Symbol "Drucken" der
- * CL-Kartei): Kunde, Anpassung, Linsenparameter R/L, Linsen und
- * Lieferdaten, Pflegemittel, Leistungen und Beträge, Notizen sowie
- * Unterschrift des Kunden für Einweisung in Handhabung und Pflege.
+ * Kontaktlinsenauftrag zum Drucken (Symbol "Auftrag drucken" der CL-Kartei),
+ * genauso aufgebaut wie der Werkstattauftrag, damit er gleich gefaltet in die
+ * Auftragstüte passt: oben links die Auftragskarte (Kunde, Linsenwerte,
+ * Linsen, Lieferung, Bemerkungen), oben rechts Preise und Auftragserteilung,
+ * unten zum Abtrennen der Kundenabschnitt mit Pflegetipps und Preisen.
  */
 
 type Datensatz = Record<string, unknown>;
@@ -23,7 +26,6 @@ type Datensatz = Record<string, unknown>;
 export type KontaktlinseAuftragDaten = {
   cl: Datensatz;
   kunde?: Datensatz | null;
-  absender?: Absender;
 };
 
 const AUGEN = [
@@ -31,30 +33,37 @@ const AUGEN = [
   { seite: "L", endung: "Links" },
 ] as const;
 
-const PARAMETER = [
+type Spalte = {
+  feld: string;
+  titel: string;
+  format?: Parameters<typeof formatWert>[1];
+  datum?: boolean;
+};
+
+const PARAMETER: Spalte[] = [
   { feld: "Sph", titel: "Sph", format: "dioptrie" },
   { feld: "Cyl", titel: "Cyl", format: "dioptrie" },
-  { feld: "Achse", titel: "Achse", format: "achse" },
+  { feld: "Achse", titel: "A", format: "achse" },
   { feld: "Add", titel: "Add", format: "dioptrie" },
-  { feld: "Radius", titel: "BC (mm)", format: "zwei" },
-  { feld: "Durchmesser", titel: "DM (mm)", format: "frei" },
-  { feld: "Vis", titel: "Visus", format: "visus" },
-] as const;
+  { feld: "Radius", titel: "BC", format: "zwei" },
+  { feld: "Durchmesser", titel: "DM", format: "frei" },
+  { feld: "Vis", titel: "Vis", format: "visus" },
+];
 
-const LINSE = [
+const LINSE: Spalte[] = [
   { feld: "Hersteller", titel: "Hersteller" },
-  { feld: "Linsentyp", titel: "Linsentyp" },
+  { feld: "Linsentyp", titel: "Linse" },
   { feld: "Material", titel: "Material" },
   { feld: "Tragemodus", titel: "Tragemodus" },
-] as const;
+];
 
-const LIEFERUNG = [
+const LIEFERUNG: Spalte[] = [
   { feld: "Lagernummer", titel: "Lagernr." },
-  { feld: "LieferscheinNr", titel: "Lieferschein-Nr." },
-  { feld: "LieferscheinDatum", titel: "Lieferschein vom", datum: true },
-  { feld: "LotNr", titel: "LOT-Nr." },
+  { feld: "LieferscheinNr", titel: "Lieferschein" },
+  { feld: "LieferscheinDatum", titel: "vom", datum: true },
+  { feld: "LotNr", titel: "LOT" },
   { feld: "Status", titel: "Status" },
-] as const;
+];
 
 const zahl = (wert: unknown) => {
   if (wert === null || wert === undefined || wert === "") return null;
@@ -62,196 +71,190 @@ const zahl = (wert: unknown) => {
   return Number.isFinite(n) ? n : null;
 };
 
-const euro = (wert: number | null) =>
-  wert === null ? "" : `${formatEuro(wert)} €`;
+const round2 = (wert: number) => Math.round(wert * 100) / 100;
 
-const angabe = (titel: string, wert: string) =>
-  `<div class="angabe"><span class="t">${e(titel)}</span><span class="w">${e(wert) || "&nbsp;"}</span></div>`;
-
-const augenTabelle = (
-  spalten: readonly { feld: string; titel: string }[],
-  wert: (feld: string, spalte: (typeof spalten)[number]) => string,
-) =>
-  `<table class="werte"><thead><tr><th></th>${spalten
+// Tabelle R/L im Stil der Werte-Tabelle des Werkstattauftrags
+const augenTabelle = (cl: Datensatz, spalten: Spalte[], textSpalten = false) =>
+  `<table class="werte${textSpalten ? " text" : ""}"><thead><tr><th></th>${spalten
     .map((s) => `<th>${e(s.titel)}</th>`)
     .join("")}</tr></thead><tbody>${AUGEN.map(
     (a) =>
       `<tr><th>${a.seite}</th>${spalten
-        .map((s) => `<td>${e(wert(`${s.feld}${a.endung}`, s))}</td>`)
+        .map((s) => {
+          const wert = cl[`${s.feld}${a.endung}`];
+          const inhalt = s.datum
+            ? formatDatum(wert)
+            : s.format
+              ? formatWert(wert, s.format)
+              : text(wert);
+          return `<td>${e(inhalt)}</td>`;
+        })
         .join("")}</tr>`,
   ).join("")}</tbody></table>`;
 
-export const buildKontaktlinseAuftragBodyHtml = ({
-  cl,
-  kunde,
-  absender = RECHNUNG_ABSENDER,
-}: KontaktlinseAuftragDaten) => {
-  const k = kunde ?? {};
-  const name = [text(k.Anrede), text(k.Vorname), text(k.Nachname)]
-    .filter((t) => t && !/^keine angabe$/i.test(t))
-    .join(" ");
-  const anschrift = [
-    [text(k.Straße), text(k.Hausnummer)].filter(Boolean).join(" "),
-    [text(k.Postleitzahl), text(k.Stadt)].filter(Boolean).join(" "),
-  ]
-    .filter(Boolean)
-    .join(", ");
-  const telefon = text(k.Handy) || text(k.TelefonnummerPrivat);
-
-  const zusatz = [1, 2, 3]
-    .map((i) => ({
-      titel: text(cl[`Zusatzleistung${i}`]),
-      betrag: zahl(cl[`Zusatzbetrag${i}`]),
-    }))
-    .filter((z) => z.titel || z.betrag !== null);
-  const posten = [
+export const buildKontaktlinseAuftragSummen = (
+  cl: Datensatz,
+): WerkstattauftragSummen => {
+  const positionen = [
     ...AUGEN.map((a) => ({
-      titel: `Kontaktlinse ${a.seite === "R" ? "rechts" : "links"}${
+      label: `Kontaktlinse ${a.seite}.${
         text(cl[`Linsentyp${a.endung}`])
           ? ` – ${text(cl[`Linsentyp${a.endung}`])}`
           : ""
       }`,
       betrag: zahl(cl[`Preis${a.endung}`]),
-    })).filter((p) => p.betrag !== null),
-    ...zusatz,
-  ];
-  const summe = zahl(cl.Summe);
-  const kk = zahl(cl.KKAnteil);
-  const anzahlung = zahl(cl.Anzahlung);
-  const rest = summe === null ? null : summe - (kk ?? 0) - (anzahlung ?? 0);
-  const rabatt = zahl(cl.RabattProzent);
-
-  const betraege = [
-    ...posten.map((p) => [p.titel, euro(p.betrag)]),
-    ...(rabatt
-      ? [
-          [
-            `Rabatt ${text(cl.RabattBezeichnung)} ${formatWert(rabatt, "frei")} %`.replace(
-              /\s+/g,
-              " ",
-            ),
-            "",
-          ],
-        ]
-      : []),
-    ["Summe", euro(summe)],
-    ...(kk ? [["abzgl. Anteil Krankenkasse", euro(kk)]] : []),
-    ...(anzahlung ? [["abzgl. Anzahlung", euro(anzahlung)]] : []),
-    ...(kk || anzahlung ? [["Restbetrag", euro(rest)]] : []),
-  ];
-
-  return `
-<div class="seite">
-  <div class="kopf">
-    <img src="${logoSehzentrum}" alt="" />
-    <div class="firma">
-      <b>${e(absender.marke)}</b><br />
-      ${e(absender.firma)} · ${e(absender.strasseLang)} · ${e(`${absender.plz} ${absender.ort}`)}<br />
-      Tel. ${e(absender.telefon)} · ${e(absender.email)}
-    </div>
-    <div class="titel">
-      <h1>Kontaktlinsen-Auftrag</h1>
-      <div>Auftrag ${e(text(cl.id))}${text(cl.Rechnungsnummer) ? ` · Rechnung ${e(text(cl.Rechnungsnummer))}` : ""}</div>
-      <div>vom ${e(formatDatum(cl.Datum))}</div>
-    </div>
-  </div>
-
-  <h2>Kunde</h2>
-  <div class="raster">
-    ${angabe("Name", name)}
-    ${angabe("Kunden-Nr.", text(k.KundenNummer) || text(k.id))}
-    ${angabe("Anschrift", anschrift)}
-    ${angabe("Geburtsdatum", formatDatum(k.Geburtsdatum))}
-    ${angabe("Telefon", telefon)}
-    ${angabe("E-Mail", text(k.Email))}
-  </div>
-
-  <h2>Anpassung</h2>
-  <div class="raster">
-    ${angabe("Linsenart", text(cl.Linsenart))}
-    ${angabe("Anpassgrund", text(cl.Anpassgrund))}
-    ${angabe("Anpasser", text(cl.Berater))}
-    ${angabe("Abo-Lieferung", cl.AboLieferung ? "ja" : "nein")}
-    ${angabe("Nachkontrolle", formatDatum(cl.Nachkontrolltermin))}
-    ${angabe("Abholung", formatDatum(cl.Abholung))}
-  </div>
-
-  <h2>Linsenparameter</h2>
-  ${augenTabelle(PARAMETER, (feld, s) => formatWert(cl[feld], (s as (typeof PARAMETER)[number]).format))}
-
-  <h2>Linsen</h2>
-  ${augenTabelle(LINSE, (feld) => text(cl[feld]))}
-
-  <h2>Lieferung</h2>
-  ${augenTabelle(LIEFERUNG, (feld, s) =>
-    "datum" in s && s.datum ? formatDatum(cl[feld]) : text(cl[feld]),
-  )}
-
-  <div class="zwei">
-    <div>
-      <h2>Pflegemittel</h2>
-      <div class="kasten">${e(text(cl.Pflegemittel)) || "&nbsp;"}</div>
-      <h2>Notizen</h2>
-      <div class="kasten notizen">${e(text(cl.Notizen)) || "&nbsp;"}</div>
-    </div>
-    <div>
-      <h2>Leistungen und Beträge</h2>
-      <table class="betraege">${betraege
-        .map(
-          ([t, w]) =>
-            `<tr${/^(Summe|Restbetrag)$/.test(t) ? ' class="summe"' : ""}><td>${e(t)}</td><td>${e(w)}</td></tr>`,
-        )
-        .join("")}</table>
-      ${text(cl.Zahlungsstatus) ? `<div class="zahlung">Zahlungsstatus: ${e(text(cl.Zahlungsstatus))}${cl.Zahlungsdatum ? ` am ${e(formatDatum(cl.Zahlungsdatum))}` : ""}</div>` : ""}
-    </div>
-  </div>
-
-  <div class="hinweis">
-    Ich wurde in das Einsetzen, Herausnehmen und die Pflege der Kontaktlinsen
-    eingewiesen. Die Tragezeiten und Nachkontrolltermine wurden mit mir
-    besprochen. Bei Rötung, Schmerzen oder Sehverschlechterung nehme ich die
-    Linsen heraus und melde mich.
-  </div>
-  <div class="unterschrift">
-    <div><div class="strich"></div>Ort, Datum</div>
-    <div><div class="strich"></div>Unterschrift Kunde</div>
-    <div><div class="strich"></div>Unterschrift Anpasser</div>
-  </div>
-</div>`;
+    })),
+    ...[1, 2, 3].map((i) => ({
+      label: text(cl[`Zusatzleistung${i}`]) || "Zusatzleistung",
+      betrag: zahl(cl[`Zusatzbetrag${i}`]),
+    })),
+  ].flatMap((p) => (p.betrag === null ? [] : [{ ...p, betrag: p.betrag }]));
+  const gesamt =
+    zahl(cl.Summe) ?? round2(positionen.reduce((s, p) => s + p.betrag, 0));
+  const kassenanteil = zahl(cl.KKAnteil) ?? 0;
+  const anzahlung = zahl(cl.Anzahlung) ?? 0;
+  const endpreis = round2(gesamt - kassenanteil);
+  const netto = round2(gesamt / (1 + RECHNUNG_ABSENDER.mwstSatz / 100));
+  return {
+    positionen,
+    gesamt,
+    kassenanteil,
+    endpreis,
+    netto,
+    mwst: round2(gesamt - netto),
+    anzahlung,
+    offen: round2(endpreis - anzahlung),
+  };
 };
 
-const STYLES = `
-  * { box-sizing: border-box; }
-  body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #1f2937; font-size: 9pt; line-height: 1.3; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .seite { width: 210mm; min-height: 297mm; padding: 12mm 14mm; background: #fff; }
-  .kopf { display: flex; gap: 4mm; align-items: center; border-bottom: 0.4mm solid #1d4e8f; padding-bottom: 3mm; }
-  .kopf img { width: 22mm; height: 17mm; object-fit: contain; }
-  .kopf .firma { flex: 1; font-size: 8pt; color: #4b5563; }
-  .kopf .firma b { font-size: 10pt; color: #1e2b4a; }
-  .kopf .titel { text-align: right; font-size: 8.5pt; }
-  h1 { font-size: 15pt; margin: 0 0 1mm; color: #1e2b4a; }
-  h2 { font-size: 9.5pt; color: #1d4e8f; margin: 4mm 0 1.2mm; text-transform: uppercase; letter-spacing: 0.04em; }
-  .raster { display: grid; grid-template-columns: 1fr 1fr; gap: 1mm 6mm; }
-  .angabe { display: flex; gap: 2mm; border-bottom: 0.2mm solid #e5e7eb; padding: 0.6mm 0; }
-  .angabe .t { width: 28mm; flex: none; color: #6b7280; }
-  .angabe .w { flex: 1; }
-  table { border-collapse: collapse; width: 100%; }
-  table.werte th, table.werte td { border: 0.25mm solid #cbd5e1; padding: 1mm 1.2mm; text-align: center; }
-  table.werte thead th { background: #eef3fa; font-size: 7.8pt; }
-  table.werte tbody th { width: 8mm; background: #eef3fa; }
-  table.werte td { font-size: 9.5pt; height: 6mm; }
-  .zwei { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
-  .kasten { border: 0.25mm solid #cbd5e1; min-height: 9mm; padding: 1.2mm 1.5mm; white-space: pre-wrap; }
-  .kasten.notizen { min-height: 22mm; }
-  table.betraege td { padding: 0.9mm 0; border-bottom: 0.2mm solid #e5e7eb; }
-  table.betraege td:last-child { text-align: right; white-space: nowrap; padding-left: 3mm; }
-  table.betraege tr.summe td { font-weight: bold; border-bottom: 0.3mm solid #1f2937; }
-  .zahlung { margin-top: 1.5mm; font-size: 8.5pt; color: #4b5563; }
-  .hinweis { margin-top: 6mm; font-size: 8pt; color: #374151; border: 0.25mm solid #cbd5e1; background: #f8fafc; padding: 2mm 2.5mm; }
-  .unterschrift { display: flex; gap: 8mm; margin-top: 13mm; font-size: 8pt; color: #4b5563; }
-  .unterschrift > div { flex: 1; }
-  .strich { border-top: 0.25mm solid #6b7280; margin-bottom: 1mm; }
-`;
+const PFLEGETIPPS = [
+  "Vor jedem Einsetzen und Herausnehmen die Hände gründlich waschen und mit einem fusselfreien Tuch abtrocknen.",
+  "Linsen nur mit dem empfohlenen Pflegemittel reinigen und aufbewahren – niemals mit Leitungswasser oder Speichel.",
+  "Die Aufbewahrungslösung täglich erneuern, den Behälter ausspülen, an der Luft trocknen und regelmäßig austauschen.",
+  "Tragezeit und Austauschrhythmus der Linsen einhalten, nicht mit Linsen schlafen, sofern nicht ausdrücklich vereinbart.",
+  "Beim Schwimmen, Duschen und in der Sauna die Linsen herausnehmen oder eine Schwimmbrille tragen.",
+  "Bei Rötung, Schmerzen, Lichtempfindlichkeit oder Sehverschlechterung die Linsen sofort herausnehmen und uns oder einen Augenarzt aufsuchen.",
+];
+
+// Auftragserteilung wie beim Werkstattauftrag, ergänzt um die Einweisung in
+// Handhabung und Pflege
+const auftragserteilung = (endpreis: number) => {
+  const firma = e(RECHNUNG_ABSENDER.firma);
+  return `<div class="auftragserteilung">
+      <p><b>Auftragserteilung</b><br />
+      Ich beauftrage ${firma} mit der Anpassung und Lieferung der oben beschriebenen Kontaktlinsen zum Endpreis von ${e(formatEuro(endpreis))} € inkl. MwSt.
+      Der Betrag ist bei Abholung fällig; bis zur vollständigen Bezahlung bleiben die Linsen Eigentum von ${firma}.
+      Übernimmt ein Kostenträger seinen Anteil nicht, zahle ich diesen selbst.
+      Ich wurde in das Einsetzen, Herausnehmen und die Pflege der Linsen eingewiesen; Tragezeiten und Nachkontrollen wurden mit mir besprochen.
+      Meine gesetzlichen Gewährleistungsrechte bleiben unberührt.</p>
+      <div class="unterschriften">
+        <div class="unterschrift">${e(RECHNUNG_ABSENDER.ort)}, Datum</div>
+        <div class="unterschrift">Unterschrift Kunde/Kundin</div>
+      </div>
+    </div>`;
+};
+
+// Zum Abhaken im Laden, neben den Kontaktdaten
+const LADEN_HAKEN = `<div class="haken">
+  <span class="kasten"></span><span>Linsen bestellt</span><span class="datum">Datum</span><span class="linie"></span>
+  <span class="kasten"></span><span>Linsen da</span><span class="datum">Datum</span><span class="linie"></span>
+  <span class="kasten"></span><span>Sonstiges</span><span class="linie lang"></span>
+</div>`;
+
+export const buildKontaktlinseAuftragBodyHtml = ({
+  cl,
+  kunde,
+}: KontaktlinseAuftragDaten): string => {
+  const k = kunde ?? {};
+  const summen = buildKontaktlinseAuftragSummen(cl);
+  const anrede = /^keine angabe$/i.test(text(k.Anrede)) ? "" : text(k.Anrede);
+  const name = [k.Vorname, k.Nachname].map(text).filter(Boolean);
+  const strasse = [k.Straße, k.Hausnummer].map(text).filter(Boolean);
+  const ort = [k.Postleitzahl, k.Stadt].map(text).filter(Boolean);
+  const auftragsdatum = formatDatum(cl.Datum) || dayjs().format("DD.MM.YYYY");
+  const fertigBis = formatDatum(cl.Abholung, true);
+
+  const kundeninfo: [string, string][] = [
+    ["Geburtsdatum", formatDatum(k.Geburtsdatum)],
+    ["Krankenkasse", text(k.KrankenversicherungsTyp)],
+    ["Anpasser", text(mitarbeiterAnzeige(cl.Berater))],
+    ["Anpassgrund", text(cl.Anpassgrund)],
+    ["Nachkontrolle", formatDatum(cl.Nachkontrolltermin, true)],
+    ["Abo-Lieferung", cl.AboLieferung ? "ja" : "nein"],
+    ["Pflegemittel", text(cl.Pflegemittel)],
+  ];
+
+  const firma = RECHNUNG_ABSENDER.firma;
+  const kontakt = `${firma} · ${RECHNUNG_ABSENDER.strasseLang} · ${RECHNUNG_ABSENDER.plz} ${RECHNUNG_ABSENDER.ort} · Tel. ${RECHNUNG_ABSENDER.telefon}`;
+
+  return `
+<div class="blatt">
+  <section class="haelfte">
+    <div class="spalte">
+      <div class="titelzeile"><span>Kontaktlinsenauftrag</span><span>${e(auftragsdatum)}</span></div>
+      <div class="kundenbox">
+        <div>
+          <div>${e(anrede)}</div>
+          <div class="fett">${e(name.join(" "))}</div>
+          <div>${e(strasse.join(" "))}</div>
+          <div>${e(ort.join(" "))}</div>
+        </div>
+        <div class="nummern">
+          <div>Kd.-Nr. <b>${e(text(k.KundenNummer) || text(k.id))}</b></div>
+          <div>Auftrag <b>${e(text(cl.id))}</b></div>
+          <div>Fertig bis <b>${e(fertigBis)}</b></div>
+        </div>
+      </div>
+      <div class="kontaktzeile">
+        ${angaben([
+          ["Telefon", text(k.TelefonnummerPrivat)],
+          ["Mobil", text(k.Handy)],
+          ["E-Mail", text(k.Email)],
+        ])}
+        ${LADEN_HAKEN}
+      </div>
+      <div class="balken">${e(text(cl.Linsenart) || "Kontaktlinsen")}</div>
+      ${augenTabelle(cl, PARAMETER)}
+      <div class="balken">Linsen</div>
+      ${augenTabelle(cl, LINSE, true)}
+      <div class="balken">Lieferung</div>
+      ${augenTabelle(cl, LIEFERUNG, true)}
+      <div class="balken"><span>Bemerkungen</span><span>Offen: ${e(formatEuro(summen.offen))} €</span></div>
+      <div class="notizen">${e(text(cl.Notizen))}</div>
+      ${text(k.Notizen) ? `<div class="notizen"><b>Kunde:</b> ${e(text(k.Notizen))}</div>` : ""}
+      <div class="schreiblinie"></div>
+      <div class="schreiblinie"></div>
+    </div>
+    <div class="spalte">
+      ${angaben(kundeninfo)}
+      ${preisTabelle(summen, false)}
+      ${auftragserteilung(summen.endpreis)}
+    </div>
+  </section>
+
+  <div class="schnitt"><span>✂ Kundenabschnitt</span></div>
+
+  <section class="haelfte">
+    <div class="spalte">
+      <div class="titelzeile"><span>Pflegetipps für Ihre Kontaktlinsen</span></div>
+      <p>Richtige Pflege schützt Ihre Augen und sorgt für angenehmes Tragen und gleichbleibend gute Sicht.</p>
+      <ul class="tipps">${PFLEGETIPPS.map((tipp) => `<li>${e(tipp)}</li>`).join("")}</ul>
+      <p>Bitte nehmen Sie Ihre Nachkontrolltermine wahr. Für Fragen sprechen Sie uns einfach an.</p>
+      <p>Ihr ${e(firma)}</p>
+    </div>
+    <div class="spalte">
+      <div class="titelzeile"><span>Ihr Auftrag ${e(text(cl.id))}</span><span>${e(auftragsdatum)}</span></div>
+      ${angaben([
+        ["Kunde", [anrede, ...name].filter(Boolean).join(" ")],
+        ["Fertig bis", fertigBis],
+        ...kundeninfo.slice(2, 6),
+      ])}
+      ${preisTabelle(summen, true)}
+      <p class="kontakt">${e(kontakt)}</p>
+    </div>
+  </section>
+</div>`;
+};
 
 export const buildKontaktlinseAuftragPrintHtml = (
   daten: KontaktlinseAuftragDaten,
@@ -259,13 +262,15 @@ export const buildKontaktlinseAuftragPrintHtml = (
 <html lang="de">
 <head>
 <meta charset="utf-8" />
-<title>Kontaktlinsen-Auftrag ${e(text(daten.cl.id))}</title>
+<title>${e(`Kontaktlinsenauftrag ${text(daten.cl.id)}`)}</title>
 <style>
-  ${STYLES}
+  ${WERKSTATTAUFTRAG_STYLES}
+  .werte.text td { text-align: left; }
   @page { size: A4; margin: 0; }
 </style>
 </head>
 <body>
 ${buildKontaktlinseAuftragBodyHtml(daten)}
+${EINPASSEN}
 </body>
 </html>`;
