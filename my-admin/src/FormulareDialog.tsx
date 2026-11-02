@@ -102,7 +102,7 @@ import {
   type Seitenformat,
 } from "./belegPdf";
 import { druckfensterOeffnen } from "./druckfenster";
-import { choosePhoneNumberForMessaging } from "./messaging";
+import { choosePhoneNumberForMessaging, istHandy } from "./messaging";
 import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
   buildErprobungsprotokollPreviewHtml,
@@ -1022,7 +1022,16 @@ const FormulareDialog = ({
   useEffect(() => setVersandDatei(null), [selectedVorlage?.id]);
   const versenden = async (kanal: "email" | "whatsapp") => {
     if (!selectedVorlage) return;
+    // Gmail bzw. WhatsApp am Computer gleich beim Klick öffnen: nach dem
+    // Erstellen des PDFs blockiert der Browser das neue Fenster sonst
+    const vorab = istHandy()
+      ? null
+      : window.open(
+          "about:blank",
+          kanal === "whatsapp" ? "unicorn-whatsapp" : "unicorn-gmail",
+        );
     if (pdfVorlage && !pdfUrl) {
+      vorab?.close();
       notify(
         "Das PDF wird noch erstellt – bitte gleich noch einmal versuchen.",
         {
@@ -1056,6 +1065,7 @@ const FormulareDialog = ({
           ).trim()
         : "";
       if (agRechnung && kanal === "whatsapp") {
+        vorab?.close();
         notify("Rechnungen an den Arbeitgeber gehen per E-Mail.", {
           type: "warning",
         });
@@ -1106,6 +1116,7 @@ const FormulareDialog = ({
             `E-Mail-Adresse ${adresse} kopiert – in der E-Mail beim Empfänger einfügen.`,
             { type: "info", autoHideDuration: 15000 },
           ),
+        vorab,
       );
       if (ergebnis !== "abgebrochen") kvMerken();
       if (ergebnis === "heruntergeladen") setVersandDatei(datei);
@@ -1118,6 +1129,7 @@ const FormulareDialog = ({
         );
       }
     } catch {
+      vorab?.close();
       notify("PDF konnte nicht erstellt werden.", { type: "error" });
     } finally {
       setVersendet(null);
