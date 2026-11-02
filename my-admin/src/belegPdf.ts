@@ -188,6 +188,8 @@ export const belegVersenden = async (
   datei: File,
   nachricht: { an: string; betreff: string; text: string },
   beiAdresseKopiert?: (adresse: string) => void,
+  // schon beim Klick geöffnetes Fenster für Gmail bzw. WhatsApp
+  vorab?: Window | null,
 ): Promise<VersandErgebnis> => {
   // Am Computer bietet das Teilen-Menü weder Gmail noch WhatsApp an (die
   // Mac-App von WhatsApp fehlt dort), daher gleich Gmail bzw. den Chat des
@@ -198,6 +200,7 @@ export const belegVersenden = async (
     typeof navigator.canShare === "function" &&
     navigator.canShare({ files: [datei] });
   if (teilbar) {
+    vorab?.close();
     if (kanal === "email" && nachricht.an) {
       const kopiert = await inZwischenablage(nachricht.an);
       if (kopiert) beiAdresseKopiert?.(nachricht.an);
@@ -216,6 +219,15 @@ export const belegVersenden = async (
     }
   }
   herunterladen(datei);
+  openExternalMessage(
+    buildExternalMessageUrl(kanal, {
+      to: nachricht.an,
+      subject: nachricht.betreff,
+      message: nachricht.text,
+    }),
+    vorab,
+  );
+  if (vorab) return "heruntergeladen";
   // Chrome blockiert den automatischen Download gern: das PDF zusätzlich in
   // einem eigenen Tab öffnen, von dort lässt es sich speichern (Tab bleibt
   // offen, Gmail/WhatsApp kommt danach in den Vordergrund)
@@ -226,12 +238,5 @@ export const belegVersenden = async (
   } catch {
     // Pop-up blockiert: dann bleibt der Download
   }
-  openExternalMessage(
-    buildExternalMessageUrl(kanal, {
-      to: nachricht.an,
-      subject: nachricht.betreff,
-      message: nachricht.text,
-    }),
-  );
   return "heruntergeladen";
 };

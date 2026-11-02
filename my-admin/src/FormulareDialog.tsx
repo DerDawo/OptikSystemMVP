@@ -102,7 +102,7 @@ import {
   type Seitenformat,
 } from "./belegPdf";
 import { druckfensterOeffnen } from "./druckfenster";
-import { choosePhoneNumberForMessaging } from "./messaging";
+import { choosePhoneNumberForMessaging, istHandy } from "./messaging";
 import { KI_FORMULARE, begruendungVorschlagen } from "./kiBegruendung";
 import {
   buildErprobungsprotokollPreviewHtml,
@@ -217,6 +217,8 @@ type LayoutDaten = {
   entities: DocumentMergeEntities;
   betrieb?: RaRecord;
   rechnungsnummer: string;
+  // kurze optometrische Verordnung: fortlaufende Nummer des Auftrags
+  verordnungsnummer?: string;
   begruendung?: string;
   // leer drucken (zum Ausfüllen von Hand), nur bei `leerMoeglich`
   leer?: boolean;
@@ -775,11 +777,42 @@ const FormulareDialog = ({
       });
   }, [braucheNummer, brille.id, notify, refresh]);
 
+  // Kurze optometrische Verordnung: beim ersten Öffnen zum Auftrag die nächste
+  // fortlaufende Verordnungsnummer vergeben (bleibt beim erneuten Druck gleich)
+  const [vergebeneVerordnung, setVergebeneVerordnung] = useState("");
+  const verordnungsnummer = String(
+    brille.Verordnungsnummer || vergebeneVerordnung || "",
+  );
+  const braucheVerordnungsnummer =
+    selectedVorlage?.Kategorie === VERORDNUNG_KATEGORIE &&
+    !verordnungsnummer &&
+    typeof brille.id === "number";
+  const verordnungAngefragt = useRef(false);
+  useEffect(() => {
+    if (!braucheVerordnungsnummer || verordnungAngefragt.current) return;
+    verordnungAngefragt.current = true;
+    supabase
+      .rpc("assign_verordnungsnummer", { p_brille_id: brille.id })
+      .then(({ data, error }) => {
+        if (error || !data) {
+          verordnungAngefragt.current = false;
+          notify("Verordnungsnummer konnte nicht vergeben werden.", {
+            type: "error",
+          });
+          return;
+        }
+        setVergebeneVerordnung(String(data));
+        notify(`Verordnungsnummer ${data} vergeben.`, { type: "success" });
+        refresh();
+      });
+  }, [braucheVerordnungsnummer, brille.id, notify, refresh]);
+
   const layoutDaten: LayoutDaten = useMemo(
     () => ({
       entities: mergeEntities,
       betrieb,
       rechnungsnummer,
+      verordnungsnummer,
       begruendung,
       leer,
       vorlagentext: selectedVorlage?.Vorlagentext ?? "",
@@ -788,6 +821,7 @@ const FormulareDialog = ({
       mergeEntities,
       betrieb,
       rechnungsnummer,
+      verordnungsnummer,
       begruendung,
       leer,
       selectedVorlage?.Vorlagentext,
@@ -1022,7 +1056,16 @@ const FormulareDialog = ({
   useEffect(() => setVersandDatei(null), [selectedVorlage?.id]);
   const versenden = async (kanal: "email" | "whatsapp") => {
     if (!selectedVorlage) return;
+    // Gmail bzw. WhatsApp am Computer gleich beim Klick öffnen: nach dem
+    // Erstellen des PDFs blockiert der Browser das neue Fenster sonst
+    const vorab = istHandy()
+      ? null
+      : window.open(
+          "about:blank",
+          kanal === "whatsapp" ? "unicorn-whatsapp" : "unicorn-gmail",
+        );
     if (pdfVorlage && !pdfUrl) {
+      vorab?.close();
       notify(
         "Das PDF wird noch erstellt – bitte gleich noch einmal versuchen.",
         {
@@ -1056,6 +1099,7 @@ const FormulareDialog = ({
           ).trim()
         : "";
       if (agRechnung && kanal === "whatsapp") {
+        vorab?.close();
         notify("Rechnungen an den Arbeitgeber gehen per E-Mail.", {
           type: "warning",
         });
@@ -1106,6 +1150,7 @@ const FormulareDialog = ({
             `E-Mail-Adresse ${adresse} kopiert – in der E-Mail beim Empfänger einfügen.`,
             { type: "info", autoHideDuration: 15000 },
           ),
+        vorab,
       );
       if (ergebnis !== "abgebrochen") kvMerken();
       if (ergebnis === "heruntergeladen") setVersandDatei(datei);
@@ -1118,6 +1163,7 @@ const FormulareDialog = ({
         );
       }
     } catch {
+      vorab?.close();
       notify("PDF konnte nicht erstellt werden.", { type: "error" });
     } finally {
       setVersendet(null);

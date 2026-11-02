@@ -249,9 +249,20 @@ export const istHandy = () =>
  * verwirft aber oft den mitgeschickten Text - dann reicht Strg+V. Am PC
  * nutzen WhatsApp und Gmail (E-Mails) immer denselben Browser-Tab, statt
  * jedes Mal einen neuen zu öffnen. Rückgabe: true, wenn es ein
- * WhatsApp-Link war.
+ * WhatsApp-Link war. `vorab`: schon beim Klick geöffnetes, leeres Fenster;
+ * nach längerem Warten (PDF erstellen) blockiert der Browser sonst das
+ * Öffnen.
  */
-export const openExternalMessage = (url: string): boolean => {
+export const openExternalMessage = (
+  url: string,
+  vorab?: Window | null,
+): boolean => {
+  const inVorab = (ziel: string) => {
+    if (!vorab || vorab.closed) return null;
+    vorab.location.href = ziel;
+    vorab.opener = null;
+    return vorab;
+  };
   const webUrl = whatsappWebUrl(url);
   if (webUrl) {
     const text = new URL(url).searchParams.get("text") ?? "";
@@ -259,7 +270,8 @@ export const openExternalMessage = (url: string): boolean => {
     if (istHandy()) {
       window.open(url, "_blank", "noopener,noreferrer");
     } else {
-      const fenster = window.open(webUrl, "unicorn-whatsapp");
+      const fenster =
+        inVorab(webUrl) ?? window.open(webUrl, "unicorn-whatsapp");
       if (fenster) fenster.opener = null;
     }
     return true;
@@ -267,7 +279,7 @@ export const openExternalMessage = (url: string): boolean => {
 
   const gmail = istHandy() ? null : gmailUrl(url);
   if (gmail) {
-    const fenster = window.open(gmail, "unicorn-gmail");
+    const fenster = inVorab(gmail) ?? window.open(gmail, "unicorn-gmail");
     if (fenster) {
       fenster.opener = null;
       return false;
