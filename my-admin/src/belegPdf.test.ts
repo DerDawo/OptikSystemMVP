@@ -94,6 +94,28 @@ describe("belegVersenden", () => {
     expect(link.click).toHaveBeenCalled();
     expect(openExternalMessage).toHaveBeenCalledWith(
       "https://wa.me/491701234567?text=Guten%20Tag",
+      undefined,
+    );
+  });
+
+  it("nutzt das beim Klick geöffnete Fenster und öffnet keinen PDF-Tab", async () => {
+    teilenMoeglich(MAC);
+    herunterladenMoeglich();
+    const open = vi.fn();
+    vi.stubGlobal("window", { setTimeout: vi.fn(), open });
+    const vorab = { closed: false } as unknown as Window;
+    const ergebnis = await belegVersenden(
+      "whatsapp",
+      datei,
+      { ...nachricht, an: "0170 1234567" },
+      undefined,
+      vorab,
+    );
+    expect(ergebnis).toBe("heruntergeladen");
+    expect(open).not.toHaveBeenCalled();
+    expect(openExternalMessage).toHaveBeenCalledWith(
+      "https://wa.me/491701234567?text=Guten%20Tag",
+      vorab,
     );
   });
 
@@ -121,6 +143,7 @@ describe("belegVersenden", () => {
     // openExternalMessage öffnet daraus am Computer Gmail
     expect(openExternalMessage).toHaveBeenCalledWith(
       "mailto:kunde@example.org?subject=Rechnung%201&body=Guten%20Tag",
+      undefined,
     );
   });
 
