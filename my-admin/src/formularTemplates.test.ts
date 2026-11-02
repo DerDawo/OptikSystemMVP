@@ -108,6 +108,22 @@ describe("Optometrische Verordnung", () => {
     expect(html).toContain("Max Beispiel");
     expect(html).toContain("63,5");
     expect(html).toContain("+2,00");
+    expect(html).toContain("Visus cc");
+  });
+
+  it("zeigt Verordnungsnummer, Stempel und Unterschrift", () => {
+    const png = "data:image/png;base64,iVBORw0KGgo=";
+    const html = buildVerordnungKurzPrintHtml({
+      entities,
+      verordnungsnummer: "2026-0007",
+      bilder: { stempel: png, unterschrift: png },
+    });
+    expect(html).toContain("2026-0007");
+    expect(html).toContain('class="stempel-bild"');
+    expect(html).toContain('class="unterschrift-bild"');
+    const ohne = buildVerordnungKurzPrintHtml({ entities, bilder: {} });
+    expect(ohne).not.toContain('class="stempel-bild"');
+    expect(ohne).toMatch(/Verordnungs-Nr\.: \d{4}-/);
   });
 });
 

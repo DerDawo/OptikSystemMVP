@@ -10,6 +10,11 @@ import type {
 import { RECHNUNG_ABSENDER, escapeHtml } from "./rechnungTemplate";
 import { formatDatum, formatWert, text } from "./werkstattauftragTemplate";
 import {
+  type BetriebBilder,
+  betriebBilder,
+  bildUrl,
+} from "./betriebBilderCache";
+import {
   KAESTCHEN_STYLES,
   anzahlGlaeser,
   kaestchen as kaestchenInput,
@@ -19,6 +24,10 @@ import {
 
 export type OptometrischeVerordnungDaten = {
   entities: DocumentMergeEntities;
+  // fortlaufende Nummer der kurzen Verordnung (JJJJ-NNNN), sonst leere Linie
+  verordnungsnummer?: string;
+  // Stempel/Unterschrift; ohne Angabe die privat gespeicherten Bilder
+  bilder?: BetriebBilder;
 };
 
 // Erst beim Erzeugen lesen, die Betriebsdaten kommen zur Laufzeit (#132).
@@ -223,13 +232,18 @@ const wertKaestchen = (glas: MergeSource) =>
     formatWert(glas?.A, "achse"),
     formatWert(glas?.Pr, "zwei"),
     formatWert(glas?.B, "frei"),
+    formatWert(glas?.Vis, "visus"),
   ]
     .map((v) => `<span class="feld">${wert(v)}</span>`)
     .join("");
 
 export const buildVerordnungKurzBodyHtml = ({
   entities,
+  verordnungsnummer = "",
+  bilder = betriebBilder(),
 }: OptometrischeVerordnungDaten): string => {
+  const stempel = bildUrl(bilder.stempel);
+  const unterschrift = bildUrl(bilder.unterschrift);
   const kunde: Record<string, unknown> = entities.kunde ?? {};
   const name = [text(kunde.Vorname), text(kunde.Nachname)]
     .filter(Boolean)
@@ -244,7 +258,11 @@ export const buildVerordnungKurzBodyHtml = ({
     <div>${escapeHtml(`${aussteller().name} · Inhaber: ${aussteller().inhaber} · Augenoptikermeister`)}</div>
     <div>${escapeHtml(`${aussteller().strasse} · ${aussteller().ort}`)}</div>
   </div>
-  <div class="zeile fett">Verordnungs-Nr.: ${dayjs().year()}-${ausfuellen("", "10.6mm")}</div>
+  <div class="zeile fett">Verordnungs-Nr.: ${
+    verordnungsnummer
+      ? wert(verordnungsnummer)
+      : `${dayjs().year()}-${ausfuellen("", "10.6mm")}`
+  }</div>
   <div class="zeile zwei">
     <span>Name: ${ausfuellen(name, "68.5mm")}</span>
     <span>Datum: ${ausfuellen(dayjs().format("DD.MM.YYYY"), "25.7mm")}</span>
@@ -252,12 +270,16 @@ export const buildVerordnungKurzBodyHtml = ({
   <div class="zeile">Geb.-Datum: ${ausfuellen(formatDatum(kunde.Geburtsdatum), "25.5mm")}&nbsp;&nbsp; PD: ${ausfuellen(pdGesamt(glasRechts, glasLinks), "10.6mm")} mm</div>
   <div class="zeile refraktion">Refraktion:</div>
   <div class="werte-kurz">
-    <span></span><div class="spalten"><span>Sph</span><span>Cyl</span><span>Achse</span><span>Prisma</span><span>Basis</span></div>
+    <span></span><div class="spalten"><span>Sph</span><span>Cyl</span><span>Achse</span><span>Prisma</span><span>Basis</span><span>Visus cc</span></div>
     <span>Ferne R</span><div class="felder">${wertKaestchen(glasRechts)}</div>
     <span>Ferne L</span><div class="felder">${wertKaestchen(glasLinks)}</div>
     <span>Nähe ADD</span><div class="felder"><span class="feld">${wert(addition(glasRechts, glasLinks))}</span></div>
   </div>
-  <div class="zeile unterschrift-kurz">Stempel / Unterschrift: <span class="eintrag" style="width:70.9mm"></span></div>
+  <div class="zeile unterschrift-kurz">Stempel / Unterschrift: <span class="eintrag stempelfeld" style="width:70.9mm">${
+    unterschrift
+      ? `<img class="unterschrift-bild" src="${unterschrift}" alt="" />`
+      : ""
+  }${stempel ? `<img class="stempel-bild" src="${stempel}" alt="" />` : ""}</span></div>
 </div>
 <div class="schnitt-kurz"><span>✂</span></div>`;
 };
@@ -279,6 +301,9 @@ const VERORDNUNG_KURZ_STYLES = `
   .spalten span { width: 15.3mm; text-align: center; font-size: 7.5pt; color: #666; }
   .feld { width: 15.3mm; height: 6.2mm; border: 0.5mm solid #111; display: flex; align-items: center; justify-content: center; }
   .unterschrift-kurz { margin-top: 9mm; }
+  .stempelfeld { position: relative; }
+  .unterschrift-bild { position: absolute; left: 2mm; bottom: 0; height: 11mm; max-width: 30mm; object-fit: contain; }
+  .stempel-bild { position: absolute; left: 32mm; bottom: -4mm; height: 17mm; max-width: 34mm; object-fit: contain; }
   .wert { font-family: "Courier New", Courier, monospace; font-weight: bold; font-size: 10pt; }
   .schnitt-kurz { border-top: 0.25mm dashed #999; position: relative; }
   .schnitt-kurz span { position: absolute; left: 4mm; top: -2.6mm; background: #fff; color: #999; font-size: 9pt; padding: 0 1mm; }

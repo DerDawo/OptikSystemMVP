@@ -217,6 +217,8 @@ type LayoutDaten = {
   entities: DocumentMergeEntities;
   betrieb?: RaRecord;
   rechnungsnummer: string;
+  // kurze optometrische Verordnung: fortlaufende Nummer des Auftrags
+  verordnungsnummer?: string;
   begruendung?: string;
   // leer drucken (zum Ausfüllen von Hand), nur bei `leerMoeglich`
   leer?: boolean;
@@ -775,11 +777,42 @@ const FormulareDialog = ({
       });
   }, [braucheNummer, brille.id, notify, refresh]);
 
+  // Kurze optometrische Verordnung: beim ersten Öffnen zum Auftrag die nächste
+  // fortlaufende Verordnungsnummer vergeben (bleibt beim erneuten Druck gleich)
+  const [vergebeneVerordnung, setVergebeneVerordnung] = useState("");
+  const verordnungsnummer = String(
+    brille.Verordnungsnummer || vergebeneVerordnung || "",
+  );
+  const braucheVerordnungsnummer =
+    selectedVorlage?.Kategorie === VERORDNUNG_KATEGORIE &&
+    !verordnungsnummer &&
+    typeof brille.id === "number";
+  const verordnungAngefragt = useRef(false);
+  useEffect(() => {
+    if (!braucheVerordnungsnummer || verordnungAngefragt.current) return;
+    verordnungAngefragt.current = true;
+    supabase
+      .rpc("assign_verordnungsnummer", { p_brille_id: brille.id })
+      .then(({ data, error }) => {
+        if (error || !data) {
+          verordnungAngefragt.current = false;
+          notify("Verordnungsnummer konnte nicht vergeben werden.", {
+            type: "error",
+          });
+          return;
+        }
+        setVergebeneVerordnung(String(data));
+        notify(`Verordnungsnummer ${data} vergeben.`, { type: "success" });
+        refresh();
+      });
+  }, [braucheVerordnungsnummer, brille.id, notify, refresh]);
+
   const layoutDaten: LayoutDaten = useMemo(
     () => ({
       entities: mergeEntities,
       betrieb,
       rechnungsnummer,
+      verordnungsnummer,
       begruendung,
       leer,
       vorlagentext: selectedVorlage?.Vorlagentext ?? "",
@@ -788,6 +821,7 @@ const FormulareDialog = ({
       mergeEntities,
       betrieb,
       rechnungsnummer,
+      verordnungsnummer,
       begruendung,
       leer,
       selectedVorlage?.Vorlagentext,
