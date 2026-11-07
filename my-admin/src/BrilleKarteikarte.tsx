@@ -70,6 +70,7 @@ import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
 import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
+import { FASSUNG_HERSTELLER } from "./fassungHersteller";
 import { HerstellerBestellung } from "./HerstellerBestellung";
 import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
 
@@ -1578,6 +1579,7 @@ export const BrilleKarteikarte = () => {
                 "Hersteller Fassung",
                 fassungFeld("Hersteller"),
                 text(fassung?.Hersteller) || text(fassung?.Linie) || null,
+                { vorschlaege: FASSUNG_HERSTELLER },
               )}
             </Feld>
 
