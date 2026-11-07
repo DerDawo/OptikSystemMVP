@@ -152,6 +152,19 @@ describe("Rezeptanfrage an den Augenarzt", () => {
     expect(html).not.toContain("Hornhautverkruemmung");
   });
 
+  it("übernimmt den Augenarzt aus der Kundenkartei in eine Zeile", () => {
+    const html = buildRezeptanfragePrintHtml({
+      entities: {
+        ...entities,
+        kunde: {
+          ...entities.kunde,
+          Augenarzt: "Praxis Dr. Muster\nHauptstraße 1\n07545 Gera",
+        },
+      },
+    });
+    expect(html).toContain("Praxis Dr. Muster, Hauptstraße 1, 07545 Gera");
+  });
+
   it("bettet Stempel und Unterschrift nur als Bild-data-URL ein", () => {
     const png = "data:image/png;base64,iVBORw0KGgo=";
     const mit = buildRezeptanfragePrintHtml({
