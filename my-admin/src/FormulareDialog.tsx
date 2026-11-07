@@ -137,6 +137,10 @@ import {
   buildSrhBildschirmbrillePrintHtml,
 } from "./srhBildschirmbrilleTemplate";
 import {
+  buildJobcenterBildschirmbrillePreviewHtml,
+  buildJobcenterBildschirmbrillePrintHtml,
+} from "./jobcenterBildschirmbrilleTemplate";
+import {
   buildMahnungPreviewHtml,
   buildMahnungPrintHtml,
 } from "./mahnungTemplate";
@@ -404,6 +408,14 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Antrag-SRH-Vorschau",
     preview: buildSrhBildschirmbrillePreviewHtml,
     print: buildSrhBildschirmbrillePrintHtml,
+  },
+  // Formblatt "Vom Optiker auszufüllen (Bildschirmarbeitsplatzbrille)" für
+  // Mitarbeiter des Jobcenters (Stempel und Unterschrift aus den Einstellungen)
+  "Antrag Jobcenter": {
+    ausVorschau: true,
+    title: "Antrag-Jobcenter-Vorschau",
+    preview: buildJobcenterBildschirmbrillePreviewHtml,
+    print: buildJobcenterBildschirmbrillePrintHtml,
   },
   [AUFTRAGSZETTEL_KATEGORIE]: {
     ausVorschau: true,
