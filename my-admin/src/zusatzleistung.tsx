@@ -86,7 +86,10 @@ export const ZusatzleistungEdit = () => (
         <FieldRow>
           <SelectInput source="Kategorie" choices={ZUSATZLEISTUNG_KATEGORIEN} />
           <TextInput source="Bezeichnung" />
-          <NumberInput source="Betrag" />
+          <NumberInput
+            source="Betrag"
+            helperText="Gilt für neue Aufträge; bisherige behalten ihren Preis"
+          />
         </FieldRow>
         <FieldRow>
           <BooleanInput
