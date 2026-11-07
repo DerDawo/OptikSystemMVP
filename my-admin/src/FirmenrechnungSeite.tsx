@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Title, useNotify } from "react-admin";
 import {
   Alert,
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -27,6 +28,10 @@ import { supabase } from "./utils";
 import { formatEuro } from "./rechnungTemplate";
 import { belegAlsPdf, herunterladen } from "./belegPdf";
 import { druckeDirekt } from "./direktDruck";
+import {
+  FIRMENTAG_AKTIVITAETEN,
+  FIRMENTAG_LEISTUNGEN,
+} from "./firmentagLeistungen";
 import {
   alsDatensatz,
   ausDatensatz,
@@ -237,12 +242,20 @@ export const FirmenrechnungSeite = () => {
               onChange={(e) => setze("ansprechpartner", e.target.value)}
             />
           </Box>
-          <TextField
-            label="Aktivität (Veranstaltung, Vortrag, Seminar …)"
-            size="small"
+          <Autocomplete
+            freeSolo
+            openOnFocus
             disabled={gestellt}
-            value={r.aktivitaet}
-            onChange={(e) => setze("aktivitaet", e.target.value)}
+            options={FIRMENTAG_AKTIVITAETEN}
+            inputValue={r.aktivitaet}
+            onInputChange={(_, wert) => setze("aktivitaet", wert)}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                label="Aktivität (Veranstaltung, Vortrag, Seminar …)"
+                size="small"
+              />
+            )}
           />
           <TextField
             label="Beschreibung des Auftrags"
@@ -276,12 +289,22 @@ export const FirmenrechnungSeite = () => {
                   setzePosition(i, "zeitaufwand", e.target.value)
                 }
               />
-              <TextField
-                label="Aktivität"
-                size="small"
+              <Autocomplete
+                freeSolo
+                openOnFocus
                 disabled={gestellt}
-                value={p.aktivitaet}
-                onChange={(e) => setzePosition(i, "aktivitaet", e.target.value)}
+                options={[...FIRMENTAG_LEISTUNGEN, ...FIRMENTAG_AKTIVITAETEN]}
+                inputValue={p.aktivitaet}
+                onInputChange={(_, wert) =>
+                  setzePosition(i, "aktivitaet", wert)
+                }
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    label="Aktivität / Untersuchung"
+                    size="small"
+                  />
+                )}
               />
               <TextField
                 label="Betrag €"
