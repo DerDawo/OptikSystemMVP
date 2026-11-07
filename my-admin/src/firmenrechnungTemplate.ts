@@ -279,3 +279,31 @@ export const ausDatensatz = (z: Zeile): Firmenrechnung => ({
   mwstSatz: Number(z.MwStSatz) || 0,
   bemerkung: z.Bemerkung ?? "",
 });
+
+/** Betreff und Text für den Versand der Firmenrechnung per E-Mail. */
+export const firmenrechnungMail = (r: Firmenrechnung) => {
+  const a = RECHNUNG_ABSENDER;
+  const anrede = r.ansprechpartner.trim()
+    ? `Guten Tag ${r.ansprechpartner.trim()},`
+    : "Sehr geehrte Damen und Herren,";
+  const wofuer = [
+    r.aktivitaet.trim() && `für den ${r.aktivitaet.trim()}`,
+    r.leistungsdatum && `am ${datum(r.leistungsdatum)}`,
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return {
+    betreff: `Rechnung Nr. ${r.rechnungsnummer} – ${a.firma}`,
+    text: `${anrede}
+
+anbei erhalten Sie unsere Rechnung Nr. ${r.rechnungsnummer}${wofuer ? ` ${wofuer}` : ""} über ${formatEuro(summen(r).brutto)}.
+
+Vielen Dank für Ihren Auftrag und die angenehme Zusammenarbeit.
+
+Mit freundlichen Grüßen
+${a.inhaber}
+${a.firma} · ${a.marke}
+${a.strasseLang}, ${a.plz} ${a.ort}
+Tel. ${a.telefon}`,
+  };
+};

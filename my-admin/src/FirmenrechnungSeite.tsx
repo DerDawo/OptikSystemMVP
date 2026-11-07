@@ -23,20 +23,24 @@ import AddIcon from "@mui/icons-material/Add";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import PrintIcon from "@mui/icons-material/Print";
 import PictureAsPdfIcon from "@mui/icons-material/PictureAsPdf";
+import EmailIcon from "@mui/icons-material/Email";
 import dayjs from "dayjs";
 import { supabase } from "./utils";
 import { formatEuro } from "./rechnungTemplate";
-import { belegAlsPdf, herunterladen } from "./belegPdf";
+import { belegAlsPdf, belegVersenden, herunterladen } from "./belegPdf";
+import { istHandy } from "./messaging";
 import { druckeDirekt } from "./direktDruck";
 import {
   FIRMENTAG_AKTIVITAETEN,
   FIRMENTAG_LEISTUNGEN,
+  beschreibungVorschlag,
 } from "./firmentagLeistungen";
 import {
   alsDatensatz,
   ausDatensatz,
   buildFirmenrechnungHtml,
   fehlendeAngaben,
+  firmenrechnungMail,
   leereFirmenrechnung,
   summen,
   type Firmenrechnung,
@@ -125,6 +129,44 @@ export const FirmenrechnungSeite = () => {
         ?.trim()
         .replace(/[^\wÄÖÜäöüß-]+/g, "-") || "Firma"
     }.pdf`;
+
+  // E-Mail-Adresse nur für den Versand, nicht Teil der Rechnung
+  const [email, setEmail] = useState("");
+  const perEmail = async () => {
+    // Gmail gleich beim Klick öffnen, sonst blockiert der Browser das Fenster
+    const vorab = istHandy()
+      ? null
+      : window.open("about:blank", "unicorn-gmail");
+    setArbeitet(true);
+    try {
+      const datei = await belegAlsPdf(
+        buildFirmenrechnungHtml(r, false),
+        dateiname(),
+      );
+      const mail = firmenrechnungMail(r);
+      const ergebnis = await belegVersenden(
+        "email",
+        datei,
+        { an: email.trim(), ...mail },
+        (adresse) =>
+          notify(
+            `E-Mail-Adresse ${adresse} kopiert – in der E-Mail beim Empfänger einfügen.`,
+            { type: "info", autoHideDuration: 15000 },
+          ),
+        vorab,
+      );
+      if (ergebnis === "heruntergeladen") {
+        notify(
+          `PDF „${datei.name}“ im Ordner „Downloads“ gespeichert und Gmail geöffnet – bitte das PDF in die E-Mail ziehen.`,
+          { type: "info", autoHideDuration: 15000 },
+        );
+      }
+    } catch {
+      vorab?.close();
+      notify("PDF konnte nicht erstellt werden.", { type: "error" });
+    }
+    setArbeitet(false);
+  };
 
   const pdf = async () => {
     setArbeitet(true);
@@ -248,7 +290,13 @@ export const FirmenrechnungSeite = () => {
             disabled={gestellt}
             options={FIRMENTAG_AKTIVITAETEN}
             inputValue={r.aktivitaet}
-            onInputChange={(_, wert) => setze("aktivitaet", wert)}
+            onInputChange={(_, wert) =>
+              setR((alt) => ({
+                ...alt,
+                aktivitaet: wert,
+                beschreibung: beschreibungVorschlag(wert, alt.beschreibung),
+              }))
+            }
             renderInput={(params) => (
               <TextField
                 {...params}
@@ -429,6 +477,22 @@ export const FirmenrechnungSeite = () => {
                   onClick={() => void pdf()}
                 >
                   PDF speichern
+                </Button>
+                <TextField
+                  size="small"
+                  type="email"
+                  label="E-Mail des Empfängers"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  sx={{ flex: "1 1 220px" }}
+                />
+                <Button
+                  variant="outlined"
+                  disabled={arbeitet}
+                  startIcon={<EmailIcon />}
+                  onClick={() => void perEmail()}
+                >
+                  Per E-Mail
                 </Button>
               </>
             )}
