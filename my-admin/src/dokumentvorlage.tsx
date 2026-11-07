@@ -62,6 +62,10 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Trockenes Auge", name: "Fragebogen Trockenes Auge" },
   { id: "Antrag SRH", name: "Antrag SRH (Bildschirmarbeitsbrille)" },
   {
+    id: "Antrag Jobcenter",
+    name: "Antrag Jobcenter (Bildschirmarbeitsbrille)",
+  },
+  {
     id: "Rechnung Bildschirmarbeitsplatzbrille",
     name: "Rechnung Bildschirmarbeitsplatzbrille",
   },
