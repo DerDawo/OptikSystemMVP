@@ -37,6 +37,10 @@ export type Firmenrechnung = {
   bemerkung: string;
 };
 
+// Vorbelegung der Bemerkung, in der Seite änderbar
+export const DANKESTEXT =
+  "Vielen Dank für Ihren Auftrag und das entgegengebrachte Vertrauen. Es war uns eine Freude, Ihre Mitarbeitenden rund um das Thema Augen und gutes Sehen zu unterstützen. Für Rückfragen und weitere Aktionstage stehen wir Ihnen jederzeit gern zur Verfügung.";
+
 export const leereFirmenrechnung = (heute: string): Firmenrechnung => ({
   rechnungsnummer: "",
   rechnungsdatum: heute,
@@ -52,7 +56,7 @@ export const leereFirmenrechnung = (heute: string): Firmenrechnung => ({
   kilometer: "",
   kmSatz: "0,30",
   mwstSatz: RECHNUNG_ABSENDER.mwstSatz,
-  bemerkung: "",
+  bemerkung: DANKESTEXT,
 });
 
 const runde = (n: number) => Math.round(n * 100) / 100;
@@ -74,13 +78,25 @@ export const summen = (r: Firmenrechnung) => {
   return { honorar, fahrkosten, netto, mwst, brutto: runde(netto + mwst) };
 };
 
+/** Text einer Position; ohne eigenen Text die Aktivität der Rechnung. */
+export const positionText = (p: HonorarPosition, r: Firmenrechnung) =>
+  p.aktivitaet.trim() || r.aktivitaet.trim();
+
+// Positionen, die auf der Rechnung erscheinen
+const sichtbarePositionen = (r: Firmenrechnung) =>
+  r.positionen.filter((p) => p.aktivitaet.trim() || betrag(p.betrag) > 0);
+
 /** Was vor dem Anlegen noch fehlt; leer = Rechnung kann gestellt werden. */
 export const fehlendeAngaben = (r: Firmenrechnung): string[] => {
   const fehlt: string[] = [];
   if (!r.empfaenger.trim()) fehlt.push("Empfänger");
   if (!r.rechnungsdatum) fehlt.push("Rechnungsdatum");
-  if (!r.positionen.some((p) => p.aktivitaet.trim() && betrag(p.betrag) > 0))
+  if (!r.positionen.some((p) => betrag(p.betrag) > 0))
     fehlt.push("mindestens eine Position mit Betrag");
+  r.positionen.forEach((p, i) => {
+    if (betrag(p.betrag) > 0 && !positionText(p, r))
+      fehlt.push(`Aktivität bei Position ${i + 1}`);
+  });
   if (summen(r).netto <= 0) fehlt.push("Betrag");
   return fehlt;
 };
@@ -103,9 +119,7 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
     .filter(Boolean)
     .map((z) => `<div>${e(z)}</div>`)
     .join("");
-  const positionen = r.positionen.filter(
-    (p) => p.aktivitaet.trim() || betrag(p.betrag) > 0,
-  );
+  const positionen = sichtbarePositionen(r);
   const km = betrag(r.kilometer);
   return `
 <div class="beleg">
@@ -135,7 +149,7 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
         ${positionen
           .map(
             (p) =>
-              `<tr><td>${e(p.zeitaufwand)}</td><td>${e(p.aktivitaet)}</td><td class="fr-betrag">${e(formatEuro(betrag(p.betrag)))}</td></tr>`,
+              `<tr><td>${e(p.zeitaufwand)}</td><td>${e(positionText(p, r))}</td><td class="fr-betrag">${e(formatEuro(betrag(p.betrag)))}</td></tr>`,
           )
           .join("")}
         ${km > 0 ? `<tr><td></td><td>Fahrkosten: ${e(zahl1.format(km))} km × ${e(formatEuro(betrag(r.kmSatz)))}</td><td class="fr-betrag">${e(formatEuro(s.fahrkosten))}</td></tr>` : ""}
@@ -193,13 +207,11 @@ export const alsDatensatz = (r: Firmenrechnung) => {
     Ansprechpartner: r.ansprechpartner.trim(),
     Aktivitaet: r.aktivitaet.trim(),
     Beschreibung: r.beschreibung.trim(),
-    Positionen: r.positionen
-      .filter((p) => p.aktivitaet.trim() || betrag(p.betrag) > 0)
-      .map((p) => ({
-        zeitaufwand: p.zeitaufwand.trim(),
-        aktivitaet: p.aktivitaet.trim(),
-        betrag: runde(betrag(p.betrag)),
-      })),
+    Positionen: sichtbarePositionen(r).map((p) => ({
+      zeitaufwand: p.zeitaufwand.trim(),
+      aktivitaet: positionText(p, r),
+      betrag: runde(betrag(p.betrag)),
+    })),
     Kilometer: betrag(r.kilometer),
     KmSatz: betrag(r.kmSatz),
     MwStSatz: r.mwstSatz,
