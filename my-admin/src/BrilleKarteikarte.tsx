@@ -1079,15 +1079,16 @@ export const BrilleKarteikarte = () => {
         sx={{
           display: "grid",
           // Kundenname schmal links wie in Prisma, die Karteikarte nutzt die
-          // übrige Breite
-          gridTemplateColumns: { xs: "1fr", md: "120px minmax(0, 1fr)" },
-          gap: { xs: 1, md: 1.5 },
+          // übrige Breite; bis 1536 px (z. B. 1366x768 mit Menü) steht der
+          // Name darüber, damit die Karteikarte nicht abgeschnitten wird
+          gridTemplateColumns: { xs: "1fr", xl: "110px minmax(0, 1fr)" },
+          gap: { xs: 0.5, xl: 1.5 },
         }}
       >
         <Typography
           component="div"
           sx={{
-            fontSize: "1.15rem",
+            fontSize: { xs: "1rem", xl: "1.05rem" },
             fontWeight: 400,
             color: "text.secondary",
             lineHeight: 1.25,

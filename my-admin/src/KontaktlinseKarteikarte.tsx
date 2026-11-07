@@ -469,8 +469,10 @@ export const KontaktlinseKarteikarte = () => {
       <Box
         sx={{
           display: "grid",
-          gridTemplateColumns: { xs: "1fr", md: "150px minmax(0, 1fr)" },
-          gap: { xs: 1, md: 1.5 },
+          // bis 1536 px (z. B. 1366x768 mit Menü) stehen Name und
+          // CL-Karteien über der Karteikarte, damit sie nicht abgeschnitten wird
+          gridTemplateColumns: { xs: "1fr", xl: "150px minmax(0, 1fr)" },
+          gap: { xs: 0.5, xl: 1.5 },
         }}
       >
         {/* Kundenname und Baum der CL-Karteien */}
@@ -478,7 +480,7 @@ export const KontaktlinseKarteikarte = () => {
           <Typography
             component="div"
             sx={{
-              fontSize: "1.15rem",
+              fontSize: { xs: "1rem", xl: "1.05rem" },
               color: "text.secondary",
               lineHeight: 1.25,
               overflowWrap: "anywhere",
