@@ -3,6 +3,7 @@ import {
   alsDatensatz,
   ausDatensatz,
   betrag,
+  firmenrechnungMail,
   buildFirmenrechnungHtml,
   fehlendeAngaben,
   leereFirmenrechnung,
@@ -94,5 +95,16 @@ describe("Firmenrechnung", () => {
     const zurueck = ausDatensatz({ ...d, Rechnungsnummer: "1" });
     expect(summen(zurueck)).toEqual(summen(gesundheitstag()));
     expect(zurueck.empfaenger).toContain("Jena");
+  });
+  it("baut den E-Mail-Text mit Nummer, Anlass und Betrag", () => {
+    const mail = firmenrechnungMail({
+      ...gesundheitstag(),
+      rechnungsnummer: "114999",
+      ansprechpartner: "Ilka Scheibe",
+    });
+    expect(mail.betreff).toContain("Rechnung Nr. 114999");
+    expect(mail.text).toContain("Guten Tag Ilka Scheibe,");
+    expect(mail.text).toContain("für den Gesundheitstag Augen am 08.11.2026");
+    expect(mail.text).toMatch(/1\.206,42/);
   });
 });
