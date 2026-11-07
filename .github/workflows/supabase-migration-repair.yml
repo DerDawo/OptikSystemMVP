@@ -137,10 +137,10 @@ jobs:
           fi
 
           if [ "${#to_revert[@]}" -gt 0 ]; then
-            supabase migration repair --linked --status reverted "${to_revert[@]}"
+            supabase migration repair --linked --yes --status reverted "${to_revert[@]}"
           fi
           if [ "${#to_apply[@]}" -gt 0 ]; then
-            supabase migration repair --linked --status applied "${to_apply[@]}"
+            supabase migration repair --linked --yes --status applied "${to_apply[@]}"
           fi
 
           echo
