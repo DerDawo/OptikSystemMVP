@@ -638,6 +638,13 @@ export const KundeEdit = () => (
             multiline
             fullWidth
           />
+          <TextInput
+            source="Augenarzt"
+            label="Augenarzt (Praxis, Name, Straße, PLZ Ort, Telefon)"
+            multiline
+            minRows={3}
+            fullWidth
+          />
         </FieldRow>
       </FormSection>
       <FormSection title="Merkmale">
@@ -729,6 +736,13 @@ export const KundeCreate = () => {
               source="Notizen"
               label="Medizinische Notizen (Erkrankungen, OPs, Unverträglichkeiten)"
               multiline
+              fullWidth
+            />
+            <TextInput
+              source="Augenarzt"
+              label="Augenarzt (Praxis, Name, Straße, PLZ Ort, Telefon)"
+              multiline
+              minRows={3}
               fullWidth
             />
           </FieldRow>

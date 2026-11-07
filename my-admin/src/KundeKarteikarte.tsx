@@ -483,6 +483,21 @@ export const KundeKarteikarte = () => {
           undefined,
           true,
         )}
+
+        {/* Behandelnder Augenarzt mit vollständiger Adresse */}
+        {zeile(
+          "Augenarzt",
+          <Feld mehrzeilig>
+            <Eingabe
+              name="Augenarzt (Praxis, Name, Straße, PLZ Ort, Telefon)"
+              wert={kunde.Augenarzt}
+              speichere={speichere("Augenarzt")}
+              mehrzeilig
+            />
+          </Feld>,
+          undefined,
+          true,
+        )}
       </Box>
 
       {prismaAngaben.length > 0 && (
