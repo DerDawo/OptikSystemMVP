@@ -158,6 +158,7 @@ export const buildRezeptanfrageBodyHtml = ({
   <div class="reihe">${feld("Zuweisender Optiker / Betrieb", `${a.firma} · ${a.marke}`)}${feld("Telefon / E-Mail Optiker", `${a.telefon} · ${a.email}`)}${feld("Anfragedatum", heute, "0.6")}</div>
   <div class="reihe">${feld("Letzte augenärztl. Untersuchung (ca.)")}<div class="feld" style="flex:1.4"><div class="label">Aktuelle Brillenglasstärke bekannt</div><div class="wert">${box("Ja")}${box("Nein")}${box("Unbekannt")}</div></div></div>
   <div class="zeile dringlich"><span>Dringlichkeit: ${box("Normal")}${box("Dringend")}</span><span>(Begründung:</span><span class="linie"></span><span>)</span></div>
+  <div class="reihe">${feld("Behandelnder Augenarzt / Praxis", text(k.Augenarzt).replace(/\s*\n\s*/g, ", "), "3")}</div>
   <div class="reihe freitext">${feld("Anliegen / Freitext an den Augenarzt")}</div>
 
   <h2>6 Datenschutz, Einwilligung &amp; Unterschrift</h2>
