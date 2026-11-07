@@ -133,7 +133,7 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
     "HONORARRECHNUNG",
     anschrift,
   )}
-  <div class="inhalt">
+  <div class="inhalt fr-inhalt">
     <div class="inhalt-block">
       <table class="fr-angaben">
         ${angabe("Auftrag Nr.", r.auftragsnummer)}
@@ -159,10 +159,10 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
         <div><span>zzgl. ${e(zahl1.format(r.mwstSatz))} % MwSt</span><span>${e(formatEuro(s.mwst))}</span></div>
       </div>
       <div class="summenbalken"><span>Rechnungsbetrag</span><span>${e(formatEuro(s.brutto))}</span></div>
+      ${r.bemerkung.trim() ? `<div class="fr-bemerkung">${e(r.bemerkung).replace(/\n/g, "<br />")}</div>` : ""}
       <div class="hinweise">
         Bitte überweisen Sie den Rechnungsbetrag innerhalb von ${a.zahlungszielTage} Tagen unter Angabe der Rechnungsnummer auf unser Konto:<br />
         ${e(a.bankName)} · IBAN ${e(a.iban)} · BIC ${e(a.bic)}
-        ${r.bemerkung.trim() ? `<br /><br />${e(r.bemerkung).replace(/\n/g, "<br />")}` : ""}
       </div>
     </div>
   </div>
@@ -182,7 +182,29 @@ const FIRMENRECHNUNG_STYLES = `<style>
   .beleg .fr-betrag, .beleg .fr-posten th.fr-betrag { text-align: right; white-space: nowrap; }
   .beleg .fr-summen { border-top: 0.25mm solid #999; padding-top: 1.4mm; }
   .beleg .fr-summen > div { display: flex; justify-content: space-between; padding: 0.4mm 0; }
+  .beleg .fr-bemerkung { margin-top: 5mm; font-size: 9pt; line-height: 1.45; }
+  .beleg .fr-inhalt { overflow: hidden; font-size: 10pt; }
+  .beleg .fr-inhalt .hinweise { margin-top: 4mm; }
 </style>`;
+
+// Viel Inhalt (lange Beschreibung, viele Positionen, Bemerkung): der Block
+// wird verkleinert, statt in die Fußzeile zu laufen (transform, damit auch
+// Druck und PDF stimmen)
+const FIRMENRECHNUNG_EINPASSEN = `<script>
+(function () {
+  document.querySelectorAll(".beleg .fr-inhalt").forEach(function (rahmen) {
+    var block = rahmen.querySelector(".inhalt-block");
+    if (!block) return;
+    var faktor = 1;
+    while (block.offsetHeight * faktor > rahmen.clientHeight + 1 && faktor > 0.6) {
+      faktor = Math.round((faktor - 0.02) * 100) / 100;
+      block.style.transformOrigin = "top left";
+      block.style.transform = "scale(" + faktor + ")";
+      block.style.width = 100 / faktor + "%";
+    }
+  });
+})();
+</script>`;
 
 export const buildFirmenrechnungHtml = (
   r: Firmenrechnung,
@@ -190,7 +212,9 @@ export const buildFirmenrechnungHtml = (
 ): string =>
   belegSeite(
     `Rechnung ${r.rechnungsnummer}`.trim(),
-    FIRMENRECHNUNG_STYLES + buildFirmenrechnungBodyHtml(r),
+    FIRMENRECHNUNG_STYLES +
+      buildFirmenrechnungBodyHtml(r) +
+      FIRMENRECHNUNG_EINPASSEN,
     vorschau,
   );
 
