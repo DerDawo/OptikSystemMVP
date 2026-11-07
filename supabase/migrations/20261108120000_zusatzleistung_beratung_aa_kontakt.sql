@@ -33,3 +33,19 @@ select
 where not exists (
   select 1 from public.zusatzleistung where "Bezeichnung" = 'Nachtclip'
 );
+
+-- Ersatzclip (39,90 €), ebenfalls am Ende der Auswahl
+update public.zusatzleistung
+set "Betrag" = 39.90, "Aktiv" = true
+where "Bezeichnung" = 'Ersatzclip';
+
+insert into public.zusatzleistung ("Bezeichnung", "Betrag", "Kategorie", "Reihenfolge", "Aktiv")
+select
+  'Ersatzclip',
+  39.90,
+  'Veredelungen & Extras',
+  coalesce((select max("Reihenfolge") from public.zusatzleistung), 0) + 1,
+  true
+where not exists (
+  select 1 from public.zusatzleistung where "Bezeichnung" = 'Ersatzclip'
+);
