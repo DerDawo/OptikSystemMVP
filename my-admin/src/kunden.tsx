@@ -47,6 +47,9 @@ import EmailIcon from "@mui/icons-material/Email";
 import SendIcon from "@mui/icons-material/Send";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import { sortiereVorlagen, verschiebe } from "./nachrichtenReihenfolge";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { supabase } from "./utils";
 import {
@@ -854,8 +857,8 @@ export const KundeMessage = () => {
       return;
     }
 
-    const nextMessages = (Array.isArray(data) ? data : [])
-      .map((entry, index) => {
+    const nextMessages = (Array.isArray(data) ? data : []).map(
+      (entry, index) => {
         const record = (entry ?? {}) as Record<string, unknown>;
         const id =
           typeof record.id === "string" || typeof record.id === "number"
@@ -867,26 +870,17 @@ export const KundeMessage = () => {
           id,
           _rowKey: id !== undefined ? String(id) : `nachricht-${index}`,
         };
-      })
-      .sort((left, right) => {
-        if (typeof left.id === "number" && typeof right.id === "number") {
-          return left.id - right.id;
-        }
+      },
+    );
+    const sortedMessages = sortiereVorlagen(nextMessages);
 
-        if (typeof left.id === "string" && typeof right.id === "string") {
-          return left.id.localeCompare(right.id);
-        }
-
-        return left._rowKey.localeCompare(right._rowKey);
-      });
-
-    setMessages(nextMessages);
+    setMessages(sortedMessages);
     setSelectedMessageKey((previousKey) => {
       const targetKey = preferredKey ?? previousKey;
       return targetKey &&
-        nextMessages.some((message) => message._rowKey === targetKey)
+        sortedMessages.some((message) => message._rowKey === targetKey)
         ? targetKey
-        : (nextMessages[0]?._rowKey ?? null);
+        : (sortedMessages[0]?._rowKey ?? null);
     });
     setIsLoadingMessages(false);
   }, []);
@@ -1160,6 +1154,21 @@ export const KundeMessage = () => {
     await loadMessages(savedId !== undefined ? String(savedId) : undefined);
   };
 
+  // Pfeile in der Vorlagenliste: Vorlage eine Stelle nach oben/unten
+  const verschiebeVorlage = async (index: number, richtung: -1 | 1) => {
+    const aenderungen = verschiebe(messages, index, richtung);
+    if (aenderungen.length === 0) return;
+    const ergebnisse = await Promise.all(
+      aenderungen.map(({ id, Reihenfolge }) =>
+        supabase.from("nachrichten").update({ Reihenfolge }).eq("id", id),
+      ),
+    );
+    if (ergebnisse.some((r) => r.error)) {
+      setMessageError("Reihenfolge konnte nicht gespeichert werden.");
+    }
+    await loadMessages(messages[index]?._rowKey);
+  };
+
   const openDeleteTemplateDialog = (message: NachrichtRecord) => {
     setTemplateDeleteError(null);
     setTemplateToDelete(message);
@@ -1306,7 +1315,7 @@ export const KundeMessage = () => {
                 </Typography>
               ) : null}
               {!isLoadingMessages && !messageError
-                ? messages.map((message) => {
+                ? messages.map((message, index) => {
                     const messageTitle = getMessageTitle(message);
                     const messageContent = getMessageContent(message);
 
@@ -1316,6 +1325,22 @@ export const KundeMessage = () => {
                         disablePadding
                         secondaryAction={
                           <Stack direction="row" spacing={0.5}>
+                            <IconButton
+                              aria-label="Vorlage nach oben"
+                              size="small"
+                              disabled={index === 0}
+                              onClick={() => void verschiebeVorlage(index, -1)}
+                            >
+                              <ArrowUpwardIcon fontSize="small" />
+                            </IconButton>
+                            <IconButton
+                              aria-label="Vorlage nach unten"
+                              size="small"
+                              disabled={index === messages.length - 1}
+                              onClick={() => void verschiebeVorlage(index, 1)}
+                            >
+                              <ArrowDownwardIcon fontSize="small" />
+                            </IconButton>
                             <IconButton
                               aria-label="Vorlage bearbeiten"
                               size="small"
@@ -1336,7 +1361,7 @@ export const KundeMessage = () => {
                         <ListItemButton
                           selected={selectedMessageKey === message._rowKey}
                           onClick={() => setSelectedMessageKey(message._rowKey)}
-                          sx={{ borderRadius: 1, pr: 9 }}
+                          sx={{ borderRadius: 1, pr: 17 }}
                         >
                           <ListItemText
                             primary={messageTitle}

@@ -17,6 +17,7 @@ import {
   openExternalMessage,
 } from "./messaging";
 import { renderMessageTemplate } from "./nachrichtenPlatzhalter";
+import { sortiereVorlagen } from "./nachrichtenReihenfolge";
 
 /*
  * Nachricht an einen Kunden im Stil eines Handys: oben Name und Nummer,
@@ -221,7 +222,7 @@ export const NachrichtHandy = ({
                 flexShrink: 0,
               }}
             >
-              {(vorlagen ?? []).map((v) => {
+              {sortiereVorlagen(vorlagen ?? []).map((v) => {
                 const titel = text(v.Titel) || text(v.bezeichnung);
                 const inhalt = text(v.Text) || text(v.template);
                 if (!inhalt) return null;
