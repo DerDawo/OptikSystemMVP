@@ -33,3 +33,16 @@ export const FIRMENTAG_LEISTUNGEN = [
   "Vortrag",
   "Fahrkosten",
 ];
+
+// Feste Leistungsbeschreibung für Gesundheitstage; wird eingetragen, sobald
+// die Aktivität ein Gesundheitstag ist und die Beschreibung noch leer ist
+export const GESUNDHEITSTAG_BESCHREIBUNG =
+  "Refraktion, Sehtest Bildschirmarbeitsplatz, Netzhautscreening (Fundusaufnahme), IOD-Messung, Farbsehtest, Brillen-Service (Reparatur und Anpassung), Beratung zu Augenkrankheiten, Bildschirmarbeitsplatzbrille, Kontaktlinsenberatung, Dokumentation";
+
+export const beschreibungVorschlag = (
+  aktivitaet: string,
+  beschreibung: string,
+): string =>
+  !beschreibung.trim() && /gesundheitstag/i.test(aktivitaet)
+    ? GESUNDHEITSTAG_BESCHREIBUNG
+    : beschreibung;
