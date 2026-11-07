@@ -49,6 +49,7 @@ import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/Delete";
 import { supabase } from "./utils";
+import { KundeLoeschenButton } from "./KundeLoeschenButton";
 import {
   type NachrichtTermin,
   renderMessageTemplate,
@@ -453,6 +454,7 @@ const KundeShowActions = () => (
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
+    <KundeLoeschenButton />
   </ShowActionsBar>
 );
 
