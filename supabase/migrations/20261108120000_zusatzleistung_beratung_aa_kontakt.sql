@@ -17,3 +17,19 @@ where not exists (
   select 1 from public.zusatzleistung
   where "Bezeichnung" = 'Beratungsleistung / AA-Kontakt'
 );
+
+-- Nachtclip (59,60 €), ebenfalls am Ende der Auswahl
+update public.zusatzleistung
+set "Betrag" = 59.60, "Aktiv" = true
+where "Bezeichnung" = 'Nachtclip';
+
+insert into public.zusatzleistung ("Bezeichnung", "Betrag", "Kategorie", "Reihenfolge", "Aktiv")
+select
+  'Nachtclip',
+  59.60,
+  'Veredelungen & Extras',
+  coalesce((select max("Reihenfolge") from public.zusatzleistung), 0) + 1,
+  true
+where not exists (
+  select 1 from public.zusatzleistung where "Bezeichnung" = 'Nachtclip'
+);
