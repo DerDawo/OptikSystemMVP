@@ -115,4 +115,20 @@ describe("werkstattauftragTemplate", () => {
     expect(html).not.toContain("L-778");
     expect(html).not.toContain("Classic");
   });
+  it("hat unter der Auftragserteilung Zeilen für neue Brillenstärken", () => {
+    const html = buildWerkstattauftragPrintHtml({ entities: {} });
+    expect(html).toContain("Neue Brillenstärken");
+    expect(html.indexOf("Neue Brillenstärken")).toBeGreaterThan(
+      html.indexOf("Unterschrift Kunde/Kundin"),
+    );
+  });
+  it("hat unter Bemerkungen drei Ankreuzfelder", () => {
+    const html = buildWerkstattauftragPrintHtml({ entities: {} });
+    for (const t of [
+      "Augenarzt kontaktieren",
+      "Form größer",
+      "Fassungsauswahl ausstehend",
+    ])
+      expect(html).toContain(t);
+  });
 });

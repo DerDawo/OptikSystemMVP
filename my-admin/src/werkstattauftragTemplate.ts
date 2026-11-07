@@ -229,8 +229,36 @@ const auftragserteilung = (endpreis: number) => {
         <div class="unterschrift">${escapeHtml(RECHNUNG_ABSENDER.ort)}, Datum</div>
         <div class="unterschrift">Unterschrift Kunde/Kundin</div>
       </div>
+      ${NEUE_STAERKEN}
     </div>`;
 };
+
+// Leere Zeilen zum Eintragen neuer Brillenstärken von Hand (z. B. nach
+// einer Nachmessung), direkt unter der Auftragserteilung
+const NEUE_STAERKEN_SPALTEN = [
+  "Sph",
+  "Cyl",
+  "A",
+  "Add",
+  "Prisma",
+  "Basis",
+  "Vis",
+];
+const NEUE_STAERKEN = `<div class="neue-staerken">
+        <b>Neue Brillenstärken</b>
+        <table class="werte"><thead><tr><th></th>${NEUE_STAERKEN_SPALTEN.map((s) => `<th>${s}</th>`).join("")}</tr></thead>
+        <tbody><tr><th>R</th>${"<td></td>".repeat(NEUE_STAERKEN_SPALTEN.length)}</tr><tr><th>L</th>${"<td></td>".repeat(NEUE_STAERKEN_SPALTEN.length)}</tr></tbody></table>
+        <div class="unterschriften"><div class="unterschrift">Datum</div><div class="unterschrift">Gemessen von</div></div>
+      </div>`;
+
+// Zum Ankreuzen unter "Bemerkungen"
+const BEMERKUNG_HAKEN = `<div class="bemerkung-haken">${[
+  "Augenarzt kontaktieren",
+  "Form größer",
+  "Fassungsauswahl ausstehend",
+]
+  .map((t) => `<span><span class="kasten"></span>${t}</span>`)
+  .join("")}</div>`;
 
 // Zum Abhaken in der Werkstatt, neben den Kontaktdaten
 const WERKSTATT_HAKEN = `<div class="haken">
@@ -311,6 +339,7 @@ export const buildWerkstattauftragBodyHtml = ({
         ["Größe", text(fassung.Groesse)],
       ])}
       <div class="balken"><span>Bemerkungen</span><span>Offen: ${escapeHtml(formatEuro(summen.offen))} €</span></div>
+      ${BEMERKUNG_HAKEN}
       <div class="notizen">${escapeHtml(text(brille.Notizen))}</div>
       ${text(kunde.Notizen) ? `<div class="notizen"><b>Kunde:</b> ${escapeHtml(text(kunde.Notizen))}</div>` : ""}
       <div class="schreiblinie"></div>
@@ -395,12 +424,19 @@ export const WERKSTATTAUFTRAG_STYLES = `
   .haken .linie { border-bottom: 1px solid #777; height: 3.4mm; }
   .haken .linie.lang { grid-column: span 2; }
   .notizen { white-space: pre-wrap; min-height: 4mm; }
+  .bemerkung-haken { display: flex; flex-wrap: wrap; column-gap: 4mm; row-gap: 1mm; font-size: 8pt; margin: 0.6mm 0 1mm; }
+  .bemerkung-haken > span { display: inline-flex; align-items: center; gap: 1.4mm; }
+  .bemerkung-haken .kasten { width: 2.8mm; height: 2.8mm; border: 1px solid #111; display: inline-block; }
   .schreiblinie { border-bottom: 1px solid #999; height: 5mm; }
   .auftragserteilung { margin-top: 2.5mm; font-size: 7pt; line-height: 1.3; }
   .auftragserteilung p { margin: 0 0 6mm; text-align: justify; }
   .auftragserteilung b { font-size: 8pt; }
   .unterschriften { display: flex; gap: 5mm; }
   .unterschrift { flex: 1; border-top: 1px solid #111; padding-top: 0.8mm; font-size: 7.5pt; }
+  .neue-staerken { margin-top: 5mm; }
+  .neue-staerken b { font-size: 8pt; display: block; margin-bottom: 1mm; }
+  .neue-staerken .werte { margin-bottom: 7mm; }
+  .neue-staerken .werte tbody td, .neue-staerken .werte tbody th { height: 6.5mm; }
   .schnitt { border-top: 1px dashed #888; margin: 3mm 0; height: 0; text-align: center; }
   .schnitt span { position: relative; top: -2.2mm; background: #fff; padding: 0 2mm; font-size: 7pt; color: #666; }
   .tipps { margin: 1mm 0 2mm; padding-left: 4mm; }
