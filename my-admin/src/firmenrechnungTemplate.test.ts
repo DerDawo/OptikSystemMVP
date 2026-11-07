@@ -57,6 +57,26 @@ describe("Firmenrechnung", () => {
     ]);
   });
 
+  it("nimmt ohne eigenen Positionstext die Aktivität der Rechnung", () => {
+    const r = gesundheitstag();
+    r.positionen = [
+      { zeitaufwand: "ganztägig", aktivitaet: "", betrag: "500" },
+    ];
+    expect(fehlendeAngaben(r)).toEqual([]);
+    expect(alsDatensatz(r).Positionen[0].aktivitaet).toBe(
+      "Gesundheitstag Augen",
+    );
+    expect(fehlendeAngaben({ ...r, aktivitaet: "" })).toEqual([
+      "Aktivität bei Position 1",
+    ]);
+  });
+
+  it("belegt die Bemerkung mit einem Dankestext vor", () => {
+    expect(leereFirmenrechnung("2026-11-08").bemerkung).toContain(
+      "Vielen Dank für Ihren Auftrag",
+    );
+  });
+
   it("zeigt Empfänger, Fahrkosten und Rechnungsbetrag", () => {
     const html = buildFirmenrechnungHtml(
       { ...gesundheitstag(), rechnungsnummer: "114999" },

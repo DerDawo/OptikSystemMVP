@@ -37,6 +37,10 @@ export type Firmenrechnung = {
   bemerkung: string;
 };
 
+// Vorbelegung der Bemerkung, in der Seite änderbar
+export const DANKESTEXT =
+  "Vielen Dank für Ihren Auftrag und das entgegengebrachte Vertrauen. Es war uns eine Freude, Ihre Mitarbeitenden rund um das Thema Augen und gutes Sehen zu unterstützen. Für Rückfragen und weitere Aktionstage stehen wir Ihnen jederzeit gern zur Verfügung.";
+
 export const leereFirmenrechnung = (heute: string): Firmenrechnung => ({
   rechnungsnummer: "",
   rechnungsdatum: heute,
@@ -52,7 +56,7 @@ export const leereFirmenrechnung = (heute: string): Firmenrechnung => ({
   kilometer: "",
   kmSatz: "0,30",
   mwstSatz: RECHNUNG_ABSENDER.mwstSatz,
-  bemerkung: "",
+  bemerkung: DANKESTEXT,
 });
 
 const runde = (n: number) => Math.round(n * 100) / 100;
@@ -74,13 +78,25 @@ export const summen = (r: Firmenrechnung) => {
   return { honorar, fahrkosten, netto, mwst, brutto: runde(netto + mwst) };
 };
 
+/** Text einer Position; ohne eigenen Text die Aktivität der Rechnung. */
+export const positionText = (p: HonorarPosition, r: Firmenrechnung) =>
+  p.aktivitaet.trim() || r.aktivitaet.trim();
+
+// Positionen, die auf der Rechnung erscheinen
+const sichtbarePositionen = (r: Firmenrechnung) =>
+  r.positionen.filter((p) => p.aktivitaet.trim() || betrag(p.betrag) > 0);
+
 /** Was vor dem Anlegen noch fehlt; leer = Rechnung kann gestellt werden. */
 export const fehlendeAngaben = (r: Firmenrechnung): string[] => {
   const fehlt: string[] = [];
   if (!r.empfaenger.trim()) fehlt.push("Empfänger");
   if (!r.rechnungsdatum) fehlt.push("Rechnungsdatum");
-  if (!r.positionen.some((p) => p.aktivitaet.trim() && betrag(p.betrag) > 0))
+  if (!r.positionen.some((p) => betrag(p.betrag) > 0))
     fehlt.push("mindestens eine Position mit Betrag");
+  r.positionen.forEach((p, i) => {
+    if (betrag(p.betrag) > 0 && !positionText(p, r))
+      fehlt.push(`Aktivität bei Position ${i + 1}`);
+  });
   if (summen(r).netto <= 0) fehlt.push("Betrag");
   return fehlt;
 };
@@ -103,9 +119,7 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
     .filter(Boolean)
     .map((z) => `<div>${e(z)}</div>`)
     .join("");
-  const positionen = r.positionen.filter(
-    (p) => p.aktivitaet.trim() || betrag(p.betrag) > 0,
-  );
+  const positionen = sichtbarePositionen(r);
   const km = betrag(r.kilometer);
   return `
 <div class="beleg">
@@ -119,7 +133,7 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
     "HONORARRECHNUNG",
     anschrift,
   )}
-  <div class="inhalt">
+  <div class="inhalt fr-inhalt">
     <div class="inhalt-block">
       <table class="fr-angaben">
         ${angabe("Auftrag Nr.", r.auftragsnummer)}
@@ -135,7 +149,7 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
         ${positionen
           .map(
             (p) =>
-              `<tr><td>${e(p.zeitaufwand)}</td><td>${e(p.aktivitaet)}</td><td class="fr-betrag">${e(formatEuro(betrag(p.betrag)))}</td></tr>`,
+              `<tr><td>${e(p.zeitaufwand)}</td><td>${e(positionText(p, r))}</td><td class="fr-betrag">${e(formatEuro(betrag(p.betrag)))}</td></tr>`,
           )
           .join("")}
         ${km > 0 ? `<tr><td></td><td>Fahrkosten: ${e(zahl1.format(km))} km × ${e(formatEuro(betrag(r.kmSatz)))}</td><td class="fr-betrag">${e(formatEuro(s.fahrkosten))}</td></tr>` : ""}
@@ -145,10 +159,10 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
         <div><span>zzgl. ${e(zahl1.format(r.mwstSatz))} % MwSt</span><span>${e(formatEuro(s.mwst))}</span></div>
       </div>
       <div class="summenbalken"><span>Rechnungsbetrag</span><span>${e(formatEuro(s.brutto))}</span></div>
+      ${r.bemerkung.trim() ? `<div class="fr-bemerkung">${e(r.bemerkung).replace(/\n/g, "<br />")}</div>` : ""}
       <div class="hinweise">
         Bitte überweisen Sie den Rechnungsbetrag innerhalb von ${a.zahlungszielTage} Tagen unter Angabe der Rechnungsnummer auf unser Konto:<br />
         ${e(a.bankName)} · IBAN ${e(a.iban)} · BIC ${e(a.bic)}
-        ${r.bemerkung.trim() ? `<br /><br />${e(r.bemerkung).replace(/\n/g, "<br />")}` : ""}
       </div>
     </div>
   </div>
@@ -168,7 +182,29 @@ const FIRMENRECHNUNG_STYLES = `<style>
   .beleg .fr-betrag, .beleg .fr-posten th.fr-betrag { text-align: right; white-space: nowrap; }
   .beleg .fr-summen { border-top: 0.25mm solid #999; padding-top: 1.4mm; }
   .beleg .fr-summen > div { display: flex; justify-content: space-between; padding: 0.4mm 0; }
+  .beleg .fr-bemerkung { margin-top: 5mm; font-size: 9pt; line-height: 1.45; }
+  .beleg .fr-inhalt { overflow: hidden; font-size: 10pt; }
+  .beleg .fr-inhalt .hinweise { margin-top: 4mm; }
 </style>`;
+
+// Viel Inhalt (lange Beschreibung, viele Positionen, Bemerkung): der Block
+// wird verkleinert, statt in die Fußzeile zu laufen (transform, damit auch
+// Druck und PDF stimmen)
+const FIRMENRECHNUNG_EINPASSEN = `<script>
+(function () {
+  document.querySelectorAll(".beleg .fr-inhalt").forEach(function (rahmen) {
+    var block = rahmen.querySelector(".inhalt-block");
+    if (!block) return;
+    var faktor = 1;
+    while (block.offsetHeight * faktor > rahmen.clientHeight + 1 && faktor > 0.6) {
+      faktor = Math.round((faktor - 0.02) * 100) / 100;
+      block.style.transformOrigin = "top left";
+      block.style.transform = "scale(" + faktor + ")";
+      block.style.width = 100 / faktor + "%";
+    }
+  });
+})();
+</script>`;
 
 export const buildFirmenrechnungHtml = (
   r: Firmenrechnung,
@@ -176,7 +212,9 @@ export const buildFirmenrechnungHtml = (
 ): string =>
   belegSeite(
     `Rechnung ${r.rechnungsnummer}`.trim(),
-    FIRMENRECHNUNG_STYLES + buildFirmenrechnungBodyHtml(r),
+    FIRMENRECHNUNG_STYLES +
+      buildFirmenrechnungBodyHtml(r) +
+      FIRMENRECHNUNG_EINPASSEN,
     vorschau,
   );
 
@@ -193,13 +231,11 @@ export const alsDatensatz = (r: Firmenrechnung) => {
     Ansprechpartner: r.ansprechpartner.trim(),
     Aktivitaet: r.aktivitaet.trim(),
     Beschreibung: r.beschreibung.trim(),
-    Positionen: r.positionen
-      .filter((p) => p.aktivitaet.trim() || betrag(p.betrag) > 0)
-      .map((p) => ({
-        zeitaufwand: p.zeitaufwand.trim(),
-        aktivitaet: p.aktivitaet.trim(),
-        betrag: runde(betrag(p.betrag)),
-      })),
+    Positionen: sichtbarePositionen(r).map((p) => ({
+      zeitaufwand: p.zeitaufwand.trim(),
+      aktivitaet: positionText(p, r),
+      betrag: runde(betrag(p.betrag)),
+    })),
     Kilometer: betrag(r.kilometer),
     KmSatz: betrag(r.kmSatz),
     MwStSatz: r.mwstSatz,
