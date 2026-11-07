@@ -235,6 +235,11 @@ export const MyMenu = () => (
       leftIcon={<AlertIcon />}
     />
     <Menu.Item
+      to="/firmenrechnung"
+      primaryText="Firmenrechnung"
+      leftIcon={<ReceiptIcon />}
+    />
+    <Menu.Item
       to="/rezepte"
       primaryText="Abgerechnete Rezepte"
       leftIcon={<PrescriptionIcon />}
