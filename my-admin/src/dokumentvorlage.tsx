@@ -60,6 +60,7 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
   { id: "Glasbestellung POL", name: "Glasbestellung POL" },
   { id: "Patientenanfrage", name: "Patientenanfrage" },
   { id: "Trockenes Auge", name: "Fragebogen Trockenes Auge" },
+  { id: "Auswertungsbogen", name: "Auswertungsbogen" },
   { id: "Antrag SRH", name: "Antrag SRH (Bildschirmarbeitsbrille)" },
   {
     id: "Antrag Jobcenter",
