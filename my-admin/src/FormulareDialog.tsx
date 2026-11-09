@@ -159,6 +159,10 @@ import {
   buildVerordnungKurzPreviewHtml,
   buildVerordnungKurzPrintHtml,
 } from "./optometrischeVerordnungTemplate";
+import {
+  buildAuswertungsbogenPreviewHtml,
+  buildAuswertungsbogenPrintHtml,
+} from "./auswertungsbogenTemplate";
 import { druckeDirekt } from "./direktDruck";
 
 // Kategorie, unter der die Rechnungsvorlage(n) in `dokumentvorlage` angelegt
@@ -416,6 +420,14 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Antrag-Jobcenter-Vorschau",
     preview: buildJobcenterBildschirmbrillePreviewHtml,
     print: buildJobcenterBildschirmbrillePrintHtml,
+  },
+  // Ergebnis der optometrischen Untersuchung für den Kunden: Refraktion,
+  // Visus und IOD aus dem Auftrag, Prüfungen in der Vorschau ankreuzen
+  Auswertungsbogen: {
+    ausVorschau: true,
+    title: "Auswertungsbogen-Vorschau",
+    preview: buildAuswertungsbogenPreviewHtml,
+    print: buildAuswertungsbogenPrintHtml,
   },
   [AUFTRAGSZETTEL_KATEGORIE]: {
     ausVorschau: true,
