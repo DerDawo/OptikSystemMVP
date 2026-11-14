@@ -74,9 +74,11 @@ export const buildAuswertungsbogenBodyHtml = ({
   const unterschrift = bildUrl(bilder.unterschrift);
   const datum = text(brille.Datum) ? dayjs(text(brille.Datum)) : dayjs();
   const name = [k.Vorname, k.Nachname].map(text).filter(Boolean).join(" ");
+  // "Robert Ulm lt. optometrischer Messung" -> "Robert Ulm"; andere
+  // Angaben (Augenarzt, "nach augenärztl. Verordnung") sind kein Untersucher
+  const refraktion = text(mitarbeiterAnzeige(brille.Refraktion));
   const untersucher =
-    // "Robert Ulm lt. optometrischer Messung" -> "Robert Ulm"
-    text(mitarbeiterAnzeige(brille.Refraktion)).split(/\s+lt\.\s/)[0] ||
+    (/\s+lt\.\s/.test(refraktion) ? refraktion.split(/\s+lt\.\s/)[0] : "") ||
     text(mitarbeiterAnzeige(brille.Berater)) ||
     a.inhaber;
 
