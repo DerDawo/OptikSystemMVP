@@ -1,4 +1,5 @@
 // in src/App.tsx
+import { DatensicherungSeite } from "./DatensicherungSeite";
 import { SerienbriefSeite } from "./SerienbriefSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
@@ -260,6 +261,7 @@ export const App = () => {
         <Route path="/fundusarchiv" element={<Fundusarchiv />} />
         <Route path="/rezepte" element={<KassenrezepteSeite />} />
         <Route path="/firmenrechnung" element={<FirmenrechnungSeite />} />
+        <Route path="/datensicherung" element={<DatensicherungSeite />} />
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />
         <Route path="/kalender" element={<TerminKalender />} />

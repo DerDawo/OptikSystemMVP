@@ -306,7 +306,7 @@ export const MyMenu = () => (
     <SubMenu
       label="Einstellungen"
       icon={<BuildingIcon />}
-      paths={["/betrieb", "/dokumentvorlage"]}
+      paths={["/betrieb", "/dokumentvorlage", "/datensicherung"]}
     >
       <Menu.Item
         to="/betrieb/1"
@@ -317,6 +317,11 @@ export const MyMenu = () => (
         to="/dokumentvorlage"
         primaryText="Dokumentvorlagen"
         leftIcon={<DocumentIcon />}
+      />
+      <Menu.Item
+        to="/datensicherung"
+        primaryText="Datensicherung"
+        leftIcon={<ImportIcon />}
       />
     </SubMenu>
   </Menu>
