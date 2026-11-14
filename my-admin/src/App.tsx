@@ -1,5 +1,4 @@
 // in src/App.tsx
-import { GlaslagerCreate, GlaslagerEdit, GlaslagerList } from "./glaslager";
 import { SerienbriefSeite } from "./SerienbriefSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
@@ -65,6 +64,7 @@ import {
   ZusatzleistungEdit,
   ZusatzleistungCreate,
 } from "./zusatzleistung";
+import { GlaslagerCreate, GlaslagerEdit, GlaslagerList } from "./glaslager";
 import { TerminList, TerminShow, TerminEdit, TerminCreate } from "./termin";
 import {
   KrankenkasseList,
