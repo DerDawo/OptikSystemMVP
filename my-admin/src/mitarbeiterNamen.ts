@@ -4,10 +4,13 @@ export const MITARBEITER = ["Andrea Heydrich", "Robert Ulm"];
 
 // Auswahl "Refraktion" in Karteikarte und Auftragsformular, in der
 // Reihenfolge des Betriebs (eigene Mitarbeiter, dann Augenärzte/Praxen).
-// Ältere abweichende Angaben bleiben beim jeweiligen Auftrag erhalten.
+// In der Karteikarte ist auch freie Eingabe möglich; ältere abweichende
+// Angaben bleiben beim jeweiligen Auftrag erhalten.
+export const NACH_VERORDNUNG = "nach augenärztl. Verordnung";
 export const REFRAKTION = [
   "Robert Ulm lt. optometrischer Messung",
   "Andrea Heydrich lt. optometrischer Messung",
+  NACH_VERORDNUNG,
   "Praxis Dr. Schroth",
   "Dr. Elbasyounis",
   "Dr. Jana Weiser",

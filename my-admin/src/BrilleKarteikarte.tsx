@@ -165,7 +165,6 @@ export const prismaKnopf = {
 } as const;
 
 const MITARBEITER_AUSWAHL = MITARBEITER.map((m) => ({ id: m, name: m }));
-const REFRAKTION_AUSWAHL = REFRAKTION.map((r) => ({ id: r, name: r }));
 // Achtungsfeld: an wen die Rechnung geht
 // nur intern auf der Karteikarte, erscheint auf keinem Beleg
 const ACHTUNG_AUSWAHL = [
@@ -1215,10 +1214,12 @@ export const BrilleKarteikarte = () => {
               Refraktion
             </Beschriftung>
             <Feld z={3} s={LINKS}>
-              <Auswahl
+              {/* Vorschläge zum Auswählen, freie Eingabe möglich (z. B.
+                  "Dr. Weiser, Verordnung vom 03.11.") */}
+              <Eingabe
                 name="Refraktion"
                 wert={mitarbeiterAnzeige(brille.Refraktion) || null}
-                optionen={REFRAKTION_AUSWAHL}
+                vorschlaege={REFRAKTION}
                 speichere={auftrag("Refraktion")}
               />
             </Feld>
