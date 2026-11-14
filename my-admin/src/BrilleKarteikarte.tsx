@@ -68,6 +68,9 @@ import {
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { KassenanteilRechner } from "./KassenanteilRechner";
 import { GlasassistentDialog } from "./glaskatalog/Glasassistent";
+import { GlasFinderDialog } from "./GlasFinderDialog";
+import type { Lagerglas } from "./glasFinder";
+import { supabase } from "./utils";
 import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
 import { FASSUNG_HERSTELLER } from "./fassungHersteller";
@@ -935,6 +938,7 @@ export const BrilleKarteikarte = () => {
   const { auftrag, komponente } = useKarteiSpeichern(brille, refresh);
   const [bestellOffen, setBestellOffen] = useState(false);
   const [assistentOffen, setAssistentOffen] = useState(false);
+  const [finderOffen, setFinderOffen] = useState(false);
 
   if (!brille) return null;
 
@@ -961,6 +965,46 @@ export const BrilleKarteikarte = () => {
     { seite: "R", glas: glasNach(brille.GlasRechts) },
     { seite: "L", glas: glasNach(brille.GlasLinks) },
   ];
+
+  // Glas-Finder: Lagerglas je Auge abbuchen und in den Auftrag eintragen
+  // (Glastyp vom ersten gewählten Glas, Preis und Status "eingetroffen" je Auge)
+  const lagerglasUebernehmen = async (wahl: {
+    R: Lagerglas | null;
+    L: Lagerglas | null;
+  }) => {
+    const erstes = wahl.R ?? wahl.L;
+    if (!erstes) return;
+    for (const g of [wahl.R, wahl.L]) {
+      if (!g) continue;
+      const { error } = await supabase.rpc("glaslager_abbuchen", {
+        p_id: g.id,
+      });
+      if (error) throw new Error(error.message);
+    }
+    const index = erstes.Brechungsindex
+      ? String(erstes.Brechungsindex).replace(".", ",")
+      : "";
+    await glasFeld("Bezeichnung")(
+      [erstes.Bezeichnung, index].filter(Boolean).join(" "),
+    );
+    if (erstes.Hersteller) await glasFeld("Hersteller")(erstes.Hersteller);
+    if (erstes.Verguetung) await glasFeld("Verguetung")(erstes.Verguetung);
+    if (erstes.Durchmesser)
+      await glasFeld("GlasGroesse")(String(erstes.Durchmesser));
+    for (const [i, g] of [wahl.R, wahl.L].entries()) {
+      if (!g) continue;
+      const speichere = komponente(
+        "glass",
+        i === 0 ? "GlasRechts" : "GlasLinks",
+        augen[i].glas,
+        { Seite: i === 0 ? "Rechts" : "Links" },
+      );
+      if (g.Verkaufspreis != null)
+        await speichere("Betrag")(Number(g.Verkaufspreis));
+      await speichere("Auftragsstatus")("eingetroffen");
+    }
+    refresh();
+  };
 
   // Zusatzleistungen plus "Weitere Leistungen" (Freitext aus Prisma),
   // mindestens drei Zeilen wie in Prisma
@@ -1366,6 +1410,14 @@ export const BrilleKarteikarte = () => {
                 sx={prismaKnopf}
               >
                 Glasassistent
+              </Button>
+              <Button
+                variant="contained"
+                disableElevation
+                onClick={() => setFinderOffen(true)}
+                sx={prismaKnopf}
+              >
+                Glas-Finder
               </Button>
               <Button
                 variant="contained"
@@ -1874,6 +1926,17 @@ export const BrilleKarteikarte = () => {
           </Box>
         </Box>
       </Box>
+      {finderOffen && (
+        <GlasFinderDialog
+          augen={augen.map(({ seite, glas }) => ({
+            seite: seite as "R" | "L",
+            werte: glas,
+          }))}
+          onClose={() => setFinderOffen(false)}
+          onAssistent={() => setAssistentOffen(true)}
+          uebernehmen={lagerglasUebernehmen}
+        />
+      )}
       {assistentOffen && (
         <GlasassistentDialog
           onClose={() => setAssistentOffen(false)}

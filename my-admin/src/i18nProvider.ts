@@ -307,6 +307,9 @@ export const germanMessages: TranslationMessages = {
       BrillenID: "Brille",
     }),
     zusatzleistung: resource("Zusatzleistung |||| Zusatzleistungen"),
+    glaslager: resource("Lagerglas |||| Lagergläser", {
+      Verguetung: "Vergütung",
+    }),
     termin: resource("Termin |||| Termine"),
     dokumentvorlage: resource("Dokumentvorlage |||| Dokumentvorlagen"),
     betrieb: resource("Betrieb |||| Betriebe"),

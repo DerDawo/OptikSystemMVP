@@ -64,6 +64,7 @@ import {
   ZusatzleistungEdit,
   ZusatzleistungCreate,
 } from "./zusatzleistung";
+import { GlaslagerCreate, GlaslagerEdit, GlaslagerList } from "./glaslager";
 import { TerminList, TerminShow, TerminEdit, TerminCreate } from "./termin";
 import {
   KrankenkasseList,
@@ -212,6 +213,13 @@ export const App = () => {
         show={Kunde_leistet_zauzahlung_fuer_brilleShow}
         edit={Kunde_leistet_zauzahlung_fuer_brilleEdit}
         create={Kunde_leistet_zauzahlung_fuer_brilleCreate}
+      />
+      <Resource
+        name="glaslager"
+        recordRepresentation={byField("Bezeichnung")}
+        list={GlaslagerList}
+        edit={GlaslagerEdit}
+        create={GlaslagerCreate}
       />
       <Resource
         name="zusatzleistung"
