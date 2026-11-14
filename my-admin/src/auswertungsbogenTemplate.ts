@@ -120,7 +120,7 @@ export const buildAuswertungsbogenBodyHtml = ({
   <h2>Sehschärfe (Visus)</h2>
   <table class="tabelle visus">
     <tr><th>Prüfung</th><th>Rechts</th><th>Links</th><th>Beidäugig</th></tr>
-    <tr><td>Ferne ohne Korrektion (sc)</td>${leer(3)}</tr>
+    <tr><td>Ferne ohne Korrektion (sc)</td>${zellen([formatWert(r?.VisSC, "visus"), formatWert(l?.VisSC, "visus"), ""])}</tr>
     <tr><td>Ferne mit bisheriger Brille</td>${leer(3)}</tr>
     <tr><td class="fett">Ferne mit neuer Korrektion (cc)</td>${zellen([formatWert(r?.Vis, "visus"), formatWert(l?.Vis, "visus"), ""])}</tr>
     <tr><td>Nähe mit neuer Korrektion</td>${leer(3)}</tr>

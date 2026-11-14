@@ -69,7 +69,7 @@ export const glasAngaben = (
     ["Vergütung", text(glastyp?.Verguetung)],
     ["Farbe", text(glastyp?.Farbe)],
     ["Durchmesser", text(glastyp?.GlasGroesse)],
-    ["Sonstiges", text(glastyp?.Sonstiges)],
+    ["Bemerkung zum Glas", text(glastyp?.Sonstiges)],
     [
       "Fassung",
       [text(fassung?.Bezeichnung), text(fassung?.Groesse)]
