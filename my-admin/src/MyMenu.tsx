@@ -255,6 +255,7 @@ export const MyMenu = () => (
         "/brillenart",
         "/fassung",
         "/zusatzleistung",
+        "/glaslager",
         "/glaskatalog",
         "/glashersteller",
         "/krankenkasse",
@@ -282,6 +283,11 @@ export const MyMenu = () => (
         leftIcon={<ListIcon />}
       />
       <Menu.Item
+        to="/glaslager"
+        primaryText="Glas-Lager"
+        leftIcon={<LensIcon />}
+      />
+      <Menu.Item
         to="/glaskatalog"
         primaryText="Glaskatalog"
         leftIcon={<BookIcon />}
@@ -300,7 +306,7 @@ export const MyMenu = () => (
     <SubMenu
       label="Einstellungen"
       icon={<BuildingIcon />}
-      paths={["/betrieb", "/dokumentvorlage"]}
+      paths={["/betrieb", "/dokumentvorlage", "/datensicherung"]}
     >
       <Menu.Item
         to="/betrieb/1"
@@ -311,6 +317,11 @@ export const MyMenu = () => (
         to="/dokumentvorlage"
         primaryText="Dokumentvorlagen"
         leftIcon={<DocumentIcon />}
+      />
+      <Menu.Item
+        to="/datensicherung"
+        primaryText="Datensicherung"
+        leftIcon={<ImportIcon />}
       />
     </SubMenu>
   </Menu>

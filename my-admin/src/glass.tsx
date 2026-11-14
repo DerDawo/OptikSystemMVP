@@ -48,7 +48,8 @@ export const GlassList = () => (
       <DataTable.NumberCol source="Pr" label="Pr" />
       <DataTable.NumberCol source="B" label="B" />
       <DataTable.NumberCol source="HSA" label="HSA" />
-      <DataTable.NumberCol source="Vis" label="Vis" />
+      <DataTable.NumberCol source="VisSC" label="Vis sc" />
+      <DataTable.NumberCol source="Vis" label="Vis cc" />
       <DataTable.NumberCol source="iod" label="iod" />
       <DataTable.Col source="Liefern">
         <BooleanField source="Liefern" />
@@ -104,7 +105,8 @@ export const GlassShow = () => (
           <NumberField source="HSA" />
         </Field>
         <Field>
-          <NumberField source="Vis" />
+          <NumberField source="VisSC" label="Visus sc" />
+          <NumberField source="Vis" label="Visus cc" />
         </Field>
         <Field>
           <NumberField source="iod" />
@@ -174,7 +176,8 @@ export const GlassEdit = () => (
           <NumberInput source="HSA" />
         </FieldRow>
         <FieldRow>
-          <NumberInput source="Vis" />
+          <NumberInput source="VisSC" label="Visus sc" />
+          <NumberInput source="Vis" label="Visus cc" />
           <NumberInput source="iod" />
         </FieldRow>
       </FormSection>
@@ -219,7 +222,8 @@ export const GlassCreate = () => (
           <NumberInput source="HSA" />
         </FieldRow>
         <FieldRow>
-          <NumberInput source="Vis" />
+          <NumberInput source="VisSC" label="Visus sc" />
+          <NumberInput source="Vis" label="Visus cc" />
           <NumberInput source="iod" />
         </FieldRow>
       </FormSection>

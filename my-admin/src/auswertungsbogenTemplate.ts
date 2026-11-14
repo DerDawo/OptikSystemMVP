@@ -74,9 +74,11 @@ export const buildAuswertungsbogenBodyHtml = ({
   const unterschrift = bildUrl(bilder.unterschrift);
   const datum = text(brille.Datum) ? dayjs(text(brille.Datum)) : dayjs();
   const name = [k.Vorname, k.Nachname].map(text).filter(Boolean).join(" ");
+  // "Robert Ulm lt. optometrischer Messung" -> "Robert Ulm"; andere
+  // Angaben (Augenarzt, "nach augenärztl. Verordnung") sind kein Untersucher
+  const refraktion = text(mitarbeiterAnzeige(brille.Refraktion));
   const untersucher =
-    // "Robert Ulm lt. optometrischer Messung" -> "Robert Ulm"
-    text(mitarbeiterAnzeige(brille.Refraktion)).split(/\s+lt\.\s/)[0] ||
+    (/\s+lt\.\s/.test(refraktion) ? refraktion.split(/\s+lt\.\s/)[0] : "") ||
     text(mitarbeiterAnzeige(brille.Berater)) ||
     a.inhaber;
 
@@ -120,7 +122,7 @@ export const buildAuswertungsbogenBodyHtml = ({
   <h2>Sehschärfe (Visus)</h2>
   <table class="tabelle visus">
     <tr><th>Prüfung</th><th>Rechts</th><th>Links</th><th>Beidäugig</th></tr>
-    <tr><td>Ferne ohne Korrektion (sc)</td>${leer(3)}</tr>
+    <tr><td>Ferne ohne Korrektion (sc)</td>${zellen([formatWert(r?.VisSC, "visus"), formatWert(l?.VisSC, "visus"), ""])}</tr>
     <tr><td>Ferne mit bisheriger Brille</td>${leer(3)}</tr>
     <tr><td class="fett">Ferne mit neuer Korrektion (cc)</td>${zellen([formatWert(r?.Vis, "visus"), formatWert(l?.Vis, "visus"), ""])}</tr>
     <tr><td>Nähe mit neuer Korrektion</td>${leer(3)}</tr>

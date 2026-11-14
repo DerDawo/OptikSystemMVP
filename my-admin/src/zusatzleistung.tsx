@@ -28,6 +28,7 @@ export const ZUSATZLEISTUNG_KATEGORIEN = [
   { id: "Service & Hausbesuch", name: "Service & Hausbesuch" },
   { id: "Reparaturen", name: "Reparaturen" },
   { id: "Veredelungen & Extras", name: "Veredelungen & Extras" },
+  { id: "Individuell", name: "Individuell (frei eingetippt)" },
 ];
 
 export const ZusatzleistungList = () => (

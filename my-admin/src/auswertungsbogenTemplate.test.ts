@@ -56,6 +56,20 @@ describe("Auswertungsbogen", () => {
     expect(html).not.toMatch(/class="kaestchen" checked/);
   });
 
+  it("nimmt bei augenärztlicher Verordnung den Berater als Untersucher", () => {
+    const bogen = buildAuswertungsbogenPrintHtml({
+      bilder: {},
+      entities: {
+        brille: {
+          Refraktion: "nach augenärztl. Verordnung",
+          Berater: "Andrea Heydrich",
+        },
+      },
+    });
+    expect(bogen).toContain(">Andrea Heydrich<");
+    expect(bogen).not.toContain(">nach augenärztl. Verordnung<");
+  });
+
   it("berechnet das Alter", () => {
     expect(alterJahre("2000-06-01", dayjs("2026-05-31"))).toBe("25");
     expect(alterJahre("")).toBe("");
