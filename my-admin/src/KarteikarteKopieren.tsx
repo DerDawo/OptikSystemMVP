@@ -42,6 +42,7 @@ const OPTISCHE_GLAS_FELDER = [
   "Pr",
   "B",
   "HSA",
+  "VisSC",
   "Vis",
   "iod",
 ] as const;
@@ -227,7 +228,7 @@ const KarteikarteKopierenDialog = ({
                 onChange={(e) => setzeAuswahl("glaswerte", e.target.checked)}
               />
             }
-            label="Glaswerte (Sph, Cyl, A, PD, Add, y/h, Pr, B, HSA, Vis, iod)"
+            label="Glaswerte (Sph, Cyl, A, PD, Add, y/h, Pr, B, HSA, Visus sc/cc, iod)"
           />
           <FormControlLabel
             control={

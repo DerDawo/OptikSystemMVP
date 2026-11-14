@@ -20,8 +20,8 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
-  Select,
+  Autocomplete,
+  InputBase,
   Table,
   TableBody,
   TableCell,
@@ -140,7 +140,9 @@ const WERTE: { feld: string; titel: string; stellen: number }[] = [
   { feld: "Pr", titel: "Pr", stellen: 2 },
   { feld: "B", titel: "B", stellen: 0 },
   { feld: "HSA", titel: "HSA", stellen: 1 },
-  { feld: "Vis", titel: "Vis", stellen: 2 },
+  // Visus ohne (sc) und mit Korrektion (cc, Spalte Vis)
+  { feld: "VisSC", titel: "Vis sc", stellen: 2 },
+  { feld: "Vis", titel: "Vis cc", stellen: 2 },
   { feld: "iod", titel: "iod", stellen: 1 },
 ];
 const WERTE_LINKS = WERTE.slice(0, 8);
@@ -253,12 +255,13 @@ export type Platz = { z: number; s: string; h?: number };
 export const Beschriftung = ({
   z,
   s,
+  h = 1,
   children,
   rechts,
 }: Platz & { children: ReactNode; rechts?: boolean }) => (
   <Box
     sx={{
-      gridRow: z,
+      gridRow: `${z} / span ${h}`,
       gridColumn: s,
       alignSelf: "center",
       fontStyle: "italic",
@@ -266,7 +269,8 @@ export const Beschriftung = ({
       color: "text.secondary",
       textAlign: rechts ? "right" : "left",
       pr: rechts ? 1 : 0,
-      whiteSpace: "nowrap",
+      // über mehrere Zeilen: Beschriftung darf umbrechen
+      whiteSpace: h > 1 ? "normal" : "nowrap",
       overflow: "hidden",
     }}
   >
@@ -576,9 +580,13 @@ export const WerteTabelle = ({
   );
 };
 
-// Ausklappliste "Zusatzleistung hinzufügen" in der Karteikarte: bucht die
-// gewählte Leistung direkt auf den Auftrag (brille_hat_zusatzleistungen);
-// die Summe rechnet ein Datenbank-Trigger neu.
+// Feld "Zusatzleistung hinzufügen" in der Karteikarte: Auswahl aus dem
+// Katalog oder freier Text. Die gewählte Leistung wird direkt auf den Auftrag
+// gebucht (brille_hat_zusatzleistungen); freier Text legt eine eigene,
+// nicht auswählbare Leistung (Kategorie "Individuell") ohne Preis an, der
+// Betrag wird rechts daneben eingetragen. Die Summe rechnet ein
+// Datenbank-Trigger neu.
+export const INDIVIDUELL = "Individuell";
 const ZusatzleistungAuswahl = ({
   z,
   s,
@@ -589,6 +597,7 @@ const ZusatzleistungAuswahl = ({
   const notify = useNotify();
   const refresh = useRefresh();
   const [speichert, setSpeichert] = useState(false);
+  const [eingabe, setEingabe] = useState("");
   const { data: katalog } = useGetList<Datensatz>("zusatzleistung", {
     filter: { Aktiv: true },
     sort: { field: "Reihenfolge", order: "ASC" },
@@ -596,12 +605,34 @@ const ZusatzleistungAuswahl = ({
   });
   const angebot = (katalog ?? []).filter((l) => !vorhanden.includes(l.id));
 
-  const hinzufuegen = async (id: number) => {
+  const hinzufuegen = async (wahl: Datensatz | string) => {
+    const freierText = typeof wahl === "string" ? wahl.trim() : "";
+    if (typeof wahl === "string" && !freierText) return;
     setSpeichert(true);
     try {
+      let id = typeof wahl === "string" ? null : (wahl.id as number);
+      if (id === null) {
+        // gleich lautende Katalogleistung statt eines neuen Eintrags
+        const treffer = angebot.find(
+          (l) => text(l.Bezeichnung).toLowerCase() === freierText.toLowerCase(),
+        );
+        id = treffer
+          ? (treffer.id as number)
+          : ((
+              await dataProvider.create("zusatzleistung", {
+                data: {
+                  Bezeichnung: freierText,
+                  Kategorie: INDIVIDUELL,
+                  Aktiv: false,
+                  Betrag: null,
+                },
+              })
+            ).data.id as number);
+      }
       await dataProvider.create("brille_hat_zusatzleistungen", {
         data: { BrillenID: brilleId, ZusatzleistungID: id },
       });
+      setEingabe("");
       refresh();
     } catch {
       notify("Zusatzleistung konnte nicht gespeichert werden.", {
@@ -624,40 +655,56 @@ const ZusatzleistungAuswahl = ({
         alignItems: "center",
       })}
     >
-      <Select
-        variant="standard"
-        disableUnderline
-        displayEmpty
+      <Autocomplete<Datensatz, false, true, true>
+        freeSolo
+        disableClearable
         fullWidth
-        value=""
-        disabled={speichert || angebot.length === 0}
-        onChange={(e) => hinzufuegen(Number(e.target.value))}
-        renderValue={() => (
-          <Box
-            component="span"
-            sx={{ color: "text.secondary", fontStyle: "italic" }}
-          >
-            {speichert ? "Wird gespeichert …" : "Zusatzleistung hinzufügen …"}
-          </Box>
-        )}
-        sx={{
-          px: "6px",
-          fontSize: "0.9rem",
-          "& .MuiSelect-select": { py: 0 },
+        openOnFocus
+        disabled={speichert}
+        options={angebot}
+        value={undefined}
+        inputValue={eingabe}
+        onInputChange={(_, v, grund) => {
+          if (grund !== "reset") setEingabe(v);
         }}
-        inputProps={{ "aria-label": "Zusatzleistung hinzufügen" }}
-      >
-        {angebot.map((l) => (
-          <MenuItem key={l.id} value={l.id} sx={{ gap: 3 }}>
-            <Box component="span" sx={{ flex: 1 }}>
+        onChange={(_, wahl) => {
+          if (wahl) void hinzufuegen(wahl);
+        }}
+        getOptionLabel={(l) =>
+          typeof l === "string" ? l : text(l.Bezeichnung)
+        }
+        renderOption={({ key, ...props }, l) => (
+          <li key={key} {...props}>
+            <Box component="span" sx={{ flex: 1, pr: 3 }}>
               {text(l.Bezeichnung)}
             </Box>
             <Box component="span" sx={{ color: "text.secondary" }}>
               {betragText(l.Betrag)} €
             </Box>
-          </MenuItem>
-        ))}
-      </Select>
+          </li>
+        )}
+        slotProps={{ popper: { sx: { minWidth: 320 } } }}
+        renderInput={(params) => (
+          <InputBase
+            ref={params.InputProps.ref}
+            inputProps={{
+              ...params.inputProps,
+              "aria-label": "Zusatzleistung hinzufügen",
+            }}
+            placeholder={
+              speichert
+                ? "Wird gespeichert …"
+                : "Zusatzleistung hinzufügen oder eintippen …"
+            }
+            fullWidth
+            sx={{
+              px: "6px",
+              fontSize: "0.9rem",
+              "& input::placeholder": { fontStyle: "italic", opacity: 0.7 },
+            }}
+          />
+        )}
+      />
     </Box>
   );
 };
@@ -1305,7 +1352,7 @@ export const BrilleKarteikarte = () => {
                 <Spaltentitel key={w.feld}>{w.titel}</Spaltentitel>
               ))}
             </Zellen>
-            <Zellen z={4} s="6 / 8" spalten="repeat(3, 1fr) 0.8fr">
+            <Zellen z={4} s="6 / 8" spalten="repeat(4, 1fr) 0.8fr">
               {WERTE_RECHTS.map((w) => (
                 <Spaltentitel key={w.feld}>{w.titel}</Spaltentitel>
               ))}
@@ -1363,7 +1410,7 @@ export const BrilleKarteikarte = () => {
                   key={`${seite}-h`}
                   z={z}
                   s="6 / 8"
-                  spalten="repeat(3, 1fr) 0.8fr"
+                  spalten="repeat(4, 1fr) 0.8fr"
                 >
                   {WERTE_RECHTS.map(wertFeld)}
                   <Box
@@ -1510,15 +1557,18 @@ export const BrilleKarteikarte = () => {
                 glastyp?.Hersteller,
               )}
             </Feld>
-            <Beschriftung z={9} s="5 / 6">
-              Sonstiges
+            {/* "Bemerkung zum Glas" (Spalte glastyp.Sonstiges) über zwei
+                Zeilen, ersetzt die beiden Felder "Sonstiges" */}
+            <Beschriftung z={9} s="5 / 6" h={2}>
+              Bemerkung zum Glas
             </Beschriftung>
-            <Feld z={9} s={RECHTS}>
+            <Feld z={9} s={RECHTS} h={2} mehrzeilig>
               {textFeld(
                 "glastyp.Sonstiges",
-                "Sonstiges",
+                "Bemerkung zum Glas",
                 glasFeld("Sonstiges"),
                 glastyp?.Sonstiges,
+                { mehrzeilig: true },
               )}
             </Feld>
             <Beschriftung z={10} s="1 / 2">
@@ -1532,10 +1582,6 @@ export const BrilleKarteikarte = () => {
                 glastyp?.Verguetung,
               )}
             </Feld>
-            <Beschriftung z={10} s="5 / 6">
-              Sonstiges
-            </Beschriftung>
-            <Feld z={10} s={RECHTS} />
             <Beschriftung z={11} s="1 / 2">
               Farbe
             </Beschriftung>
