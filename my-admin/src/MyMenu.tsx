@@ -255,6 +255,7 @@ export const MyMenu = () => (
         "/brillenart",
         "/fassung",
         "/zusatzleistung",
+        "/glaslager",
         "/glaskatalog",
         "/glashersteller",
         "/krankenkasse",
@@ -280,6 +281,11 @@ export const MyMenu = () => (
         to="/zusatzleistung"
         primaryText="Zusatzleistungen"
         leftIcon={<ListIcon />}
+      />
+      <Menu.Item
+        to="/glaslager"
+        primaryText="Glas-Lager"
+        leftIcon={<LensIcon />}
       />
       <Menu.Item
         to="/glaskatalog"

@@ -1,4 +1,5 @@
 // in src/App.tsx
+import { GlaslagerCreate, GlaslagerEdit, GlaslagerList } from "./glaslager";
 import { SerienbriefSeite } from "./SerienbriefSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
@@ -212,6 +213,13 @@ export const App = () => {
         show={Kunde_leistet_zauzahlung_fuer_brilleShow}
         edit={Kunde_leistet_zauzahlung_fuer_brilleEdit}
         create={Kunde_leistet_zauzahlung_fuer_brilleCreate}
+      />
+      <Resource
+        name="glaslager"
+        recordRepresentation={byField("Bezeichnung")}
+        list={GlaslagerList}
+        edit={GlaslagerEdit}
+        create={GlaslagerCreate}
       />
       <Resource
         name="zusatzleistung"
