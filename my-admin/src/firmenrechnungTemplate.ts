@@ -3,6 +3,7 @@
 // Positionen mit Zeitaufwand, Fahrkosten nach Kilometern und MwSt.
 // Unabhängig von Kunde und Auftrag. Ohne React, damit es sich testen lässt.
 import dayjs from "dayjs";
+import { girocodeBlockHtml } from "./girocode";
 import {
   RECHNUNG_ABSENDER,
   belegSeite,
@@ -164,6 +165,13 @@ export const buildFirmenrechnungBodyHtml = (r: Firmenrechnung): string => {
         Bitte überweisen Sie den Rechnungsbetrag innerhalb von ${a.zahlungszielTage} Tagen unter Angabe der Rechnungsnummer auf unser Konto:<br />
         ${e(a.bankName)} · IBAN ${e(a.iban)} · BIC ${e(a.bic)}
       </div>
+      ${girocodeBlockHtml({
+        name: a.firma,
+        iban: a.iban,
+        bic: a.bic,
+        betrag: s.brutto,
+        zweck: r.rechnungsnummer ? `Rechnung ${r.rechnungsnummer}` : "",
+      })}
     </div>
   </div>
   ${fusszeileHtml(false)}

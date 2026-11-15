@@ -21,7 +21,9 @@ import {
   briefkopfHtml,
   escapeHtml,
   fusszeileHtml,
+  verwendungszweck,
 } from "./rechnungTemplate";
+import { girocodeBlockHtml } from "./girocode";
 import {
   buildWerkstattauftragSummen,
   formatEuro,
@@ -156,6 +158,16 @@ export const buildMahnungBodyHtml = (daten: MahnungDaten): string => {
     ${absaetze
       .map((absatz) => `<p>${e(absatz).replace(/\r?\n/g, "<br />")}</p>`)
       .join("")}
+    ${girocodeBlockHtml({
+      name: RECHNUNG_ABSENDER.firma,
+      iban: RECHNUNG_ABSENDER.iban,
+      bic: RECHNUNG_ABSENDER.bic,
+      betrag: buildWerkstattauftragSummen(daten.entities).offen,
+      zweck: verwendungszweck(
+        mahnungPlatzhalter(daten)["rechnung.nummer"],
+        daten.entities.kunde,
+      ),
+    })}
   </div>
   ${fusszeileHtml(false)}
 </div>`;
