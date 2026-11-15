@@ -13,7 +13,7 @@ import type {
   UpdateParams,
 } from "react-admin";
 import { leereDatumsfelderZuNull } from "./leereDatumsfelder";
-import { uebersetzeFehler } from "./rolle";
+import { uebersetzeFehler } from "./rolleFehler";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;

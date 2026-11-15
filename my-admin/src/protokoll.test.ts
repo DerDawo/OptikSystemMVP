@@ -4,7 +4,7 @@ import {
   BERECHTIGUNG_FEHLT,
   istBerechtigungsFehler,
   uebersetzeFehler,
-} from "./rolle";
+} from "./rolleFehler";
 
 describe("aenderungsZeilen", () => {
   it("zeigt bei Änderungen alt und neu je Feld", () => {
