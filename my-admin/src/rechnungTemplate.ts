@@ -14,6 +14,7 @@ import dayjs from "dayjs";
 import logoSehzentrum from "./assets/logo-sehzentrum.jpg?inline";
 import bewertungQr from "./assets/google-bewertung-qr.png?inline";
 import { mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import { GIROCODE_STYLES, girocodeSeitlichHtml } from "./girocode";
 import {
   leistungsText,
   weitereLeistungenPositionen,
@@ -331,6 +332,24 @@ export const fusszeileHtml = (mitDank = true): string => `
     </div>
   </div>`;
 
+// Verwendungszweck für den GiroCode: "Rechnung 2025-123 Max Muster"
+export const verwendungszweck = (
+  nummer: string,
+  kunde: DocumentMergeEntities["kunde"],
+) =>
+  [
+    nummer ? `Rechnung ${nummer}` : "",
+    [kunde?.Vorname, kunde?.Nachname].filter(Boolean).join(" "),
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+// Zahlungshinweise, bei offenem Betrag mit GiroCode rechts daneben
+const zahlungHtml = (hinweiseHtml: string, girocode: string) =>
+  girocode
+    ? `<div class="zahlung"><div class="hinweise">${hinweiseHtml}</div>${girocode}</div>`
+    : `<div class="hinweise">${hinweiseHtml}</div>`;
+
 const belegHtml = ({
   art,
   entities,
@@ -425,10 +444,21 @@ const belegHtml = ({
           : "Gesamtbetrag"
     }</span><span>${e(formatEuro(betrag))}</span></div>
     <p class="mwst">Im obigen Betrag sind ${a.mwstSatz}% Mwst = ${e(formatEuro(mwst))} enthalten. (Nettopreis: ${e(zahl2.format(netto))} €)</p>
-    <div class="hinweise">${hinweise
-      .filter(Boolean)
-      .map((h) => `<div>${h}</div>`)
-      .join("")}</div>
+    ${zahlungHtml(
+      hinweise
+        .filter(Boolean)
+        .map((h) => `<div>${h}</div>`)
+        .join(""),
+      istRechnung && !bezahlt && nochZuZahlen > 0
+        ? girocodeSeitlichHtml({
+            name: a.firma,
+            iban: a.iban,
+            bic: a.bic,
+            betrag: nochZuZahlen,
+            zweck: verwendungszweck(nummer, kunde),
+          })
+        : "",
+    )}
    </div>
     ${istRechnung ? BEWERTUNG_HTML : ""}
   </div>
@@ -493,6 +523,9 @@ const BEWERTUNG_PLATZ_PRUEFEN = `<script>
       for (var k = 0; k < rs.length; k++) zeilen.push(rs[k]);
     }
   });
+  // der GiroCode ist ebenfalls ein Hindernis
+  var giro = document.querySelector(".girocode-seite");
+  if (giro) zeilen.push(giro.getBoundingClientRect());
   beleg.appendChild(b);
   t.innerHTML = "Teilen Sie Ihre Erfahrung gern auf Google.";
   b.style.position = "absolute";
@@ -557,7 +590,7 @@ export const BELEG_STYLES = `
   .beleg .spalten > div { flex: 1; }
   .beleg .spalten > div:nth-child(2) { text-align: center; }
   .beleg .spalten > div:nth-child(3) { text-align: right; }
-`;
+${GIROCODE_STYLES}`;
 
 // Seitenrahmen der Belege (A4, Vorschau mit grauem Hintergrund)
 export const belegSeite = (
