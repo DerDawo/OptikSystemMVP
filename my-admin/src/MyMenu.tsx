@@ -37,6 +37,7 @@ import {
 } from "./icons";
 import unicornLogo from "./assets/unicorn-weiss.png";
 import { useOffeneAnfragen } from "./OnlineAnfragenSeite";
+import { useRolle } from "./rolle";
 
 // Terminanfragen von der Website, mit Anzahl der offenen
 const OnlineAnfragenEintrag = () => {
@@ -189,140 +190,174 @@ const SubMenu = ({
   );
 };
 
-export const MyMenu = () => (
-  <Menu>
-    <Brand />
-    <Menu.DashboardItem primaryText="Dashboard" leftIcon={<DashboardIcon />} />
+export const MyMenu = () => {
+  const inhaber = useRolle() === "inhaber";
+  return (
+    <Menu>
+      <Brand />
+      <Menu.DashboardItem
+        primaryText="Dashboard"
+        leftIcon={<DashboardIcon />}
+      />
 
-    <Section label="Termine" />
-    <Menu.Item
-      to="/kalender"
-      primaryText="Terminkalender"
-      leftIcon={<CalendarIcon />}
-    />
-    <OnlineAnfragenEintrag />
-
-    <Section label="Kunden" />
-    <Menu.Item to="/kunde" primaryText="Kunden" leftIcon={<UsersIcon />} />
-    <Menu.Item
-      to="/search"
-      primaryText="Kundensuche"
-      leftIcon={<SearchIcon />}
-    />
-    <Menu.Item
-      to="/fundusarchiv"
-      primaryText="Fundusarchiv"
-      leftIcon={<SearchIcon />}
-    />
-
-    <Section label="Aufträge" />
-    <Menu.Item to="/brille" primaryText="Brillen" leftIcon={<GlassesIcon />} />
-    <Menu.Item
-      to="/kontaktlinse"
-      primaryText="Kontaktlinsen"
-      leftIcon={<LensIcon />}
-    />
-
-    <Section label="Abrechnung" />
-    <Menu.Item
-      to="/rechnungen"
-      primaryText="Rechnungen"
-      leftIcon={<ReceiptIcon />}
-    />
-    <Menu.Item
-      to="/mahnungen"
-      primaryText="Mahnungen"
-      leftIcon={<AlertIcon />}
-    />
-    <Menu.Item
-      to="/firmenrechnung"
-      primaryText="Firmenrechnung"
-      leftIcon={<ReceiptIcon />}
-    />
-    <Menu.Item
-      to="/rezepte"
-      primaryText="Abgerechnete Rezepte"
-      leftIcon={<PrescriptionIcon />}
-    />
-
-    <Section label="Verwaltung" />
-    <SubMenu
-      label="Stammdaten"
-      icon={<LayersIcon />}
-      paths={[
-        "/glass",
-        "/glastyp",
-        "/brillenart",
-        "/fassung",
-        "/zusatzleistung",
-        "/glaslager",
-        "/glaskatalog",
-        "/glashersteller",
-        "/krankenkasse",
-      ]}
-    >
-      <Menu.Item to="/glass" primaryText="Gläser" leftIcon={<LensIcon />} />
+      <Section label="Termine" />
       <Menu.Item
-        to="/glastyp"
-        primaryText="Glastypen"
-        leftIcon={<LayersIcon />}
+        to="/kalender"
+        primaryText="Terminkalender"
+        leftIcon={<CalendarIcon />}
+      />
+      <OnlineAnfragenEintrag />
+
+      <Section label="Kunden" />
+      <Menu.Item to="/kunde" primaryText="Kunden" leftIcon={<UsersIcon />} />
+      <Menu.Item
+        to="/search"
+        primaryText="Kundensuche"
+        leftIcon={<SearchIcon />}
       />
       <Menu.Item
-        to="/brillenart"
-        primaryText="Brillenarten"
-        leftIcon={<TagIcon />}
+        to="/fundusarchiv"
+        primaryText="Fundusarchiv"
+        leftIcon={<SearchIcon />}
+      />
+
+      <Section label="Aufträge" />
+      <Menu.Item
+        to="/brille"
+        primaryText="Brillen"
+        leftIcon={<GlassesIcon />}
       />
       <Menu.Item
-        to="/fassung"
-        primaryText="Fassungen"
-        leftIcon={<FrameIcon />}
-      />
-      <Menu.Item
-        to="/zusatzleistung"
-        primaryText="Zusatzleistungen"
-        leftIcon={<ListIcon />}
-      />
-      <Menu.Item
-        to="/glaslager"
-        primaryText="Glas-Lager"
+        to="/kontaktlinse"
+        primaryText="Kontaktlinsen"
         leftIcon={<LensIcon />}
       />
+
+      <Section label="Abrechnung" />
       <Menu.Item
-        to="/glaskatalog"
-        primaryText="Glaskatalog"
-        leftIcon={<BookIcon />}
+        to="/rechnungen"
+        primaryText="Rechnungen"
+        leftIcon={<ReceiptIcon />}
       />
       <Menu.Item
-        to="/glaskatalog-import"
-        primaryText="Katalog-Import (SF6)"
-        leftIcon={<ImportIcon />}
+        to="/mahnungen"
+        primaryText="Mahnungen"
+        leftIcon={<AlertIcon />}
       />
       <Menu.Item
-        to="/krankenkasse"
-        primaryText="Krankenkassen"
-        leftIcon={<BuildingIcon />}
-      />
-    </SubMenu>
-    <SubMenu
-      label="Einstellungen"
-      icon={<BuildingIcon />}
-      paths={["/betrieb", "/dokumentvorlage", "/datensicherung"]}
-    >
-      <Menu.Item
-        to="/betrieb/1"
-        primaryText="Betriebsdaten"
-        leftIcon={<BuildingIcon />}
+        to="/firmenrechnung"
+        primaryText="Firmenrechnung"
+        leftIcon={<ReceiptIcon />}
       />
       <Menu.Item
-        to="/dokumentvorlage"
-        primaryText="Dokumentvorlagen"
-        leftIcon={<DocumentIcon />}
+        to="/rezepte"
+        primaryText="Abgerechnete Rezepte"
+        leftIcon={<PrescriptionIcon />}
       />
-      <Menu.Item
-        to="/datensicherung"
-        primaryText="Datensicherung"
-        leftIcon={<ImportIcon />}
-      />
-    </SubMenu>
-  </Menu>
-);
+
+      <Section label="Verwaltung" />
+      <SubMenu
+        label="Stammdaten"
+        icon={<LayersIcon />}
+        paths={[
+          "/glass",
+          "/glastyp",
+          "/brillenart",
+          "/fassung",
+          "/zusatzleistung",
+          "/glaslager",
+          "/glaskatalog",
+          "/glashersteller",
+          "/krankenkasse",
+        ]}
+      >
+        <Menu.Item to="/glass" primaryText="Gläser" leftIcon={<LensIcon />} />
+        <Menu.Item
+          to="/glastyp"
+          primaryText="Glastypen"
+          leftIcon={<LayersIcon />}
+        />
+        <Menu.Item
+          to="/brillenart"
+          primaryText="Brillenarten"
+          leftIcon={<TagIcon />}
+        />
+        <Menu.Item
+          to="/fassung"
+          primaryText="Fassungen"
+          leftIcon={<FrameIcon />}
+        />
+        <Menu.Item
+          to="/zusatzleistung"
+          primaryText="Zusatzleistungen"
+          leftIcon={<ListIcon />}
+        />
+        <Menu.Item
+          to="/glaslager"
+          primaryText="Glas-Lager"
+          leftIcon={<LensIcon />}
+        />
+        <Menu.Item
+          to="/glaskatalog"
+          primaryText="Glaskatalog"
+          leftIcon={<BookIcon />}
+        />
+        <Menu.Item
+          to="/glaskatalog-import"
+          primaryText="Katalog-Import (SF6)"
+          leftIcon={<ImportIcon />}
+        />
+        <Menu.Item
+          to="/krankenkasse"
+          primaryText="Krankenkassen"
+          leftIcon={<BuildingIcon />}
+        />
+      </SubMenu>
+      <SubMenu
+        label="Einstellungen"
+        icon={<BuildingIcon />}
+        paths={[
+          "/betrieb",
+          "/dokumentvorlage",
+          "/datensicherung",
+          "/benutzer",
+          "/protokoll",
+        ]}
+      >
+        {inhaber && (
+          <Menu.Item
+            to="/betrieb/1"
+            primaryText="Betriebsdaten"
+            leftIcon={<BuildingIcon />}
+          />
+        )}
+        <Menu.Item
+          to="/dokumentvorlage"
+          primaryText="Dokumentvorlagen"
+          leftIcon={<DocumentIcon />}
+        />
+        {inhaber && (
+          <Menu.Item
+            to="/benutzer"
+            primaryText="Benutzer und Rollen"
+            leftIcon={<UsersIcon />}
+          />
+        )}
+        {inhaber && (
+          <Menu.Item
+            to="/protokoll"
+            primaryText="Änderungsprotokoll"
+            leftIcon={<ListIcon />}
+          />
+        )}
+        {inhaber && (
+          <Menu.Item
+            to="/datensicherung"
+            primaryText="Datensicherung"
+            leftIcon={<ImportIcon />}
+          />
+        )}
+      </SubMenu>
+    </Menu>
+  );
+};

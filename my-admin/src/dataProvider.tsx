@@ -13,6 +13,7 @@ import type {
   UpdateParams,
 } from "react-admin";
 import { leereDatumsfelderZuNull } from "./leereDatumsfelder";
+import { uebersetzeFehler } from "./rolle";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
@@ -207,12 +208,14 @@ export const dataProvider = new Proxy(composedDataProvider, {
         const result = value.apply(target, args);
 
         if (result instanceof Promise) {
-          return result.catch((err) => Promise.reject(err));
+          return result.catch((err) =>
+            Promise.reject(uebersetzeFehler(String(prop), err)),
+          );
         }
 
         return Promise.resolve(result);
       } catch (error) {
-        return Promise.reject(error);
+        return Promise.reject(uebersetzeFehler(String(prop), error));
       }
     };
   },
