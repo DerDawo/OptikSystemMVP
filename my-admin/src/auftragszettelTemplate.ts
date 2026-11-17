@@ -27,6 +27,7 @@ import {
 } from "./werkstattauftragTemplate";
 import { KAESTCHEN_STYLES, kaestchen } from "./formularVorschlaege";
 import { MITARBEITER, mitarbeiterAnzeige } from "./mitarbeiterNamen";
+import { code39Svg } from "./auftragsverfolgung";
 
 export type AuftragszettelDaten = {
   entities: DocumentMergeEntities;
@@ -548,6 +549,7 @@ const vorderseite = (f: AuftragszettelFelder) => {
       <div class="art">AUFTRAG</div>
     </div>
     <div class="nummern">
+      ${code39Svg(f.auftragsNr)}
       <div class="nr"><span class="lbl">Auftrags-Nr.:</span><span class="wert">${e(f.auftragsNr)}</span></div>
       <div class="nr"><span class="lbl">Datum:</span><span class="wert">${e(f.datum)}</span></div>
     </div>
@@ -790,6 +792,7 @@ const STYLES = `
   .titel .haupt { font-weight: 700; font-size: 9.6pt; color: #111; }
   .titel .art { font-size: 6.2pt; letter-spacing: 0.5em; margin-top: 1.2mm; margin-right: -0.5em; }
   .nummern { width: 31mm; justify-self: end; }
+  .strichcode { display: block; width: 31mm; height: 3.6mm; margin-bottom: 0.8mm; }
   .nr { display: flex; gap: 1mm; border-bottom: 0.25mm solid #333; font-size: 6.2pt; line-height: 1.2; }
   .nr + .nr { margin-top: 1.7mm; }
   .nr .lbl { color: #444; }

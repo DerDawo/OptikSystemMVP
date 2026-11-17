@@ -2,6 +2,7 @@
 import { DatensicherungSeite } from "./DatensicherungSeite";
 import { BenutzerSeite } from "./BenutzerSeite";
 import { ProtokollSeite } from "./ProtokollSeite";
+import { AuftragsverfolgungSeite } from "./AuftragsverfolgungSeite";
 import { SerienbriefSeite } from "./SerienbriefSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
@@ -268,6 +269,10 @@ export const App = () => {
         <Route path="/protokoll" element={<ProtokollSeite />} />
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />
+        <Route
+          path="/auftragsverfolgung"
+          element={<AuftragsverfolgungSeite />}
+        />
         <Route path="/kalender" element={<TerminKalender />} />
         <Route path="/online-anfragen" element={<OnlineAnfragenSeite />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />

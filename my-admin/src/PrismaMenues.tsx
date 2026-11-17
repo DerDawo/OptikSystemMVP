@@ -20,6 +20,7 @@ const GEHE_ZU: ({ text: string; to: string; kuerzel?: string } | null)[] = [
   { text: "Kundensuche", to: "/search", kuerzel: "Alt+K" },
   { text: "Brillen-Kartei", to: "/brille" },
   { text: "CL-Kartei", to: "/kontaktlinse" },
+  { text: "Auftragsverfolgung", to: "/auftragsverfolgung" },
   { text: "Terminplaner", to: "/kalender", kuerzel: "Alt+T" },
   null,
   { text: "Rechnungen", to: "/rechnungen" },
