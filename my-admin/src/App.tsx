@@ -3,6 +3,7 @@ import { DatensicherungSeite } from "./DatensicherungSeite";
 import { BenutzerSeite } from "./BenutzerSeite";
 import { ProtokollSeite } from "./ProtokollSeite";
 import { SerienbriefSeite } from "./SerienbriefSeite";
+import { MarketingSeite } from "./MarketingSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
 import { dataProvider } from "./dataProvider";
@@ -268,6 +269,7 @@ export const App = () => {
         <Route path="/protokoll" element={<ProtokollSeite />} />
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />
+        <Route path="/marketing" element={<MarketingSeite />} />
         <Route path="/kalender" element={<TerminKalender />} />
         <Route path="/online-anfragen" element={<OnlineAnfragenSeite />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />
