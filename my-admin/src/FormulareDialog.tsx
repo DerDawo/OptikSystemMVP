@@ -168,6 +168,10 @@ import {
   buildSehtestFahrerlaubnisPreviewHtml,
   buildSehtestFahrerlaubnisPrintHtml,
 } from "./sehtestFahrerlaubnisTemplate";
+import {
+  buildMerkblattSehtestLkwPreviewHtml,
+  buildMerkblattSehtestLkwPrintHtml,
+} from "./merkblattSehtestLkwTemplate";
 
 // Kategorie, unter der die Rechnungsvorlage(n) in `dokumentvorlage` angelegt
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
@@ -433,6 +437,12 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Bescheinigung-Sehvermögen-Vorschau",
     preview: buildSehtestFahrerlaubnisPreviewHtml,
     print: buildSehtestFahrerlaubnisPrintHtml,
+  },
+  // Arbeitshilfe dazu: Grenzwerte und Ausschlusskriterien auf einer A4-Seite
+  "Merkblatt Sehtest Lkw/Bus": {
+    title: "Merkblatt-Vorschau",
+    preview: buildMerkblattSehtestLkwPreviewHtml,
+    print: buildMerkblattSehtestLkwPrintHtml,
   },
   // Ergebnis der optometrischen Untersuchung für den Kunden: Refraktion,
   // Visus und IOD aus dem Auftrag, Prüfungen in der Vorschau ankreuzen

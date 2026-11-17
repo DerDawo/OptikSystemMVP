@@ -18,7 +18,7 @@ const entities = {
     Postleitzahl: "07545",
     Stadt: "Gera",
   },
-  brille: { Datum: "2026-11-17" },
+  brille: { Datum: "2026-11-16" },
   glasRechts: { Sph: 0.75, Vis: 1.0, VisSC: 0.6 },
   glasLinks: { Sph: -0.25, Cyl: -0.5, Vis: 0.8, VisSC: 0.5 },
 } as never;
@@ -68,17 +68,27 @@ describe("Bescheinigung Sehvermögen Klasse C/D", () => {
   it("hat Teil 1 und Teil 2 mit den Pflichtvermerken", () => {
     expect(html).toContain("Teil 1");
     expect(html).toContain("Teil 2");
-    expect(html).toContain("Anlage 6 Nummer 2.1");
+    expect(html).toContain(
+      "Bescheinigung über die Untersuchung des Arztes oder eines Augenoptikerbetriebs",
+    );
+    expect(html).toContain("(verbleibt beim Arzt)");
+    expect(html).toContain("(dem Bewerber auszuhändigen)");
+    expect(html).toContain("– Vorderseite –");
+    expect(html).toContain(
+      "Angaben über den untersuchenden Augenoptikerbetrieb",
+    );
     expect(html).toContain("Das Zeugnis ist zwei Jahre gültig.");
     expect(html).toContain("Die Identität des Untersuchten wurde geprüft.");
-    expect(html).toContain("Nr. des Personalausweises");
+    expect(html).toContain("Nummer des Personalausweises:");
+    expect(html).toContain("durchführenden und bescheinigenden Augenoptikers");
     expect(html).toContain("Zusatzuntersuchung nach Anlage 6 Nummer 2.2");
   });
 
   it("übernimmt Personalien, Datum und Visus in beide Teile", () => {
     expect(html.match(/Gottschalk, Dirk/g)).toHaveLength(2);
-    expect(html.match(/Hauptstraße 5, 07545 Gera/g)).toHaveLength(2);
-    expect(html.match(/17\.11\.2026/g)).toHaveLength(2);
+    expect(html.match(/Hauptstraße 5</g)).toHaveLength(2);
+    expect(html.match(/>07545 Gera</g)).toHaveLength(2);
+    expect(html.match(/16\.11\.2026/g)).toHaveLength(2);
     expect(html).toContain(">0,6<");
     expect(html).toContain(">0,8<");
   });

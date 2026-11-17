@@ -65,6 +65,10 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
     id: "Sehvermögen Klasse C/D",
     name: "Bescheinigung Sehvermögen Lkw/Bus (FeV Anlage 6 Nr. 2.1)",
   },
+  {
+    id: "Merkblatt Sehtest Lkw/Bus",
+    name: "Merkblatt Sehtest Lkw/Bus (Grenzwerte und Ausschlusskriterien)",
+  },
   { id: "Antrag SRH", name: "Antrag SRH (Bildschirmarbeitsbrille)" },
   {
     id: "Antrag Jobcenter",

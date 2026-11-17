@@ -2,7 +2,9 @@
 -- die Klassen C/D (Lkw/Bus) nach Anlage 6 Nr. 2.1 FeV, die Augenoptikerbetriebe
 -- nach § 12 Abs. 6 FeV ausstellen dürfen. Teil 1 bleibt im Betrieb, Teil 2 ist
 -- für die Fahrerlaubnisbehörde. Layout: my-admin/src/sehtestFahrerlaubnisTemplate.ts.
--- Nur eine neue Kategorie und ein neuer Vorlagen-Datensatz, keine Kundendaten.
+-- Dazu das Merkblatt mit Grenzwerten und Ausschlusskriterien
+-- (my-admin/src/merkblattSehtestLkwTemplate.ts).
+-- Nur zwei neue Kategorien und Vorlagen-Datensätze, keine Kundendaten.
 
 alter table public.dokumentvorlage
   drop constraint if exists dokumentvorlage_kategorie_check;
@@ -42,7 +44,8 @@ alter table public.dokumentvorlage
     'Trockenes Auge',
     'Antrag Jobcenter',
     'Auswertungsbogen',
-    'Sehvermögen Klasse C/D'
+    'Sehvermögen Klasse C/D',
+    'Merkblatt Sehtest Lkw/Bus'
   ));
 
 insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
@@ -53,4 +56,14 @@ select
   true
 where not exists (
   select 1 from public.dokumentvorlage where "Kategorie" = 'Sehvermögen Klasse C/D'
+);
+
+insert into public.dokumentvorlage ("Name", "Kategorie", "Vorlagentext", "Aktiv")
+select
+  'Merkblatt Sehtest Lkw/Bus (Grenzwerte und Ausschlusskriterien)',
+  'Merkblatt Sehtest Lkw/Bus',
+  'Hinweis: Der Text dieser Vorlage wird nicht verwendet. Das Layout kommt aus my-admin/src/merkblattSehtestLkwTemplate.ts.',
+  true
+where not exists (
+  select 1 from public.dokumentvorlage where "Kategorie" = 'Merkblatt Sehtest Lkw/Bus'
 );
