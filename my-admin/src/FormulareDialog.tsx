@@ -164,6 +164,10 @@ import {
   buildAuswertungsbogenPrintHtml,
 } from "./auswertungsbogenTemplate";
 import { druckeDirekt } from "./direktDruck";
+import {
+  buildSehtestFahrerlaubnisPreviewHtml,
+  buildSehtestFahrerlaubnisPrintHtml,
+} from "./sehtestFahrerlaubnisTemplate";
 
 // Kategorie, unter der die Rechnungsvorlage(n) in `dokumentvorlage` angelegt
 // werden (siehe DOKUMENTVORLAGE_KATEGORIEN in dokumentvorlage.tsx und die
@@ -420,6 +424,15 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Antrag-Jobcenter-Vorschau",
     preview: buildJobcenterBildschirmbrillePreviewHtml,
     print: buildJobcenterBildschirmbrillePrintHtml,
+  },
+  // Bescheinigung nach Anlage 6 Nr. 2.1 FeV (Lkw/Bus): Teil 1 für den
+  // Betrieb, Teil 2 für die Fahrerlaubnisbehörde, Grenzwerte in der Vorschau
+  "Sehvermögen Klasse C/D": {
+    ausVorschau: true,
+    blatt: ".seite",
+    title: "Bescheinigung-Sehvermögen-Vorschau",
+    preview: buildSehtestFahrerlaubnisPreviewHtml,
+    print: buildSehtestFahrerlaubnisPrintHtml,
   },
   // Ergebnis der optometrischen Untersuchung für den Kunden: Refraktion,
   // Visus und IOD aus dem Auftrag, Prüfungen in der Vorschau ankreuzen
