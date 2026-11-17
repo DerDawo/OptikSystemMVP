@@ -449,11 +449,26 @@ const MessageButton = () => {
   );
 };
 
+// Refraktionsprotokoll des Kunden (Refraktionen, MKH, Tonometrie, Medizinisches)
+const RefraktionsprotokollButton = () => {
+  const record = useRecordContext();
+  const navigate = useNavigate();
+  if (!record) return null;
+  return (
+    <Button
+      onClick={() => navigate(`/kunde/${record.id}/refraktionsprotokoll`)}
+    >
+      Refraktionsprotokoll
+    </Button>
+  );
+};
+
 // Central, always-reachable actions for the Kunde detail page (message, print, edit, back).
 const KundeShowActions = () => (
   <ShowActionsBar>
     <MessageButton />
     <ErinnerungButton />
+    <RefraktionsprotokollButton />
     <Button startIcon={<PrintIcon />} onClick={() => window.print()}>
       Drucken
     </Button>
