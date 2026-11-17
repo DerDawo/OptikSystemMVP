@@ -313,3 +313,28 @@ describe("Kontaktlinsen-Rechnung", () => {
     expect(html).toContain("Es bediente Sie Robert Ulm.");
   });
 });
+
+describe("GiroCode auf der Rechnung", () => {
+  const offen = {
+    ...ENTITIES,
+    brille: { ...ENTITIES.brille, Zahlungsstatus: "offen", Anzahlung: 100 },
+  } as DocumentMergeEntities;
+
+  it("zeigt den QR-Code über den noch offenen Betrag", () => {
+    const html = buildRechnungBodyHtml({
+      entities: offen,
+      rechnungsnummer: "114400",
+    });
+    expect(html).toContain('class="girocode-seite"');
+    expect(html).toContain("Banking-App");
+  });
+
+  it("kein QR-Code auf bezahlten Rechnungen und Kostenvoranschlägen", () => {
+    expect(
+      buildRechnungBodyHtml({ entities: ENTITIES, rechnungsnummer: "114400" }),
+    ).not.toContain("girocode-seite");
+    expect(buildKostenvoranschlagBodyHtml({ entities: offen })).not.toContain(
+      "girocode-seite",
+    );
+  });
+});
