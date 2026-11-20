@@ -73,6 +73,7 @@ import type { Lagerglas } from "./glasFinder";
 import { supabase } from "./utils";
 import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
+import { ENTSPIEGELUNGEN } from "./entspiegelungen";
 import { FASSUNG_HERSTELLER } from "./fassungHersteller";
 import { HerstellerBestellung } from "./HerstellerBestellung";
 import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
@@ -1580,6 +1581,7 @@ export const BrilleKarteikarte = () => {
                 "Vergütung",
                 glasFeld("Verguetung"),
                 glastyp?.Verguetung,
+                { vorschlaege: ENTSPIEGELUNGEN },
               )}
             </Feld>
             <Beschriftung z={11} s="1 / 2">
