@@ -242,6 +242,11 @@ export const MyMenu = () => {
         primaryText="Kontaktlinsen"
         leftIcon={<LensIcon />}
       />
+      <Menu.Item
+        to="/auftragsverfolgung"
+        primaryText="Auftragsverfolgung"
+        leftIcon={<ListIcon />}
+      />
 
       <Section label="Abrechnung" />
       <Menu.Item
