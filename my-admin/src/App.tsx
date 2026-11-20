@@ -5,6 +5,7 @@ import { ProtokollSeite } from "./ProtokollSeite";
 import { AuftragsverfolgungSeite } from "./AuftragsverfolgungSeite";
 import { RefraktionsprotokollSeite } from "./RefraktionsprotokollSeite";
 import { SerienbriefSeite } from "./SerienbriefSeite";
+import { MarketingSeite } from "./MarketingSeite";
 import { BeratungsbilderSeite } from "./BeratungsbilderSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
@@ -275,6 +276,7 @@ export const App = () => {
         />
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />
+        <Route path="/marketing" element={<MarketingSeite />} />
         <Route
           path="/auftragsverfolgung"
           element={<AuftragsverfolgungSeite />}
