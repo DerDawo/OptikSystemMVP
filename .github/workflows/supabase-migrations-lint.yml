@@ -39,6 +39,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      # Zwei Migrationen mit derselben Versionsnummer (14-stelliger
+      # Timestamp) brechen "supabase db push": die zweite wird nie
+      # eingespielt (schema_migrations_pkey). Geprueft wird der Stand nach
+      # dem Merge (pull_request checkt den Merge-Commit aus).
+      - name: Doppelte Versionsnummern pruefen
+        run: |
+          set -euo pipefail
+          doppelt=$(ls supabase/migrations/*.sql | xargs -n1 basename | cut -c1-14 | sort | uniq -d)
+          if [ -n "$doppelt" ]; then
+            for v in $doppelt; do
+              echo "::error::Versionsnummer $v ist mehrfach vergeben: $(ls supabase/migrations/${v}_*.sql | xargs -n1 basename | tr '\n' ' ')"
+            done
+            echo "Bitte einer der Dateien einen neuen, eindeutigen Timestamp geben."
+            exit 1
+          fi
+          echo "Alle Versionsnummern sind eindeutig."
+
       - name: Neue Migrationsdateien pruefen
         run: |
           set -euo pipefail
