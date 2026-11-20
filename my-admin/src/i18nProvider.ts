@@ -281,6 +281,7 @@ export const germanMessages: TranslationMessages = {
     brillenart: resource("Brillenart |||| Brillenarten"),
     glass: resource("Glas |||| Gläser", {
       PD: "PD",
+      DEG: "DEG (Degression)",
       y_h: "Y/H",
       HSA: "HSA",
       iod: "IOD",
