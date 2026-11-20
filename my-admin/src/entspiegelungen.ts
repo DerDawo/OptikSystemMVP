@@ -3,6 +3,7 @@
 // aus der Preisliste (Beschichtung). Das Wort "Entspiegelung" davor sorgt
 // dafür, dass der Auftragszettel das Kästchen "HSET" ankreuzt.
 export const ENTSPIEGELUNGEN = [
+  "Entspiegelung Multi Plus",
   "Entspiegelung PURE Glide",
   "Entspiegelung OCEAN Glide",
   "Entspiegelung NANO Glide",
