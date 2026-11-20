@@ -2,6 +2,7 @@
 import { DatensicherungSeite } from "./DatensicherungSeite";
 import { BenutzerSeite } from "./BenutzerSeite";
 import { ProtokollSeite } from "./ProtokollSeite";
+import { AuftragsverfolgungSeite } from "./AuftragsverfolgungSeite";
 import { RefraktionsprotokollSeite } from "./RefraktionsprotokollSeite";
 import { SerienbriefSeite } from "./SerienbriefSeite";
 import { BeratungsbilderSeite } from "./BeratungsbilderSeite";
@@ -274,6 +275,10 @@ export const App = () => {
         />
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />
+        <Route
+          path="/auftragsverfolgung"
+          element={<AuftragsverfolgungSeite />}
+        />
         <Route path="/kalender" element={<TerminKalender />} />
         <Route path="/beratung" element={<BeratungsbilderSeite />} />
         <Route path="/online-anfragen" element={<OnlineAnfragenSeite />} />
