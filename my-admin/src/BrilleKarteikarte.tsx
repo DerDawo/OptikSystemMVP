@@ -138,6 +138,8 @@ const WERTE: { feld: string; titel: string; stellen: number }[] = [
   { feld: "A", titel: "A", stellen: 0 },
   { feld: "PD", titel: "PD", stellen: 1 },
   { feld: "Add", titel: "Add", stellen: 2 },
+  // Degression in dpt, direkt nach Add
+  { feld: "DEG", titel: "DEG", stellen: 2 },
   { feld: "y_h", titel: "y/h", stellen: 1 },
   { feld: "Pr", titel: "Pr", stellen: 2 },
   { feld: "B", titel: "B", stellen: 0 },
@@ -147,7 +149,7 @@ const WERTE: { feld: string; titel: string; stellen: number }[] = [
   { feld: "Vis", titel: "Vis cc", stellen: 2 },
   { feld: "iod", titel: "iod", stellen: 1 },
 ];
-const WERTE_LINKS = WERTE.slice(0, 8);
+const WERTE_LINKS = WERTE.slice(0, 9);
 
 // Bestellstatus eines Glases (Spalte glass."Auftragsstatus")
 const GLAS_BESTELLSTATUS = [
@@ -189,7 +191,7 @@ const ACHTUNG_AUSWAHL = [
   name: a,
 }));
 
-const WERTE_RECHTS = WERTE.slice(8);
+const WERTE_RECHTS = WERTE.slice(9);
 
 const wertText = (
   glas: Datensatz | undefined,
@@ -1350,7 +1352,7 @@ export const BrilleKarteikarte = () => {
             </Feld>
 
             {/* Werte R/L */}
-            <Zellen z={4} s={LINKS} spalten="repeat(8, 1fr)">
+            <Zellen z={4} s={LINKS} spalten="repeat(9, 1fr)">
               {WERTE_LINKS.map((w) => (
                 <Spaltentitel key={w.feld}>{w.titel}</Spaltentitel>
               ))}
@@ -1402,7 +1404,7 @@ export const BrilleKarteikarte = () => {
                   key={`${seite}-w`}
                   z={z}
                   s={LINKS}
-                  spalten="repeat(8, 1fr)"
+                  spalten="repeat(9, 1fr)"
                 >
                   {WERTE_LINKS.map(wertFeld)}
                 </Zellen>,

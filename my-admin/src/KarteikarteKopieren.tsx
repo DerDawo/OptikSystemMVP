@@ -38,6 +38,7 @@ const OPTISCHE_GLAS_FELDER = [
   "A",
   "PD",
   "Add",
+  "DEG",
   "y_h",
   "Pr",
   "B",
