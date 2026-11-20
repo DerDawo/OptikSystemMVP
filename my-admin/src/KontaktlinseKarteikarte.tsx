@@ -41,6 +41,8 @@ import { MITARBEITER, mitarbeiterAnzeige } from "./mitarbeiterNamen";
 import { leseRabattEingabe, rabattDaten, rabattOptionen } from "./rabatte";
 import { ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
+import { KlUntersuchungDialog } from "./KlUntersuchungDialog";
+import { type KlArt, untersuchungTitel } from "./klUntersuchung";
 
 /*
  * CL-Kartei wie in Prisma: alle Felder direkt eintippen (speichert beim
@@ -140,9 +142,13 @@ export const clSumme = (cl: Record<string, unknown>): number | null => {
   return rund(brutto - (brutto * prozent) / 100);
 };
 
-// Baum links: Hauptkarteien mit ihren Anpassungen (neueste oben)
+// Baum links: Hauptkarteien mit ihren Anpassungen (neueste oben), darunter
+// jeweils Kontrollen und Topometrie; unten Knöpfe zum Anlegen
 const KarteiBaum = ({ cl }: { cl: Datensatz }) => {
   const navigate = useNavigate();
+  const dataProvider = useDataProvider();
+  const notify = useNotify();
+  const [offen, setOffen] = useState<number | null>(null);
   const { data } = useGetList<Datensatz>(
     "kontaktlinse",
     {
@@ -152,29 +158,85 @@ const KarteiBaum = ({ cl }: { cl: Datensatz }) => {
     },
     { enabled: cl.kunde_id != null },
   );
+  const { data: untersuchungen, refetch } = useGetList<Datensatz>(
+    "kl_untersuchung",
+    {
+      filter: { kunde_id: cl.kunde_id },
+      sort: { field: "Datum", order: "DESC" },
+      pagination: { page: 1, perPage: 500 },
+    },
+    { enabled: cl.kunde_id != null },
+  );
   const alle = data ?? [];
   const ids = new Set(alle.map((k) => k.id));
   const haupt = alle.filter(
     (k) => k.Hauptkartei_id == null || !ids.has(k.Hauptkartei_id as number),
   );
-  const eintrag = (k: Datensatz, anpassung: boolean) => (
+  const zeile = (
+    key: string,
+    inhalt: string,
+    einzug: number,
+    aktiv: boolean,
+    klick: () => void,
+  ) => (
     <Box
-      key={k.id}
-      onClick={() => navigate(`/kontaktlinse/${k.id}/show`)}
+      key={key}
+      onClick={klick}
       sx={{
-        pl: anpassung ? 2 : 0,
+        pl: einzug,
         py: "1px",
         cursor: "pointer",
         fontSize: "0.8rem",
         whiteSpace: "nowrap",
         borderRadius: "3px",
-        bgcolor: k.id === cl.id ? "action.selected" : undefined,
+        bgcolor: aktiv ? "action.selected" : undefined,
         "&:hover": { bgcolor: "action.hover" },
       }}
     >
-      {anpassung ? "Anpassung" : "CL-Kartei"} {datum(k.Datum) || `#${k.id}`}
+      {inhalt}
     </Box>
   );
+  const eintrag = (k: Datensatz, anpassung: boolean) => (
+    <Box key={k.id}>
+      {zeile(
+        `k${k.id}`,
+        `${anpassung ? "Anpassung" : "CL-Kartei"} ${datum(k.Datum) || `#${k.id}`}`,
+        anpassung ? 2 : 0,
+        k.id === cl.id,
+        () => navigate(`/kontaktlinse/${k.id}/show`),
+      )}
+      {(untersuchungen ?? [])
+        .filter((u) => u.kontaktlinse_id === k.id)
+        .map((u) =>
+          zeile(
+            `u${u.id}`,
+            untersuchungTitel(u),
+            anpassung ? 4 : 2,
+            u.id === offen,
+            () => setOffen(u.id),
+          ),
+        )}
+    </Box>
+  );
+  const anlegen = async (art: KlArt) => {
+    try {
+      const { data: neu } = await dataProvider.create("kl_untersuchung", {
+        data: {
+          kunde_id: cl.kunde_id,
+          kontaktlinse_id: cl.id,
+          Art: art,
+          Datum: new Date().toLocaleDateString("sv-SE"),
+          Untersucher: cl.Berater ?? null,
+        },
+      });
+      await refetch();
+      setOffen(neu.id as number);
+    } catch (f) {
+      notify((f as Error).message || `${art} konnte nicht angelegt werden.`, {
+        type: "error",
+      });
+    }
+  };
   return (
     <Box sx={{ mt: 1.5 }}>
       {haupt.map((h) => (
@@ -185,6 +247,27 @@ const KarteiBaum = ({ cl }: { cl: Datensatz }) => {
             .map((k) => eintrag(k, true))}
         </Box>
       ))}
+      <Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mt: 1 }}>
+        <Button size="small" onClick={() => void anlegen("Kontrolle")}>
+          + Kontrolle
+        </Button>
+        <Button size="small" onClick={() => void anlegen("Topometrie")}>
+          + Topometrie
+        </Button>
+      </Box>
+      {offen !== null && (
+        <KlUntersuchungDialog
+          id={offen}
+          onClose={() => {
+            setOffen(null);
+            void refetch();
+          }}
+          geloescht={() => {
+            setOffen(null);
+            void refetch();
+          }}
+        />
+      )}
     </Box>
   );
 };
