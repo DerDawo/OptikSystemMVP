@@ -36,6 +36,7 @@ import dayjs from "dayjs";
 import { CurrencyField } from "./CurrencyField";
 import { DashboardAufgaben } from "./DashboardAufgaben";
 import { BrilleStatusChip, getBrilleOrderStatus } from "./orderStatus";
+import { GlasStatistik } from "./GlasStatistikKarte";
 import { tokensFor } from "./designTokens";
 import { CalendarIcon, CheckIcon, GlassesIcon, UserPlusIcon } from "./icons";
 
@@ -865,6 +866,9 @@ const DashboardInhalt = ({ statistik }: { statistik: boolean }) => {
 
             {statistik && (
               <>
+                <DashboardCard title="Glasbestellungen je Monat" span>
+                  <GlasStatistik />
+                </DashboardCard>
                 <DashboardCard
                   title="Schuldner – unbezahlt"
                   action={
