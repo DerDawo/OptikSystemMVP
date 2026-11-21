@@ -40,17 +40,17 @@ alter table public.arzt enable row level security;
 
 drop policy if exists rolle_lesen on public.arzt;
 create policy rolle_lesen on public.arzt
-  for select to authenticated using (public.darf_lesen());
+  for select to authenticated using ((select public.darf_lesen()));
 drop policy if exists rolle_anlegen on public.arzt;
 create policy rolle_anlegen on public.arzt
-  for insert to authenticated with check (public.darf_bearbeiten());
+  for insert to authenticated with check ((select public.darf_bearbeiten()));
 drop policy if exists rolle_aendern on public.arzt;
 create policy rolle_aendern on public.arzt
   for update to authenticated
-  using (public.darf_bearbeiten()) with check (public.darf_bearbeiten());
+  using ((select public.darf_bearbeiten())) with check ((select public.darf_bearbeiten()));
 drop policy if exists rolle_loeschen on public.arzt;
 create policy rolle_loeschen on public.arzt
-  for delete to authenticated using (public.darf_bearbeiten());
+  for delete to authenticated using ((select public.darf_bearbeiten()));
 
 revoke all on public.arzt from anon;
 
