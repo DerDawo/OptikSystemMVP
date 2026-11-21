@@ -74,6 +74,7 @@ import { supabase } from "./utils";
 import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
 import { ENTSPIEGELUNGEN } from "./entspiegelungen";
+import { GlasZusatzAuswahl, useGlasFarben } from "./GlasZusatzAuswahl";
 import { FASSUNG_HERSTELLER } from "./fassungHersteller";
 import { HerstellerBestellung } from "./HerstellerBestellung";
 import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";
@@ -989,6 +990,7 @@ export const BrilleKarteikarte = () => {
   const [bestellOffen, setBestellOffen] = useState(false);
   const [assistentOffen, setAssistentOffen] = useState(false);
   const [finderOffen, setFinderOffen] = useState(false);
+  const glasFarben = useGlasFarben();
 
   if (!brille) return null;
 
@@ -1566,13 +1568,27 @@ export const BrilleKarteikarte = () => {
               Bemerkung zum Glas
             </Beschriftung>
             <Feld z={9} s={RECHTS} h={2} mehrzeilig>
-              {textFeld(
-                "glastyp.Sonstiges",
-                "Bemerkung zum Glas",
-                glasFeld("Sonstiges"),
-                glastyp?.Sonstiges,
-                { mehrzeilig: true },
-              )}
+              <Box
+                sx={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  width: "100%",
+                }}
+              >
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  {textFeld(
+                    "glastyp.Sonstiges",
+                    "Bemerkung zum Glas",
+                    glasFeld("Sonstiges"),
+                    glastyp?.Sonstiges,
+                    { mehrzeilig: true },
+                  )}
+                </Box>
+                <GlasZusatzAuswahl
+                  wert={glastyp?.Sonstiges}
+                  speichere={glasFeld("Sonstiges")}
+                />
+              </Box>
             </Feld>
             <Beschriftung z={10} s="1 / 2">
               Vergütung
@@ -1595,6 +1611,7 @@ export const BrilleKarteikarte = () => {
                 "Farbe",
                 glasFeld("Farbe"),
                 glastyp?.Farbe,
+                { vorschlaege: glasFarben },
               )}
             </Feld>
             <Beschriftung z={11} s="5 / 6">
