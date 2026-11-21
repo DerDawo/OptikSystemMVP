@@ -99,6 +99,7 @@ import { RechnungenList } from "./Rechnungen";
 import { Fundusarchiv } from "./Fundusarchiv";
 import { MahnungenList } from "./Mahnungen";
 import { KassenrezepteSeite } from "./Kassenrezepte";
+import { OpticaAbrechnungenSeite } from "./OpticaAbrechnungen";
 import { FirmenrechnungSeite } from "./FirmenrechnungSeite";
 import { Dashboard, StatistikSeite } from "./Dashboard";
 import { BetriebEdit } from "./betrieb";
@@ -266,6 +267,7 @@ export const App = () => {
         <Route path="/mahnungen" element={<MahnungenList />} />
         <Route path="/fundusarchiv" element={<Fundusarchiv />} />
         <Route path="/rezepte" element={<KassenrezepteSeite />} />
+        <Route path="/optica" element={<OpticaAbrechnungenSeite />} />
         <Route path="/firmenrechnung" element={<FirmenrechnungSeite />} />
         <Route path="/datensicherung" element={<DatensicherungSeite />} />
         <Route path="/benutzer" element={<BenutzerSeite />} />
