@@ -101,7 +101,8 @@ describe("Rechnung Sehtest C/D", () => {
     expect(html).toContain("20.11.2028");
     for (const k of FAHRERLAUBNISKLASSEN) expect(html).toContain(k);
     for (const l of SEHTEST_LEISTUNGEN) expect(html).toContain(l.bezeichnung);
-    expect(html).toContain("25,00 EUR");
+    expect(html).toContain("139,90 EUR");
+    expect(html).toContain("22,34 EUR");
     expect(html).toContain("Anlage 6 Nr. 2.1 FeV");
     // ohne Vorschau kein Skript
     expect(html).not.toContain("<script");

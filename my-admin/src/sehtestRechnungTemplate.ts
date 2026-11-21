@@ -52,8 +52,8 @@ export type SehtestLeistung = {
 
 /**
  * Leistungskatalog. Die Pflichtprüfungen nach Anlage 6 Nr. 2.1 FeV sind
- * vorausgewählt; die übrigen sind freiwillige Zusatzleistungen. Preise sind
- * Vorschläge und lassen sich in der Vorschau ändern.
+ * vorausgewählt (zusammen 139,90 €); die übrigen sind freiwillige
+ * Zusatzleistungen. Preise lassen sich in der Vorschau ändern.
  */
 export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
   {
@@ -61,7 +61,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Sehschärfe ohne Korrektur",
     beschreibung:
       "Tagessehschärfe rechts, links, beidäugig (DIN 58220, Anl. 6 Nr. 2.1.1 FeV)",
-    preis: 8,
+    preis: 35,
     menge: 1,
     standard: true,
   },
@@ -70,7 +70,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Sehschärfe mit Korrektur",
     beschreibung:
       "mit Brille bzw. Kontaktlinsen; Grenzwerte je Auge 0,8, beidäugig 1,0",
-    preis: 8,
+    preis: 35,
     menge: 1,
     standard: true,
   },
@@ -79,7 +79,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Prüfung der Korrektur",
     beschreibung:
       "Scheitelbrechwert der Brille, sphärisches Äquivalent höchstens +8,0 dpt",
-    preis: 6,
+    preis: 39.9,
     menge: 1,
     standard: true,
   },
@@ -88,7 +88,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Bescheinigung über das Sehvermögen",
     beschreibung:
       "amtliches Muster, Teil 1 (Betrieb) und Teil 2 (Fahrerlaubnisbehörde)",
-    preis: 3,
+    preis: 30,
     menge: 1,
     standard: true,
   },
