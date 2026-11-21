@@ -23,6 +23,7 @@ import { Theme } from "@mui/material/styles";
 import PhoneIcon from "@mui/icons-material/Phone";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { Auswahl, Eingabe, Speichern } from "./KarteiEingabe";
+import { ArztAuswahl } from "./aerzteSeite";
 import { HINWEISE } from "./KundeFelder";
 import { kontaktAktionen } from "./kontaktLinks";
 import { NachrichtHandy, NachrichtKanal } from "./NachrichtHandy";
@@ -487,14 +488,26 @@ export const KundeKarteikarte = () => {
         {/* Behandelnder Augenarzt mit vollständiger Adresse */}
         {zeile(
           "Augenarzt",
-          <Feld mehrzeilig>
-            <Eingabe
-              name="Augenarzt (Praxis, Name, Straße, PLZ Ort, Telefon)"
-              wert={kunde.Augenarzt}
-              speichere={speichere("Augenarzt")}
-              mehrzeilig
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            <Feld mehrzeilig>
+              <Eingabe
+                name="Augenarzt (Praxis, Name, Straße, PLZ Ort, Telefon)"
+                wert={kunde.Augenarzt}
+                speichere={speichere("Augenarzt")}
+                mehrzeilig
+              />
+            </Feld>
+            {/* Arzt aus der Ärzte-Liste übernehmen (ersetzt den Freitext) */}
+            <ArztAuswahl
+              onWahl={(block) =>
+                speichere("Augenarzt")(block).catch(() =>
+                  notify("Augenarzt konnte nicht gespeichert werden.", {
+                    type: "error",
+                  }),
+                )
+              }
             />
-          </Feld>,
+          </Box>,
           undefined,
           true,
         )}
