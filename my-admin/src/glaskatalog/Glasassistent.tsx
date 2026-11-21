@@ -33,6 +33,7 @@ import {
   useRecordContext,
 } from "react-admin";
 import { useFormContext, useWatch } from "react-hook-form";
+import { KatalogKnopf } from "../KatalogKnopf";
 import {
   VORGABEN,
   Vorgabe,
@@ -1023,6 +1024,9 @@ export const GlasassistentDialog = ({
                 borderColor: "divider",
               }}
             >
+              <Box sx={{ mr: "auto" }}>
+                <KatalogKnopf />
+              </Box>
               <Button onClick={onClose} disabled={submitting}>
                 Abbrechen
               </Button>
