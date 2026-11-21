@@ -211,7 +211,10 @@ export const OpticaImportDialog = ({
         {schritt === "vorschau" && gelesen && (
           <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
             {gelesen.laeufe.length === 0 ? (
-              <Alert severity="warning">
+              <Alert
+                severity="warning"
+                sx={{ display: gelesen.fehler.length ? "none" : undefined }}
+              >
                 In den ausgewählten Dateien wurde keine OPTICA-Abrechnung
                 erkannt.
               </Alert>
@@ -323,9 +326,37 @@ export const OpticaImportDialog = ({
                 </Box>
               </Box>
             )}
+            {gelesen.fehler.length > 0 && (
+              <Alert
+                severity="error"
+                action={
+                  <Button
+                    color="inherit"
+                    size="small"
+                    onClick={() => window.location.reload()}
+                  >
+                    Seite neu laden
+                  </Button>
+                }
+              >
+                {gelesen.fehler.length} PDF
+                {gelesen.fehler.length === 1 ? " konnte" : "s konnten"} nicht
+                gelesen werden. Meist hilft es, die Seite neu zu laden (z. B.
+                nach einem Update der App) und die Dateien noch einmal
+                auszuwählen.
+                <Typography
+                  variant="caption"
+                  sx={{ display: "block", mt: 0.5 }}
+                >
+                  {gelesen.fehler
+                    .map((f) => `${f.name} (${f.grund})`)
+                    .join(", ")}
+                </Typography>
+              </Alert>
+            )}
             {gelesen.uebersprungen.length > 0 && (
               <Typography variant="caption" color="text.secondary">
-                Nicht erkannt und übersprungen:{" "}
+                Keine OPTICA-Unterlage, übersprungen:{" "}
                 {gelesen.uebersprungen.join(", ")}
               </Typography>
             )}

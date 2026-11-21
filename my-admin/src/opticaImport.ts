@@ -26,9 +26,14 @@ export type GeleseneUnterlagen = {
   laeufe: OpticaLauf[];
   /** Dateien je Abrechnungsmonat, zum Ablegen. */
   dateien: Map<string, File[]>;
-  /** Dateien, die nicht gelesen werden konnten oder keinen Monat haben. */
+  /** Dateien, die keine OPTICA-Unterlage sind (kein Abrechnungsmonat). */
   uebersprungen: string[];
+  /** Dateien, die nicht gelesen werden konnten, mit Grund. */
+  fehler: { name: string; grund: string }[];
 };
+
+const fehlerText = (err: unknown) =>
+  err instanceof Error ? `${err.name}: ${err.message}` : String(err);
 
 /** Ausgewählte PDFs lesen und nach Abrechnungsmonat zu Läufen bündeln. */
 export const liesUnterlagen = async (
@@ -41,16 +46,23 @@ export const liesUnterlagen = async (
   const uebersprungen = dateien
     .filter((d) => !/\.pdf$/i.test(d.name) && !d.name.startsWith("."))
     .map((d) => d.name);
+  const fehler: GeleseneUnterlagen["fehler"] = [];
   let fertig = 0;
   for (const datei of pdfs) {
     try {
-      const zeilen = await pdfTextZeilen(await datei.arrayBuffer());
+      let zeilen: string[];
+      try {
+        zeilen = await pdfTextZeilen(await datei.arrayBuffer());
+      } catch {
+        // Ein zweiter Versuch hilft, wenn pdf.js kurz hängt
+        zeilen = await pdfTextZeilen(await datei.arrayBuffer());
+      }
       const doc = dokumentAusZeilen(datei.name, zeilen);
       if (doc.kopf) dokumente.push({ doc, datei });
       else uebersprungen.push(datei.name);
     } catch (err) {
       console.error("PDF konnte nicht gelesen werden", datei.name, err);
-      uebersprungen.push(datei.name);
+      fehler.push({ name: datei.name, grund: fehlerText(err) });
     }
     fortschritt?.(++fertig, pdfs.length);
   }
@@ -66,6 +78,7 @@ export const liesUnterlagen = async (
     laeufe: laeufeAusDokumenten(dokumente.map((d) => d.doc)),
     dateien: dateienJeMonat,
     uebersprungen,
+    fehler,
   };
 };
 
