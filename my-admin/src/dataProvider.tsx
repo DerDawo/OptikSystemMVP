@@ -14,6 +14,7 @@ import type {
 } from "react-admin";
 import { leereDatumsfelderZuNull } from "./leereDatumsfelder";
 import { uebersetzeFehler } from "./rolleFehler";
+import { arztFilter } from "./aerzte";
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_DEFAULT_KEY;
@@ -123,7 +124,12 @@ const syncZusatzleistungen = async (
 };
 
 const brilleZusatzleistungenProvider = {
-  getList: async (resource: string, params: GetListParams) => {
+  getList: async (resource: string, eingabe: GetListParams) => {
+    // Ärzte: Schnellsuche "q" über mehrere Spalten (siehe aerzte.ts)
+    const params =
+      resource === "arzt"
+        ? { ...eingabe, filter: arztFilter(eingabe.filter) }
+        : eingabe;
     const result = await rawDataProvider.getList(resource, params);
     if (resource !== "brille") {
       return result;
