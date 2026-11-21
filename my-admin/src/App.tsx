@@ -2,7 +2,11 @@
 import { DatensicherungSeite } from "./DatensicherungSeite";
 import { BenutzerSeite } from "./BenutzerSeite";
 import { ProtokollSeite } from "./ProtokollSeite";
+import { AuftragsverfolgungSeite } from "./AuftragsverfolgungSeite";
+import { RefraktionsprotokollSeite } from "./RefraktionsprotokollSeite";
 import { SerienbriefSeite } from "./SerienbriefSeite";
+import { MarketingSeite } from "./MarketingSeite";
+import { BeratungsbilderSeite } from "./BeratungsbilderSeite";
 import { Admin, CustomRoutes, Resource } from "react-admin";
 import { lightTheme, darkTheme } from "./theme";
 import { dataProvider } from "./dataProvider";
@@ -266,9 +270,19 @@ export const App = () => {
         <Route path="/datensicherung" element={<DatensicherungSeite />} />
         <Route path="/benutzer" element={<BenutzerSeite />} />
         <Route path="/protokoll" element={<ProtokollSeite />} />
+        <Route
+          path="/kunde/:id/refraktionsprotokoll"
+          element={<RefraktionsprotokollSeite />}
+        />
         <Route path="/statistiken" element={<StatistikSeite />} />
         <Route path="/serienbrief" element={<SerienbriefSeite />} />
+        <Route path="/marketing" element={<MarketingSeite />} />
+        <Route
+          path="/auftragsverfolgung"
+          element={<AuftragsverfolgungSeite />}
+        />
         <Route path="/kalender" element={<TerminKalender />} />
+        <Route path="/beratung" element={<BeratungsbilderSeite />} />
         <Route path="/online-anfragen" element={<OnlineAnfragenSeite />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />
         <Route path="/glaskatalog-import" element={<GlaskatalogImportPage />} />

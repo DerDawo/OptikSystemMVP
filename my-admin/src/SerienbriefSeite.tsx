@@ -28,6 +28,8 @@ import {
   emailListeCsv,
   fuelleText,
 } from "./serienbrief";
+import { SERIENBRIEF_AUSWAHL, Selektion, selektionText } from "./marketing";
+import { ladeAuswahl, zaehleAuswahl } from "./marketingAbfrage";
 
 /*
  * Gehe zu -> Serienbrief: 1. Empfänger auswählen, 2. Text mit Platzhaltern
@@ -63,6 +65,20 @@ Wir laden Sie herzlich zu einer kostenlosen Überprüfung Ihrer Sehstärke ein �
 
 Mit freundlichen Grüßen
 Ihr Team von Augenoptik Ulm`;
+
+type MarketingUebergabe = { name: string; auswahl: Selektion };
+
+// Auswahl aus dem Marketingmodul ("Serienbrief schreiben"); bleibt, bis sie
+// hier verworfen wird
+const leseMarketing = (): MarketingUebergabe | null => {
+  try {
+    const roh = localStorage.getItem(SERIENBRIEF_AUSWAHL);
+    const m = roh ? (JSON.parse(roh) as MarketingUebergabe) : null;
+    return m?.auswahl?.kriterien ? m : null;
+  } catch {
+    return null;
+  }
+};
 
 type Entwurf = { auswahl: Auswahl; betreff: string; text: string };
 
@@ -114,8 +130,22 @@ export const SerienbriefSeite = () => {
   const [beispiel, setBeispiel] = useState<Empfaenger | null>(null);
   const [laedt, setLaedt] = useState<string | null>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const [marketing, setMarketing] = useState(leseMarketing);
 
   const filter = useMemo(() => auswahlFilter(auswahl), [auswahl]);
+  // Marketing-Auswahl mit dem hier gewählten Weg (Brief oder E-Mail)
+  const marketingAuswahl = useMemo(
+    () => (marketing ? { ...marketing.auswahl, kanal: auswahl.kanal } : null),
+    [marketing, auswahl.kanal],
+  );
+  const marketingVerwerfen = () => {
+    try {
+      localStorage.removeItem(SERIENBRIEF_AUSWAHL);
+    } catch {
+      // nichts zu tun
+    }
+    setMarketing(null);
+  };
 
   useEffect(() => {
     try {
@@ -130,6 +160,19 @@ export const SerienbriefSeite = () => {
     let abgebrochen = false;
     setAnzahl(null);
     const zeit = window.setTimeout(() => {
+      if (marketingAuswahl) {
+        Promise.all([
+          zaehleAuswahl(marketingAuswahl),
+          ladeAuswahl<Empfaenger>(marketingAuswahl, 1),
+        ])
+          .then(([n, erste]) => {
+            if (abgebrochen) return;
+            setAnzahl(n);
+            setBeispiel(erste[0] ?? null);
+          })
+          .catch(() => !abgebrochen && setAnzahl(-1));
+        return;
+      }
       dataProvider
         .getList(ANSICHT, {
           pagination: { page: 1, perPage: 1 },
@@ -147,9 +190,10 @@ export const SerienbriefSeite = () => {
       abgebrochen = true;
       window.clearTimeout(zeit);
     };
-  }, [dataProvider, filter]);
+  }, [dataProvider, filter, marketingAuswahl]);
 
   const alleLaden = async () => {
+    if (marketingAuswahl) return ladeAuswahl<Empfaenger>(marketingAuswahl);
     const alle: Empfaenger[] = [];
     for (let seite = 1; ; seite += 1) {
       const r = await dataProvider.getList(ANSICHT, {
@@ -254,71 +298,94 @@ export const SerienbriefSeite = () => {
             <ToggleButton value="post">Brief per Post</ToggleButton>
             <ToggleButton value="email">E-Mail-Liste</ToggleButton>
           </ToggleButtonGroup>
-          <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
-            <TextField
-              select
-              size="small"
-              label="Kunden"
-              value={auswahl.gruppe}
-              onChange={(ev) => setze("gruppe", ev.target.value as Gruppe)}
-              sx={{ minWidth: 260 }}
+          {marketing ? (
+            <Alert
+              severity="info"
+              action={
+                <Button
+                  color="inherit"
+                  size="small"
+                  onClick={marketingVerwerfen}
+                >
+                  Verwerfen
+                </Button>
+              }
             >
-              {GRUPPEN.map((g) => (
-                <MenuItem key={g.id} value={g.id}>
-                  {g.name}
-                </MenuItem>
-              ))}
-            </TextField>
-            {auswahl.gruppe === "sehtest" && (
-              <TextField
-                size="small"
-                type="number"
-                label="Jahre"
-                value={auswahl.jahre}
-                onChange={(ev) =>
-                  setze("jahre", Math.max(1, Number(ev.target.value) || 1))
-                }
-                sx={{ width: 100 }}
-              />
-            )}
-            {auswahl.gruppe === "geburtstag" && (
-              <TextField
-                select
-                size="small"
-                label="Monat"
-                value={auswahl.monat}
-                onChange={(ev) => setze("monat", Number(ev.target.value))}
-                sx={{ width: 150 }}
-              >
-                {MONATE.map((m, i) => (
-                  <MenuItem key={m} value={i + 1}>
-                    {m}
-                  </MenuItem>
-                ))}
-              </TextField>
-            )}
-            <TextField
-              size="small"
-              label="PLZ beginnt mit"
-              value={auswahl.plz}
-              onChange={(ev) => setze("plz", ev.target.value)}
-              sx={{ width: 150 }}
-            />
-          </Box>
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={auswahl.nurEinwilligung}
-                onChange={(ev) => setze("nurEinwilligung", ev.target.checked)}
-              />
-            }
-            label="nur Kunden mit Werbeeinwilligung"
-          />
-          {!auswahl.nurEinwilligung && (
-            <Alert severity="warning">
-              Werbung nur an Kunden mit Einwilligung schicken. Ohne Haken nur
-              für reine Mitteilungen (z. B. geänderte Öffnungszeiten).
+              <strong>Empfänger aus dem Marketing: {marketing.name}</strong>
+              <br />
+              {selektionText(marketingAuswahl ?? marketing.auswahl)}
             </Alert>
+          ) : (
+            <>
+              <Box sx={{ display: "flex", gap: 1.5, flexWrap: "wrap" }}>
+                <TextField
+                  select
+                  size="small"
+                  label="Kunden"
+                  value={auswahl.gruppe}
+                  onChange={(ev) => setze("gruppe", ev.target.value as Gruppe)}
+                  sx={{ minWidth: 260 }}
+                >
+                  {GRUPPEN.map((g) => (
+                    <MenuItem key={g.id} value={g.id}>
+                      {g.name}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                {auswahl.gruppe === "sehtest" && (
+                  <TextField
+                    size="small"
+                    type="number"
+                    label="Jahre"
+                    value={auswahl.jahre}
+                    onChange={(ev) =>
+                      setze("jahre", Math.max(1, Number(ev.target.value) || 1))
+                    }
+                    sx={{ width: 100 }}
+                  />
+                )}
+                {auswahl.gruppe === "geburtstag" && (
+                  <TextField
+                    select
+                    size="small"
+                    label="Monat"
+                    value={auswahl.monat}
+                    onChange={(ev) => setze("monat", Number(ev.target.value))}
+                    sx={{ width: 150 }}
+                  >
+                    {MONATE.map((m, i) => (
+                      <MenuItem key={m} value={i + 1}>
+                        {m}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                )}
+                <TextField
+                  size="small"
+                  label="PLZ beginnt mit"
+                  value={auswahl.plz}
+                  onChange={(ev) => setze("plz", ev.target.value)}
+                  sx={{ width: 150 }}
+                />
+              </Box>
+              <FormControlLabel
+                control={
+                  <Checkbox
+                    checked={auswahl.nurEinwilligung}
+                    onChange={(ev) =>
+                      setze("nurEinwilligung", ev.target.checked)
+                    }
+                  />
+                }
+                label="nur Kunden mit Werbeeinwilligung"
+              />
+              {!auswahl.nurEinwilligung && (
+                <Alert severity="warning">
+                  Werbung nur an Kunden mit Einwilligung schicken. Ohne Haken
+                  nur für reine Mitteilungen (z. B. geänderte Öffnungszeiten).
+                </Alert>
+              )}
+            </>
           )}
           <Typography sx={{ fontSize: 15 }}>
             {anzahl === null

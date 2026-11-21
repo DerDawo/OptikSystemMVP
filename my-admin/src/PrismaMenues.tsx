@@ -20,7 +20,9 @@ const GEHE_ZU: ({ text: string; to: string; kuerzel?: string } | null)[] = [
   { text: "Kundensuche", to: "/search", kuerzel: "Alt+K" },
   { text: "Brillen-Kartei", to: "/brille" },
   { text: "CL-Kartei", to: "/kontaktlinse" },
+  { text: "Auftragsverfolgung", to: "/auftragsverfolgung" },
   { text: "Terminplaner", to: "/kalender", kuerzel: "Alt+T" },
+  { text: "Beratungsbilder", to: "/beratung" },
   null,
   { text: "Rechnungen", to: "/rechnungen" },
   { text: "Mahnungen", to: "/mahnungen" },
@@ -29,6 +31,7 @@ const GEHE_ZU: ({ text: string; to: string; kuerzel?: string } | null)[] = [
   null,
   { text: "Textverarbeitung (Vorlagen)", to: "/dokumentvorlage" },
   { text: "Statistiken", to: "/statistiken" },
+  { text: "Marketing", to: "/marketing" },
   { text: "Serienbrief", to: "/serienbrief" },
   { text: "Betriebsdaten", to: "/betrieb/1" },
 ];

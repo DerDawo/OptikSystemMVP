@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Confirm, useDataProvider, useNotify } from "react-admin";
+import { Confirm, DataProvider, useDataProvider, useNotify } from "react-admin";
 import { Box, ButtonBase, Typography } from "@mui/material";
 import CheckBoxIcon from "@mui/icons-material/CheckBox";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
@@ -31,6 +31,29 @@ const datumKurz = (wert: unknown) =>
       })
     : "";
 
+// Bestellstatus der Gläser mitziehen (Spalte "Liefern"); Fehler dort
+// halten den Auftragsstatus nicht auf. Auch von der Auftragsverfolgung genutzt.
+export const glaeserStatusSetzen = async (
+  dataProvider: DataProvider,
+  brille: Record<string, unknown>,
+  status: string,
+) => {
+  const ids = [brille.GlasRechts, brille.GlasLinks].filter(
+    (id): id is number => typeof id === "number",
+  );
+  await Promise.all(
+    ids.map((id) =>
+      dataProvider
+        .update("glass", {
+          id,
+          data: { Auftragsstatus: status },
+          previousData: { id },
+        })
+        .catch(() => undefined),
+    ),
+  );
+};
+
 const SCHRITTE = [
   { feld: "Bestellt", titel: "Bestellt", glas: "bestellt" },
   { feld: "Fertig", titel: "Fertig", glas: "eingetroffen" },
@@ -51,24 +74,8 @@ export const AuftragsstatusLeiste = ({
   );
   const [laeuft, setLaeuft] = useState(false);
 
-  // Bestellstatus der Gläser mitziehen (Spalte "Liefern"); Fehler dort
-  // halten den Auftragsstatus nicht auf
-  const glaeserSetzen = async (status: string) => {
-    const ids = [brille.GlasRechts, brille.GlasLinks].filter(
-      (id): id is number => typeof id === "number",
-    );
-    await Promise.all(
-      ids.map((id) =>
-        dataProvider
-          .update("glass", {
-            id,
-            data: { Auftragsstatus: status },
-            previousData: { id },
-          })
-          .catch(() => undefined),
-      ),
-    );
-  };
+  const glaeserSetzen = (status: string) =>
+    glaeserStatusSetzen(dataProvider, brille, status);
 
   const setze = async (
     schritt: (typeof SCHRITTE)[number],

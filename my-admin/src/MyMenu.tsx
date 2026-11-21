@@ -220,6 +220,16 @@ export const MyMenu = () => {
         primaryText="Fundusarchiv"
         leftIcon={<SearchIcon />}
       />
+      <Menu.Item
+        to="/marketing"
+        primaryText="Marketing"
+        leftIcon={<TagIcon />}
+      />
+      <Menu.Item
+        to="/beratung"
+        primaryText="Beratungsbilder"
+        leftIcon={<BookIcon />}
+      />
 
       <Section label="Aufträge" />
       <Menu.Item
@@ -231,6 +241,11 @@ export const MyMenu = () => {
         to="/kontaktlinse"
         primaryText="Kontaktlinsen"
         leftIcon={<LensIcon />}
+      />
+      <Menu.Item
+        to="/auftragsverfolgung"
+        primaryText="Auftragsverfolgung"
+        leftIcon={<ListIcon />}
       />
 
       <Section label="Abrechnung" />
