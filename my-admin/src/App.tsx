@@ -102,6 +102,12 @@ import { KassenrezepteSeite } from "./Kassenrezepte";
 import { FirmenrechnungSeite } from "./FirmenrechnungSeite";
 import { Dashboard, StatistikSeite } from "./Dashboard";
 import { BetriebEdit } from "./betrieb";
+import {
+  ArztCreate,
+  ArztEdit,
+  ArztList,
+  arztRepresentation,
+} from "./aerzteSeite";
 
 import PersonIcon from "@mui/icons-material/Person";
 import PanoramaFishEyeIcon from "@mui/icons-material/PanoramaFishEye";
@@ -155,6 +161,14 @@ export const App = () => {
         list={KrankenkasseList}
         edit={KrankenkasseEdit}
         create={KrankenkasseCreate}
+      />
+      <Resource
+        name="arzt"
+        options={{ label: "Ärzte" }}
+        recordRepresentation={arztRepresentation}
+        list={ArztList}
+        edit={ArztEdit}
+        create={ArztCreate}
       />
       <Resource
         name="brillenart"
