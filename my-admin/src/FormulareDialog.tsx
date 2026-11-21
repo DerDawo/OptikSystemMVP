@@ -150,6 +150,11 @@ import {
   buildArbeitgeberRechnungPrintHtml,
 } from "./arbeitgeberRechnungTemplate";
 import {
+  SEHTEST_RECHNUNG_KATEGORIE,
+  buildSehtestRechnungPreviewHtml,
+  buildSehtestRechnungPrintHtml,
+} from "./sehtestRechnungTemplate";
+import {
   buildAuftragszettelPreviewHtml,
   buildAuftragszettelPrintHtml,
 } from "./auftragszettelTemplate";
@@ -211,6 +216,13 @@ const AG_RECHNUNG_SCHUTZ_KATEGORIE = ARBEITGEBER_RECHNUNG_KATEGORIEN.schutz;
 const AG_RECHNUNG_KATEGORIEN: string[] = [
   AG_RECHNUNG_BILDSCHIRM_KATEGORIE,
   AG_RECHNUNG_SCHUTZ_KATEGORIE,
+];
+
+// Rechnungen, die beim Öffnen eine fortlaufende Rechnungsnummer brauchen
+// (die Arbeitgeber-Rechnungen und die Rechnung über den Sehtest C/D)
+const NUMMER_KATEGORIEN: string[] = [
+  ...AG_RECHNUNG_KATEGORIEN,
+  SEHTEST_RECHNUNG_KATEGORIE,
 ];
 
 // Auftragszettel in A4 mit Anamnesebogen auf der Rückseite
@@ -437,6 +449,14 @@ const LAYOUTS: Record<string, Layout> = {
     title: "Bescheinigung-Sehvermögen-Vorschau",
     preview: buildSehtestFahrerlaubnisPreviewHtml,
     print: buildSehtestFahrerlaubnisPrintHtml,
+  },
+  // Rechnung über den Sehtest C/D: Leistungen, Preise, Rabatt und
+  // Zahlungsart in der Vorschau wählen, Summen rechnet die Vorschau neu
+  [SEHTEST_RECHNUNG_KATEGORIE]: {
+    ausVorschau: true,
+    title: "Rechnung-Vorschau",
+    preview: buildSehtestRechnungPreviewHtml,
+    print: buildSehtestRechnungPrintHtml,
   },
   // Arbeitshilfe dazu: Grenzwerte und Ausschlusskriterien auf einer A4-Seite
   "Merkblatt Sehtest Lkw/Bus": {
@@ -792,7 +812,8 @@ const FormulareDialog = ({
     }
   };
 
-  // Rechnungen an den Arbeitgeber: fehlt am Auftrag noch die Rechnungsnummer,
+  // Rechnungen an den Arbeitgeber und über den Sehtest C/D: fehlt am Auftrag
+  // noch die Rechnungsnummer,
   // wird beim Öffnen der Vorlage die nächste fortlaufende vergeben
   const refresh = useRefresh();
   const [vergebeneNummer, setVergebeneNummer] = useState("");
@@ -801,7 +822,7 @@ const FormulareDialog = ({
   );
   const braucheNummer =
     Boolean(selectedVorlage) &&
-    AG_RECHNUNG_KATEGORIEN.includes(selectedVorlage?.Kategorie ?? "") &&
+    NUMMER_KATEGORIEN.includes(selectedVorlage?.Kategorie ?? "") &&
     !rechnungsnummer &&
     typeof brille.id === "number";
   const nummerAngefragt = useRef(false);
@@ -1127,13 +1148,18 @@ const FormulareDialog = ({
       const agRechnung = AG_RECHNUNG_KATEGORIEN.includes(
         selectedVorlage.Kategorie,
       );
+      const sehtestRechnung =
+        selectedVorlage.Kategorie === SEHTEST_RECHNUNG_KATEGORIE;
       const beleg =
         selectedVorlage.Kategorie === RECHNUNG_KATEGORIE ||
         mahnung ||
-        agRechnung;
+        agRechnung ||
+        sehtestRechnung;
       const nummer = beleg ? rechnungsnummer.trim() : "";
       const art =
-        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE || agRechnung
+        selectedVorlage.Kategorie === RECHNUNG_KATEGORIE ||
+        agRechnung ||
+        sehtestRechnung
           ? "Rechnung"
           : selectedVorlage.Name;
       // Rechnung an den Arbeitgeber: Empfänger ist die in der Vorschau
