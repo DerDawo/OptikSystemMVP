@@ -269,6 +269,11 @@ export const MyMenu = () => {
         primaryText="Abgerechnete Rezepte"
         leftIcon={<PrescriptionIcon />}
       />
+      <Menu.Item
+        to="/optica"
+        primaryText="OPTICA-Abrechnungen"
+        leftIcon={<ReceiptIcon />}
+      />
 
       <Section label="Verwaltung" />
       <SubMenu
