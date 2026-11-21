@@ -22,6 +22,7 @@ import { MahnungErstellenButton } from "./FormulareDialog";
 import { brilleRowSx } from "./orderStatus";
 import { MAHNBARE_ZAHLUNGSSTATUS } from "./zahlungsstatus";
 import { MahnungEntfernenButton, WiederMahnenButton } from "./MahnungEntfernen";
+import { mahnstufeText } from "./mahnstufen";
 
 // "Nicht mahnen" (MahnungAusgesetzt) nimmt einen Auftrag aus der Liste; mit
 // "Ausgesetzte anzeigen" erscheinen nur diese, zum Zurückholen.
@@ -79,7 +80,11 @@ export const MahnungenList = () => {
           <DataTable.Col sx={{ textAlign: "end" }} source="Restbetrag">
             <CurrencyField source="Restbetrag" />
           </DataTable.Col>
-          <DataTable.Col source="Mahnstufe" label="Mahnstufe" />
+          <DataTable.Col source="Mahnstufe" label="Zuletzt verschickt">
+            <FunctionField
+              render={(record) => mahnstufeText(record?.Mahnstufe)}
+            />
+          </DataTable.Col>
           <DataTable.Col label="Aktion">
             <FunctionField
               render={(record) => (
@@ -87,9 +92,7 @@ export const MahnungenList = () => {
                   {ausgesetzte ? (
                     <WiederMahnenButton />
                   ) : (
-                    <Box
-                      sx={{ display: "flex", alignItems: "center", gap: 0.5 }}
-                    >
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       <MahnungErstellenButton />
                       <MahnungEntfernenButton />
                     </Box>
