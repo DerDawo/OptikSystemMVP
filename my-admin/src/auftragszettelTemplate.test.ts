@@ -297,10 +297,10 @@ describe("Auftragszettel: Ableitungen", () => {
 });
 
 describe("Auftragszettel: Druckbild", () => {
-  it("ist ein A5-Formular mit Anamnesebogen auf der Rückseite", () => {
+  it("ist ein A4-Formular mit Anamnesebogen auf der Rückseite", () => {
     const html = buildAuftragszettelPrintHtml({ entities });
-    expect(html).toContain("@page { size: A5; margin: 0; }");
-    expect(html).toContain("width: 148mm; height: 210mm;");
+    expect(html).toContain("@page { size: A4; margin: 0; }");
+    expect(html).toContain("width: 210mm; height: 297mm;");
     expect(html.match(/class="blatt /g)).toHaveLength(2);
     expect(html).toContain("Kompetenz-Zentrum für Augenoptik");
     expect(html).toContain("AUFTRAGSBEDINGUNGEN &amp; EINWILLIGUNG");
@@ -356,7 +356,7 @@ describe("Auftragszettel: Druckbild", () => {
 
   it("druckt aus der Vorschau mit denselben Druckregeln", () => {
     const html = buildAuftragszettelPreviewHtml({ entities });
-    expect(html).toContain("@page { size: A5; margin: 0; }");
+    expect(html).toContain("@page { size: A4; margin: 0; }");
     expect(html).toContain("@media print");
   });
 });

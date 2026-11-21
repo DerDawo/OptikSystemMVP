@@ -213,7 +213,7 @@ const AG_RECHNUNG_KATEGORIEN: string[] = [
   AG_RECHNUNG_SCHUTZ_KATEGORIE,
 ];
 
-// Auftragszettel in A5 mit Anamnesebogen auf der Rückseite
+// Auftragszettel in A4 mit Anamnesebogen auf der Rückseite
 // (auftragszettelTemplate.ts), leer oder ausgefüllt
 const AUFTRAGSZETTEL_KATEGORIE = "Auftragszettel";
 
@@ -455,7 +455,7 @@ const LAYOUTS: Record<string, Layout> = {
   [AUFTRAGSZETTEL_KATEGORIE]: {
     ausVorschau: true,
     leerMoeglich: true,
-    format: "A5",
+    format: "A4",
     blatt: ".blatt",
     title: "Auftragszettel-Vorschau",
     preview: buildAuftragszettelPreviewHtml,
@@ -2099,7 +2099,7 @@ export const WerkstattauftragButton = ({
 };
 
 // "Auftragszettel"-Knopf für die Brillenkartei: öffnet die Vorschau des
-// A5-Auftragszettels (Kategorie "Auftragszettel"), dort wahlweise leer zum
+// A4-Auftragszettels (Kategorie "Auftragszettel"), dort wahlweise leer zum
 // Ausfüllen von Hand oder mit den Daten des Auftrags
 export const AuftragszettelButton = ({ symbol }: { symbol?: boolean } = {}) => {
   const record = useRecordContext();
