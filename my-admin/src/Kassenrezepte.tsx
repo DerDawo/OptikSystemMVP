@@ -48,6 +48,39 @@ import {
   sortiereRezepte,
   zahl,
 } from "./kassenrezept";
+import { grundKategorie } from "./optica";
+
+type AbsetzungKurz = {
+  kassenrezept_id: number | null;
+  Betrag: number | string | null;
+  Grund: string | null;
+  Abrechnungsmonat: string;
+};
+
+/** Absetzungen und eingelesene OPTICA-Monate (für Hinweise in der Liste). */
+const ladeOptica = async () => {
+  const [abs, laeufe] = await Promise.all([
+    supabase
+      .from("optica_absetzung")
+      .select('kassenrezept_id, "Betrag", "Grund", "Abrechnungsmonat"')
+      .not("kassenrezept_id", "is", null),
+    supabase.from("optica_abrechnung").select('"Abrechnungsmonat"'),
+  ]);
+  const absetzungen = new Map<number, AbsetzungKurz[]>();
+  for (const a of (abs.data ?? []) as AbsetzungKurz[]) {
+    const l = absetzungen.get(a.kassenrezept_id!) ?? [];
+    l.push(a);
+    absetzungen.set(a.kassenrezept_id!, l);
+  }
+  return {
+    absetzungen,
+    monate: new Set(
+      ((laeufe.data ?? []) as { Abrechnungsmonat: string }[]).map(
+        (l) => l.Abrechnungsmonat,
+      ),
+    ),
+  };
+};
 
 const TABELLE = "kassenrezept";
 const SEITE = 1000; // PostgREST liefert höchstens 1000 Zeilen je Abruf
@@ -135,11 +168,18 @@ export const KassenrezepteSeite = () => {
   const [rezepte, setRezepte] = useState<Kassenrezept[] | null>(null);
   const [fehler, setFehler] = useState(false);
   const [filter, setFilter] = useState<RezeptFilter>(leererFilter);
+  const [optica, setOptica] = useState<Awaited<
+    ReturnType<typeof ladeOptica>
+  > | null>(null);
 
   const laden = useCallback(async () => {
     try {
       setRezepte(await ladeAlle());
       setFehler(false);
+      // OPTICA-Daten sind Zusatzinfo; ohne sie bleibt die Liste nutzbar
+      ladeOptica().then(setOptica, (err) =>
+        console.error("OPTICA-Absetzungen konnten nicht geladen werden", err),
+      );
     } catch (err) {
       console.error("Abgerechnete Rezepte konnten nicht geladen werden", err);
       setFehler(true);
@@ -154,9 +194,13 @@ export const KassenrezepteSeite = () => {
   const alle = useMemo(() => rezepte ?? [], [rezepte]);
   const doppelt = useMemo(() => doppelteIds(alle), [alle]);
   const monate = useMemo(() => nachMonat(alle), [alle]);
+  // Monate mit OPTICA-Abrechnung ohne Rezepte (z. B. nur Absetzungen) fehlen nicht
   const fehlend = useMemo(
-    () => fehlendeMonate(monate.map((m) => m.monat)),
-    [monate],
+    () =>
+      fehlendeMonate(monate.map((m) => m.monat)).filter(
+        (m) => !optica?.monate.has(m),
+      ),
+    [monate, optica],
   );
   const gefiltert = useMemo(
     () => sortiereRezepte(filtereRezepte(alle, filter, doppelt)),
@@ -601,6 +645,19 @@ export const KassenrezepteSeite = () => {
                         </td>
                         <td>
                           {leistungenText(r)}
+                          {optica?.absetzungen.get(r.id)?.map((a, i) => (
+                            <Tooltip
+                              key={i}
+                              title={`Abgesetzt in der Abrechnung ${monatName(a.Abrechnungsmonat)}: ${a.Grund ?? ""}`}
+                            >
+                              <Chip
+                                size="small"
+                                color="error"
+                                label={`abgesetzt ${formatCurrency(zahl(a.Betrag))} · ${grundKategorie(a.Grund)}`}
+                                sx={{ ml: 1 }}
+                              />
+                            </Tooltip>
+                          ))}
                           {doppelt.has(r.id) && (
                             <Tooltip title="Gleiche Person und gleiches Rezeptdatum wurden mehrfach abgerechnet">
                               <Chip

@@ -21,10 +21,30 @@ import {
   kassenanteil,
   leistungenText,
   monatKurz,
+  monatName,
   rezeptSummen,
   sortiereRezepte,
   zahl,
 } from "./kassenrezept";
+import { grundKategorie } from "./optica";
+
+type AbsetzungKurz = {
+  kassenrezept_id: number;
+  Betrag: number | string | null;
+  Grund: string | null;
+  Abrechnungsmonat: string;
+};
+
+type EkvKurz = {
+  id: number;
+  Kasse: string | null;
+  KvDatum: string | null;
+  Genehmigt: string | null;
+  Genehmigungsnummer: string | null;
+  Teilgenehmigt: boolean;
+  Erstattung: number | string | null;
+  Zuzahlung: number | string | null;
+};
 
 /*
  * Bereich "Abgerechnete Rezepte" in der Kundenkartei: alle für diesen Kunden
@@ -48,6 +68,54 @@ export const KundeKassenrezepte = () => {
   const [fehler, setFehler] = useState(false);
   const [neuOffen, setNeuOffen] = useState(false);
   const [stand, setStand] = useState(0);
+  const [absetzungen, setAbsetzungen] = useState<Map<number, AbsetzungKurz[]>>(
+    new Map(),
+  );
+  const [ekv, setEkv] = useState<EkvKurz[]>([]);
+
+  // Kostenvoranschläge (eKV) aus den OPTICA-Abrechnungen
+  useEffect(() => {
+    if (kundeId == null) return;
+    let abgebrochen = false;
+    supabase
+      .from("optica_ekv")
+      .select(
+        'id, "Kasse", "KvDatum", "Genehmigt", "Genehmigungsnummer", "Teilgenehmigt", "Erstattung", "Zuzahlung"',
+      )
+      .eq("kunde_id", kundeId)
+      .order("KvDatum", { ascending: false })
+      .then(({ data }) => {
+        if (!abgebrochen) setEkv((data ?? []) as EkvKurz[]);
+      });
+    return () => {
+      abgebrochen = true;
+    };
+  }, [kundeId, stand]);
+
+  // Absetzungen der Kassen zu diesen Rezepten
+  useEffect(() => {
+    const ids = (liste ?? []).map((r) => r.id);
+    if (!ids.length) {
+      setAbsetzungen(new Map());
+      return;
+    }
+    let abgebrochen = false;
+    supabase
+      .from("optica_absetzung")
+      .select('kassenrezept_id, "Betrag", "Grund", "Abrechnungsmonat"')
+      .in("kassenrezept_id", ids)
+      .then(({ data }) => {
+        if (abgebrochen) return;
+        const m = new Map<number, AbsetzungKurz[]>();
+        for (const a of (data ?? []) as AbsetzungKurz[]) {
+          m.set(a.kassenrezept_id, [...(m.get(a.kassenrezept_id) ?? []), a]);
+        }
+        setAbsetzungen(m);
+      });
+    return () => {
+      abgebrochen = true;
+    };
+  }, [liste]);
 
   useEffect(() => {
     if (kundeId == null) return;
@@ -182,6 +250,19 @@ export const KundeKassenrezepte = () => {
                     </td>
                     <td>
                       {leistungenText(r)}
+                      {absetzungen.get(r.id)?.map((a, i) => (
+                        <Tooltip
+                          key={i}
+                          title={`Abgesetzt in der Abrechnung ${monatName(a.Abrechnungsmonat)}: ${a.Grund ?? ""}`}
+                        >
+                          <Chip
+                            size="small"
+                            color="error"
+                            label={`abgesetzt ${formatCurrency(zahl(a.Betrag))} · ${grundKategorie(a.Grund)}`}
+                            sx={{ ml: 1 }}
+                          />
+                        </Tooltip>
+                      ))}
                       {doppelt.has(r.id) && (
                         <Tooltip title="Dieses Rezeptdatum wurde mehrfach abgerechnet">
                           <Chip
@@ -222,6 +303,27 @@ export const KundeKassenrezepte = () => {
             {formatCurrency(summen.kassenanteil)}
           </Typography>
         </>
+      )}
+
+      {ekv.length > 0 && (
+        <Box sx={{ mt: 1.5 }}>
+          <Typography variant="subtitle2" sx={{ mb: 0.5 }}>
+            Kostenvoranschläge (eKV)
+          </Typography>
+          {ekv.map((e) => (
+            <Typography key={e.id} variant="body2" sx={{ mb: 0.25 }}>
+              {e.Kasse} · KV vom {datum(e.KvDatum)} ·{" "}
+              {e.Genehmigt
+                ? `genehmigt ${datum(e.Genehmigt)}${e.Teilgenehmigt ? " (teilweise)" : ""}`
+                : "noch nicht genehmigt"}
+              {e.Genehmigungsnummer ? ` · Nr. ${e.Genehmigungsnummer}` : ""} ·
+              Erstattung {formatCurrency(zahl(e.Erstattung))}
+              {zahl(e.Zuzahlung) > 0
+                ? `, Zuzahlung ${formatCurrency(zahl(e.Zuzahlung))}`
+                : ""}
+            </Typography>
+          ))}
+        </Box>
       )}
     </Card>
   );

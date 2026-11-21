@@ -16,7 +16,6 @@ import {
   DialogContent,
   DialogContentText,
   DialogTitle,
-  IconButton,
   Tooltip,
 } from "@mui/material";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
@@ -74,17 +73,20 @@ export const MahnungEntfernenButton = () => {
 
   return (
     <>
-      <Tooltip title="Aus der Mahnliste nehmen">
-        <IconButton
-          size="small"
+      <Tooltip title="Aus der Mahnliste nehmen (bezahlt oder nicht mahnen)">
+        <Button
+          variant="outlined"
+          color="error"
+          startIcon={<DeleteOutlineIcon />}
           aria-label={`${nr} aus der Mahnliste nehmen`}
+          sx={{ whiteSpace: "nowrap" }}
           onClick={(e) => {
             e.stopPropagation();
             setOffen(true);
           }}
         >
-          <DeleteOutlineIcon fontSize="small" />
-        </IconButton>
+          Entfernen
+        </Button>
       </Tooltip>
       <Dialog
         open={offen}

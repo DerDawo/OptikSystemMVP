@@ -69,6 +69,10 @@ export const DOKUMENTVORLAGE_KATEGORIEN = [
     id: "Merkblatt Sehtest Lkw/Bus",
     name: "Merkblatt Sehtest Lkw/Bus (Grenzwerte und Ausschlusskriterien)",
   },
+  {
+    id: "Rechnung Sehtest C/D",
+    name: "Rechnung Sehtest Fahrerlaubnis C/D",
+  },
   { id: "Antrag SRH", name: "Antrag SRH (Bildschirmarbeitsbrille)" },
   {
     id: "Antrag Jobcenter",

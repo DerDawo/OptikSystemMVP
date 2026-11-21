@@ -14,6 +14,7 @@ import {
 } from "react-admin";
 import { FieldRow, FormSection } from "./EntityLayout";
 import { BetriebBilderFeld } from "./BetriebBilder";
+import { KatalogUploadFeld } from "./KatalogKnopf";
 
 export const BetriebEdit = () => (
   <Edit title="Betriebsdaten" redirect={false}>
@@ -74,6 +75,10 @@ export const BetriebEdit = () => (
           Formulare wie die Rezeptanfrage an den Augenarzt */}
       <FormSection title="Stempel und Unterschrift (privat gespeichert)">
         <BetriebBilderFeld />
+      </FormSection>
+      {/* Infomaterial für die Glasberatung, ebenfalls privat gespeichert */}
+      <FormSection title="Poloptic-Katalog für die Glasberatung (privat gespeichert)">
+        <KatalogUploadFeld />
       </FormSection>
     </SimpleForm>
   </Edit>

@@ -269,6 +269,11 @@ export const MyMenu = () => {
         primaryText="Abgerechnete Rezepte"
         leftIcon={<PrescriptionIcon />}
       />
+      <Menu.Item
+        to="/optica"
+        primaryText="OPTICA-Abrechnungen"
+        leftIcon={<ReceiptIcon />}
+      />
 
       <Section label="Verwaltung" />
       <SubMenu
@@ -284,6 +289,7 @@ export const MyMenu = () => {
           "/glaskatalog",
           "/glashersteller",
           "/krankenkasse",
+          "/arzt",
         ]}
       >
         <Menu.Item to="/glass" primaryText="Gläser" leftIcon={<LensIcon />} />
@@ -326,6 +332,11 @@ export const MyMenu = () => {
           to="/krankenkasse"
           primaryText="Krankenkassen"
           leftIcon={<BuildingIcon />}
+        />
+        <Menu.Item
+          to="/arzt"
+          primaryText="Ärzte"
+          leftIcon={<PrescriptionIcon />}
         />
       </SubMenu>
       <SubMenu
