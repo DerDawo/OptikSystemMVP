@@ -1,5 +1,6 @@
 // Auftragszettel (Kategorie "Auftragszettel"), nachgebaut nach der
-// Papiervorlage "Auftragszettel_A5.pdf": A5 hochkant, vorne der Auftrag
+// Papiervorlage "Auftragszettel_A5.pdf", vergrößert auf A4 hochkant (alle
+// Maße und Schriftgrößen der A5-Vorlage mal Wurzel 2), vorne der Auftrag
 // (Kunde, Werte, Glas, Fassung, Preise, Auftragsbedingungen und
 // Unterschrift), hinten der Anamnesebogen, den der Kunde selbst ausfüllt.
 //
@@ -499,9 +500,13 @@ const box = (label: string, an = false) =>
 const kreis = (label: string) =>
   `<label class="option">${kaestchen(false, "kaestchen kreis")}<span>${e(label)}</span></label>`;
 
+// Breiten sind in mm der A5-Papiervorlage angegeben und werden wie das
+// ganze Blatt auf A4 vergrößert (Faktor Wurzel 2)
+const massA4 = (mm: number) => Math.round(mm * Math.SQRT2 * 100) / 100;
+
 // Schreiblinie im Text ("Index: _____"), bei Daten mit dem Wert darauf
 const luecke = (wert: string, breite: number) =>
-  `<span class="luecke" style="min-width:${breite}mm">${e(wert)}</span>`;
+  `<span class="luecke" style="min-width:${massA4(breite)}mm">${e(wert)}</span>`;
 
 const preis = (wert: string) =>
   `${wert ? `<span class="betrag">${e(wert).replace("\n", "<br />")}</span> ` : ""}€`;
@@ -700,7 +705,7 @@ const rueckseite = (f: AuftragszettelFelder) => {
   const a = RECHNUNG_ABSENDER;
   const name = [f.name, f.vorname].filter(Boolean).join(", ");
   const linie = (breite?: number) =>
-    `<span class="schreiblinie"${breite ? ` style="flex:0 0 ${breite}mm"` : ""}></span>`;
+    `<span class="schreiblinie"${breite ? ` style="flex:0 0 ${massA4(breite)}mm"` : ""}></span>`;
   const z = (inhalt: string, klasse = "") =>
     `<div class="z${klasse ? ` ${klasse}` : ""}">${inhalt}</div>`;
   const frage = (t: string) => `<b class="frage">${e(t)}</b>`;
@@ -773,133 +778,133 @@ export const buildAuftragszettelBodyHtml = ({
 const STYLES = `
   ${KAESTCHEN_STYLES}
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 6.6pt; line-height: 1.25; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .blatt { width: 148mm; height: 210mm; padding: 4.6mm 6mm 4.4mm; background: #fff; overflow: hidden; }
-  .blatt.hinten { padding: 4.8mm 7mm 4.6mm; }
+  body { margin: 0; font-family: Inter, "Helvetica Neue", Arial, Helvetica, sans-serif; color: #1a1a1a; font-size: 9.33pt; line-height: 1.25; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .blatt { width: 210mm; height: 297mm; padding: 6.51mm 8.49mm 6.22mm; background: #fff; overflow: hidden; }
+  .blatt.hinten { padding: 6.79mm 9.9mm 6.51mm; }
   .blatt + .blatt { break-before: page; page-break-before: always; }
   .inhalt { display: flex; flex-direction: column; min-height: 100%; }
   b { font-weight: 700; }
-  .kaestchen { width: 2.1mm; height: 2.1mm; border: 0.25mm solid #1a1a1a; margin: 0; flex: none; }
+  .kaestchen { width: 2.97mm; height: 2.97mm; border: 0.35mm solid #1a1a1a; margin: 0; flex: none; }
   .kaestchen.kreis { border-radius: 50%; }
-  .option { display: inline-flex; align-items: center; gap: 1.1mm; white-space: nowrap; }
-  .luecke { display: inline-block; border-bottom: 0.2mm solid #333; line-height: 1; padding: 0 0.6mm; text-align: center; font-weight: 600; max-width: 34mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: baseline; }
-  .option .luecke { height: 2.7mm; line-height: 2.7mm; padding-bottom: 0; }
+  .option { display: inline-flex; align-items: center; gap: 1.56mm; white-space: nowrap; }
+  .luecke { display: inline-block; border-bottom: 0.28mm solid #333; line-height: 1; padding: 0 0.85mm; text-align: center; font-weight: 600; max-width: 48.08mm; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: baseline; }
+  .option .luecke { height: 3.82mm; line-height: 3.82mm; padding-bottom: 0; }
 
-  .kopf { display: grid; grid-template-columns: 33mm 1fr 33mm; align-items: end; height: 11.8mm; padding-bottom: 1.5mm; border-bottom: 0.6mm solid #111; }
-  .logo .marke { font-weight: 700; font-size: 15pt; line-height: 0.95; letter-spacing: -0.03em; color: #111; }
-  .logo .zusatz { font-size: 4.5pt; letter-spacing: 0.24em; color: #555; margin-top: 1mm; line-height: 1.4; }
-  .titel { text-align: center; padding-bottom: 0.3mm; }
-  .titel .haupt { font-weight: 700; font-size: 9.6pt; color: #111; }
-  .titel .art { font-size: 6.2pt; letter-spacing: 0.5em; margin-top: 1.2mm; margin-right: -0.5em; }
-  .nummern { width: 31mm; justify-self: end; }
-  .strichcode { display: block; width: 31mm; height: 3.6mm; margin-bottom: 0.8mm; }
-  .nr { display: flex; gap: 1mm; border-bottom: 0.25mm solid #333; font-size: 6.2pt; line-height: 1.2; }
-  .nr + .nr { margin-top: 1.7mm; }
+  .kopf { display: grid; grid-template-columns: 46.67mm 1fr 46.67mm; align-items: end; height: 16.69mm; padding-bottom: 2.12mm; border-bottom: 0.85mm solid #111; }
+  .logo .marke { font-weight: 700; font-size: 21.21pt; line-height: 0.95; letter-spacing: -0.03em; color: #111; }
+  .logo .zusatz { font-size: 6.36pt; letter-spacing: 0.24em; color: #555; margin-top: 1.41mm; line-height: 1.4; }
+  .titel { text-align: center; padding-bottom: 0.42mm; }
+  .titel .haupt { font-weight: 700; font-size: 13.58pt; color: #111; }
+  .titel .art { font-size: 8.77pt; letter-spacing: 0.5em; margin-top: 1.7mm; margin-right: -0.5em; }
+  .nummern { width: 43.84mm; justify-self: end; }
+  .strichcode { display: block; width: 43.84mm; height: 5.09mm; margin-bottom: 1.13mm; }
+  .nr { display: flex; gap: 1.41mm; border-bottom: 0.35mm solid #333; font-size: 8.77pt; line-height: 1.2; }
+  .nr + .nr { margin-top: 2.4mm; }
   .nr .lbl { color: #444; }
   .nr .wert { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; }
 
-  .auftragsart { display: flex; height: 6.2mm; align-items: center; font-weight: 600; font-size: 7pt; }
-  .auftragsart .option { width: 21.8mm; gap: 1.4mm; }
+  .auftragsart { display: flex; height: 8.77mm; align-items: center; font-weight: 600; font-size: 9.9pt; }
+  .auftragsart .option { width: 30.83mm; gap: 1.98mm; }
 
-  .rahmen { border: 0.3mm solid #444; }
-  .kunde { height: 15.5mm; padding: 0.4mm 2.1mm 1.4mm; display: flex; flex-direction: column; justify-content: flex-end; gap: 1.3mm; }
-  .reihe { display: flex; gap: 3.7mm; }
-  .feld { display: flex; align-items: baseline; gap: 1.2mm; border-bottom: 0.25mm solid #333; padding-bottom: 0.25mm; min-width: 0; line-height: 1.15; }
+  .rahmen { border: 0.42mm solid #444; }
+  .kunde { height: 21.92mm; padding: 0.57mm 2.97mm 1.98mm; display: flex; flex-direction: column; justify-content: flex-end; gap: 1.84mm; }
+  .reihe { display: flex; gap: 5.23mm; }
+  .feld { display: flex; align-items: baseline; gap: 1.7mm; border-bottom: 0.35mm solid #333; padding-bottom: 0.35mm; min-width: 0; line-height: 1.15; }
   .feld .lbl { color: #555; white-space: nowrap; }
   .feld .wert { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; color: #111; }
   .feld .wert.eng { font-size: 85%; }
 
   table { border-collapse: collapse; width: 100%; table-layout: fixed; }
-  .tab { border: 0.35mm solid #555; }
-  .tab th, .tab td { border: 0.2mm solid #777; padding: 0 1.4mm; overflow: hidden; white-space: nowrap; }
+  .tab { border: 0.49mm solid #555; }
+  .tab th, .tab td { border: 0.28mm solid #777; padding: 0 1.98mm; overflow: hidden; white-space: nowrap; }
   .tab thead th { background: #e6e6e6; font-weight: 600; text-align: center; color: #222; }
   .tab tbody th { background: #e6e6e6; font-weight: 700; text-align: left; color: #222; }
   .tab .links { text-align: left; }
   .tab .mitte { text-align: center; }
 
-  .werte { margin-top: 1.3mm; }
-  .werte thead th { height: 4.5mm; font-size: 6.4pt; }
-  .werte thead th:first-child { width: 8.9mm; }
-  .werte tbody th { text-align: center; font-size: 7pt; padding: 0; }
-  .werte tr.neu > * { height: 5mm; }
-  .werte tr.alt > * { height: 4.2mm; }
-  .werte tr.alt th { font-size: 5.2pt; }
-  .werte td { text-align: center; font-size: 6.8pt; font-weight: 600; padding: 0 0.6mm; }
-  .werte td.eng { font-size: 5.8pt; }
+  .werte { margin-top: 1.84mm; }
+  .werte thead th { height: 6.36mm; font-size: 9.05pt; }
+  .werte thead th:first-child { width: 12.59mm; }
+  .werte tbody th { text-align: center; font-size: 9.9pt; padding: 0; }
+  .werte tr.neu > * { height: 7.07mm; }
+  .werte tr.alt > * { height: 5.94mm; }
+  .werte tr.alt th { font-size: 7.35pt; }
+  .werte td { text-align: center; font-size: 9.62pt; font-weight: 600; padding: 0 0.85mm; }
+  .werte td.eng { font-size: 8.2pt; }
 
-  .werteaus { display: flex; align-items: center; height: 5.8mm; font-size: 6.4pt; }
-  .werteaus b { width: 14.2mm; flex: none; }
-  .werteaus .option { width: 33mm; }
+  .werteaus { display: flex; align-items: center; height: 8.2mm; font-size: 9.05pt; }
+  .werteaus b { width: 20.08mm; flex: none; }
+  .werteaus .option { width: 46.67mm; }
 
-  .glas thead th { height: 4.5mm; font-size: 6.4pt; }
-  .glas thead th:first-child { width: 16.8mm; }
-  .glas thead th:nth-child(3), .glas thead th:nth-child(4) { width: 15.1mm; }
-  .glas tbody > tr > * { height: 4.75mm; }
-  .glas tbody th { font-size: 6.6pt; }
-  .glas .wahl { display: flex; align-items: center; gap: 3.2mm; padding-top: 0.3mm; }
+  .glas thead th { height: 6.36mm; font-size: 9.05pt; }
+  .glas thead th:first-child { width: 23.76mm; }
+  .glas thead th:nth-child(3), .glas thead th:nth-child(4) { width: 21.35mm; }
+  .glas tbody > tr > * { height: 6.72mm; }
+  .glas tbody th { font-size: 9.33pt; }
+  .glas .wahl { display: flex; align-items: center; gap: 4.53mm; padding-top: 0.42mm; }
   .glas .glasname { margin-left: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
   .preis { text-align: right; }
   .preis .betrag { font-weight: 600; }
-  .preis.zweizeilig { font-size: 5pt; line-height: 1.05; }
+  .preis.zweizeilig { font-size: 7.07pt; line-height: 1.05; }
 
-  .fassung { margin-top: 1.6mm; }
-  .fassung thead th { height: 4.3mm; text-align: left; font-size: 6.4pt; }
-  .fassung thead th:last-child { width: 14mm; text-align: center; }
-  .fassung td { height: 4.6mm; font-weight: 600; text-overflow: ellipsis; }
+  .fassung { margin-top: 2.26mm; }
+  .fassung thead th { height: 6.08mm; text-align: left; font-size: 9.05pt; }
+  .fassung thead th:last-child { width: 19.8mm; text-align: center; }
+  .fassung td { height: 6.51mm; font-weight: 600; text-overflow: ellipsis; }
   .fassung td.preis { font-weight: 400; }
 
-  .sonstiges { margin-top: 2mm; }
-  .sonstiges thead th { height: 4.2mm; font-size: 6.4pt; }
-  .sonstiges thead th:last-child { width: 14mm; }
+  .sonstiges { margin-top: 2.83mm; }
+  .sonstiges thead th { height: 5.94mm; font-size: 9.05pt; }
+  .sonstiges thead th:last-child { width: 19.8mm; }
   .sonstiges th.schwarz { background: #111; color: #fff; text-align: left; letter-spacing: 0.08em; }
-  .sonstiges td { height: 4.5mm; font-size: 6.6pt; text-overflow: ellipsis; }
+  .sonstiges td { height: 6.36mm; font-size: 9.33pt; text-overflow: ellipsis; }
 
-  .gesamt { display: flex; align-items: center; gap: 2.4mm; height: 7.5mm; margin-top: 1.6mm; padding: 0 2.6mm 0 2.9mm; border: 0.45mm solid #111; background: #f3f3f3; box-shadow: inset 0 0 0 0.35mm #fff; }
-  .gesamt .titel { font-weight: 700; font-size: 9.8pt; letter-spacing: 0.03em; color: #111; padding: 0; }
-  .gesamt .strich { flex: 1; border-bottom: 0.25mm solid #333; min-height: 4mm; text-align: right; font-weight: 700; font-size: 9pt; line-height: 1.1; padding-right: 1mm; }
-  .gesamt .eur { font-weight: 700; font-size: 10pt; }
+  .gesamt { display: flex; align-items: center; gap: 3.39mm; height: 10.61mm; margin-top: 2.26mm; padding: 0 3.68mm 0 4.1mm; border: 0.64mm solid #111; background: #f3f3f3; box-shadow: inset 0 0 0 0.49mm #fff; }
+  .gesamt .titel { font-weight: 700; font-size: 13.86pt; letter-spacing: 0.03em; color: #111; padding: 0; }
+  .gesamt .strich { flex: 1; border-bottom: 0.35mm solid #333; min-height: 5.66mm; text-align: right; font-weight: 700; font-size: 12.73pt; line-height: 1.1; padding-right: 1.41mm; }
+  .gesamt .eur { font-weight: 700; font-size: 14.14pt; }
 
-  .zahlung { display: flex; align-items: center; gap: 3.4mm; height: 4.6mm; margin-top: 1.7mm; padding: 0 2.1mm; font-size: 6.5pt; white-space: nowrap; }
-  .zahlung .meldung { display: inline-flex; align-items: center; gap: 1.4mm; margin-left: 1.4mm; }
+  .zahlung { display: flex; align-items: center; gap: 4.81mm; height: 6.51mm; margin-top: 2.4mm; padding: 0 2.97mm; font-size: 9.19pt; white-space: nowrap; }
+  .zahlung .meldung { display: inline-flex; align-items: center; gap: 1.98mm; margin-left: 1.98mm; }
 
-  .bedingungen { flex: 1 0 auto; margin-top: 1.7mm; padding: 1.7mm 2.1mm 1.4mm; font-size: 5.05pt; line-height: 1.3; }
-  .bedingungen .ueberschrift { font-weight: 700; font-size: 5.4pt; letter-spacing: 0.2em; margin-bottom: 0.7mm; color: #222; }
-  .bedingungen p { margin: 0 0 0.75mm; }
-  .bedingungen .schluss { font-weight: 700; margin-top: 1mm; }
+  .bedingungen { flex: 1 0 auto; margin-top: 2.4mm; padding: 2.4mm 2.97mm 1.98mm; font-size: 7.14pt; line-height: 1.3; }
+  .bedingungen .ueberschrift { font-weight: 700; font-size: 7.64pt; letter-spacing: 0.2em; margin-bottom: 0.99mm; color: #222; }
+  .bedingungen p { margin: 0 0 1.06mm; }
+  .bedingungen .schluss { font-weight: 700; margin-top: 1.41mm; }
 
-  .unterschriften { display: flex; gap: 3.75mm; padding-top: 4mm; }
+  .unterschriften { display: flex; gap: 5.3mm; padding-top: 5.66mm; }
   .unterschriften .u { flex: none; }
-  .unterschriften .schmal { width: 35.6mm; }
-  .unterschriften .breit { width: 57.3mm; }
-  .unterschriften .vor { height: 3.4mm; border-bottom: 0.3mm solid #111; font-weight: 600; font-size: 6.6pt; padding: 0 0.5mm; white-space: nowrap; }
-  .unterschriften .lbl { font-size: 5.2pt; color: #555; padding-top: 1.1mm; }
+  .unterschriften .schmal { width: 50.35mm; }
+  .unterschriften .breit { width: 81.03mm; }
+  .unterschriften .vor { height: 4.81mm; border-bottom: 0.42mm solid #111; font-weight: 600; font-size: 9.33pt; padding: 0 0.71mm; white-space: nowrap; }
+  .unterschriften .lbl { font-size: 7.35pt; color: #555; padding-top: 1.56mm; }
 
-  .kopf2 { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 0.5mm solid #111; padding: 1.5mm 0 1.3mm; }
-  .kopf2 h1 { margin: 0; font-size: 15.3pt; line-height: 1; letter-spacing: -0.01em; color: #111; }
-  .marke2 { font-size: 4.6pt; letter-spacing: 0.24em; color: #555; }
-  .hinten { font-size: 6.7pt; }
-  .hinten .kopfzeile { margin-top: 3.4mm; }
-  .hinten .feld .wert { font-size: 6.9pt; }
-  .z { display: flex; align-items: center; gap: 3mm; min-height: 4.85mm; white-space: nowrap; }
-  .z.weit { min-height: 6mm; }
-  .z .frage { margin-right: 0.8mm; }
-  .z .rechts { margin-left: auto; display: inline-flex; align-items: center; gap: 3mm; }
-  .z .grau { color: #555; margin-left: -1.6mm; }
-  .schreiblinie { flex: 1; align-self: flex-end; border-bottom: 0.25mm solid #333; height: 3.3mm; margin-bottom: 0.6mm; min-width: 10mm; }
-  .schreiblinie.mitwert { height: auto; font-weight: 600; padding-left: 1mm; line-height: 1.1; }
-  .hinten .kopfzeile + .z { margin-top: 0.8mm; }
-  .altwerte { margin: 0.6mm 0 0; }
-  .altwerte thead th { height: 4.5mm; font-size: 6.2pt; }
-  .altwerte thead th:first-child { width: 6.7mm; }
-  .altwerte sub { font-size: 65%; vertical-align: baseline; position: relative; top: 0.1em; margin-left: 0.2mm; }
-  .altwerte tbody > tr > * { height: 4.65mm; }
+  .kopf2 { display: flex; align-items: baseline; justify-content: space-between; border-bottom: 0.71mm solid #111; padding: 2.12mm 0 1.84mm; }
+  .kopf2 h1 { margin: 0; font-size: 21.64pt; line-height: 1; letter-spacing: -0.01em; color: #111; }
+  .marke2 { font-size: 6.51pt; letter-spacing: 0.24em; color: #555; }
+  .hinten { font-size: 9.48pt; }
+  .hinten .kopfzeile { margin-top: 4.81mm; }
+  .hinten .feld .wert { font-size: 9.76pt; }
+  .z { display: flex; align-items: center; gap: 4.24mm; min-height: 6.86mm; white-space: nowrap; }
+  .z.weit { min-height: 8.49mm; }
+  .z .frage { margin-right: 1.13mm; }
+  .z .rechts { margin-left: auto; display: inline-flex; align-items: center; gap: 4.24mm; }
+  .z .grau { color: #555; margin-left: -2.26mm; }
+  .schreiblinie { flex: 1; align-self: flex-end; border-bottom: 0.35mm solid #333; height: 4.67mm; margin-bottom: 0.85mm; min-width: 14.14mm; }
+  .schreiblinie.mitwert { height: auto; font-weight: 600; padding-left: 1.41mm; line-height: 1.1; }
+  .hinten .kopfzeile + .z { margin-top: 1.13mm; }
+  .altwerte { margin: 0.85mm 0 0; }
+  .altwerte thead th { height: 6.36mm; font-size: 8.77pt; }
+  .altwerte thead th:first-child { width: 9.48mm; }
+  .altwerte sub { font-size: 65%; vertical-align: baseline; position: relative; top: 0.1em; margin-left: 0.28mm; }
+  .altwerte tbody > tr > * { height: 6.58mm; }
   .altwerte tbody th { text-align: center; padding: 0; }
-  .hinten hr { border: 0; border-top: 0.25mm solid #aaa; margin: 1.9mm 0 1.4mm; }
-  .abschnitt { font-weight: 700; font-size: 5.4pt; letter-spacing: 0.2em; color: #555; margin: 0.6mm 0 0.4mm; }
-  .fusszeile { margin-top: auto; border-top: 0.25mm solid #aaa; padding-top: 1.6mm; font-size: 4.9pt; color: #555; }
+  .hinten hr { border: 0; border-top: 0.35mm solid #aaa; margin: 2.69mm 0 1.98mm; }
+  .abschnitt { font-weight: 700; font-size: 7.64pt; letter-spacing: 0.2em; color: #555; margin: 0.85mm 0 0.57mm; }
+  .fusszeile { margin-top: auto; border-top: 0.35mm solid #aaa; padding-top: 2.26mm; font-size: 6.93pt; color: #555; }
 `;
 
-// Passt eine Seite nicht auf A5 (z. B. viele Positionen unter "Sonstiges"),
+// Passt eine Seite nicht auf A4 (z. B. viele Positionen unter "Sonstiges"),
 // wird ihr Inhalt verkleinert statt abgeschnitten (transform statt zoom,
 // damit auch das PDF stimmt)
 const EINPASSEN = `<script>
@@ -935,7 +940,7 @@ export const buildAuftragszettelPrintHtml = (
 <title>${e(titel(daten))}</title>
 <style>
   ${STYLES}
-  @page { size: A5; margin: 0; }
+  @page { size: A4; margin: 0; }
 </style>
 </head>
 <body>
@@ -957,7 +962,7 @@ export const buildAuftragszettelPreviewHtml = (
   ${STYLES}
   html { background: #eee; }
   .blatt { margin: 12px auto; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.2); }
-  @page { size: A5; margin: 0; }
+  @page { size: A4; margin: 0; }
   @media print { html { background: none; } .blatt { margin: 0; box-shadow: none; } }
 </style>
 </head>
