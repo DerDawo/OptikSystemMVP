@@ -1,11 +1,15 @@
 import { describe, expect, it } from "vitest";
 import {
+  ENTSPIEGELUNG_ZUSCHLAEGE,
   Grundglas,
+  STANDARD_ENTSPIEGELUNG,
   Vorgabe,
   durchmesserListe,
+  entspiegelungAusName,
   grundglasPreis,
   optionKategorie,
   passtZuVorgaben,
+  zuschlagText,
 } from "./glasassistentRegeln";
 
 const glas = (teil: Partial<Grundglas>): Grundglas => ({
@@ -135,5 +139,49 @@ describe("Durchmesser und Preis", () => {
     expect(grundglasPreis(g, null)).toBe(100);
     expect(grundglasPreis(g, "99")).toBe(100);
     expect(grundglasPreis(null, "70")).toBe(0);
+  });
+});
+
+describe("Entspiegelung mit Zuschlag", () => {
+  it("enthält die Zuschlagsliste mit Ultra Glide als Mindeststandard", () => {
+    const preise = Object.fromEntries(
+      ENTSPIEGELUNG_ZUSCHLAEGE.map((e) => [e.bezeichnung, e.preis]),
+    );
+    expect(preise).toEqual({
+      "Multi Plus": 0,
+      "Ultra Glide": 0,
+      "Nano Glide": 28,
+      "Blue Glide": 25,
+      "Polar Glide": 35,
+      "Pure Glide": 42,
+      Color: 38,
+      Mirror: 25,
+      Kantenfilter: 46,
+    });
+    expect(
+      ENTSPIEGELUNG_ZUSCHLAEGE.filter((e) => !e.waehlbar).map((e) => e.id),
+    ).toEqual(["multi-plus"]);
+    expect(STANDARD_ENTSPIEGELUNG).toBe("ultra-glide");
+  });
+
+  it("ordnet gespeicherte Vergütungen zu", () => {
+    expect(entspiegelungAusName("UltraGlide").id).toBe("ultra-glide");
+    expect(entspiegelungAusName("UltraGlide BS").id).toBe("ultra-glide");
+    expect(entspiegelungAusName("Nano Glide_AC").id).toBe("nano-glide");
+    expect(entspiegelungAusName("BlueGlide").id).toBe("blue-glide");
+    expect(entspiegelungAusName("Kantenfilter").id).toBe("kantenfilter");
+  });
+
+  it("nimmt bei Multi Plus, Unbekanntem oder leer die Mindestentspiegelung", () => {
+    expect(entspiegelungAusName("Multi Plus").id).toBe("ultra-glide");
+    expect(entspiegelungAusName("OceanGlide").id).toBe("ultra-glide");
+    expect(entspiegelungAusName("").id).toBe("ultra-glide");
+    expect(entspiegelungAusName(null).id).toBe("ultra-glide");
+  });
+
+  it("schreibt den Zuschlag wie in der Liste", () => {
+    expect(zuschlagText(0)).toBe("+0 €");
+    expect(zuschlagText(28)).toBe("+28 €");
+    expect(zuschlagText(12.5)).toBe("+12,50 €");
   });
 });
