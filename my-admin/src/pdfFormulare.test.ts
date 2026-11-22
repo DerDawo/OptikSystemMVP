@@ -71,7 +71,7 @@ describe.each(Object.entries(PDF_VORLAGEN))("PDF-Vorlage %s", (_, vorlage) => {
     const ausgefuellt = form
       .getFields()
       .filter((f) => f instanceof PDFTextField && f.getText());
-    if (vorlage.datei !== "antrag-bap.pdf") {
+    if (!vorlage.vorbelegt) {
       expect(ausgefuellt.map((f) => f.getName())).toEqual([]);
     }
     const fehlend = Object.keys(vorlage.felder(entities)).filter(
@@ -244,6 +244,30 @@ describe("Abholbestätigung", () => {
       anzahlung: formatEuro(100),
       offener_betrag: formatEuro(437.55),
     });
+  });
+});
+
+describe("Führerschein-Bescheinigung (Anlage 6 FeV)", () => {
+  it("trägt die Personalien in Teil 1 und Teil 2 ein und behält die Vorbelegung", async () => {
+    const vorlage = PDF_VORLAGEN["Führerschein-Bescheinigung"];
+    const bytes = await fuellePdfVorlage(
+      vorlage,
+      lade(vorlage.datei),
+      entities,
+    );
+    const pdf = await PDFDocument.load(bytes);
+    for (const t of ["t1", "t2"]) {
+      expect(feldwert(pdf, `${t}_name`)).toBe("Muster, Erika");
+      expect(feldwert(pdf, `${t}_gebdatum`)).toBe("30.06.1975");
+      expect(feldwert(pdf, `${t}_wohnort`)).toBe("07545 Gera");
+      expect(feldwert(pdf, `${t}_strasse`)).toBe("Hauptstraße 1");
+      expect(feldwert(pdf, `${t}_befunddatum`)).toMatch(/^\d\d\.\d\d\.\d{4}$/);
+    }
+    expect(feldwert(pdf, "t2_datum")).toMatch(/^\d\d\.\d\d\.\d{4}$/);
+    expect(feldwert(pdf, "t2_optiker")).toBe("Robert Ulm");
+    // Geburtsort, Ausweisnummer und Befunde bleiben für den Optiker offen
+    expect(feldwert(pdf, "t1_gebort")).toBeFalsy();
+    expect(feldwert(pdf, "t2_ausweis")).toBeFalsy();
   });
 });
 

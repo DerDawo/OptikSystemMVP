@@ -398,6 +398,28 @@ const abholbestaetigungFelder = (entities: DocumentMergeEntities) => {
   };
 };
 
+// Bescheinigung über die Untersuchung nach Anlage 6 Nr. 2.1 FeV (Sehtest für
+// Fahrerlaubnis der Klassen C/D und Fahrgastbeförderung). Teil 1 (verbleibt im
+// Betrieb) und Teil 2 (für den Bewerber) bekommen die Personalien des Kunden;
+// Betrieb und Optiker sind im PDF vorbelegt. Geburtsort, Ausweisnummer, Befunde
+// und das Ergebnis trägt der Optiker im PDF-Viewer ein.
+const fuehrerscheinFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  const heute = dayjs().format("DD.MM.YYYY");
+  const person = {
+    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    gebdatum: formatDatum(k.Geburtsdatum),
+    wohnort: [k.Postleitzahl, k.Stadt].map(text).filter(Boolean).join(" "),
+    strasse: [k.Straße, k.Hausnummer].map(text).filter(Boolean).join(" "),
+    befunddatum: heute,
+  };
+  const teil = (t: "t1" | "t2") =>
+    Object.fromEntries(
+      Object.entries(person).map(([name, wert]) => [`${t}_${name}`, wert]),
+    );
+  return { ...teil("t1"), ...teil("t2"), t2_datum: heute };
+};
+
 // Kategorie in `dokumentvorlage` -> PDF-Vorlage
 export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
   Beobachtungsbogen: {
@@ -458,6 +480,12 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "abholbestaetigung.pdf",
     titel: "Abholbestätigung mit Schuldanerkenntnis",
     felder: abholbestaetigungFelder,
+  },
+  "Führerschein-Bescheinigung": {
+    datei: "fuehrerschein-bescheinigung.pdf",
+    titel: "Bescheinigung Sehtest Fahrerlaubnis (Anlage 6 FeV)",
+    felder: fuehrerscheinFelder,
+    vorbelegt: true,
   },
   "Erprobungsbericht Lupe": {
     datei: "erprobungsbericht-lupe.pdf",
