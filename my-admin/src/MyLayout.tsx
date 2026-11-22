@@ -7,6 +7,7 @@ import { uebernehmeBetriebsdaten } from "./rechnungTemplate";
 import { GlobaleTastenkuerzel } from "./tastenkuerzel";
 import { NeueVersion } from "./NeueVersion";
 import { SeitenVerlauf } from "./seitenVerlauf";
+import { DatumMausrad } from "./datumMausrad";
 
 // Lädt die Betriebsdaten (Tabelle `betrieb`, Zeile 1) für Belege, Formulare
 // und SMS-Platzhalter (#132). Nach dem Speichern auf der Seite
@@ -23,6 +24,7 @@ export const MyLayout = ({ children }: { children: ReactNode }) => (
   <Layout menu={MyMenu} appBar={MyAppBar} appBarAlwaysOn>
     <BetriebsdatenLaden />
     <GlobaleTastenkuerzel />
+    <DatumMausrad />
     <NeueVersion />
     <SeitenVerlauf />
     {children}
