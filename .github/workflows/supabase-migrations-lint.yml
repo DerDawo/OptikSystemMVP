@@ -83,7 +83,10 @@ jobs:
             fi
 
             lower="${name,,}"
-            if [[ "$lower" =~ (test|mock|dummy|demo|beispiel|sample) ]] && [[ ! "$lower" == *_testdaten.sql ]]; then
+            # Kennwort nur am Anfang eines Namensteils (nach "_"), damit
+            # z. B. "..._sehtest_..." (Führerscheinsehtest) nicht anschlägt,
+            # "..._testkunden..." oder "..._demo_..." aber schon
+            if [[ "$lower" =~ _(test|mock|dummy|demo|beispiel|sample) ]] && [[ ! "$lower" == *_testdaten.sql ]]; then
               echo "::error file=$path::Dateiname enthaelt ein Test-/Mock-Datenkennwort, endet aber nicht auf '_testdaten.sql'. Test-/Mockdaten fuer Dev muessen laut Konvention (siehe supabase/README.md) zwingend auf '_testdaten.sql' enden, sonst schliesst supabase-migrate-prod.yml sie nicht automatisch vom Prod-Deploy aus."
               fail=1
             fi
