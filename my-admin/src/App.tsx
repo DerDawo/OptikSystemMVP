@@ -100,6 +100,7 @@ import { Fundusarchiv } from "./Fundusarchiv";
 import { MahnungenList } from "./Mahnungen";
 import { KassenrezepteSeite } from "./Kassenrezepte";
 import { OpticaAbrechnungenSeite } from "./OpticaAbrechnungen";
+import { AbrechnungSperre } from "./AbrechnungSperre";
 import { FirmenrechnungSeite } from "./FirmenrechnungSeite";
 import { Dashboard, StatistikSeite } from "./Dashboard";
 import { BetriebEdit } from "./betrieb";
@@ -277,12 +278,47 @@ export const App = () => {
       </CustomRoutes>
       <CustomRoutes>
         <Route path="/search" element={<Search />} />
-        <Route path="/rechnungen" element={<RechnungenList />} />
-        <Route path="/mahnungen" element={<MahnungenList />} />
+        <Route
+          path="/rechnungen"
+          element={
+            <AbrechnungSperre titel="Rechnungen">
+              <RechnungenList />
+            </AbrechnungSperre>
+          }
+        />
+        <Route
+          path="/mahnungen"
+          element={
+            <AbrechnungSperre titel="Mahnungen">
+              <MahnungenList />
+            </AbrechnungSperre>
+          }
+        />
         <Route path="/fundusarchiv" element={<Fundusarchiv />} />
-        <Route path="/rezepte" element={<KassenrezepteSeite />} />
-        <Route path="/optica" element={<OpticaAbrechnungenSeite />} />
-        <Route path="/firmenrechnung" element={<FirmenrechnungSeite />} />
+        <Route
+          path="/rezepte"
+          element={
+            <AbrechnungSperre titel="Abgerechnete Rezepte">
+              <KassenrezepteSeite />
+            </AbrechnungSperre>
+          }
+        />
+        <Route
+          path="/optica"
+          element={
+            <AbrechnungSperre titel="OPTICA-Abrechnungen">
+              <OpticaAbrechnungenSeite />
+            </AbrechnungSperre>
+          }
+        />
+        <Route
+          path="/firmenrechnung"
+          element={
+            <AbrechnungSperre titel="Firmenrechnung">
+              <FirmenrechnungSeite />
+            </AbrechnungSperre>
+          }
+        />
         <Route path="/datensicherung" element={<DatensicherungSeite />} />
         <Route path="/benutzer" element={<BenutzerSeite />} />
         <Route path="/protokoll" element={<ProtokollSeite />} />
