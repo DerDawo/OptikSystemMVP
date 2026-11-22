@@ -37,11 +37,13 @@ import {
 } from "./icons";
 import unicornLogo from "./assets/unicorn-weiss.png";
 import { useOffeneAnfragen } from "./OnlineAnfragenSeite";
+import { useOffeneKundenAppNachrichten } from "./KundenAppNachrichten";
 import { useRolle } from "./rolle";
 
-// Terminanfragen von der Website, mit Anzahl der offenen
+// Terminanfragen von der Website und Nachrichten aus der Kunden-App, mit
+// Anzahl der offenen
 const OnlineAnfragenEintrag = () => {
-  const offen = useOffeneAnfragen();
+  const offen = useOffeneAnfragen() + useOffeneKundenAppNachrichten();
   return (
     <Menu.Item
       to="/online-anfragen"
