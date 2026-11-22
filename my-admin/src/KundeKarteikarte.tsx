@@ -27,6 +27,7 @@ import { ArztAuswahl } from "./aerzteSeite";
 import { HINWEISE } from "./KundeFelder";
 import { kontaktAktionen } from "./kontaktLinks";
 import { NachrichtHandy, NachrichtKanal } from "./NachrichtHandy";
+import { KundenAppEinladung } from "./KundenAppEinladung";
 import { ikVon, useKrankenkassen } from "./krankenkassen";
 
 /*
@@ -208,6 +209,7 @@ export const KundeKarteikarte = () => {
   const notify = useNotify();
   const [nachricht, setNachricht] = useState<NachrichtKanal | null>(null);
   const [kasseOffen, setKasseOffen] = useState(false);
+  const [appOffen, setAppOffen] = useState(false);
   const kassen = useKrankenkassen();
 
   if (!kunde) return null;
@@ -401,7 +403,15 @@ export const KundeKarteikarte = () => {
             eMail
           </PrismaKnopf>,
         )}
-        {zeile("Geburtsdatum", datum("Geburtsdatum", "Geburtsdatum"))}
+        {zeile(
+          "Geburtsdatum",
+          datum("Geburtsdatum", "Geburtsdatum"),
+          <Tooltip title="Kunden-App: Einladung mit QR-Code, WhatsApp, SMS oder E-Mail">
+            <span>
+              <PrismaKnopf onClick={() => setAppOffen(true)}>App</PrismaKnopf>
+            </span>
+          </Tooltip>,
+        )}
 
         {/* Versichertennummer und "Kasse" (Krankenkasse, Kassen-Nr., Status,
             Versicherungsart im Fenster) */}
@@ -535,6 +545,14 @@ export const KundeKarteikarte = () => {
           onClose={() => setNachricht(null)}
           kanal={nachricht}
           nummer={handyNummer}
+          kunde={kunde}
+        />
+      )}
+
+      {appOffen && (
+        <KundenAppEinladung
+          offen
+          onClose={() => setAppOffen(false)}
           kunde={kunde}
         />
       )}

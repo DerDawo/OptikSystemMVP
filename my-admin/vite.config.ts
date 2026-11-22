@@ -9,9 +9,10 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     sourcemap: mode === "development",
-    // zweite Seite: öffentliche Online-Terminbuchung (ohne Anmeldung)
+    // weitere Seiten ohne Mitarbeiter-Login: öffentliche Online-Terminbuchung
+    // und die Kunden-App
     rollupOptions: {
-      input: { main: "index.html", buchen: "buchen.html" },
+      input: { main: "index.html", buchen: "buchen.html", kunde: "kunde.html" },
     },
   },
   base: "./",

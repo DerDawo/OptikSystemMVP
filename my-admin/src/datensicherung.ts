@@ -35,6 +35,9 @@ export const SICHERUNG_TABELLEN = [
   "buchung_oeffnungszeit",
   "buchung_terminart",
   "buchung_anfrage",
+  // Kunden-App: Nachrichten ja, Einladungen/Sitzungen (nur Schlüssel-Hashes,
+  // für Mitarbeiter nicht lesbar) nicht
+  "portal_nachricht",
   "rechnungsnummer_stand",
   "rechnungsnummer_zaehler",
   "verordnungsnummer_zaehler",
