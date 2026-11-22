@@ -16,6 +16,7 @@ import {
   rezeptAusEingabe,
   rezeptEingabeFehlt,
   rezeptSummen,
+  sortiereNachPerson,
   sortiereRezepte,
 } from "./kassenrezept";
 
@@ -149,6 +150,37 @@ describe("doppelteIds", () => {
       Rezeptdatum: "2026-03-12",
     });
     expect(doppelteIds([a, b, c]).size).toBe(2);
+  });
+});
+
+describe("sortiereNachPerson", () => {
+  it("stellt gleiche Person und gleiches Rezeptdatum untereinander", () => {
+    const a1 = rezept({
+      Versichertennummer: "A1",
+      Rezeptdatum: "2026-03-13",
+      Abrechnungsmonat: "2026-04",
+    });
+    const b = rezept({
+      Versichertennummer: "B2",
+      Rezeptdatum: "2026-03-13",
+      Abrechnungsmonat: "2026-03",
+    });
+    const a2 = rezept({
+      Versichertennummer: "A1",
+      Rezeptdatum: "2026-03-13",
+      Abrechnungsmonat: "2026-03",
+    });
+    const alt = rezept({
+      Versichertennummer: "A1",
+      Rezeptdatum: "2026-01-02",
+      Abrechnungsmonat: "2026-02",
+    });
+    expect(sortiereNachPerson([a1, alt, b, a2]).map((r) => r.id)).toEqual([
+      a2.id,
+      a1.id,
+      b.id,
+      alt.id,
+    ]);
   });
 });
 
