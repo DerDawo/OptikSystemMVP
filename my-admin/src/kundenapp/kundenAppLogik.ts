@@ -107,9 +107,26 @@ export const schluesselAusHash = (hash: string): string | null => {
   return treffer ? treffer[1].toLowerCase() : null;
 };
 
-// Geburtsdatum aus der Eingabe "17.04.1998", "17.4.98" oder "1998-04-17"
+// Beim Tippen: Punkte automatisch setzen, damit die Zifferntastatur des
+// Handys (ohne Punkt-Taste) reicht: "17041998" wird zu "17.04.1998".
+// Eingaben mit Buchstaben oder Bindestrich (ISO) bleiben unverändert.
+export const geburtsdatumTippen = (eingabe: string): string => {
+  if (/[^\d./\s]/.test(eingabe)) return eingabe;
+  const z = eingabe.replace(/\D/g, "").slice(0, 8);
+  let aus = z.slice(0, 2);
+  if (z.length > 2) aus += `.${z.slice(2, 4)}`;
+  if (z.length > 4) aus += `.${z.slice(4)}`;
+  return aus;
+};
+
+// Geburtsdatum aus der Eingabe "17.04.1998", "17.4.98", "17041998",
+// "170498" oder "1998-04-17"
 export const geburtsdatumLesen = (eingabe: string): string | null => {
-  const t = eingabe.trim();
+  let t = eingabe.trim();
+  // nur Ziffern (z. B. Zifferntastatur ohne Punkt): TTMMJJJJ oder TTMMJJ
+  if (/^\d{8}$/.test(t)) t = `${t.slice(0, 2)}.${t.slice(2, 4)}.${t.slice(4)}`;
+  else if (/^\d{6}$/.test(t))
+    t = `${t.slice(0, 2)}.${t.slice(2, 4)}.${t.slice(4)}`;
   let tag: number, monat: number, jahr: number;
   const iso = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(t);
   const de = /^(\d{1,2})[./ -](\d{1,2})[./ -](\d{2}|\d{4})$/.exec(t);

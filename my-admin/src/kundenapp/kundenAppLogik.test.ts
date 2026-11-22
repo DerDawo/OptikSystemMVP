@@ -5,6 +5,7 @@ import {
   einladungsLink,
   einladungsText,
   geburtsdatumLesen,
+  geburtsdatumTippen,
   kanaeleAusText,
   kommendeTermine,
   kundenRechnungen,
@@ -49,8 +50,15 @@ describe("geburtsdatumLesen", () => {
     expect(geburtsdatumLesen("17.04.98")).toBe("1998-04-17");
   });
 
+  it("versteht Eingabe ohne Punkte (Zifferntastatur)", () => {
+    expect(geburtsdatumLesen("17041998")).toBe("1998-04-17");
+    expect(geburtsdatumLesen("170498")).toBe("1998-04-17");
+  });
+
   it("lehnt unmögliche Daten ab", () => {
     expect(geburtsdatumLesen("31.02.1990")).toBeNull();
+    expect(geburtsdatumLesen("31021990")).toBeNull();
+    expect(geburtsdatumLesen("1704199")).toBeNull();
     expect(geburtsdatumLesen("abc")).toBeNull();
     expect(geburtsdatumLesen("")).toBeNull();
   });
@@ -170,5 +178,31 @@ describe("Einwilligung und Einladung", () => {
     expect(t).toContain("Liebe Frau Schneider,");
     expect(t).toContain("https://x/kunde#e=1");
     expect(t).toContain("Geburtsdatum");
+  });
+});
+
+describe("geburtsdatumTippen", () => {
+  it("setzt die Punkte beim Tippen von Ziffern", () => {
+    expect(geburtsdatumTippen("1")).toBe("1");
+    expect(geburtsdatumTippen("17")).toBe("17");
+    expect(geburtsdatumTippen("170")).toBe("17.0");
+    expect(geburtsdatumTippen("1704")).toBe("17.04");
+    expect(geburtsdatumTippen("17041")).toBe("17.04.1");
+    expect(geburtsdatumTippen("17041998")).toBe("17.04.1998");
+  });
+
+  it("lässt sich mit Rücktaste über einen Punkt löschen", () => {
+    expect(geburtsdatumTippen("17.")).toBe("17");
+    expect(geburtsdatumTippen("17.04.")).toBe("17.04");
+  });
+
+  it("schneidet überzählige Ziffern ab und behandelt eigene Punkte", () => {
+    expect(geburtsdatumTippen("170419981")).toBe("17.04.1998");
+    expect(geburtsdatumTippen("17.04.1998")).toBe("17.04.1998");
+  });
+
+  it("lässt ISO-Schreibweise und Text unverändert", () => {
+    expect(geburtsdatumTippen("1998-04-17")).toBe("1998-04-17");
+    expect(geburtsdatumTippen("abc")).toBe("abc");
   });
 });
