@@ -346,6 +346,29 @@ weiter, nur ohne Vorschlag. Aufrufen können sie nur angemeldete Nutzer
 (JWT-Prüfung der Edge Functions). Kosten: ein Vorschlag liegt bei wenigen
 Cent.
 
+## Taste „Sicherung jetzt starten“ (`datensicherung-starten`)
+
+Einstellungen → Datensicherung zeigt den Stand der nächtlichen verschlüsselten
+Sicherung (privates Repo `ulmrobert/optik-datensicherung`) und startet sie auf
+Knopfdruck. Die Function prüft `public.ist_inhaber()`; nur der Inhaber kann sie
+benutzen. Der GitHub-Token bleibt als Secret auf dem Server.
+
+Einrichtung (nur Prod):
+
+1. **GitHub-Token** anlegen: github.com → Settings → Developer settings →
+   Fine-grained tokens → Generate new token. Repository access: *Only select
+   repositories* → `optik-datensicherung`. Permissions → Repository →
+   **Actions: Read and write**. Ablaufdatum notieren.
+2. **Secret** setzen (Supabase → Prod → Edge Functions → Secrets):
+   `SICHERUNG_GITHUB_TOKEN` = der Token. Optional `SICHERUNG_REPO` und
+   `SICHERUNG_WORKFLOW` (Standard `ulmrobert/optik-datensicherung`,
+   `datensicherung.yml`).
+3. **Function bereitstellen**:
+   `supabase functions deploy datensicherung-starten --project-ref cktdtojgrxskihihmnjm`
+
+Ohne Secret zeigt die Karte „Die Sicherungs-Taste ist noch nicht
+eingerichtet“; der Download darunter funktioniert weiter.
+
 ## Echtdaten aus dem Altsystem Prisma übernehmen (#80)
 
 > Tracking-Issue: #104 (Dev/Prod-Trennung), Schritt 8 von 8.

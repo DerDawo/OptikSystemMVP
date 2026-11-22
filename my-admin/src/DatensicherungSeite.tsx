@@ -16,6 +16,7 @@ import {
   sicherungDateiname,
   sicherungUmfang,
 } from "./datensicherung";
+import { NachtSicherungKarte } from "./NachtSicherungKarte";
 
 /*
  * Einstellungen → Datensicherung: lädt alle Geschäftsdaten (Kunden,
@@ -85,8 +86,9 @@ export const DatensicherungSeite = () => {
   };
 
   return (
-    <Box sx={{ maxWidth: 720, mt: 2 }}>
+    <Box sx={{ maxWidth: 720, mt: 2, display: "grid", gap: 2 }}>
       <Title title="Datensicherung" />
+      <NachtSicherungKarte />
       <Card variant="outlined">
         <CardContent sx={{ display: "grid", gap: 2 }}>
           <Typography variant="h6">Datensicherung herunterladen</Typography>
