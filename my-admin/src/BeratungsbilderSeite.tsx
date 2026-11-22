@@ -27,6 +27,7 @@ import {
   Zustand,
   strahlengang,
 } from "./beratungsbilder";
+import { KatalogKnopf } from "./KatalogKnopf";
 
 // Feste, helle Farben: die Bilder sehen auf jedem Gerät gleich aus
 const F = {
@@ -794,6 +795,7 @@ export const BeratungsbilderSeite = () => {
           <Typography sx={{ flex: 1, color: "text.secondary" }}>
             Bilder für das Kundengespräch. Tippen Sie auf ein Thema.
           </Typography>
+          <KatalogKnopf />
           <Button startIcon={<FullscreenIcon />} onClick={vollbild}>
             Vollbild
           </Button>

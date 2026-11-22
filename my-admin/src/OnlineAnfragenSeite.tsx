@@ -26,6 +26,7 @@ import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import EmailIcon from "@mui/icons-material/Email";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { supabase } from "./utils";
+import { KundenAppNachrichten } from "./KundenAppNachrichten";
 import { RECHNUNG_ABSENDER } from "./rechnungTemplate";
 import {
   buildExternalMessageUrl,
@@ -205,26 +206,40 @@ const AnfrageKarte = ({
   const offen = anfrage.status === "offen";
 
   // vorhandene Kunden mit gleichem Namen vorschlagen
+  // Anfragen aus der Kunden-App sind schon dem Kunden zugeordnet
   useEffect(() => {
     if (!offen) return;
-    supabase
-      .from("kunde")
-      .select("id, Vorname, Nachname, Geburtsdatum, Email")
-      .ilike("Nachname", anfrage.nachname)
-      .ilike("Vorname", anfrage.vorname)
-      .limit(5)
-      .then(({ data }) => {
-        const liste = (data ?? []) as Kunde[];
-        setTreffer(liste);
-        const gleicheMail = liste.find(
-          (k) =>
-            anfrage.email &&
-            k.Email?.toLowerCase() === anfrage.email.toLowerCase(),
-        );
-        if (gleicheMail) setKundeWahl(String(gleicheMail.id));
-        else if (liste.length === 1) setKundeWahl(String(liste[0].id));
-      });
-  }, [offen, anfrage.nachname, anfrage.vorname, anfrage.email]);
+    const spalten = "id, Vorname, Nachname, Geburtsdatum, Email";
+    (anfrage.kunde_id
+      ? supabase.from("kunde").select(spalten).eq("id", anfrage.kunde_id)
+      : supabase
+          .from("kunde")
+          .select(spalten)
+          .ilike("Nachname", anfrage.nachname)
+          .ilike("Vorname", anfrage.vorname)
+          .limit(5)
+    ).then(({ data }) => {
+      const liste = (data ?? []) as Kunde[];
+      setTreffer(liste);
+      if (anfrage.kunde_id && liste.length) {
+        setKundeWahl(String(liste[0].id));
+        return;
+      }
+      const gleicheMail = liste.find(
+        (k) =>
+          anfrage.email &&
+          k.Email?.toLowerCase() === anfrage.email.toLowerCase(),
+      );
+      if (gleicheMail) setKundeWahl(String(gleicheMail.id));
+      else if (liste.length === 1) setKundeWahl(String(liste[0].id));
+    });
+  }, [
+    offen,
+    anfrage.nachname,
+    anfrage.vorname,
+    anfrage.email,
+    anfrage.kunde_id,
+  ]);
 
   const bestaetigen = async () => {
     setLaeuft(true);
@@ -724,7 +739,10 @@ export const OnlineAnfragenSeite = () => {
     <Box sx={{ p: 2, maxWidth: 1100 }}>
       <Title title="Online-Anfragen" />
       <Stack gap={2}>
-        <Typography variant="h5">Online-Terminanfragen</Typography>
+        <KundenAppNachrichten />
+        <Typography variant="h5" sx={{ mt: 2 }}>
+          Online-Terminanfragen
+        </Typography>
         {fehler && <Alert severity="error">{fehler}</Alert>}
         {anfragen && offene.length === 0 && (
           <Alert severity="info">Keine offenen Anfragen.</Alert>

@@ -89,6 +89,7 @@ import { KundeDokumente } from "./KundeDokumente";
 import { zurueckNachSpeichern } from "./seitenVerlauf";
 import { KundeKarteikarte } from "./KundeKarteikarte";
 import { KrankenkasseInput } from "./krankenkassen";
+import { AugenarztAuswahlInput } from "./aerzteSeite";
 import { KundeBrillenversicherungen } from "./KundeBrillenversicherungen";
 import { KundeKassenrezepte } from "./KundeKassenrezepte";
 
@@ -665,6 +666,7 @@ export const KundeEdit = () => (
             minRows={3}
             fullWidth
           />
+          <AugenarztAuswahlInput />
         </FieldRow>
       </FormSection>
       <FormSection title="Merkmale">
@@ -765,6 +767,7 @@ export const KundeCreate = () => {
               minRows={3}
               fullWidth
             />
+            <AugenarztAuswahlInput />
           </FieldRow>
         </FormSection>
         <FormSection title="Merkmale">
