@@ -15,6 +15,7 @@ import {
 import { FieldRow, FormSection } from "./EntityLayout";
 import { BetriebBilderFeld } from "./BetriebBilder";
 import { KatalogUploadFeld } from "./KatalogKnopf";
+import { AbrechnungCodeFeld } from "./AbrechnungSperre";
 
 export const BetriebEdit = () => (
   <Edit title="Betriebsdaten" redirect={false}>
@@ -52,6 +53,9 @@ export const BetriebEdit = () => (
           <TextInput source="Email" label="E-Mail" />
           <TextInput source="Website" label="Website" />
         </FieldRow>
+      </FormSection>
+      <FormSection title="Code für den Bereich Abrechnung">
+        <AbrechnungCodeFeld />
       </FormSection>
       <FormSection title="Steuer und Bankverbindung">
         <FieldRow>
