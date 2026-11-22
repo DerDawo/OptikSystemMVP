@@ -75,6 +75,7 @@ import { RechnungsnummerFeld } from "./RechnungsnummerFeld";
 import { AuftragsstatusLeiste } from "./AuftragsstatusLeiste";
 import { ENTSPIEGELUNGEN } from "./entspiegelungen";
 import { GlasZusatzAuswahl, useGlasFarben } from "./GlasZusatzAuswahl";
+import { ENTSPIEGELUNGEN } from "./entspiegelungen";
 import { FASSUNG_HERSTELLER } from "./fassungHersteller";
 import { HerstellerBestellung } from "./HerstellerBestellung";
 import { DIAGNOSEN, baueDiagnose, zerlegeDiagnose } from "./diagnosen";

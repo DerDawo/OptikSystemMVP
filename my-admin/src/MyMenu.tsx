@@ -37,11 +37,13 @@ import {
 } from "./icons";
 import unicornLogo from "./assets/unicorn-weiss.png";
 import { useOffeneAnfragen } from "./OnlineAnfragenSeite";
+import { useOffeneKundenAppNachrichten } from "./KundenAppNachrichten";
 import { useRolle } from "./rolle";
 
-// Terminanfragen von der Website, mit Anzahl der offenen
+// Terminanfragen von der Website und Nachrichten aus der Kunden-App, mit
+// Anzahl der offenen
 const OnlineAnfragenEintrag = () => {
-  const offen = useOffeneAnfragen();
+  const offen = useOffeneAnfragen() + useOffeneKundenAppNachrichten();
   return (
     <Menu.Item
       to="/online-anfragen"
@@ -269,6 +271,11 @@ export const MyMenu = () => {
         primaryText="Abgerechnete Rezepte"
         leftIcon={<PrescriptionIcon />}
       />
+      <Menu.Item
+        to="/optica"
+        primaryText="OPTICA-Abrechnungen"
+        leftIcon={<ReceiptIcon />}
+      />
 
       <Section label="Verwaltung" />
       <SubMenu
@@ -284,6 +291,7 @@ export const MyMenu = () => {
           "/glaskatalog",
           "/glashersteller",
           "/krankenkasse",
+          "/arzt",
         ]}
       >
         <Menu.Item to="/glass" primaryText="Gläser" leftIcon={<LensIcon />} />
@@ -326,6 +334,11 @@ export const MyMenu = () => {
           to="/krankenkasse"
           primaryText="Krankenkassen"
           leftIcon={<BuildingIcon />}
+        />
+        <Menu.Item
+          to="/arzt"
+          primaryText="Ärzte"
+          leftIcon={<PrescriptionIcon />}
         />
       </SubMenu>
       <SubMenu

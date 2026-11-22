@@ -5,6 +5,10 @@
       "destination": "/buchen.html"
     },
     {
+      "source": "/kunde",
+      "destination": "/kunde.html"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }

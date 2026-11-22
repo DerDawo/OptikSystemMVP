@@ -278,6 +278,12 @@ export const germanMessages: TranslationMessages = {
       Geoeffnet: "Geöffnet für",
       IK: "IK / Kassen-Nr.",
     }),
+    arzt: resource("Arzt |||| Ärzte", {
+      Name: "Titel und Name",
+      Praxis: "Praxis / Klinik / BAG",
+      PLZ: "PLZ",
+      Email: "E-Mail",
+    }),
     brillenart: resource("Brillenart |||| Brillenarten"),
     glass: resource("Glas |||| Gläser", {
       PD: "PD",

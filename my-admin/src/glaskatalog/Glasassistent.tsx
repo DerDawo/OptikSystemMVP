@@ -33,13 +33,18 @@ import {
   useRecordContext,
 } from "react-admin";
 import { useFormContext, useWatch } from "react-hook-form";
+import { KatalogKnopf } from "../KatalogKnopf";
 import {
+  ENTSPIEGELUNG_ZUSCHLAEGE,
+  STANDARD_ENTSPIEGELUNG,
   VORGABEN,
   Vorgabe,
   durchmesserListe,
+  entspiegelungAusName,
   grundglasPreis,
   optionKategorie,
   passtZuVorgaben,
+  zuschlagText,
 } from "./glasassistentRegeln";
 
 type Glashersteller = RaRecord & { code: string; name: string };
@@ -243,8 +248,9 @@ export const GlasassistentDialog = ({
   const [durchmesserR, setDurchmesserR] = useState<string | null>(null);
   const [durchmesserL, setDurchmesserL] = useState<string | null>(null);
   const [farbeId, setFarbeId] = useState<Identifier | null>(null);
-  const [entspiegelungId, setEntspiegelungId] = useState<Identifier | null>(
-    null,
+  // Entspiegelung aus der festen Zuschlagsliste (mindestens Ultra Glide)
+  const [entspiegelungId, setEntspiegelungId] = useState<string>(
+    STANDARD_ENTSPIEGELUNG,
   );
   const [hartschichtIds, setHartschichtIds] = useState<Set<Identifier>>(
     new Set(),
@@ -333,15 +339,14 @@ export const GlasassistentDialog = ({
   const selectedHersteller = hersteller?.find((h) => h.id === herstellerId);
   const selectedGrundglas = grundglaeser?.find((g) => g.id === grundglasId);
 
-  const { farben, entspiegelungen, hartschichten } = useMemo(() => {
+  // Die Entspiegelungen der Kataloge werden nicht angeboten; es gilt die
+  // feste Zuschlagsliste (ENTSPIEGELUNG_ZUSCHLAEGE)
+  const { farben, hartschichten } = useMemo(() => {
     const sortiert = [...(optionen ?? [])].sort((a, b) =>
       a.bezeichnung.localeCompare(b.bezeichnung, "de"),
     );
     return {
       farben: sortiert.filter((o) => optionKategorie(o) === "farbe"),
-      entspiegelungen: sortiert.filter(
-        (o) => optionKategorie(o) === "entspiegelung",
-      ),
       hartschichten: sortiert.filter(
         (o) => optionKategorie(o) === "hartschicht",
       ),
@@ -349,7 +354,7 @@ export const GlasassistentDialog = ({
   }, [optionen]);
 
   const selectedFarbe = farben.find((o) => o.id === farbeId);
-  const selectedEntspiegelung = entspiegelungen.find(
+  const selectedEntspiegelung = ENTSPIEGELUNG_ZUSCHLAEGE.find(
     (o) => o.id === entspiegelungId,
   );
   const selectedHartschichten = hartschichten.filter((o) =>
@@ -365,10 +370,7 @@ export const GlasassistentDialog = ({
     setFarbeId(
       farben.find((o) => name(o) === bestehenderGlastyp.Farbe)?.id ?? null,
     );
-    setEntspiegelungId(
-      entspiegelungen.find((o) => name(o) === bestehenderGlastyp.Verguetung)
-        ?.id ?? null,
-    );
+    setEntspiegelungId(entspiegelungAusName(bestehenderGlastyp.Verguetung).id);
     const sonstiges = (bestehenderGlastyp.Sonstiges ?? "")
       .split(",")
       .map((s) => s.trim());
@@ -386,7 +388,6 @@ export const GlasassistentDialog = ({
     optionen,
     grundglasId,
     farben,
-    entspiegelungen,
     hartschichten,
   ]);
 
@@ -432,7 +433,7 @@ export const GlasassistentDialog = ({
       setHerstellerId(id);
       setGrundglasId(null);
       setFarbeId(null);
-      setEntspiegelungId(null);
+      setEntspiegelungId(STANDARD_ENTSPIEGELUNG);
       setHartschichtIds(new Set());
     }
     geheZu("grundglas");
@@ -442,7 +443,7 @@ export const GlasassistentDialog = ({
     if (g.id !== grundglasId) {
       setGrundglasId(g.id);
       setFarbeId(null);
-      setEntspiegelungId(null);
+      setEntspiegelungId(STANDARD_ENTSPIEGELUNG);
       setHartschichtIds(new Set());
       const verfuegbar = Object.keys(g.durchmesser ?? {});
       if (durchmesserR && !verfuegbar.includes(durchmesserR))
@@ -687,9 +688,7 @@ export const GlasassistentDialog = ({
         );
       case "entspiegelung":
         return (
-          <OptionenListe
-            ohne="(ohne Entspiegelung)"
-            optionen={entspiegelungen}
+          <EntspiegelungListe
             gewaehlt={entspiegelungId}
             onWahl={(id) => {
               setEntspiegelungId(id);
@@ -1023,6 +1022,9 @@ export const GlasassistentDialog = ({
                 borderColor: "divider",
               }}
             >
+              <Box sx={{ mr: "auto" }}>
+                <KatalogKnopf />
+              </Box>
               <Button onClick={onClose} disabled={submitting}>
                 Abbrechen
               </Button>
@@ -1111,6 +1113,68 @@ const OptionenListe = ({
           onClick={() => onWahl(o.id)}
         />
       ))}
+    </>
+  );
+};
+
+// Entspiegelungen mit Aufpreis (+0 €, +28 €, ...) wie in der Zuschlagsliste;
+// Multi Plus ist ausgegraut, mindestens Ultra Glide ist Pflicht
+const EntspiegelungListe = ({
+  gewaehlt,
+  onWahl,
+  onWeiter,
+  bereit,
+}: {
+  gewaehlt: string;
+  onWahl: (id: string) => void;
+  onWeiter: () => void;
+  bereit: boolean;
+}) => {
+  if (!bereit) return <Hinweis>Bitte zuerst ein Grundglas wählen.</Hinweis>;
+  return (
+    <>
+      <Eintrag text="(weiter)" weiter onClick={onWeiter} />
+      {ENTSPIEGELUNG_ZUSCHLAEGE.map((o) =>
+        o.waehlbar ? (
+          <Eintrag
+            key={o.id}
+            text={
+              <Box
+                component="span"
+                sx={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  gap: 2,
+                }}
+              >
+                <span>{o.bezeichnung}</span>
+                <span>{zuschlagText(o.preis)}</span>
+              </Box>
+            }
+            gewaehlt={o.id === gewaehlt}
+            onClick={() => onWahl(o.id)}
+          />
+        ) : (
+          <Box
+            key={o.id}
+            aria-disabled="true"
+            sx={{
+              px: 0.75,
+              py: "2px",
+              fontSize: "0.875rem",
+              color: "text.disabled",
+            }}
+          >
+            {o.bezeichnung} (nicht mehr wählbar)
+          </Box>
+        ),
+      )}
+      <Typography
+        sx={{ mt: 1, px: 0.75, fontSize: "0.8rem", color: "text.secondary" }}
+      >
+        Mindestens die Ultra-Glide-Entspiegelung ist erforderlich und im Preis
+        inbegriffen.
+      </Typography>
     </>
   );
 };

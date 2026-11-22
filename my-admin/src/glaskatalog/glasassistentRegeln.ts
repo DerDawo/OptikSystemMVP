@@ -120,3 +120,66 @@ export const grundglasPreis = (
     : undefined;
   return jeDurchmesser ?? glas.basispreis ?? 0;
 };
+
+// Entspiegelungen mit festem Aufpreis auf das Grundglas (Zuschlagsliste des
+// Betriebs). Ultra Glide ist im Glaspreis enthalten und Mindeststandard;
+// Multi Plus wird nur noch angezeigt, ist aber nicht mehr wählbar. Ersetzt
+// die Entspiegelungen und Preise aus den SF6-Katalogen.
+export type EntspiegelungZuschlag = {
+  id: string;
+  bezeichnung: string;
+  preis: number;
+  waehlbar: boolean;
+};
+
+export const ENTSPIEGELUNG_ZUSCHLAEGE: EntspiegelungZuschlag[] = [
+  { id: "multi-plus", bezeichnung: "Multi Plus", preis: 0, waehlbar: false },
+  { id: "ultra-glide", bezeichnung: "Ultra Glide", preis: 0, waehlbar: true },
+  { id: "nano-glide", bezeichnung: "Nano Glide", preis: 28, waehlbar: true },
+  { id: "blue-glide", bezeichnung: "Blue Glide", preis: 25, waehlbar: true },
+  { id: "polar-glide", bezeichnung: "Polar Glide", preis: 35, waehlbar: true },
+  { id: "pure-glide", bezeichnung: "Pure Glide", preis: 42, waehlbar: true },
+  { id: "color", bezeichnung: "Color", preis: 38, waehlbar: true },
+  { id: "mirror", bezeichnung: "Mirror", preis: 25, waehlbar: true },
+  {
+    id: "kantenfilter",
+    bezeichnung: "Kantenfilter",
+    preis: 46,
+    waehlbar: true,
+  },
+];
+
+/** Mindestentspiegelung, im Preis enthalten und vorausgewählt. */
+export const STANDARD_ENTSPIEGELUNG = "ultra-glide";
+
+const entspiegelungSchluessel = (name: string) =>
+  name
+    .toLowerCase()
+    .replace(/_ac$|\bbs$/g, "")
+    .replace(/[^a-z]/g, "");
+
+/**
+ * Ordnet eine gespeicherte Vergütung (Freitext am Glastyp, z. B.
+ * "UltraGlide", "Nano Glide_AC" oder "Blue Glide") einer Entspiegelung der
+ * Zuschlagsliste zu. Nicht wählbare (Multi Plus) und unbekannte Namen
+ * ergeben die Mindestentspiegelung.
+ */
+export const entspiegelungAusName = (
+  name: string | null | undefined,
+): EntspiegelungZuschlag => {
+  const schluessel = entspiegelungSchluessel(name ?? "");
+  const treffer = ENTSPIEGELUNG_ZUSCHLAEGE.find(
+    (e) => e.waehlbar && entspiegelungSchluessel(e.bezeichnung) === schluessel,
+  );
+  return (
+    treffer ??
+    ENTSPIEGELUNG_ZUSCHLAEGE.find((e) => e.id === STANDARD_ENTSPIEGELUNG)!
+  );
+};
+
+/** "+0 €", "+28 €", "+12,50 €" wie in der Zuschlagsliste */
+export const zuschlagText = (preis: number) =>
+  `+${new Intl.NumberFormat("de-DE", {
+    minimumFractionDigits: Number.isInteger(preis) ? 0 : 2,
+    maximumFractionDigits: 2,
+  }).format(preis)} €`;

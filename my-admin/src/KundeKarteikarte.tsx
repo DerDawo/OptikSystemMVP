@@ -23,9 +23,11 @@ import { Theme } from "@mui/material/styles";
 import PhoneIcon from "@mui/icons-material/Phone";
 import WhatsAppIcon from "@mui/icons-material/WhatsApp";
 import { Auswahl, Eingabe, Speichern } from "./KarteiEingabe";
+import { ArztAuswahl } from "./aerzteSeite";
 import { HINWEISE } from "./KundeFelder";
 import { kontaktAktionen } from "./kontaktLinks";
 import { NachrichtHandy, NachrichtKanal } from "./NachrichtHandy";
+import { KundenAppEinladung } from "./KundenAppEinladung";
 import { ikVon, useKrankenkassen } from "./krankenkassen";
 
 /*
@@ -207,6 +209,7 @@ export const KundeKarteikarte = () => {
   const notify = useNotify();
   const [nachricht, setNachricht] = useState<NachrichtKanal | null>(null);
   const [kasseOffen, setKasseOffen] = useState(false);
+  const [appOffen, setAppOffen] = useState(false);
   const kassen = useKrankenkassen();
 
   if (!kunde) return null;
@@ -400,7 +403,15 @@ export const KundeKarteikarte = () => {
             eMail
           </PrismaKnopf>,
         )}
-        {zeile("Geburtsdatum", datum("Geburtsdatum", "Geburtsdatum"))}
+        {zeile(
+          "Geburtsdatum",
+          datum("Geburtsdatum", "Geburtsdatum"),
+          <Tooltip title="Kunden-App: Einladung mit QR-Code, WhatsApp, SMS oder E-Mail">
+            <span>
+              <PrismaKnopf onClick={() => setAppOffen(true)}>App</PrismaKnopf>
+            </span>
+          </Tooltip>,
+        )}
 
         {/* Versichertennummer und "Kasse" (Krankenkasse, Kassen-Nr., Status,
             Versicherungsart im Fenster) */}
@@ -487,14 +498,26 @@ export const KundeKarteikarte = () => {
         {/* Behandelnder Augenarzt mit vollständiger Adresse */}
         {zeile(
           "Augenarzt",
-          <Feld mehrzeilig>
-            <Eingabe
-              name="Augenarzt (Praxis, Name, Straße, PLZ Ort, Telefon)"
-              wert={kunde.Augenarzt}
-              speichere={speichere("Augenarzt")}
-              mehrzeilig
+          <Box sx={{ display: "flex", flexDirection: "column", gap: 0.5 }}>
+            <Feld mehrzeilig>
+              <Eingabe
+                name="Augenarzt (Praxis, Name, Straße, PLZ Ort, Telefon)"
+                wert={kunde.Augenarzt}
+                speichere={speichere("Augenarzt")}
+                mehrzeilig
+              />
+            </Feld>
+            {/* Arzt aus der Ärzte-Liste übernehmen (ersetzt den Freitext) */}
+            <ArztAuswahl
+              onWahl={(block) =>
+                speichere("Augenarzt")(block).catch(() =>
+                  notify("Augenarzt konnte nicht gespeichert werden.", {
+                    type: "error",
+                  }),
+                )
+              }
             />
-          </Feld>,
+          </Box>,
           undefined,
           true,
         )}
@@ -522,6 +545,14 @@ export const KundeKarteikarte = () => {
           onClose={() => setNachricht(null)}
           kanal={nachricht}
           nummer={handyNummer}
+          kunde={kunde}
+        />
+      )}
+
+      {appOffen && (
+        <KundenAppEinladung
+          offen
+          onClose={() => setAppOffen(false)}
           kunde={kunde}
         />
       )}
