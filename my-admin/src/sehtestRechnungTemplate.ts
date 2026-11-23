@@ -59,9 +59,9 @@ export type SehtestLeistung = {
 export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
   {
     id: "visus_sc",
-    bezeichnung: "Sehschärfe ohne Korrektur",
+    bezeichnung: "Landolt-Ringe-Test",
     beschreibung:
-      "Tagessehschärfe rechts, links, beidäugig (DIN 58220, Anl. 6 Nr. 2.1.1 FeV)",
+      "mit Testscheibe 114 Rodenstock R20; Tagessehschärfe rechts, links, beidäugig (DIN 58220, Anl. 6 Nr. 2.1.1 FeV)",
     preis: 25,
     menge: 1,
     standard: true,
