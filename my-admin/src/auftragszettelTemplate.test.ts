@@ -232,6 +232,9 @@ describe("Auftragszettel: Ableitungen", () => {
     expect(glastypAusBrillenart("Gleitsichtbrille")).toBe("GS");
     expect(glastypAusBrillenart("Bildschirmarbeitsplatzbrille")).toBe("Profi");
     expect(glastypAusBrillenart("Optometrische Refraktion")).toBeNull();
+    expect(
+      glastypAusBrillenart("Erweiterte Führerscheinuntersuchung"),
+    ).toBeNull();
     expect(glastypAusBrillenart("elektronische Sehhilfe")).toBeNull();
     expect(glastypAusBrillenart("")).toBeNull();
   });
