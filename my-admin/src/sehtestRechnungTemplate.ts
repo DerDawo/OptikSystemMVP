@@ -104,7 +104,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     id: "daemmerung",
     bezeichnung: "Dämmerungssehen / Blendempfindlichkeit",
     beschreibung:
-      "Kontrastsehen mit und ohne Blendung, Dämmerungssehen (orientierend)",
+      "mit OCULUS Mesotest II, Dämmerungssehen und Blendempfindlichkeit nach DIN 58220 Teil 7",
     preis: 25,
     menge: 1,
     standard: true,
