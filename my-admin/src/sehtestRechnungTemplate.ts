@@ -63,7 +63,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Landolt-Ringe-Test",
     beschreibung:
       "mit Testscheibe 114 Rodenstock R20; Tagessehschärfe rechts, links, beidäugig (DIN 58220, Anl. 6 Nr. 2.1.1 FeV)",
-    preis: 25,
+    preis: 20,
     menge: 1,
     standard: true,
   },
@@ -72,7 +72,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Sehschärfe mit Korrektur",
     beschreibung:
       "mit Brille bzw. Kontaktlinsen; Grenzwerte je Auge 0,8, beidäugig 1,0",
-    preis: 25,
+    preis: 20,
     menge: 1,
     standard: true,
   },
@@ -96,8 +96,8 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
   {
     id: "gesichtsfeld",
     bezeichnung: "Gesichtsfeld",
-    beschreibung: "Screening des Gesichtsfeldes (orientierend)",
-    preis: 20,
+    beschreibung: "Kinetische Perimetrie mit Goldmann-Perimeter",
+    preis: 35,
     menge: 1,
     standard: true,
   },
@@ -106,7 +106,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Dämmerungssehen / Blendempfindlichkeit",
     beschreibung:
       "mit OCULUS Mesotest II, Dämmerungssehen und Blendempfindlichkeit nach DIN 58220 Teil 7",
-    preis: 25,
+    preis: 20,
     menge: 1,
     standard: true,
   },
