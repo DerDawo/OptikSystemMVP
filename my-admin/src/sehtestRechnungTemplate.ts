@@ -60,27 +60,27 @@ export type SehtestLeistung = {
 export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
   {
     id: "visus_sc",
-    bezeichnung: "Landolt-Ringe-Test",
+    bezeichnung: "Visusprüfung ohne Korrektur (Landolt-Ringe-Test)",
     beschreibung:
-      "mit Testscheibe 114 Rodenstock R20; Tagessehschärfe rechts, links, beidäugig (DIN 58220, Anl. 6 Nr. 2.1.1 FeV)",
+      "Tagessehschärfe rechts, links und beidäugig mit Landolt-Ringen (DIN EN ISO 8596) · Gerät: Testscheibe 114, Rodenstock R20 · DIN 58220, Anl. 6 Nr. 2.1.1 FeV",
     preis: 18,
     menge: 1,
     standard: true,
   },
   {
     id: "visus_cc",
-    bezeichnung: "Sehschärfe mit Korrektur",
+    bezeichnung: "Visusprüfung mit Korrektur (Landolt-Ringe-Test)",
     beschreibung:
-      "mit Brille bzw. Kontaktlinsen; Grenzwerte je Auge 0,8, beidäugig 1,0",
+      "mit Brille bzw. Kontaktlinsen, Landolt-Ringe (DIN EN ISO 8596) · Gerät: Testscheibe 114, Rodenstock R20 · Grenzwerte je Auge 0,8, beidäugig 1,0",
     preis: 18,
     menge: 1,
     standard: true,
   },
   {
     id: "korrektur",
-    bezeichnung: "Prüfung der Korrektur",
+    bezeichnung: "Prüfung der Korrektur (Scheitelbrechwertmessung)",
     beschreibung:
-      "Scheitelbrechwert der Brille, sphärisches Äquivalent höchstens +8,0 dpt",
+      "Scheitelbrechwert der Brille am Scheitelbrechwertmesser (Lensmeter) · sphärisches Äquivalent höchstens +8,0 dpt",
     preis: 14,
     menge: 1,
     standard: true,
@@ -88,15 +88,17 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
   {
     id: "farbsinn",
     bezeichnung: "Farbsinnprüfung",
-    beschreibung: "Farbsehen mit Tafeln nach Ishihara (orientierend)",
+    beschreibung:
+      "pseudoisochromatische Tafeln nach Ishihara · standardisierte Beleuchtung (orientierend, ersetzt keine augenärztliche Prüfung)",
     preis: 12,
     menge: 1,
     standard: true,
   },
   {
     id: "gesichtsfeld",
-    bezeichnung: "Gesichtsfeld",
-    beschreibung: "Kinetische Perimetrie mit Goldmann-Perimeter",
+    bezeichnung: "Gesichtsfeldprüfung (Perimetrie)",
+    beschreibung:
+      "kinetische Perimetrie mit dem Goldmann-Perimeter · Bestimmung der Isopteren, beide Augen",
     preis: 35,
     menge: 1,
     standard: true,
@@ -105,7 +107,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     id: "daemmerung",
     bezeichnung: "Dämmerungssehen / Blendempfindlichkeit",
     beschreibung:
-      "mit OCULUS Mesotest II, Dämmerungssehen und Blendempfindlichkeit nach DIN 58220 Teil 7",
+      "Gerät: OCULUS Mesotest II · Prüfung des Dämmerungssehens und der Blendempfindlichkeit nach DIN 58220 Teil 7",
     preis: 18,
     menge: 1,
     standard: true,
@@ -114,7 +116,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     id: "bescheinigung",
     bezeichnung: "Bescheinigung über das Sehvermögen",
     beschreibung:
-      "amtliches Muster, Teil 1 (Betrieb) und Teil 2 (Fahrerlaubnisbehörde)",
+      "Ausstellung nach Anlage 6 Nr. 2.1 FeV auf amtlichem Muster · Teil 1 verbleibt im Betrieb, Teil 2 für die Fahrerlaubnisbehörde",
     preis: 20,
     menge: 1,
     standard: true,
