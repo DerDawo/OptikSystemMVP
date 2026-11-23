@@ -29,7 +29,6 @@ import { kontaktAktionen } from "./kontaktLinks";
 import { NachrichtHandy, NachrichtKanal } from "./NachrichtHandy";
 import { KundenAppEinladung } from "./KundenAppEinladung";
 import { ikVon, useKrankenkassen } from "./krankenkassen";
-import { PDF_VORLAGEN, fuellePdfVorlage, ladePdfVorlage } from "./pdfFormulare";
 
 /*
  * Kundenkartei im Aufbau der Prisma-Kundenmaske: links kursive Beschriftungen,
@@ -214,37 +213,6 @@ export const KundeKarteikarte = () => {
   const kassen = useKrankenkassen();
 
   if (!kunde) return null;
-
-  // Bescheinigung Sehtest Fahrerlaubnis (Anlage 6 FeV) mit den Kundendaten
-  // vorausgefüllt in einem neuen Tab öffnen (Drucken/Ausfüllen im PDF-Viewer).
-  // Das Fenster wird vor dem Laden geöffnet, sonst blockt der Browser es.
-  const pdfOeffnen = async (kategorie: string, name: string) => {
-    const fenster = window.open("", "_blank");
-    try {
-      const vorlage = PDF_VORLAGEN[kategorie];
-      const bytes = await fuellePdfVorlage(
-        vorlage,
-        await ladePdfVorlage(vorlage),
-        { kunde },
-      );
-      const url = URL.createObjectURL(
-        new Blob([bytes as BlobPart], { type: "application/pdf" }),
-      );
-      if (fenster) fenster.location.href = url;
-      else window.location.href = url;
-    } catch (error) {
-      fenster?.close();
-      notify(
-        `${name} konnte nicht erstellt werden: ${error instanceof Error ? error.message : error}`,
-        { type: "error" },
-      );
-    }
-  };
-
-  const fuehrerscheinOeffnen = () =>
-    pdfOeffnen("Führerschein-Bescheinigung", "Bescheinigung");
-  const reparaturOeffnen = () =>
-    pdfOeffnen("Reparaturauftrag HSC", "Reparaturauftrag");
 
   const speichere =
     (feld: string): Speichern =>
@@ -461,38 +429,6 @@ export const KundeKarteikarte = () => {
         )}
 
         {zeile("Beruf", text("Merkmal1", "Beruf"), undefined, true)}
-
-        {/* Sehtest-Bescheinigung für den Führerschein (Anlage 6 FeV) */}
-        {zeile(
-          "Führerschein",
-          <Feld grau>
-            <Box component="span" sx={{ color: "text.secondary" }}>
-              Sehtest-Bescheinigung (Anlage 6 FeV)
-            </Box>
-          </Feld>,
-          <Tooltip title="Bescheinigung mit Name, Geburtsdatum und Adresse vorausgefüllt öffnen">
-            <span>
-              <PrismaKnopf onClick={fuehrerscheinOeffnen}>
-                Bescheinigung
-              </PrismaKnopf>
-            </span>
-          </Tooltip>,
-        )}
-
-        {/* Reparaturauftrag an das Hotstegs Service Center (1 Seite) */}
-        {zeile(
-          "Reparatur",
-          <Feld grau>
-            <Box component="span" sx={{ color: "text.secondary" }}>
-              Auftragsformular Hotstegs Service Center
-            </Box>
-          </Feld>,
-          <Tooltip title="Reparaturauftrag mit Datum, Kommission und Kunden-Nr. vorausgefüllt öffnen">
-            <span>
-              <PrismaKnopf onClick={reparaturOeffnen}>Auftrag</PrismaKnopf>
-            </span>
-          </Tooltip>,
-        )}
 
         {/* Hinweise (Auswahl) und medizinische Notizen in einem Feld */}
         {zeile(
