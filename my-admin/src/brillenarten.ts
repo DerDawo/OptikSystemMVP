@@ -12,6 +12,7 @@ export const BRILLENARTEN = [
   "elektronische Sehhilfe",
   "Nachtfahrbrille",
   "Hobbybrille",
+  "Sportbrille",
   "Sonnenbrille",
   "Kantenfilterbrille",
   "Ersatzbrille",
