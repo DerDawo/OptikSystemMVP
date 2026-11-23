@@ -90,6 +90,7 @@ describe("Leistungskatalog", () => {
       "gesichtsfeld",
       "daemmerung",
       "bescheinigung",
+      "zweitschrift",
     ]);
   });
 });

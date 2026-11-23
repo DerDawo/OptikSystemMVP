@@ -53,8 +53,8 @@ export type SehtestLeistung = {
 
 /**
  * Leistungskatalog. Die Prüfungen des erweiterten Sehtests (Pflichtprüfungen
- * nach Anlage 6 Nr. 2.1 FeV, Farbsinn, Gesichtsfeld, Dämmerungssehen/Blendung
- * und die Bescheinigung) sind vorausgewählt (zusammen 149,90 €); die übrigen
+ * nach Anlage 6 Nr. 2.1 FeV, Farbsinn, Gesichtsfeld, Dämmerungssehen/Blendung,
+ * die Bescheinigung und deren Zweitschrift) sind vorausgewählt (zusammen 149,90 €); die übrigen
  * sind Zusatzleistungen. Preise lassen sich in der Vorschau ändern.
  */
 export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
@@ -63,7 +63,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Landolt-Ringe-Test",
     beschreibung:
       "mit Testscheibe 114 Rodenstock R20; Tagessehschärfe rechts, links, beidäugig (DIN 58220, Anl. 6 Nr. 2.1.1 FeV)",
-    preis: 20,
+    preis: 18,
     menge: 1,
     standard: true,
   },
@@ -72,7 +72,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Sehschärfe mit Korrektur",
     beschreibung:
       "mit Brille bzw. Kontaktlinsen; Grenzwerte je Auge 0,8, beidäugig 1,0",
-    preis: 20,
+    preis: 18,
     menge: 1,
     standard: true,
   },
@@ -81,7 +81,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Prüfung der Korrektur",
     beschreibung:
       "Scheitelbrechwert der Brille, sphärisches Äquivalent höchstens +8,0 dpt",
-    preis: 19.9,
+    preis: 14,
     menge: 1,
     standard: true,
   },
@@ -89,7 +89,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     id: "farbsinn",
     bezeichnung: "Farbsinnprüfung",
     beschreibung: "Farbsehen mit Tafeln nach Ishihara (orientierend)",
-    preis: 15,
+    preis: 12,
     menge: 1,
     standard: true,
   },
@@ -106,7 +106,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Dämmerungssehen / Blendempfindlichkeit",
     beschreibung:
       "mit OCULUS Mesotest II, Dämmerungssehen und Blendempfindlichkeit nach DIN 58220 Teil 7",
-    preis: 20,
+    preis: 18,
     menge: 1,
     standard: true,
   },
@@ -120,19 +120,19 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     standard: true,
   },
   {
+    id: "zweitschrift",
+    bezeichnung: "Zweitschrift der Bescheinigung",
+    beschreibung: "weitere Ausfertigung von Teil 2, z. B. für den Arbeitgeber",
+    preis: 14.9,
+    menge: 1,
+    standard: true,
+  },
+  {
     id: "refraktion",
     bezeichnung: "Subjektive Refraktion (Vollkorrektion)",
     beschreibung:
       "bestmögliche Korrektur, wenn die Grenzwerte nicht erreicht werden",
     preis: 20,
-    menge: 1,
-    standard: false,
-  },
-  {
-    id: "zweitschrift",
-    bezeichnung: "Zweitschrift der Bescheinigung",
-    beschreibung: "weitere Ausfertigung von Teil 2, z. B. für den Arbeitgeber",
-    preis: 5,
     menge: 1,
     standard: false,
   },
