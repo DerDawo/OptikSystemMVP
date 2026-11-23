@@ -51,9 +51,10 @@ export type SehtestLeistung = {
 };
 
 /**
- * Leistungskatalog. Die Pflichtprüfungen nach Anlage 6 Nr. 2.1 FeV sind
- * vorausgewählt (zusammen 139,90 €); die übrigen sind freiwillige
- * Zusatzleistungen. Preise lassen sich in der Vorschau ändern.
+ * Leistungskatalog. Die Prüfungen des erweiterten Sehtests (Pflichtprüfungen
+ * nach Anlage 6 Nr. 2.1 FeV, Farbsinn, Gesichtsfeld, Dämmerungssehen/Blendung
+ * und die Bescheinigung) sind vorausgewählt (zusammen 149,90 €); die übrigen
+ * sind Zusatzleistungen. Preise lassen sich in der Vorschau ändern.
  */
 export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
   {
@@ -61,7 +62,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Sehschärfe ohne Korrektur",
     beschreibung:
       "Tagessehschärfe rechts, links, beidäugig (DIN 58220, Anl. 6 Nr. 2.1.1 FeV)",
-    preis: 35,
+    preis: 25,
     menge: 1,
     standard: true,
   },
@@ -70,7 +71,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Sehschärfe mit Korrektur",
     beschreibung:
       "mit Brille bzw. Kontaktlinsen; Grenzwerte je Auge 0,8, beidäugig 1,0",
-    preis: 35,
+    preis: 25,
     menge: 1,
     standard: true,
   },
@@ -79,7 +80,32 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Prüfung der Korrektur",
     beschreibung:
       "Scheitelbrechwert der Brille, sphärisches Äquivalent höchstens +8,0 dpt",
-    preis: 39.9,
+    preis: 19.9,
+    menge: 1,
+    standard: true,
+  },
+  {
+    id: "farbsinn",
+    bezeichnung: "Farbsinnprüfung",
+    beschreibung: "Farbsehen mit Tafeln nach Ishihara (orientierend)",
+    preis: 15,
+    menge: 1,
+    standard: true,
+  },
+  {
+    id: "gesichtsfeld",
+    bezeichnung: "Gesichtsfeld",
+    beschreibung: "Screening des Gesichtsfeldes (orientierend)",
+    preis: 20,
+    menge: 1,
+    standard: true,
+  },
+  {
+    id: "daemmerung",
+    bezeichnung: "Dämmerungssehen / Blendempfindlichkeit",
+    beschreibung:
+      "Kontrastsehen mit und ohne Blendung, Dämmerungssehen (orientierend)",
+    preis: 25,
     menge: 1,
     standard: true,
   },
@@ -88,7 +114,7 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     bezeichnung: "Bescheinigung über das Sehvermögen",
     beschreibung:
       "amtliches Muster, Teil 1 (Betrieb) und Teil 2 (Fahrerlaubnisbehörde)",
-    preis: 30,
+    preis: 20,
     menge: 1,
     standard: true,
   },
@@ -98,33 +124,6 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     beschreibung:
       "bestmögliche Korrektur, wenn die Grenzwerte nicht erreicht werden",
     preis: 20,
-    menge: 1,
-    standard: false,
-  },
-  {
-    id: "farbsinn",
-    bezeichnung: "Farbsinnprüfung (orientierend)",
-    beschreibung:
-      "Tafeln nach Ishihara (freiwillig, ersetzt keine augenärztliche Prüfung)",
-    preis: 8,
-    menge: 1,
-    standard: false,
-  },
-  {
-    id: "daemmerung",
-    bezeichnung: "Dämmerungssehen / Blendempfindlichkeit (orientierend)",
-    beschreibung:
-      "Kontrastsehen mit und ohne Blendung (freiwillig, nicht augenärztlich)",
-    preis: 15,
-    menge: 1,
-    standard: false,
-  },
-  {
-    id: "gesichtsfeld",
-    bezeichnung: "Gesichtsfeld (orientierend)",
-    beschreibung:
-      "Screening (freiwillig, ersetzt keine augenärztliche Perimetrie)",
-    preis: 15,
     menge: 1,
     standard: false,
   },
@@ -302,7 +301,7 @@ export const buildSehtestRechnungBodyHtml = ({
       <div data-zahlung="sofort" class="aus">Den Rechnungsbetrag haben wir dankend erhalten.</div>
       <div data-zahlung="ueberweisung">Bitte überweisen Sie den Rechnungsbetrag bis zum ${e(zahlbarBis)} auf unser unten genanntes Konto. Verwendungszweck: Rechnung ${e(rechnungsnummer)}.</div>
       <div>Leistungsdatum ist das Untersuchungsdatum. Die Untersuchung dient dem Nachweis gegenüber der Fahrerlaubnisbehörde und ist keine Heilbehandlung; sie unterliegt daher dem Regelsteuersatz von ${a.mwstSatz} %.</div>
-      <div>Die Bescheinigung darf bei Antragstellung höchstens zwei Jahre alt sein (§ 12 Abs. 7 FeV), hier also bis ${e(gueltigBis)}. Freiwillige orientierende Prüfungen ersetzen nicht die augenärztliche Untersuchung nach Anlage 6 Nr. 2.2 FeV.</div>
+      <div>Die Bescheinigung darf bei Antragstellung höchstens zwei Jahre alt sein (§ 12 Abs. 7 FeV), hier also bis ${e(gueltigBis)}. Die orientierenden Prüfungen ersetzen nicht die augenärztliche Untersuchung nach Anlage 6 Nr. 2.2 FeV.</div>
     </div>
    </div>
   </div>
