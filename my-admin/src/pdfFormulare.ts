@@ -420,6 +420,23 @@ const fuehrerscheinFelder = (entities: DocumentMergeEntities) => {
   return { ...teil("t1"), ...teil("t2"), t2_datum: heute };
 };
 
+// Reparaturauftrag an das Hotstegs Service Center (Auftragsformular
+// 01.01.2026), auf eine Seite gesetzt. Das Programm trägt Datum, Kunden-Nr.,
+// Kommission (Nachname) und, falls bekannt, das Fassungsmodell ein; die
+// gewünschten Leistungen kreuzt der Optiker im PDF an.
+const reparaturauftragFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  return {
+    datum: dayjs().format("DD.MM.YYYY"),
+    komm: text(k.Nachname),
+    kundennr: text(k.KundenNummer),
+    modell: [entities.fassung?.Hersteller, entities.fassung?.Bezeichnung]
+      .map(text)
+      .filter(Boolean)
+      .join(" "),
+  };
+};
+
 // Kategorie in `dokumentvorlage` -> PDF-Vorlage
 export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
   Beobachtungsbogen: {
@@ -485,6 +502,12 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "fuehrerschein-bescheinigung.pdf",
     titel: "Bescheinigung Sehtest Fahrerlaubnis (Anlage 6 FeV)",
     felder: fuehrerscheinFelder,
+    vorbelegt: true,
+  },
+  "Reparaturauftrag HSC": {
+    datei: "reparaturauftrag-hsc.pdf",
+    titel: "Reparaturauftrag Hotstegs Service Center",
+    felder: reparaturauftragFelder,
     vorbelegt: true,
   },
   "Erprobungsbericht Lupe": {

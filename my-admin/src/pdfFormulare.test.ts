@@ -271,6 +271,23 @@ describe("Führerschein-Bescheinigung (Anlage 6 FeV)", () => {
   });
 });
 
+describe("Reparaturauftrag HSC", () => {
+  it("trägt Datum, Kommission und Kunden-Nr. ein und behält die Vorbelegung", async () => {
+    const vorlage = PDF_VORLAGEN["Reparaturauftrag HSC"];
+    const bytes = await fuellePdfVorlage(
+      vorlage,
+      lade(vorlage.datei),
+      entities,
+    );
+    const pdf = await PDFDocument.load(bytes);
+    expect(pdf.getPageCount()).toBe(1);
+    expect(feldwert(pdf, "datum")).toMatch(/^\d\d\.\d\d\.\d{4}$/);
+    expect(feldwert(pdf, "komm")).toBe("Muster");
+    expect(pdf.getForm().getCheckBox("aufarbeiten").isChecked()).toBe(true);
+    expect(pdf.getForm().getCheckBox("laser_ohne").isChecked()).toBe(false);
+  });
+});
+
 describe("vorbelegte Vorlage", () => {
   it("Antrag BAP zeigt gespeicherte Feldwerte (NeedAppearances aus) und behält sie", async () => {
     const vorlage = PDF_VORLAGEN["Antrag BAP"];
