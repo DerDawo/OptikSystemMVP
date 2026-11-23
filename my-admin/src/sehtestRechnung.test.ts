@@ -82,7 +82,15 @@ describe("Leistungskatalog", () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(
       SEHTEST_LEISTUNGEN.filter((l) => l.standard).map((l) => l.id),
-    ).toEqual(["visus_sc", "visus_cc", "korrektur", "bescheinigung"]);
+    ).toEqual([
+      "visus_sc",
+      "visus_cc",
+      "korrektur",
+      "farbsinn",
+      "gesichtsfeld",
+      "daemmerung",
+      "bescheinigung",
+    ]);
   });
 });
 
@@ -101,8 +109,8 @@ describe("Rechnung Sehtest C/D", () => {
     expect(html).toContain("20.11.2028");
     for (const k of FAHRERLAUBNISKLASSEN) expect(html).toContain(k);
     for (const l of SEHTEST_LEISTUNGEN) expect(html).toContain(l.bezeichnung);
-    expect(html).toContain("139,90 EUR");
-    expect(html).toContain("22,34 EUR");
+    expect(html).toContain("149,90 EUR");
+    expect(html).toContain("23,93 EUR");
     expect(html).toContain("Anlage 6 Nr. 2.1 FeV");
     // ohne Vorschau kein Skript
     expect(html).not.toContain("<script");
