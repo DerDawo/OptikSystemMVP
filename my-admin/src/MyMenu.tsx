@@ -39,6 +39,7 @@ import unicornLogo from "./assets/unicorn-weiss.png";
 import { useOffeneAnfragen } from "./OnlineAnfragenSeite";
 import { useOffeneKundenAppNachrichten } from "./KundenAppNachrichten";
 import { useRolle } from "./rolle";
+import { useAbrechnungFreigabe } from "./AbrechnungSperre";
 
 // Terminanfragen von der Website und Nachrichten aus der Kunden-App, mit
 // Anzahl der offenen
@@ -127,16 +128,19 @@ const Section = ({ label }: { label: string }) => {
 };
 
 // Einklappbare Gruppe; klappt automatisch auf, wenn eine ihrer Seiten
-// gerade geöffnet ist.
+// gerade geöffnet ist. Mit `vorOeffnen` (z. B. Code-Abfrage) klappt sie erst
+// auf, wenn die Funktion true liefert.
 const SubMenu = ({
   label,
   icon,
   paths,
+  vorOeffnen,
   children,
 }: {
   label: string;
   icon: ReactElement;
   paths: string[];
+  vorOeffnen?: () => Promise<boolean>;
   children: ReactNode;
 }) => {
   const [sidebarOpen] = useSidebarState();
@@ -151,7 +155,10 @@ const SubMenu = ({
   return (
     <>
       <MenuItem
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (open || !vorOeffnen) return setOpen((o) => !o);
+          void vorOeffnen().then((frei) => frei && setOpen(true));
+        }}
         aria-expanded={open}
         sx={(theme) => ({
           borderRadius: "11px",
@@ -194,8 +201,10 @@ const SubMenu = ({
 
 export const MyMenu = () => {
   const inhaber = useRolle() === "inhaber";
+  const { abfragen, dialog } = useAbrechnungFreigabe();
   return (
     <Menu>
+      {dialog}
       <Brand />
       <Menu.DashboardItem
         primaryText="Dashboard"
@@ -250,32 +259,45 @@ export const MyMenu = () => {
         leftIcon={<ListIcon />}
       />
 
-      <Section label="Abrechnung" />
-      <Menu.Item
-        to="/rechnungen"
-        primaryText="Rechnungen"
-        leftIcon={<ReceiptIcon />}
-      />
-      <Menu.Item
-        to="/mahnungen"
-        primaryText="Mahnungen"
-        leftIcon={<AlertIcon />}
-      />
-      <Menu.Item
-        to="/firmenrechnung"
-        primaryText="Firmenrechnung"
-        leftIcon={<ReceiptIcon />}
-      />
-      <Menu.Item
-        to="/rezepte"
-        primaryText="Abgerechnete Rezepte"
-        leftIcon={<PrescriptionIcon />}
-      />
-      <Menu.Item
-        to="/optica"
-        primaryText="OPTICA-Abrechnungen"
-        leftIcon={<ReceiptIcon />}
-      />
+      {/* zugeklappt, öffnet erst nach Eingabe des Abrechnungs-Codes */}
+      <SubMenu
+        label="Abrechnung"
+        icon={<ReceiptIcon />}
+        paths={[
+          "/rechnungen",
+          "/mahnungen",
+          "/firmenrechnung",
+          "/rezepte",
+          "/optica",
+        ]}
+        vorOeffnen={abfragen}
+      >
+        <Menu.Item
+          to="/rechnungen"
+          primaryText="Rechnungen"
+          leftIcon={<ReceiptIcon />}
+        />
+        <Menu.Item
+          to="/mahnungen"
+          primaryText="Mahnungen"
+          leftIcon={<AlertIcon />}
+        />
+        <Menu.Item
+          to="/firmenrechnung"
+          primaryText="Firmenrechnung"
+          leftIcon={<ReceiptIcon />}
+        />
+        <Menu.Item
+          to="/rezepte"
+          primaryText="Abgerechnete Rezepte"
+          leftIcon={<PrescriptionIcon />}
+        />
+        <Menu.Item
+          to="/optica"
+          primaryText="OPTICA-Abrechnungen"
+          leftIcon={<ReceiptIcon />}
+        />
+      </SubMenu>
 
       <Section label="Verwaltung" />
       <SubMenu
