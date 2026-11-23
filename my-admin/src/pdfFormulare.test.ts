@@ -265,9 +265,19 @@ describe("Führerschein-Bescheinigung (Anlage 6 FeV)", () => {
     }
     expect(feldwert(pdf, "t2_datum")).toMatch(/^\d\d\.\d\d\.\d{4}$/);
     expect(feldwert(pdf, "t2_optiker")).toBe("Robert Ulm");
-    // Geburtsort, Ausweisnummer und Befunde bleiben für den Optiker offen
+    // Geburtsort, Ausweisnummer (ohne Eintrag beim Kunden) und Befunde bleiben für den Optiker offen
     expect(feldwert(pdf, "t1_gebort")).toBeFalsy();
     expect(feldwert(pdf, "t2_ausweis")).toBeFalsy();
+  });
+
+  it("übernimmt die Personalausweisnummer des Kunden", async () => {
+    const vorlage = PDF_VORLAGEN["Führerschein-Bescheinigung"];
+    const bytes = await fuellePdfVorlage(vorlage, lade(vorlage.datei), {
+      ...entities,
+      kunde: { ...entities.kunde, Personalausweisnummer: "L01X00T47" },
+    });
+    const pdf = await PDFDocument.load(bytes);
+    expect(feldwert(pdf, "t2_ausweis")).toBe("L01X00T47");
   });
 });
 

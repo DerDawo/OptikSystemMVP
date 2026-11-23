@@ -430,6 +430,13 @@ export const KundeKarteikarte = () => {
 
         {zeile("Beruf", text("Merkmal1", "Beruf"), undefined, true)}
 
+        {zeile(
+          "Ausweis-Nr.",
+          text("Personalausweisnummer", "Personalausweisnummer"),
+          undefined,
+          true,
+        )}
+
         {/* Hinweise (Auswahl) und medizinische Notizen in einem Feld */}
         {zeile(
           "Med. Hinweise",

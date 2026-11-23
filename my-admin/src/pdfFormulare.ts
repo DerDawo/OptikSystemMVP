@@ -401,8 +401,8 @@ const abholbestaetigungFelder = (entities: DocumentMergeEntities) => {
 // Bescheinigung über die Untersuchung nach Anlage 6 Nr. 2.1 FeV (Sehtest für
 // Fahrerlaubnis der Klassen C/D und Fahrgastbeförderung). Teil 1 (verbleibt im
 // Betrieb) und Teil 2 (für den Bewerber) bekommen die Personalien des Kunden;
-// Betrieb und Optiker sind im PDF vorbelegt. Geburtsort, Ausweisnummer, Befunde
-// und das Ergebnis trägt der Optiker im PDF-Viewer ein.
+// Betrieb und Optiker sind im PDF vorbelegt. Geburtsort, Befunde und
+// das Ergebnis trägt der Optiker im PDF-Viewer ein.
 const fuehrerscheinFelder = (entities: DocumentMergeEntities) => {
   const k = kunde(entities);
   const heute = dayjs().format("DD.MM.YYYY");
@@ -417,7 +417,12 @@ const fuehrerscheinFelder = (entities: DocumentMergeEntities) => {
     Object.fromEntries(
       Object.entries(person).map(([name, wert]) => [`${t}_${name}`, wert]),
     );
-  return { ...teil("t1"), ...teil("t2"), t2_datum: heute };
+  return {
+    ...teil("t1"),
+    ...teil("t2"),
+    t2_datum: heute,
+    t2_ausweis: text(k.Personalausweisnummer),
+  };
 };
 
 // Reparaturauftrag an das Hotstegs Service Center (Auftragsformular
