@@ -21,6 +21,9 @@ describe("istFertigungsauftrag", () => {
     expect(istFertigungsauftrag("Umschliff")).toBe(true);
     expect(istFertigungsauftrag("Ersatzbrille")).toBe(true);
     expect(istFertigungsauftrag("Optometrische Refraktion")).toBe(false);
+    expect(istFertigungsauftrag("Erweiterte Führerscheinuntersuchung")).toBe(
+      false,
+    );
     expect(istFertigungsauftrag("Kontaktlinsenanpassung")).toBe(false);
     expect(istFertigungsauftrag("CL - KK")).toBe(false);
   });
