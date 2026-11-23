@@ -25,6 +25,7 @@ import {
   BELEG_STYLES,
   RECHNUNG_ABSENDER,
   briefkopfHtml,
+  dateiTitel,
   escapeHtml,
   formatEuro,
   fusszeileHtml,
@@ -453,19 +454,21 @@ ${skript}
 </body>
 </html>`;
 
-const titel = (nummer: string) =>
-  `Rechnung Sehtest Fahrerlaubnis C/D${nummer ? ` ${nummer}` : ""}`;
+const titel = (daten: SehtestRechnungDaten) =>
+  dateiTitel(
+    `Rechnung Sehtest Fahrerlaubnis C-D${daten.rechnungsnummer ? ` ${daten.rechnungsnummer}` : ""}`,
+    daten.entities.kunde,
+  );
 
 export const buildSehtestRechnungPrintHtml = (
   daten: SehtestRechnungDaten,
-): string =>
-  seite(titel(daten.rechnungsnummer), buildSehtestRechnungBodyHtml(daten), "");
+): string => seite(titel(daten), buildSehtestRechnungBodyHtml(daten), "");
 
 export const buildSehtestRechnungPreviewHtml = (
   daten: SehtestRechnungDaten,
 ): string =>
   seite(
-    titel(daten.rechnungsnummer),
+    titel(daten),
     buildSehtestRechnungBodyHtml(daten),
     BILDSCHIRM_STYLES,
     vorschauSkript(),
