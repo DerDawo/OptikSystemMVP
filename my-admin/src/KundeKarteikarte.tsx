@@ -6,6 +6,7 @@ import {
   useRefresh,
 } from "react-admin";
 import {
+  Autocomplete,
   Box,
   Button,
   Card,
@@ -15,8 +16,7 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
-  Select,
+  TextField,
   Tooltip,
 } from "@mui/material";
 import { Theme } from "@mui/material/styles";
@@ -501,15 +501,23 @@ export const KundeKarteikarte = () => {
             <Box
               sx={{ width: "100%", display: "flex", flexDirection: "column" }}
             >
-              <Select
+              {/* Auswahl aus den Kurz-Hinweisen oder frei eintippen (Enter) */}
+              <Autocomplete
                 multiple
-                variant="standard"
-                disableUnderline
-                displayEmpty
-                fullWidth
+                freeSolo
+                autoSelect
+                size="small"
+                options={[
+                  ...HINWEISE,
+                  ...hinweise.filter((h) => !HINWEISE.includes(h)),
+                ]}
                 value={hinweise}
-                onChange={async (e) => {
-                  const neu = e.target.value as string[];
+                onChange={async (_, werte) => {
+                  const neu = [
+                    ...new Set(
+                      (werte as string[]).map((w) => w.trim()).filter(Boolean),
+                    ),
+                  ];
                   try {
                     await speichere("Hinweise")(neu as never);
                   } catch {
@@ -518,35 +526,37 @@ export const KundeKarteikarte = () => {
                     });
                   }
                 }}
-                renderValue={(werte) =>
-                  werte.length === 0 ? (
-                    ""
-                  ) : (
-                    <Box sx={{ display: "flex", gap: 0.5, flexWrap: "wrap" }}>
-                      {werte.map((h) => (
-                        <Chip
-                          key={h}
-                          label={h}
-                          size="small"
-                          color="warning"
-                          variant="outlined"
-                        />
-                      ))}
-                    </Box>
-                  )
+                renderTags={(werte, getTagProps) =>
+                  werte.map((h, index) => {
+                    const { key, ...props } = getTagProps({ index });
+                    return (
+                      <Chip
+                        key={key}
+                        {...props}
+                        label={h}
+                        size="small"
+                        color="warning"
+                        variant="outlined"
+                      />
+                    );
+                  })
                 }
-                inputProps={{ "aria-label": "Hinweise" }}
-                sx={{ "& .MuiSelect-select": { py: "3px" } }}
-              >
-                {[
-                  ...HINWEISE,
-                  ...hinweise.filter((h) => !HINWEISE.includes(h)),
-                ].map((h) => (
-                  <MenuItem key={h} value={h}>
-                    {h}
-                  </MenuItem>
-                ))}
-              </Select>
+                renderInput={(params) => (
+                  <TextField
+                    {...params}
+                    variant="standard"
+                    placeholder="Hinweis wählen oder eintippen"
+                    inputProps={{
+                      ...params.inputProps,
+                      "aria-label": "Hinweise",
+                    }}
+                    InputProps={{
+                      ...params.InputProps,
+                      disableUnderline: true,
+                    }}
+                  />
+                )}
+              />
               <Eingabe
                 name="Medizinische Notizen"
                 wert={kunde.Notizen}
