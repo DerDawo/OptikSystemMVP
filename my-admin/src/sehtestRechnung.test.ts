@@ -90,6 +90,7 @@ describe("Leistungskatalog", () => {
       "gesichtsfeld",
       "daemmerung",
       "bescheinigung",
+      "zweitschrift",
     ]);
   });
 });
@@ -114,6 +115,16 @@ describe("Rechnung Sehtest C/D", () => {
     expect(html).toContain("Anlage 6 Nr. 2.1 FeV");
     // ohne Vorschau kein Skript
     expect(html).not.toContain("<script");
+  });
+
+  it("schlägt als Dateinamen Rechnung, Nummer und Kundennamen vor", () => {
+    const titel = (html: string) => html.match(/<title>(.*?)<\/title>/)?.[1];
+    expect(titel(buildSehtestRechnungPrintHtml(daten))).toBe(
+      "Rechnung Sehtest Fahrerlaubnis C-D 2026-123 Muster Max",
+    );
+    expect(titel(buildSehtestRechnungPreviewHtml(daten))).toBe(
+      "Rechnung Sehtest Fahrerlaubnis C-D 2026-123 Muster Max",
+    );
   });
 
   it("Vorschau enthält das Rechenskript mit denselben Funktionen", () => {
