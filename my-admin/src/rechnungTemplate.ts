@@ -296,6 +296,19 @@ type BelegDaten = {
 const a = RECHNUNG_ABSENDER;
 const e = escapeHtml;
 
+// Titel des Belegs = vorgeschlagener Dateiname beim Speichern als PDF:
+// "<Beleg> <Nachname> <Vorname>", ohne Zeichen, die Dateinamen nicht erlauben
+export const dateiTitel = (
+  beleg: string,
+  kunde?: DocumentMergeEntities["kunde"],
+): string =>
+  [beleg, kunde?.Nachname, kunde?.Vorname]
+    .map((teil) => (teil == null ? "" : String(teil)))
+    .join(" ")
+    .replace(/[\\/:*?"<>|]+/g, "-")
+    .replace(/\s+/g, " ")
+    .trim();
+
 // Briefkopf der Belege: Absenderzeile, Logo, Anschrift, Datenbox und grauer
 // Titelbalken (auch für Mahnungen, mahnungTemplate.ts)
 export const briefkopfHtml = (
@@ -627,14 +640,14 @@ export const buildRechnungBodyHtml = ({
 
 export const buildRechnungPrintHtml = (daten: RechnungDaten): string =>
   belegSeite(
-    `Rechnung ${daten.rechnungsnummer}`,
+    dateiTitel(`Rechnung ${daten.rechnungsnummer}`, daten.entities.kunde),
     buildRechnungBodyHtml(daten),
     false,
   );
 
 export const buildRechnungPreviewHtml = (daten: RechnungDaten): string =>
   belegSeite(
-    `Rechnung ${daten.rechnungsnummer}`,
+    dateiTitel(`Rechnung ${daten.rechnungsnummer}`, daten.entities.kunde),
     buildRechnungBodyHtml(daten),
     true,
   );
@@ -654,12 +667,20 @@ export const buildKostenvoranschlagBodyHtml = ({
 export const buildKostenvoranschlagPrintHtml = (
   daten: KostenvoranschlagDaten,
 ): string =>
-  belegSeite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), false);
+  belegSeite(
+    dateiTitel("Kostenvoranschlag", daten.entities.kunde),
+    buildKostenvoranschlagBodyHtml(daten),
+    false,
+  );
 
 export const buildKostenvoranschlagPreviewHtml = (
   daten: KostenvoranschlagDaten,
 ): string =>
-  belegSeite("Kostenvoranschlag", buildKostenvoranschlagBodyHtml(daten), true);
+  belegSeite(
+    dateiTitel("Kostenvoranschlag", daten.entities.kunde),
+    buildKostenvoranschlagBodyHtml(daten),
+    true,
+  );
 
 // Rechnung für einen Kontaktlinsenauftrag im selben Design: Kontaktlinse
 // rechts/links mit Werten, Zusatzleistungen, Rabatt; Summe, KK-Anteil und
@@ -770,7 +791,7 @@ export const buildKontaktlinsenRechnungPrintHtml = (
   daten: KontaktlinsenRechnungDaten,
 ): string =>
   belegSeite(
-    `Rechnung ${daten.rechnungsnummer}`,
+    dateiTitel(`Rechnung ${daten.rechnungsnummer}`, daten.kunde),
     kontaktlinsenBeleg(daten),
     false,
   );
@@ -779,7 +800,7 @@ export const buildKontaktlinsenRechnungPreviewHtml = (
   daten: KontaktlinsenRechnungDaten,
 ): string =>
   belegSeite(
-    `Rechnung ${daten.rechnungsnummer}`,
+    dateiTitel(`Rechnung ${daten.rechnungsnummer}`, daten.kunde),
     kontaktlinsenBeleg(daten),
     true,
   );

@@ -54,6 +54,18 @@ export const BetriebEdit = () => (
           <TextInput source="Website" label="Website" />
         </FieldRow>
       </FormSection>
+      <FormSection title="Betriebs- und Steuernummern">
+        <FieldRow>
+          <TextInput source="Betriebsnummer" label="Betriebsnummer" />
+          <TextInput source="HWKNummer" label="HWK-Nr." />
+          <TextInput source="BGETEMNummer" label="BG ETEM Unternehmensnummer" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Steuernummer" label="Steuernummer" />
+          <TextInput source="WirtschaftsIdNr" label="ID-Nummer" />
+          <TextInput source="EORI" label="EORI-Nummer" />
+        </FieldRow>
+      </FormSection>
       <FormSection title="Code für den Bereich Abrechnung">
         <AbrechnungCodeFeld />
       </FormSection>
@@ -61,6 +73,9 @@ export const BetriebEdit = () => (
         <FieldRow>
           <TextInput source="UStIdNr" label="USt-IdNr." />
           <NumberInput source="MwStSatz" label="MwSt-Satz (%)" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Kontoinhaber" label="Kontoinhaber" />
         </FieldRow>
         <FieldRow>
           <TextInput source="Bank" label="Bank" />

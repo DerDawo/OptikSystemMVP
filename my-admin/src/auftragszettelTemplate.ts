@@ -161,7 +161,8 @@ export const glastypAusBrillenart = (brillenArt: unknown): string | null => {
   if (/bifokal|trifokal|zweistärken/.test(art)) return "Bifo";
   if (/bildschirm|arbeitsplatz|office|raum|nahkomfort/.test(art))
     return "Profi";
-  if (/refraktion|sehhilfe|lupe|kontaktlinse/.test(art)) return null;
+  if (/refraktion|untersuchung|sehhilfe|lupe|kontaktlinse/.test(art))
+    return null;
   return "Mono";
 };
 

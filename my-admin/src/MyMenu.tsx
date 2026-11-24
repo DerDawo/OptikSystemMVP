@@ -39,6 +39,7 @@ import unicornLogo from "./assets/unicorn-weiss.png";
 import { useOffeneAnfragen } from "./OnlineAnfragenSeite";
 import { useOffeneKundenAppNachrichten } from "./KundenAppNachrichten";
 import { useRolle } from "./rolle";
+import { useAbrechnungFreigabe } from "./AbrechnungSperre";
 
 // Terminanfragen von der Website und Nachrichten aus der Kunden-App, mit
 // Anzahl der offenen
@@ -127,16 +128,19 @@ const Section = ({ label }: { label: string }) => {
 };
 
 // Einklappbare Gruppe; klappt automatisch auf, wenn eine ihrer Seiten
-// gerade geöffnet ist.
+// gerade geöffnet ist. Mit `vorOeffnen` (z. B. Code-Abfrage) klappt sie erst
+// auf, wenn die Funktion true liefert.
 const SubMenu = ({
   label,
   icon,
   paths,
+  vorOeffnen,
   children,
 }: {
   label: string;
   icon: ReactElement;
   paths: string[];
+  vorOeffnen?: () => Promise<boolean>;
   children: ReactNode;
 }) => {
   const [sidebarOpen] = useSidebarState();
@@ -151,7 +155,10 @@ const SubMenu = ({
   return (
     <>
       <MenuItem
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          if (open || !vorOeffnen) return setOpen((o) => !o);
+          void vorOeffnen().then((frei) => frei && setOpen(true));
+        }}
         aria-expanded={open}
         sx={(theme) => ({
           borderRadius: "11px",
@@ -194,8 +201,10 @@ const SubMenu = ({
 
 export const MyMenu = () => {
   const inhaber = useRolle() === "inhaber";
+  const { abfragen, dialog } = useAbrechnungFreigabe();
   return (
     <Menu>
+      {dialog}
       <Brand />
       <Menu.DashboardItem
         primaryText="Dashboard"
@@ -250,8 +259,7 @@ export const MyMenu = () => {
         leftIcon={<ListIcon />}
       />
 
-      {/* Abrechnung als Klappmenü: zu, bis man es öffnet oder auf einer
-          der Seiten ist (die Seiten selbst fragen einen Code ab) */}
+      {/* zugeklappt, öffnet erst nach Eingabe des Abrechnungs-Codes */}
       <SubMenu
         label="Abrechnung"
         icon={<ReceiptIcon />}
@@ -262,6 +270,7 @@ export const MyMenu = () => {
           "/rezepte",
           "/optica",
         ]}
+        vorOeffnen={abfragen}
       >
         <Menu.Item
           to="/rechnungen"

@@ -5,7 +5,7 @@
 // Inhaber unter Betriebsdaten fest (AbrechnungCodeFeld); ohne Code sind die
 // Seiten offen. Geprüft wird in der Datenbank (abrechnung_code_pruefen),
 // der Code selbst kommt nie in den Browser.
-import { FormEvent, ReactNode, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { Title, useNotify } from "react-admin";
 import {
   Alert,
@@ -13,6 +13,10 @@ import {
   Button,
   Card,
   CircularProgress,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   TextField,
   Typography,
 } from "@mui/material";
@@ -109,6 +113,98 @@ export const AbrechnungSperre = ({
       )}
     </Box>
   );
+};
+
+/**
+ * Code-Abfrage zum Aufklappen des Menübereichs "Abrechnung". `abfragen()`
+ * liefert true, wenn kein Code gesetzt ist oder der richtige Code eingegeben
+ * wurde. `dialog` muss irgendwo gerendert werden. Geprüft wird wie bei den
+ * Seiten selbst in der Datenbank.
+ */
+export const useAbrechnungFreigabe = () => {
+  const [offen, setOffen] = useState(false);
+  const [code, setCode] = useState("");
+  const [fehler, setFehler] = useState<string | null>(null);
+  const [prueft, setPrueft] = useState(false);
+  const antwort = useRef<((ok: boolean) => void) | null>(null);
+
+  const abschliessen = (ok: boolean) => {
+    setOffen(false);
+    setCode("");
+    antwort.current?.(ok);
+    antwort.current = null;
+  };
+
+  const abfragen = async (): Promise<boolean> => {
+    const { data, error } = await supabase.rpc("abrechnung_code_gesetzt");
+    // ohne gesetzten Code ist der Bereich offen; im Zweifel nachfragen
+    if (!error && data === false) return true;
+    return new Promise<boolean>((resolve) => {
+      antwort.current = resolve;
+      setFehler(null);
+      setOffen(true);
+    });
+  };
+
+  const pruefen = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!code) return;
+    setPrueft(true);
+    setFehler(null);
+    const { data, error } = await supabase.rpc("abrechnung_code_pruefen", {
+      p_code: code,
+    });
+    setPrueft(false);
+    setCode("");
+    if (error) setFehler(error.message);
+    else if (data === true) abschliessen(true);
+    else setFehler("Der Code stimmt nicht.");
+  };
+
+  const dialog = (
+    <Dialog
+      open={offen}
+      onClose={() => abschliessen(false)}
+      maxWidth="xs"
+      fullWidth
+    >
+      <Box component="form" onSubmit={(e: FormEvent) => void pruefen(e)}>
+        <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <LockOutlinedIcon color="primary" /> Abrechnung
+        </DialogTitle>
+        <DialogContent
+          sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}
+        >
+          <Typography variant="body2" color="text.secondary">
+            Dieser Bereich ist mit einem Code geschützt.
+          </Typography>
+          <TextField
+            autoFocus
+            type="password"
+            label="Code"
+            value={code}
+            onChange={(e) => setCode(e.target.value.replace(/\D/g, ""))}
+            slotProps={{
+              htmlInput: {
+                inputMode: "numeric",
+                autoComplete: "off",
+                maxLength: 8,
+              },
+            }}
+          />
+          {fehler && <Alert severity="error">{fehler}</Alert>}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => abschliessen(false)}>Abbrechen</Button>
+          <Button type="submit" variant="contained" disabled={!code || prueft}>
+            Öffnen
+          </Button>
+        </DialogActions>
+      </Box>
+    </Dialog>
+  );
+
+  return { abfragen, dialog };
 };
 
 /**
