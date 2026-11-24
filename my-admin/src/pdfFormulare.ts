@@ -398,6 +398,50 @@ const abholbestaetigungFelder = (entities: DocumentMergeEntities) => {
   };
 };
 
+// Bescheinigung über die Untersuchung nach Anlage 6 Nr. 2.1 FeV (Sehtest für
+// Fahrerlaubnis der Klassen C/D und Fahrgastbeförderung). Teil 1 (verbleibt im
+// Betrieb) und Teil 2 (für den Bewerber) bekommen die Personalien des Kunden;
+// Betrieb und Optiker sind im PDF vorbelegt. Geburtsort, Befunde und
+// das Ergebnis trägt der Optiker im PDF-Viewer ein.
+const fuehrerscheinFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  const heute = dayjs().format("DD.MM.YYYY");
+  const person = {
+    name: [text(k.Nachname), text(k.Vorname)].filter(Boolean).join(", "),
+    gebdatum: formatDatum(k.Geburtsdatum),
+    wohnort: [k.Postleitzahl, k.Stadt].map(text).filter(Boolean).join(" "),
+    strasse: [k.Straße, k.Hausnummer].map(text).filter(Boolean).join(" "),
+    befunddatum: heute,
+  };
+  const teil = (t: "t1" | "t2") =>
+    Object.fromEntries(
+      Object.entries(person).map(([name, wert]) => [`${t}_${name}`, wert]),
+    );
+  return {
+    ...teil("t1"),
+    ...teil("t2"),
+    t2_datum: heute,
+    t2_ausweis: text(k.Personalausweisnummer),
+  };
+};
+
+// Reparaturauftrag an das Hotstegs Service Center (Auftragsformular
+// 01.01.2026), auf eine Seite gesetzt. Das Programm trägt Datum, Kunden-Nr.,
+// Kommission (Nachname) und, falls bekannt, das Fassungsmodell ein; die
+// gewünschten Leistungen kreuzt der Optiker im PDF an.
+const reparaturauftragFelder = (entities: DocumentMergeEntities) => {
+  const k = kunde(entities);
+  return {
+    datum: dayjs().format("DD.MM.YYYY"),
+    komm: text(k.Nachname),
+    kundennr: text(k.KundenNummer),
+    modell: [entities.fassung?.Hersteller, entities.fassung?.Bezeichnung]
+      .map(text)
+      .filter(Boolean)
+      .join(" "),
+  };
+};
+
 // Kategorie in `dokumentvorlage` -> PDF-Vorlage
 export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
   Beobachtungsbogen: {
@@ -458,6 +502,18 @@ export const PDF_VORLAGEN: Record<string, PdfVorlage> = {
     datei: "abholbestaetigung.pdf",
     titel: "Abholbestätigung mit Schuldanerkenntnis",
     felder: abholbestaetigungFelder,
+  },
+  "Führerschein-Bescheinigung": {
+    datei: "fuehrerschein-bescheinigung.pdf",
+    titel: "Bescheinigung Sehtest Fahrerlaubnis (Anlage 6 FeV)",
+    felder: fuehrerscheinFelder,
+    vorbelegt: true,
+  },
+  "Reparaturauftrag HSC": {
+    datei: "reparaturauftrag-hsc.pdf",
+    titel: "Reparaturauftrag Hotstegs Service Center",
+    felder: reparaturauftragFelder,
+    vorbelegt: true,
   },
   "Erprobungsbericht Lupe": {
     datei: "erprobungsbericht-lupe.pdf",

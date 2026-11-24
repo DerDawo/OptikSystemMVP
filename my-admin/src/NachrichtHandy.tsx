@@ -18,6 +18,7 @@ import {
 } from "./messaging";
 import { renderMessageTemplate } from "./nachrichtenPlatzhalter";
 import { sortiereVorlagen } from "./nachrichtenReihenfolge";
+import { TerminvorschlagAuswahl } from "./TerminvorschlagAuswahl";
 
 /*
  * Nachricht an einen Kunden im Stil eines Handys: oben Name und Nummer,
@@ -52,8 +53,12 @@ export const NachrichtHandy = ({
 }) => {
   const notify = useNotify();
   const [nachricht, setNachricht] = useState("");
+  const [terminOffen, setTerminOffen] = useState(false);
   useEffect(() => {
-    if (offen) setNachricht("");
+    if (offen) {
+      setNachricht("");
+      setTerminOffen(false);
+    }
   }, [offen]);
 
   const { data: vorlagen } = useGetList(
@@ -182,7 +187,16 @@ export const NachrichtHandy = ({
               gap: 1,
             }}
           >
-            {nachricht.trim() ? (
+            {terminOffen ? (
+              <TerminvorschlagAuswahl
+                kunde={kunde}
+                abbrechen={() => setTerminOffen(false)}
+                uebernehmen={(t) => {
+                  setNachricht(t);
+                  setTerminOffen(false);
+                }}
+              />
+            ) : nachricht.trim() ? (
               <Box
                 sx={{
                   alignSelf: "flex-end",
@@ -211,7 +225,7 @@ export const NachrichtHandy = ({
           </Box>
 
           {/* Vorlagen */}
-          {(vorlagen ?? []).length > 0 && (
+          {
             <Box
               sx={{
                 display: "flex",
@@ -222,6 +236,16 @@ export const NachrichtHandy = ({
                 flexShrink: 0,
               }}
             >
+              <Chip
+                label="📅 Terminvorschlag"
+                size="small"
+                onClick={() => setTerminOffen(true)}
+                sx={{
+                  bgcolor: farben.blase,
+                  fontWeight: 600,
+                  flexShrink: 0,
+                }}
+              />
               {sortiereVorlagen(vorlagen ?? []).map((v) => {
                 const titel = text(v.Titel) || text(v.bezeichnung);
                 const inhalt = text(v.Text) || text(v.template);
@@ -239,7 +263,7 @@ export const NachrichtHandy = ({
                 );
               })}
             </Box>
-          )}
+          }
 
           {/* Eingabezeile */}
           <Box

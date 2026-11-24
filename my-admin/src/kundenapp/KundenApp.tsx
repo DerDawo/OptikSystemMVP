@@ -31,6 +31,7 @@ import {
 } from "./api";
 import {
   geburtsdatumLesen,
+  geburtsdatumTippen,
   schluesselAusHash,
   type PortalDaten,
 } from "./kundenAppLogik";
@@ -120,7 +121,7 @@ const Anmeldung = ({
                 label="Geburtsdatum"
                 placeholder="TT.MM.JJJJ"
                 value={eingabe}
-                onChange={(e) => setEingabe(e.target.value)}
+                onChange={(e) => setEingabe(geburtsdatumTippen(e.target.value))}
                 onKeyDown={(e) => e.key === "Enter" && anmelden()}
                 inputProps={{ inputMode: "numeric", autoComplete: "bday" }}
                 autoFocus
