@@ -2,3 +2,7 @@
 # `supabase db push`) - kein Repo-Inhalt, siehe supabase/README.md.
 supabase/.temp/
 supabase/.branches/
+
+# Telefon-Assistent: Zugangsschlüssel und von ElevenLabs vergebene IDs (nie ins Repo)
+telefon-agent/.env
+telefon-agent/.elevenlabs-ids.json

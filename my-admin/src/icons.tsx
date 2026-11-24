@@ -100,6 +100,10 @@ export const ClockIcon = lineIcon(
   "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM12 7v5l3 2",
   "ClockIcon",
 );
+export const PhoneIcon = lineIcon(
+  "M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a1 1 0 0 1-1 1A16 16 0 0 1 4 5a1 1 0 0 1 1-1z",
+  "PhoneIcon",
+);
 export const CheckIcon = lineIcon("M5 12.5l4.5 4.5L19 7", "CheckIcon");
 export const EuroIcon = lineIcon(
   "M17 6.5A6.5 6.5 0 1 0 17 17.5M4 10.5h9M4 13.5h9",
