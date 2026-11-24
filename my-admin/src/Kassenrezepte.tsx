@@ -4,7 +4,7 @@
 // CSV-Export für Excel. Grundlage ist die Tabelle kassenrezept
 // (my-admin/src/kassenrezept.ts). Die Kundenkartei zeigt dieselben Rezepte
 // je Kunde (KundeKassenrezepte.tsx).
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Title } from "react-admin";
 import { useNavigate } from "react-router-dom";
 import {
@@ -45,6 +45,7 @@ import {
   nachMonat,
   personText,
   rezeptSummen,
+  sortiereNachPerson,
   sortiereRezepte,
   zahl,
 } from "./kassenrezept";
@@ -202,10 +203,27 @@ export const KassenrezepteSeite = () => {
       ),
     [monate, optica],
   );
-  const gefiltert = useMemo(
-    () => sortiereRezepte(filtereRezepte(alle, filter, doppelt)),
-    [alle, filter, doppelt],
-  );
+  const gefiltert = useMemo(() => {
+    const treffer = filtereRezepte(alle, filter, doppelt);
+    // zu prüfende: zusammengehörige Rezepte direkt untereinander
+    return filter.nurAuffaellig
+      ? sortiereNachPerson(treffer)
+      : sortiereRezepte(treffer);
+  }, [alle, filter, doppelt]);
+  const listeRef = useRef<HTMLDivElement>(null);
+  // "Anzeigen" beim Hinweis: nur die zu prüfenden, ohne andere Filter,
+  // und zur Liste springen (sie steht weiter unten)
+  const zuPruefendeAnzeigen = () => {
+    setFilter({ ...leererFilter, nurAuffaellig: true });
+    window.setTimeout(
+      () =>
+        listeRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        }),
+      50,
+    );
+  };
   const summen = useMemo(() => rezeptSummen(gefiltert), [gefiltert]);
   // Krankenkassen-Übersicht folgt dem gewählten Monat, nicht der Kassenwahl
   const kassen = useMemo(
@@ -334,7 +352,7 @@ export const KassenrezepteSeite = () => {
                     <Button
                       color="inherit"
                       size="small"
-                      onClick={() => setze("nurAuffaellig", true)}
+                      onClick={zuPruefendeAnzeigen}
                     >
                       Anzeigen
                     </Button>
@@ -492,7 +510,11 @@ export const KassenrezepteSeite = () => {
             </Card>
           </Box>
 
-          <Card variant="outlined" sx={{ p: 1.5 }}>
+          <Card
+            ref={listeRef}
+            variant="outlined"
+            sx={{ p: 1.5, scrollMarginTop: 72 }}
+          >
             <Box
               sx={{
                 display: "flex",

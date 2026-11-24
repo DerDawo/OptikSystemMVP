@@ -25,6 +25,7 @@ import {
   BELEG_STYLES,
   RECHNUNG_ABSENDER,
   briefkopfHtml,
+  dateiTitel,
   escapeHtml,
   formatEuro,
   fusszeileHtml,
@@ -51,35 +52,63 @@ export type SehtestLeistung = {
 };
 
 /**
- * Leistungskatalog. Die Pflichtprüfungen nach Anlage 6 Nr. 2.1 FeV sind
- * vorausgewählt (zusammen 139,90 €); die übrigen sind freiwillige
- * Zusatzleistungen. Preise lassen sich in der Vorschau ändern.
+ * Leistungskatalog. Die Prüfungen des erweiterten Sehtests (Pflichtprüfungen
+ * nach Anlage 6 Nr. 2.1 FeV, Farbsinn, Gesichtsfeld, Dämmerungssehen/Blendung,
+ * die Bescheinigung und deren Zweitschrift) sind vorausgewählt (zusammen 149,90 €); die übrigen
+ * sind Zusatzleistungen. Preise lassen sich in der Vorschau ändern.
  */
 export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
   {
     id: "visus_sc",
-    bezeichnung: "Sehschärfe ohne Korrektur",
+    bezeichnung: "Visusprüfung ohne Korrektur (Landolt-Ringe-Test)",
     beschreibung:
-      "Tagessehschärfe rechts, links, beidäugig (DIN 58220, Anl. 6 Nr. 2.1.1 FeV)",
-    preis: 35,
+      "Tagessehschärfe rechts, links und beidäugig mit Landolt-Ringen (DIN EN ISO 8596) · Gerät: Testscheibe 114, Rodenstock R20 · DIN 58220, Anl. 6 Nr. 2.1.1 FeV",
+    preis: 18,
     menge: 1,
     standard: true,
   },
   {
     id: "visus_cc",
-    bezeichnung: "Sehschärfe mit Korrektur",
+    bezeichnung: "Visusprüfung mit Korrektur (Landolt-Ringe-Test)",
     beschreibung:
-      "mit Brille bzw. Kontaktlinsen; Grenzwerte je Auge 0,8, beidäugig 1,0",
-    preis: 35,
+      "mit Brille bzw. Kontaktlinsen, Landolt-Ringe (DIN EN ISO 8596) · Gerät: Testscheibe 114, Rodenstock R20 · Grenzwerte je Auge 0,8, beidäugig 1,0",
+    preis: 18,
     menge: 1,
     standard: true,
   },
   {
     id: "korrektur",
-    bezeichnung: "Prüfung der Korrektur",
+    bezeichnung: "Prüfung der Korrektur (Scheitelbrechwertmessung)",
     beschreibung:
-      "Scheitelbrechwert der Brille, sphärisches Äquivalent höchstens +8,0 dpt",
-    preis: 39.9,
+      "Scheitelbrechwert der Brille am Scheitelbrechwertmesser (Lensmeter) · sphärisches Äquivalent höchstens +8,0 dpt",
+    preis: 14,
+    menge: 1,
+    standard: true,
+  },
+  {
+    id: "farbsinn",
+    bezeichnung: "Farbsinnprüfung",
+    beschreibung:
+      "pseudoisochromatische Tafeln nach Ishihara · standardisierte Beleuchtung (orientierend, ersetzt keine augenärztliche Prüfung)",
+    preis: 12,
+    menge: 1,
+    standard: true,
+  },
+  {
+    id: "gesichtsfeld",
+    bezeichnung: "Gesichtsfeldprüfung (Perimetrie)",
+    beschreibung:
+      "kinetische Perimetrie mit dem Goldmann-Perimeter · Bestimmung der Isopteren, beide Augen",
+    preis: 35,
+    menge: 1,
+    standard: true,
+  },
+  {
+    id: "daemmerung",
+    bezeichnung: "Dämmerungssehen / Blendempfindlichkeit",
+    beschreibung:
+      "Gerät: OCULUS Mesotest II · Prüfung des Dämmerungssehens und der Blendempfindlichkeit nach DIN 58220 Teil 7",
+    preis: 18,
     menge: 1,
     standard: true,
   },
@@ -87,8 +116,16 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     id: "bescheinigung",
     bezeichnung: "Bescheinigung über das Sehvermögen",
     beschreibung:
-      "amtliches Muster, Teil 1 (Betrieb) und Teil 2 (Fahrerlaubnisbehörde)",
-    preis: 30,
+      "Ausstellung nach Anlage 6 Nr. 2.1 FeV auf amtlichem Muster · Teil 1 verbleibt im Betrieb, Teil 2 für die Fahrerlaubnisbehörde",
+    preis: 20,
+    menge: 1,
+    standard: true,
+  },
+  {
+    id: "zweitschrift",
+    bezeichnung: "Zweitschrift der Bescheinigung",
+    beschreibung: "weitere Ausfertigung von Teil 2, z. B. für den Arbeitgeber",
+    preis: 14.9,
     menge: 1,
     standard: true,
   },
@@ -98,41 +135,6 @@ export const SEHTEST_LEISTUNGEN: SehtestLeistung[] = [
     beschreibung:
       "bestmögliche Korrektur, wenn die Grenzwerte nicht erreicht werden",
     preis: 20,
-    menge: 1,
-    standard: false,
-  },
-  {
-    id: "farbsinn",
-    bezeichnung: "Farbsinnprüfung (orientierend)",
-    beschreibung:
-      "Tafeln nach Ishihara (freiwillig, ersetzt keine augenärztliche Prüfung)",
-    preis: 8,
-    menge: 1,
-    standard: false,
-  },
-  {
-    id: "daemmerung",
-    bezeichnung: "Dämmerungssehen / Blendempfindlichkeit (orientierend)",
-    beschreibung:
-      "Kontrastsehen mit und ohne Blendung (freiwillig, nicht augenärztlich)",
-    preis: 15,
-    menge: 1,
-    standard: false,
-  },
-  {
-    id: "gesichtsfeld",
-    bezeichnung: "Gesichtsfeld (orientierend)",
-    beschreibung:
-      "Screening (freiwillig, ersetzt keine augenärztliche Perimetrie)",
-    preis: 15,
-    menge: 1,
-    standard: false,
-  },
-  {
-    id: "zweitschrift",
-    bezeichnung: "Zweitschrift der Bescheinigung",
-    beschreibung: "weitere Ausfertigung von Teil 2, z. B. für den Arbeitgeber",
-    preis: 5,
     menge: 1,
     standard: false,
   },
@@ -302,7 +304,7 @@ export const buildSehtestRechnungBodyHtml = ({
       <div data-zahlung="sofort" class="aus">Den Rechnungsbetrag haben wir dankend erhalten.</div>
       <div data-zahlung="ueberweisung">Bitte überweisen Sie den Rechnungsbetrag bis zum ${e(zahlbarBis)} auf unser unten genanntes Konto. Verwendungszweck: Rechnung ${e(rechnungsnummer)}.</div>
       <div>Leistungsdatum ist das Untersuchungsdatum. Die Untersuchung dient dem Nachweis gegenüber der Fahrerlaubnisbehörde und ist keine Heilbehandlung; sie unterliegt daher dem Regelsteuersatz von ${a.mwstSatz} %.</div>
-      <div>Die Bescheinigung darf bei Antragstellung höchstens zwei Jahre alt sein (§ 12 Abs. 7 FeV), hier also bis ${e(gueltigBis)}. Freiwillige orientierende Prüfungen ersetzen nicht die augenärztliche Untersuchung nach Anlage 6 Nr. 2.2 FeV.</div>
+      <div>Die Bescheinigung darf bei Antragstellung höchstens zwei Jahre alt sein (§ 12 Abs. 7 FeV), hier also bis ${e(gueltigBis)}. Die orientierenden Prüfungen ersetzen nicht die augenärztliche Untersuchung nach Anlage 6 Nr. 2.2 FeV.</div>
     </div>
    </div>
   </div>
@@ -454,19 +456,21 @@ ${skript}
 </body>
 </html>`;
 
-const titel = (nummer: string) =>
-  `Rechnung Sehtest Fahrerlaubnis C/D${nummer ? ` ${nummer}` : ""}`;
+const titel = (daten: SehtestRechnungDaten) =>
+  dateiTitel(
+    `Rechnung Sehtest Fahrerlaubnis C-D${daten.rechnungsnummer ? ` ${daten.rechnungsnummer}` : ""}`,
+    daten.entities.kunde,
+  );
 
 export const buildSehtestRechnungPrintHtml = (
   daten: SehtestRechnungDaten,
-): string =>
-  seite(titel(daten.rechnungsnummer), buildSehtestRechnungBodyHtml(daten), "");
+): string => seite(titel(daten), buildSehtestRechnungBodyHtml(daten), "");
 
 export const buildSehtestRechnungPreviewHtml = (
   daten: SehtestRechnungDaten,
 ): string =>
   seite(
-    titel(daten.rechnungsnummer),
+    titel(daten),
     buildSehtestRechnungBodyHtml(daten),
     BILDSCHIRM_STYLES,
     vorschauSkript(),

@@ -351,6 +351,22 @@ export const sortiereRezepte = (liste: Kassenrezept[]) =>
     return a.Belegnummer < b.Belegnummer ? 1 : -1;
   });
 
+/**
+ * Zu prüfende (mehrfach abgerechnete) Rezepte: gleiche Person und gleiches
+ * Rezeptdatum direkt untereinander, innerhalb der Gruppe nach
+ * Abrechnungsmonat. Gruppen mit dem neuesten Rezeptdatum zuerst.
+ */
+export const sortiereNachPerson = (liste: Kassenrezept[]) =>
+  [...liste].sort((a, b) => {
+    const da = a.Rezeptdatum ?? "";
+    const db = b.Rezeptdatum ?? "";
+    if (da !== db) return da < db ? 1 : -1;
+    const pa = personKey(a);
+    const pb = personKey(b);
+    if (pa !== pb) return pa < pb ? -1 : 1;
+    return a.Abrechnungsmonat < b.Abrechnungsmonat ? -1 : 1;
+  });
+
 const datumDe = (w: string | null) => {
   if (!w) return "";
   const [j, m, t] = w.slice(0, 10).split("-");

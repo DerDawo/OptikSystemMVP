@@ -438,13 +438,13 @@ export const WERKSTATTAUFTRAG_STYLES = `
   .neue-staerken .werte { margin-bottom: 7mm; }
   .neue-staerken .werte tbody td, .neue-staerken .werte tbody th { height: 6.5mm; }
   .neue-staerken .werte { table-layout: fixed; }
-  .neue-staerken .werte th:nth-child(1) { width: 8%; }
-  .neue-staerken .werte th:nth-child(2), .neue-staerken .werte th:nth-child(3) { width: 19%; }
-  .neue-staerken .werte th:nth-child(4) { width: 15%; }
-  .neue-staerken .werte th:nth-child(5) { width: 12%; }
+  .neue-staerken .werte th:nth-child(1) { width: 6%; }
+  .neue-staerken .werte th:nth-child(2), .neue-staerken .werte th:nth-child(3) { width: 16%; }
+  .neue-staerken .werte th:nth-child(4) { width: 12%; }
+  .neue-staerken .werte th:nth-child(5) { width: 11%; }
   .neue-staerken .werte th:nth-child(6) { width: 10%; }
   .neue-staerken .werte th:nth-child(7) { width: 9%; }
-  .neue-staerken .werte th:nth-child(8) { width: 8%; }
+  .neue-staerken .werte th:nth-child(8) { width: 20%; }
   .neue-staerken .werte thead th:nth-child(6), .neue-staerken .werte thead th:nth-child(7) { font-size: 6pt; padding: 0.6mm 0; }
   .schnitt { border-top: 1px dashed #888; margin: 3mm 0; height: 0; text-align: center; }
   .schnitt span { position: relative; top: -2.2mm; background: #fff; padding: 0 2mm; font-size: 7pt; color: #666; }

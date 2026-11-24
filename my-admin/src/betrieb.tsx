@@ -15,6 +15,7 @@ import {
 import { FieldRow, FormSection } from "./EntityLayout";
 import { BetriebBilderFeld } from "./BetriebBilder";
 import { KatalogUploadFeld } from "./KatalogKnopf";
+import { AbrechnungCodeFeld } from "./AbrechnungSperre";
 
 export const BetriebEdit = () => (
   <Edit title="Betriebsdaten" redirect={false}>
@@ -53,10 +54,28 @@ export const BetriebEdit = () => (
           <TextInput source="Website" label="Website" />
         </FieldRow>
       </FormSection>
+      <FormSection title="Betriebs- und Steuernummern">
+        <FieldRow>
+          <TextInput source="Betriebsnummer" label="Betriebsnummer" />
+          <TextInput source="HWKNummer" label="HWK-Nr." />
+          <TextInput source="BGETEMNummer" label="BG ETEM Unternehmensnummer" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Steuernummer" label="Steuernummer" />
+          <TextInput source="WirtschaftsIdNr" label="ID-Nummer" />
+          <TextInput source="EORI" label="EORI-Nummer" />
+        </FieldRow>
+      </FormSection>
+      <FormSection title="Code für den Bereich Abrechnung">
+        <AbrechnungCodeFeld />
+      </FormSection>
       <FormSection title="Steuer und Bankverbindung">
         <FieldRow>
           <TextInput source="UStIdNr" label="USt-IdNr." />
           <NumberInput source="MwStSatz" label="MwSt-Satz (%)" />
+        </FieldRow>
+        <FieldRow>
+          <TextInput source="Kontoinhaber" label="Kontoinhaber" />
         </FieldRow>
         <FieldRow>
           <TextInput source="Bank" label="Bank" />

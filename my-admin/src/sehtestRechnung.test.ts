@@ -82,7 +82,16 @@ describe("Leistungskatalog", () => {
     expect(new Set(ids).size).toBe(ids.length);
     expect(
       SEHTEST_LEISTUNGEN.filter((l) => l.standard).map((l) => l.id),
-    ).toEqual(["visus_sc", "visus_cc", "korrektur", "bescheinigung"]);
+    ).toEqual([
+      "visus_sc",
+      "visus_cc",
+      "korrektur",
+      "farbsinn",
+      "gesichtsfeld",
+      "daemmerung",
+      "bescheinigung",
+      "zweitschrift",
+    ]);
   });
 });
 
@@ -101,11 +110,21 @@ describe("Rechnung Sehtest C/D", () => {
     expect(html).toContain("20.11.2028");
     for (const k of FAHRERLAUBNISKLASSEN) expect(html).toContain(k);
     for (const l of SEHTEST_LEISTUNGEN) expect(html).toContain(l.bezeichnung);
-    expect(html).toContain("139,90 EUR");
-    expect(html).toContain("22,34 EUR");
+    expect(html).toContain("149,90 EUR");
+    expect(html).toContain("23,93 EUR");
     expect(html).toContain("Anlage 6 Nr. 2.1 FeV");
     // ohne Vorschau kein Skript
     expect(html).not.toContain("<script");
+  });
+
+  it("schlägt als Dateinamen Rechnung, Nummer und Kundennamen vor", () => {
+    const titel = (html: string) => html.match(/<title>(.*?)<\/title>/)?.[1];
+    expect(titel(buildSehtestRechnungPrintHtml(daten))).toBe(
+      "Rechnung Sehtest Fahrerlaubnis C-D 2026-123 Muster Max",
+    );
+    expect(titel(buildSehtestRechnungPreviewHtml(daten))).toBe(
+      "Rechnung Sehtest Fahrerlaubnis C-D 2026-123 Muster Max",
+    );
   });
 
   it("Vorschau enthält das Rechenskript mit denselben Funktionen", () => {

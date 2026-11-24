@@ -1,0 +1,16 @@
+name: Fork sync
+on:
+  schedule:
+    - cron: "*/30 * * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  sync:
+    # nur im Fork, nicht im Hauptprojekt
+    if: github.repository == 'ulmrobert/OptikSystemMVP'
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh repo sync ${{ github.repository }} --source DerDawo/OptikSystemMVP --branch main
+        env:
+          GH_TOKEN: ${{ github.token }}
