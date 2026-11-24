@@ -29,6 +29,7 @@ import {
   LayersIcon,
   LensIcon,
   ListIcon,
+  PhoneIcon,
   PrescriptionIcon,
   ReceiptIcon,
   SearchIcon,
@@ -38,6 +39,7 @@ import {
 import unicornLogo from "./assets/unicorn-weiss.png";
 import { useOffeneAnfragen } from "./OnlineAnfragenSeite";
 import { useOffeneKundenAppNachrichten } from "./KundenAppNachrichten";
+import { useOffeneTelefonAufgaben } from "./TelefonAssistentSeite";
 import { useRolle } from "./rolle";
 import { useAbrechnungFreigabe } from "./AbrechnungSperre";
 
@@ -50,6 +52,18 @@ const OnlineAnfragenEintrag = () => {
       to="/online-anfragen"
       primaryText={offen ? `Online-Anfragen (${offen})` : "Online-Anfragen"}
       leftIcon={<CalendarIcon />}
+    />
+  );
+};
+
+// KI-Telefonassistent mit Anzahl offener Rückrufbitten und Fragen
+const TelefonAssistentEintrag = () => {
+  const offen = useOffeneTelefonAufgaben();
+  return (
+    <Menu.Item
+      to="/telefon-assistent"
+      primaryText={offen ? `Telefon-Assistent (${offen})` : "Telefon-Assistent"}
+      leftIcon={<PhoneIcon />}
     />
   );
 };
@@ -218,6 +232,7 @@ export const MyMenu = () => {
         leftIcon={<CalendarIcon />}
       />
       <OnlineAnfragenEintrag />
+      <TelefonAssistentEintrag />
 
       <Section label="Kunden" />
       <Menu.Item to="/kunde" primaryText="Kunden" leftIcon={<UsersIcon />} />

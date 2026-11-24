@@ -80,6 +80,7 @@ import {
 } from "./krankenkassen";
 import { TerminKalender } from "./TerminKalender";
 import { OnlineAnfragenSeite } from "./OnlineAnfragenSeite";
+import { TelefonAssistentSeite } from "./TelefonAssistentSeite";
 import {
   DokumentvorlageList,
   DokumentvorlageShow,
@@ -336,6 +337,7 @@ export const App = () => {
         <Route path="/kalender" element={<TerminKalender />} />
         <Route path="/beratung" element={<BeratungsbilderSeite />} />
         <Route path="/online-anfragen" element={<OnlineAnfragenSeite />} />
+        <Route path="/telefon-assistent" element={<TelefonAssistentSeite />} />
         <Route path="/kunde/:id/message" element={<KundeMessage />} />
         <Route path="/glaskatalog-import" element={<GlaskatalogImportPage />} />
       </CustomRoutes>
