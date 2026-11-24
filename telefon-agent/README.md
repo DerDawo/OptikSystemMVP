@@ -36,7 +36,7 @@ Anrufer → Telefonnummer (Twilio) → ElevenLabs-Agent
 | `prompt.md` | Gesprächsleitfaden des Agenten |
 | `einrichten.mjs` | legt Werkzeuge und Agent bei ElevenLabs an bzw. aktualisiert sie |
 | `.env` | Zugangsschlüssel (nur lokal, nicht im Repo) |
-| `supabase/migrations/20261124090000_telefon_assistent.sql` | Tabellen und Funktionen |
+| `supabase/migrations/20261124220000_telefon_assistent.sql` | Tabellen und Funktionen |
 | `my-admin/src/TelefonAssistentSeite.tsx` | Seite „Telefon-Assistent“ |
 
 ## Einrichtung (je Supabase-Projekt, zuerst Dev)
