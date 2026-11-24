@@ -250,32 +250,45 @@ export const MyMenu = () => {
         leftIcon={<ListIcon />}
       />
 
-      <Section label="Abrechnung" />
-      <Menu.Item
-        to="/rechnungen"
-        primaryText="Rechnungen"
-        leftIcon={<ReceiptIcon />}
-      />
-      <Menu.Item
-        to="/mahnungen"
-        primaryText="Mahnungen"
-        leftIcon={<AlertIcon />}
-      />
-      <Menu.Item
-        to="/firmenrechnung"
-        primaryText="Firmenrechnung"
-        leftIcon={<ReceiptIcon />}
-      />
-      <Menu.Item
-        to="/rezepte"
-        primaryText="Abgerechnete Rezepte"
-        leftIcon={<PrescriptionIcon />}
-      />
-      <Menu.Item
-        to="/optica"
-        primaryText="OPTICA-Abrechnungen"
-        leftIcon={<ReceiptIcon />}
-      />
+      {/* Abrechnung als Klappmenü: zu, bis man es öffnet oder auf einer
+          der Seiten ist (die Seiten selbst fragen einen Code ab) */}
+      <SubMenu
+        label="Abrechnung"
+        icon={<ReceiptIcon />}
+        paths={[
+          "/rechnungen",
+          "/mahnungen",
+          "/firmenrechnung",
+          "/rezepte",
+          "/optica",
+        ]}
+      >
+        <Menu.Item
+          to="/rechnungen"
+          primaryText="Rechnungen"
+          leftIcon={<ReceiptIcon />}
+        />
+        <Menu.Item
+          to="/mahnungen"
+          primaryText="Mahnungen"
+          leftIcon={<AlertIcon />}
+        />
+        <Menu.Item
+          to="/firmenrechnung"
+          primaryText="Firmenrechnung"
+          leftIcon={<ReceiptIcon />}
+        />
+        <Menu.Item
+          to="/rezepte"
+          primaryText="Abgerechnete Rezepte"
+          leftIcon={<PrescriptionIcon />}
+        />
+        <Menu.Item
+          to="/optica"
+          primaryText="OPTICA-Abrechnungen"
+          leftIcon={<ReceiptIcon />}
+        />
+      </SubMenu>
 
       <Section label="Verwaltung" />
       <SubMenu
