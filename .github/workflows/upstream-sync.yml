@@ -1,0 +1,27 @@
+# Nur im Fork ulmrobert/OptikSystemMVP: holt alle 15 Minuten den Branch
+# main aus DerDawo/OptikSystemMVP (Live-Version) in diesen Fork. Vercel
+# (Projekt optik-system-mvp im Team roberts-projects) baut daraufhin
+# automatisch die neue Version.
+#
+# Hinweis: Ändert ein Release Dateien unter .github/workflows, darf der
+# automatische Token diese nicht übernehmen - dann schlägt der Lauf fehl.
+# In dem Fall auf GitHub "Sync fork" -> "Update branch" klicken.
+name: Upstream-Sync (main)
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.repository == 'ulmrobert/OptikSystemMVP'
+    runs-on: ubuntu-latest
+    steps:
+      - name: main mit DerDawo/OptikSystemMVP abgleichen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X POST "repos/${{ github.repository }}/merge-upstream" -f branch=main

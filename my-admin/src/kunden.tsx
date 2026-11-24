@@ -672,6 +672,10 @@ export const KundeEdit = () => (
       <FormSection title="Merkmale">
         <FieldRow>
           <TextInput source="Merkmal1" label="Beruf" />
+          <TextInput
+            source="Personalausweisnummer"
+            label="Personalausweisnummer"
+          />
           <TextInput source="Merkmal2" label="Besonderes" />
           <TextInput source="KundenNummer" label="Kundennummer" />
           <DateInput source="Aufnahmedatum" />
@@ -773,6 +777,10 @@ export const KundeCreate = () => {
         <FormSection title="Merkmale">
           <FieldRow>
             <TextInput source="Merkmal1" label="Beruf" />
+            <TextInput
+              source="Personalausweisnummer"
+              label="Personalausweisnummer"
+            />
             <TextInput source="Merkmal2" label="Besonderes" />
             <TextInput
               source="KundenNummer"
